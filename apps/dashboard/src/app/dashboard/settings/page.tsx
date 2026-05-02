@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Shield, Save, Loader2, Check } from "lucide-react";
+import { Shield, Save, Loader2, Check, Globe } from "lucide-react";
 
 interface SsoSettings {
   id: string;
@@ -185,6 +185,55 @@ export default function SettingsPage() {
                 </p>
               </div>
             )}
+          </div>
+        </div>
+
+        <div className="rounded-lg border border-gray-200 bg-white p-6">
+          <div className="flex items-center gap-2">
+            <Globe className="h-5 w-5 text-primary-600" />
+            <h2 className="text-lg font-semibold text-gray-900">
+              Custom Domain
+            </h2>
+          </div>
+          <p className="mt-1 text-sm text-gray-600">
+            Configure a custom domain for your OpenDoor dashboard and API
+            gateway. This requires DNS configuration via your domain registrar.
+          </p>
+
+          <div className="mt-4 space-y-4">
+            <div className="rounded-md bg-blue-50 p-4">
+              <h3 className="text-sm font-medium text-blue-900">
+                DNS Configuration
+              </h3>
+              <p className="mt-1 text-sm text-blue-700">
+                To use a custom domain, create the following CNAME records with
+                your DNS provider:
+              </p>
+              <div className="mt-3 space-y-2 font-mono text-xs text-blue-800">
+                <div className="rounded bg-white p-2">
+                  <strong>Dashboard:</strong>
+                  <br />
+                  CNAME app.yourdomain.com →{" "}
+                  {typeof window !== "undefined"
+                    ? window.location.host
+                    : "your-frontdoor.azurefd.net"}
+                </div>
+                <div className="rounded bg-white p-2">
+                  <strong>Gateway API:</strong>
+                  <br />
+                  CNAME api.yourdomain.com →{" "}
+                  {typeof window !== "undefined"
+                    ? window.location.host
+                    : "your-frontdoor.azurefd.net"}
+                </div>
+              </div>
+              <p className="mt-2 text-xs text-blue-600">
+                After creating the DNS records, add{" "}
+                <code>AZURE_GATEWAY_DOMAIN</code> and{" "}
+                <code>AZURE_DASHBOARD_DOMAIN</code> to your GitHub Actions
+                secrets and redeploy.
+              </p>
+            </div>
           </div>
         </div>
 

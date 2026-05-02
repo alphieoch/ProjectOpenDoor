@@ -96,9 +96,11 @@ jobs:
               "stripeWebhookSecret": "${{ secrets.STRIPE_WEBHOOK_SECRET }}",
               "stripeProPriceId": "${{ secrets.STRIPE_PRO_PRICE_ID }}",
               "stripeEnterprisePriceId": "${{ secrets.STRIPE_ENTERPRISE_PRICE_ID }}",
-              "appUrl": "https://${{ secrets.AZURE_FRONTDOOR_HOST }}",
+              "appUrl": "https://${{ secrets.AZURE_DASHBOARD_DOMAIN || secrets.AZURE_FRONTDOOR_HOST }}",
               "workosApiKey": "${{ secrets.WORKOS_API_KEY }}",
-              "workosClientId": "${{ secrets.WORKOS_CLIENT_ID }}"
+              "workosClientId": "${{ secrets.WORKOS_CLIENT_ID }}",
+              "gatewayCustomDomain": "${{ secrets.AZURE_GATEWAY_DOMAIN }}",
+              "dashboardCustomDomain": "${{ secrets.AZURE_DASHBOARD_DOMAIN }}"
             }
           failOnStdErr: false
 

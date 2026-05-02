@@ -1,27 +1,24 @@
 FROM node:20-alpine AS base
+RUN apk add --no-cache curl libc6-compat
+# Install Bun
+RUN curl -fsSL https://bun.sh/install | bash
+ENV PATH="/root/.bun/bin:${PATH}"
 
 FROM base AS deps
-RUN apk add --no-cache libc6-compat
 WORKDIR /app
-COPY package.json pnpm-workspace.yaml ./
+COPY package.json pnpm-workspace.yaml .npmrc ./
 COPY packages ./packages
 COPY apps/gateway/package.json ./apps/gateway/package.json
 RUN npm install -g pnpm@9.0.0 && pnpm install --frozen-lockfile
 
-FROM base AS builder
-WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/packages ./packages
-COPY --from=deps /app/apps/gateway/node_modules ./apps/gateway/node_modules
-COPY . .
-RUN npm install -g pnpm@9.0.0 && pnpm --filter @opendoor/gateway build
-
 FROM base AS runner
 WORKDIR /app
 ENV NODE_ENV=production
-COPY --from=builder /app/apps/gateway/dist ./dist
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/packages ./packages
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/packages ./packages
+COPY apps/gateway ./apps/gateway
 
+WORKDIR /app/apps/gateway
 EXPOSE 3001
-CMD ["node", "dist/index.js"]
+ENV PORT=3001
+CMD ["bun", "src/index.ts"]

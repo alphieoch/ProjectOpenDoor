@@ -3,6 +3,7 @@ import { getDb } from "@/lib/db";
 import { apiKeys } from "@opendoor/database";
 import { eq } from "drizzle-orm";
 import { requireAuth } from "@/lib/auth";
+import { logAuditEvent } from "@/lib/audit";
 
 export async function DELETE(
   _: Request,

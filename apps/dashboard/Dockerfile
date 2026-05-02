@@ -1,9 +1,12 @@
 FROM node:20-alpine AS base
+RUN apk add --no-cache curl libc6-compat
+# Install Bun
+RUN curl -fsSL https://bun.sh/install | bash
+ENV PATH="/root/.bun/bin:${PATH}"
 
 FROM base AS deps
-RUN apk add --no-cache libc6-compat
 WORKDIR /app
-COPY package.json pnpm-workspace.yaml ./
+COPY package.json pnpm-workspace.yaml .npmrc ./
 COPY packages ./packages
 COPY apps/dashboard/package.json ./apps/dashboard/package.json
 RUN npm install -g pnpm@9.0.0 && pnpm install --frozen-lockfile
@@ -27,4 +30,4 @@ COPY --from=builder /app/packages ./packages
 EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
-CMD ["node", "apps/dashboard/server.js"]
+CMD ["bun", "apps/dashboard/server.js"]

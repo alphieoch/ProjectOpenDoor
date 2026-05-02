@@ -52,6 +52,12 @@ param workosApiKey string = ''
 @description('WorkOS client ID')
 param workosClientId string = ''
 
+@description('Custom domain for gateway API')
+param gatewayCustomDomain string = ''
+
+@description('Custom domain for dashboard')
+param dashboardCustomDomain string = ''
+
 // Container Registry
 module registry 'modules/registry.bicep' = {
   name: 'registry'
@@ -151,9 +157,15 @@ module frontDoor 'modules/frontDoor.bicep' = {
     secondaryEndpoint: containerEnvSecondary.outputs.gatewayFqdn
     primaryDashboardEndpoint: containerEnvPrimary.outputs.dashboardFqdn
     secondaryDashboardEndpoint: containerEnvSecondary.outputs.dashboardFqdn
+    gatewayCustomDomain: gatewayCustomDomain
+    dashboardCustomDomain: dashboardCustomDomain
   }
 }
 
-output gatewayEndpoint string = 'https://${frontDoor.outputs.gatewayHostName}'
-output dashboardEndpoint string = 'https://${frontDoor.outputs.dashboardHostName}'
+output gatewayEndpoint string = !empty(gatewayCustomDomain)
+  ? 'https://${gatewayCustomDomain}'
+  : 'https://${frontDoor.outputs.gatewayHostName}'
+output dashboardEndpoint string = !empty(dashboardCustomDomain)
+  ? 'https://${dashboardCustomDomain}'
+  : 'https://${frontDoor.outputs.dashboardHostName}'
 output registryLoginServer string = registry.outputs.loginServer

@@ -4,6 +4,7 @@ import { getDb } from "@/lib/db";
 import { users, organizations } from "@opendoor/database";
 import { eq } from "drizzle-orm";
 import { createToken } from "@/lib/auth";
+import { logAuditEvent } from "@/lib/audit";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -70,6 +71,15 @@ export async function GET(req: NextRequest) {
       email: user.email,
       orgId: user.organizationId,
       role: user.role,
+    });
+
+    await logAuditEvent({
+      organizationId: org.id,
+      userId: user.id,
+      action: "user.login",
+      entityType: "user",
+      entityId: user.id,
+      metadata: { method: "sso", provider: profile.connectionType },
     });
 
     const response = NextResponse.redirect("/dashboard");

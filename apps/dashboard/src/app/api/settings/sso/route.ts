@@ -3,6 +3,7 @@ import { getDb } from "@/lib/db";
 import { organizations } from "@opendoor/database";
 import { eq } from "drizzle-orm";
 import { requireAuth } from "@/lib/auth";
+import { logAuditEvent } from "@/lib/audit";
 
 export async function GET() {
   try {
@@ -64,6 +65,15 @@ export async function POST(req: NextRequest) {
         workosConnectionId: workosConnectionId || null,
       })
       .where(eq(organizations.id, orgId));
+
+    await logAuditEvent({
+      organizationId: orgId,
+      userId: session.sub as string,
+      action: ssoEnabled ? "sso.enabled" : "sso.disabled",
+      entityType: "organization",
+      entityId: orgId,
+      metadata: { workosOrganizationId, workosConnectionId, ssoDefaultRole },
+    });
 
     return NextResponse.json({ success: true });
   } catch (error: any) {

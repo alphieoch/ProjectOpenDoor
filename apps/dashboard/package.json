@@ -3,9 +3,9 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
+    "dev": "bun next dev",
+    "build": "bun next build",
+    "start": "bun next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit"
   },

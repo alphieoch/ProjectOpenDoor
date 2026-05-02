@@ -3,6 +3,7 @@ import { getDb } from "@/lib/db";
 import { apiKeys } from "@opendoor/database";
 import { eq, and, isNull } from "drizzle-orm";
 import { requireAuth } from "@/lib/auth";
+import { logAuditEvent } from "@/lib/audit";
 import { createHash, randomBytes } from "crypto";
 
 export async function GET() {
@@ -38,12 +39,24 @@ export async function POST(req: NextRequest) {
   const hash = createHash("sha256").update(rawKey).digest("hex");
 
   const db2 = getDb();
-  await db2.insert(apiKeys).values({
+  const [newKey] = await db2.insert(apiKeys).values({
     name: name || "Unnamed Key",
     keyHash: hash,
     keyPrefix: prefix,
     organizationId: orgId,
     allowedModels: allowedModels && allowedModels.length > 0 ? allowedModels : null,
+  }).returning();
+
+  await logAuditEvent({
+    organizationId: orgId,
+    userId: session.sub as string,
+    action: "api_key.created",
+    entityType: "api_key",
+    entityId: newKey.id,
+    metadata: {
+      name: name || "Unnamed Key",
+      allowedModels: allowedModels || null,
+    },
   });
 
   return NextResponse.json({ key: rawKey });

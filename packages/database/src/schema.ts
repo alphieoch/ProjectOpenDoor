@@ -226,6 +226,55 @@ export const requests = pgTable(
   })
 );
 
+export const auditLogs = pgTable(
+  "audit_logs",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: uuid("organization_id")
+      .references(() => organizations.id)
+      .notNull(),
+    userId: uuid("user_id").references(() => users.id),
+    action: varchar("action", { length: 100 }).notNull(),
+    entityType: varchar("entity_type", { length: 100 }),
+    entityId: varchar("entity_id", { length: 255 }),
+    metadata: jsonb("metadata"),
+    ipAddress: varchar("ip_address", { length: 45 }),
+    userAgent: text("user_agent"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    orgIdx: index("audit_logs_org_idx").on(table.organizationId),
+    actionIdx: index("audit_logs_action_idx").on(table.action),
+    createdAtIdx: index("audit_logs_created_at_idx").on(table.createdAt),
+  })
+);
+
+export const invitations = pgTable(
+  "invitations",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: uuid("organization_id")
+      .references(() => organizations.id)
+      .notNull(),
+    email: varchar("email", { length: 255 }).notNull(),
+    role: varchar("role", { length: 50 }).notNull().default("member"),
+    token: varchar("token", { length: 255 }).notNull().unique(),
+    invitedBy: uuid("invited_by").references(() => users.id),
+    acceptedAt: timestamp("accepted_at", { withTimezone: true }),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    orgIdx: index("invitations_org_idx").on(table.organizationId),
+    tokenIdx: uniqueIndex("invitations_token_idx").on(table.token),
+    emailIdx: index("invitations_email_idx").on(table.email),
+  })
+);
+
 export const usageDaily = pgTable(
   "usage_daily",
   {

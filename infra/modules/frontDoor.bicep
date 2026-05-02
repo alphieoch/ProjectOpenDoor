@@ -13,6 +13,12 @@ param primaryDashboardEndpoint string
 @description('Secondary dashboard endpoint')
 param secondaryDashboardEndpoint string
 
+@description('Custom domain for gateway (e.g. api.opendoor.ai)')
+param gatewayCustomDomain string = ''
+
+@description('Custom domain for dashboard (e.g. app.opendoor.ai)')
+param dashboardCustomDomain string = ''
+
 resource frontDoorProfile 'Microsoft.Cdn/profiles@2023-07-01-preview' = {
   name: name
   location: 'Global'
@@ -21,6 +27,7 @@ resource frontDoorProfile 'Microsoft.Cdn/profiles@2023-07-01-preview' = {
   }
 }
 
+// --- Gateway ---
 resource gatewayOriginGroup 'Microsoft.Cdn/profiles/originGroups@2023-07-01-preview' = {
   parent: frontDoorProfile
   name: 'gateway-og'
@@ -71,6 +78,18 @@ resource gatewayEndpoint 'Microsoft.Cdn/profiles/afdEndpoints@2023-07-01-preview
   }
 }
 
+resource gatewayCustomDomainResource 'Microsoft.Cdn/profiles/customDomains@2023-07-01-preview' = if (!empty(gatewayCustomDomain)) {
+  parent: frontDoorProfile
+  name: replace(replace(gatewayCustomDomain, '.', '-'), '*', 'wildcard')
+  properties: {
+    hostName: gatewayCustomDomain
+    tlsSettings: {
+      certificateType: 'ManagedCertificate'
+      minimumTlsVersion: 'TLS12'
+    }
+  }
+}
+
 resource gatewayRoute 'Microsoft.Cdn/profiles/afdEndpoints/routes@2023-07-01-preview' = {
   parent: gatewayEndpoint
   name: 'default'
@@ -78,6 +97,13 @@ resource gatewayRoute 'Microsoft.Cdn/profiles/afdEndpoints/routes@2023-07-01-pre
     originGroup: {
       id: gatewayOriginGroup.id
     }
+    customDomains: !empty(gatewayCustomDomain)
+      ? [
+          {
+            id: gatewayCustomDomainResource.id
+          }
+        ]
+      : []
     supportedProtocols: [
       'Https'
     ]
@@ -94,6 +120,7 @@ resource gatewayRoute 'Microsoft.Cdn/profiles/afdEndpoints/routes@2023-07-01-pre
   ]
 }
 
+// --- Dashboard ---
 resource dashboardOriginGroup 'Microsoft.Cdn/profiles/originGroups@2023-07-01-preview' = {
   parent: frontDoorProfile
   name: 'dashboard-og'
@@ -144,6 +171,18 @@ resource dashboardEndpoint 'Microsoft.Cdn/profiles/afdEndpoints@2023-07-01-previ
   }
 }
 
+resource dashboardCustomDomainResource 'Microsoft.Cdn/profiles/customDomains@2023-07-01-preview' = if (!empty(dashboardCustomDomain)) {
+  parent: frontDoorProfile
+  name: replace(replace(dashboardCustomDomain, '.', '-'), '*', 'wildcard')
+  properties: {
+    hostName: dashboardCustomDomain
+    tlsSettings: {
+      certificateType: 'ManagedCertificate'
+      minimumTlsVersion: 'TLS12'
+    }
+  }
+}
+
 resource dashboardRoute 'Microsoft.Cdn/profiles/afdEndpoints/routes@2023-07-01-preview' = {
   parent: dashboardEndpoint
   name: 'default'
@@ -151,6 +190,13 @@ resource dashboardRoute 'Microsoft.Cdn/profiles/afdEndpoints/routes@2023-07-01-p
     originGroup: {
       id: dashboardOriginGroup.id
     }
+    customDomains: !empty(dashboardCustomDomain)
+      ? [
+          {
+            id: dashboardCustomDomainResource.id
+          }
+        ]
+      : []
     supportedProtocols: [
       'Https'
     ]
@@ -169,3 +215,9 @@ resource dashboardRoute 'Microsoft.Cdn/profiles/afdEndpoints/routes@2023-07-01-p
 
 output gatewayHostName string = gatewayEndpoint.properties.hostName
 output dashboardHostName string = dashboardEndpoint.properties.hostName
+output gatewayCustomDomainValidation string = !empty(gatewayCustomDomain)
+  ? 'Create CNAME: ${gatewayCustomDomain} -> ${gatewayEndpoint.properties.hostName}'
+  : 'No custom domain configured'
+output dashboardCustomDomainValidation string = !empty(dashboardCustomDomain)
+  ? 'Create CNAME: ${dashboardCustomDomain} -> ${dashboardEndpoint.properties.hostName}'
+  : 'No custom domain configured'

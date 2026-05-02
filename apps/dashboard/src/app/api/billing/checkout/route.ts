@@ -4,6 +4,7 @@ import { getDb } from "@/lib/db";
 import { organizations } from "@opendoor/database";
 import { eq } from "drizzle-orm";
 import { requireAuth } from "@/lib/auth";
+import { logAuditEvent } from "@/lib/audit";
 
 export async function POST(req: NextRequest) {
   try {
@@ -48,6 +49,15 @@ export async function POST(req: NextRequest) {
       subscription_data: {
         metadata: { organizationId: orgId },
       },
+    });
+
+    await logAuditEvent({
+      organizationId: orgId,
+      userId: session.sub as string,
+      action: "billing.checkout_started",
+      entityType: "organization",
+      entityId: orgId,
+      metadata: { priceId, stripeCustomerId: customerId },
     });
 
     return NextResponse.json({ url: checkoutSession.url });
