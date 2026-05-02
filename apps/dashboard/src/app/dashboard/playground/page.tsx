@@ -15,6 +15,9 @@ const MODELS = [
 
 export default function PlaygroundPage() {
   const [apiKey, setApiKey] = useState("");
+  const [gatewayUrl, setGatewayUrl] = useState(
+    process.env.NEXT_PUBLIC_GATEWAY_URL || "https://api.opendoor.ai"
+  );
   const [model, setModel] = useState("gpt-4o");
   const [prompt, setPrompt] = useState("");
   const [response, setResponse] = useState("");
@@ -28,7 +31,7 @@ export default function PlaygroundPage() {
     setResponse("");
 
     try {
-      const res = await fetch("/v1/chat/completions", {
+      const res = await fetch(`${gatewayUrl}/v1/chat/completions`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -92,7 +95,7 @@ export default function PlaygroundPage() {
       </p>
 
       <div className="mt-6 space-y-4">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700">
               API Key
@@ -102,6 +105,18 @@ export default function PlaygroundPage() {
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}
               placeholder="opd_..."
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700">
+              Gateway URL
+            </label>
+            <input
+              type="text"
+              value={gatewayUrl}
+              onChange={(e) => setGatewayUrl(e.target.value)}
+              placeholder="https://api.opendoor.ai"
               className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
             />
           </div>
