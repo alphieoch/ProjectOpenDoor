@@ -1,12 +1,13 @@
 // @ts-nocheck
 import { Hono } from "hono";
-import { db, requests } from "@opendoor/database";
+import { db, requests, providers } from "@opendoor/database";
 import type { ChatCompletionRequest } from "@opendoor/shared";
 import { resolveProvider } from "../providers/index.js";
 import { calculateCost } from "../utils/pricing.js";
 import { encodeSSE, encodeSSEDone } from "../utils/streaming.js";
 import { recordTokens } from "../middleware/rate-limit.js";
 import { estimateTokens } from "../utils/streaming.js";
+import { eq } from "drizzle-orm";
 
 const chatRouter = new Hono();
 
@@ -31,6 +32,14 @@ chatRouter.post("/completions", async (c) => {
   }
 
   const { provider, model } = resolved;
+
+  // Lookup provider UUID for FK constraint
+  const providerRows = await db
+    .select({ id: providers.id })
+    .from(providers)
+    .where(eq(providers.slug as any, provider.slug))
+    .limit(1);
+  const providerId = providerRows[0]?.id || provider.slug;
 
   try {
     if (body.stream) {
@@ -90,7 +99,7 @@ chatRouter.post("/completions", async (c) => {
             await db.insert(requests).values({
               apiKeyId: apiKey.id,
               organizationId: organization.id,
-              providerId: provider.slug,
+              providerId: providerId,
               modelId: model,
               requestType: "chat",
               promptTokens,
@@ -114,7 +123,7 @@ chatRouter.post("/completions", async (c) => {
             await db.insert(requests).values({
               apiKeyId: apiKey.id,
               organizationId: organization.id,
-              providerId: provider.slug,
+              providerId: providerId,
               modelId: model,
               requestType: "chat",
               status: "error",
@@ -154,7 +163,7 @@ chatRouter.post("/completions", async (c) => {
       await db.insert(requests).values({
         apiKeyId: apiKey.id,
         organizationId: organization.id,
-        providerId: provider.slug,
+        providerId: providerId,
         modelId: model,
         requestType: "chat",
         promptTokens,
@@ -174,7 +183,7 @@ chatRouter.post("/completions", async (c) => {
     await db.insert(requests).values({
       apiKeyId: apiKey.id,
       organizationId: organization.id,
-      providerId: provider.slug,
+      providerId: providerId,
       modelId: model,
       requestType: "chat",
       status: "error",
