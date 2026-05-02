@@ -1,12 +1,9 @@
-FROM node:20-alpine AS base
-RUN apk add --no-cache curl libc6-compat
-# Install Bun
-RUN curl -fsSL https://bun.sh/install | bash
-ENV PATH="/root/.bun/bin:${PATH}"
+FROM oven/bun:1-alpine AS base
+RUN apk add --no-cache libc6-compat npm
 
 FROM base AS deps
 WORKDIR /app
-COPY package.json pnpm-workspace.yaml .npmrc ./
+COPY package.json pnpm-workspace.yaml .npmrc pnpm-lock.yaml ./
 COPY packages ./packages
 COPY apps/gateway/package.json ./apps/gateway/package.json
 RUN npm install -g pnpm@9.0.0 && pnpm install --frozen-lockfile

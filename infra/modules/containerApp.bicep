@@ -338,5 +338,20 @@ resource dashboardApp 'Microsoft.App/containerApps@2023-05-01' = {
   }
 }
 
+resource userWorkloadEnv 'Microsoft.App/managedEnvironments@2023-05-01' = {
+  name: '${name}-workloads'
+  location: location
+  properties: {
+    appLogsConfiguration: {
+      destination: 'log-analytics'
+      logAnalyticsConfiguration: {
+        customerId: logAnalytics.properties.customerId
+        sharedKey: logAnalytics.listKeys().primarySharedKey
+      }
+    }
+  }
+}
+
 output gatewayFqdn string = gatewayApp.properties.configuration.ingress.fqdn
 output dashboardFqdn string = dashboardApp.properties.configuration.ingress.fqdn
+output userWorkloadEnvId string = userWorkloadEnv.id

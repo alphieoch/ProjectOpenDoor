@@ -11,6 +11,8 @@ import {
   Key,
   TrendingUp,
 } from "lucide-react";
+import PricingCalculator from "@/components/pricing-calculator";
+import RateLimitPanel from "@/components/rate-limit-bar";
 
 export default async function DashboardPage() {
   const session = await requireAuth();
@@ -69,6 +71,11 @@ export default async function DashboardPage() {
           value={formatNumber(keyCount[0]?.count || 0)}
           icon={Key}
         />
+      </div>
+
+      <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <PricingCalculator />
+        <RateLimitPanel />
       </div>
 
       <div className="mt-8 rounded-lg border border-gray-200 bg-white p-6">

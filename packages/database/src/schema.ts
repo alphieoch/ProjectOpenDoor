@@ -25,6 +25,15 @@ export const requestTypeEnum = pgEnum("request_type", [
   "image",
 ]);
 
+export const deploymentStatusEnum = pgEnum("deployment_status", [
+  "pending",
+  "building",
+  "running",
+  "stopped",
+  "failed",
+  "deleting",
+]);
+
 export const organizations = pgTable("organizations", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: varchar("name", { length: 255 }).notNull(),
@@ -211,6 +220,7 @@ export const requests = pgTable(
     ),
     status: requestStatusEnum("status").notNull().default("success"),
     errorMessage: text("error_message"),
+    metadata: jsonb("metadata"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -273,6 +283,59 @@ export const invitations = pgTable(
     tokenIdx: uniqueIndex("invitations_token_idx").on(table.token),
     emailIdx: index("invitations_email_idx").on(table.email),
   })
+);
+
+export const deployments = pgTable(
+  "deployments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: uuid("organization_id")
+      .references(() => organizations.id)
+      .notNull(),
+    name: varchar("name", { length: 100 }).notNull(),
+    sourceType: varchar("source_type", { length: 50 }).notNull(), // "image" | "catalog"
+    sourceValue: text("source_value").notNull(), // image URL or catalog model ID
+    cpu: numeric("cpu", { precision: 4, scale: 2 }).notNull().default("0.5"),
+    memoryGb: numeric("memory_gb", { precision: 4, scale: 1 }).notNull().default("1.0"),
+    replicas: integer("replicas").notNull().default(1),
+    containerAppName: varchar("container_app_name", { length: 100 }),
+    fqdn: text("fqdn"),
+    azureResourceId: text("azure_resource_id"),
+    status: deploymentStatusEnum("status").notNull().default("pending"),
+    statusMessage: text("status_message"),
+    startedAt: timestamp("started_at", { withTimezone: true }),
+    stoppedAt: timestamp("stopped_at", { withTimezone: true }),
+    computeHoursBilled: numeric("compute_hours_billed", { precision: 12, scale: 4 }).default("0"),
+    computeCostUsd: numeric("compute_cost_usd", { precision: 12, scale: 4 }).default("0"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    orgIdx: index("deployments_org_idx").on(table.organizationId),
+    statusIdx: index("deployments_status_idx").on(table.status),
+  })
+);
+
+export const modelCatalog = pgTable(
+  "model_catalog",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    modelId: varchar("model_id", { length: 100 }).notNull().unique(),
+    displayName: varchar("display_name", { length: 255 }).notNull(),
+    description: text("description"),
+    huggingFaceRepo: varchar("hf_repo", { length: 255 }),
+    inferenceEngine: varchar("inference_engine", { length: 50 }).notNull().default("vllm"),
+    defaultCpu: numeric("default_cpu", { precision: 4, scale: 2 }).notNull().default("1.0"),
+    defaultMemoryGb: numeric("default_memory_gb", { precision: 4, scale: 1 }).notNull().default("2.0"),
+    enabled: boolean("enabled").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  }
 );
 
 export const usageDaily = pgTable(

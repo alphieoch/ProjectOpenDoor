@@ -15,7 +15,10 @@ export type AuditAction =
   | "billing.subscription_updated"
   | "billing.portal_opened"
   | "organization.updated"
-  | "settings.updated";
+  | "settings.updated"
+  | "deployment.created"
+  | "deployment.updated"
+  | "deployment.deleted";
 
 export interface AuditLogInput {
   organizationId: string;

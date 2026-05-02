@@ -186,3 +186,5 @@ output dashboardEndpoint string = !empty(dashboardCustomDomain)
   ? 'https://${dashboardCustomDomain}'
   : 'https://${frontDoor.outputs.dashboardHostName}'
 output registryLoginServer string = registry.outputs.loginServer
+output primaryWorkloadEnvId string = containerEnvPrimary.outputs.userWorkloadEnvId
+output secondaryWorkloadEnvId string = containerEnvSecondary.outputs.userWorkloadEnvId

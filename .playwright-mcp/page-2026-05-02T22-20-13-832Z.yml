@@ -1,0 +1,116 @@
+- generic [ref=e1]:
+  - button "Open Next.js Dev Tools" [ref=e26] [cursor=pointer]:
+    - img [ref=e27]
+  - alert [ref=e20]
+  - generic [ref=e30]:
+    - complementary [ref=e31]:
+      - generic [ref=e32]:
+        - img [ref=e33]
+        - generic [ref=e36]: OpenDoor
+      - navigation [ref=e37]:
+        - list [ref=e38]:
+          - listitem [ref=e39]:
+            - link "Overview" [active] [ref=e40] [cursor=pointer]:
+              - /url: /dashboard
+              - img [ref=e41]
+              - text: Overview
+          - listitem [ref=e46]:
+            - link "API Keys" [ref=e47] [cursor=pointer]:
+              - /url: /dashboard/api-keys
+              - img [ref=e48]
+              - text: API Keys
+          - listitem [ref=e52]:
+            - link "Usage" [ref=e53] [cursor=pointer]:
+              - /url: /dashboard/usage
+              - img [ref=e54]
+              - text: Usage
+          - listitem [ref=e56]:
+            - link "Pricing" [ref=e57] [cursor=pointer]:
+              - /url: /dashboard/pricing
+              - img [ref=e58]
+              - text: Pricing
+          - listitem [ref=e60]:
+            - link "Deployments" [ref=e61] [cursor=pointer]:
+              - /url: /dashboard/deployments
+              - img [ref=e62]
+              - text: Deployments
+          - listitem [ref=e65]:
+            - link "Billing" [ref=e66] [cursor=pointer]:
+              - /url: /dashboard/billing
+              - img [ref=e67]
+              - text: Billing
+          - listitem [ref=e69]:
+            - link "Playground" [ref=e70] [cursor=pointer]:
+              - /url: /dashboard/playground
+              - img [ref=e71]
+              - text: Playground
+          - listitem [ref=e73]:
+            - link "Team" [ref=e74] [cursor=pointer]:
+              - /url: /dashboard/team
+              - img [ref=e75]
+              - text: Team
+          - listitem [ref=e80]:
+            - link "Settings" [ref=e81] [cursor=pointer]:
+              - /url: /dashboard/settings
+              - img [ref=e82]
+              - text: Settings
+          - listitem [ref=e85]:
+            - link "Audit Logs" [ref=e86] [cursor=pointer]:
+              - /url: /dashboard/audit-logs
+              - img [ref=e87]
+              - text: Audit Logs
+      - button "Sign Out" [ref=e91] [cursor=pointer]:
+        - img [ref=e92]
+        - text: Sign Out
+    - main [ref=e95]:
+      - generic [ref=e144]:
+        - heading "Dashboard" [level=1] [ref=e145]
+        - paragraph [ref=e146]: Overview of your LLM usage in the last 30 days
+        - generic [ref=e147]:
+          - generic [ref=e149]:
+            - generic [ref=e150]:
+              - paragraph [ref=e151]: Total Requests
+              - paragraph [ref=e152]: "0"
+            - img [ref=e154]
+          - generic [ref=e157]:
+            - generic [ref=e158]:
+              - paragraph [ref=e159]: Total Tokens
+              - paragraph [ref=e160]: "0"
+            - img [ref=e162]
+          - generic [ref=e166]:
+            - generic [ref=e167]:
+              - paragraph [ref=e168]: Total Cost
+              - paragraph [ref=e169]: $0.0000
+            - img [ref=e171]
+          - generic [ref=e174]:
+            - generic [ref=e175]:
+              - paragraph [ref=e176]: API Keys
+              - paragraph [ref=e177]: "1"
+            - img [ref=e179]
+        - generic [ref=e183]:
+          - paragraph [ref=e185]: No pricing data available.
+          - generic [ref=e186]:
+            - heading "Rate Limits" [level=2] [ref=e187]
+            - paragraph [ref=e188]: Current usage against your API key limits
+            - generic [ref=e189]:
+              - generic [ref=e190]:
+                - generic [ref=e191]:
+                  - generic [ref=e192]: Requests / minute
+                  - generic [ref=e193]: 0 / 60
+                - paragraph [ref=e195]: 0% used
+              - generic [ref=e196]:
+                - generic [ref=e197]:
+                  - generic [ref=e198]: Tokens / minute
+                  - generic [ref=e199]: 0 / 100,000
+                - paragraph [ref=e201]: 0% used
+            - paragraph [ref=e202]: Resets at 23:21:07
+        - generic [ref=e203]:
+          - heading "Quick Start" [level=2] [ref=e204]
+          - generic [ref=e205]:
+            - paragraph [ref=e206]:
+              - text: 1. Create an API key from the
+              - link "API Keys" [ref=e207] [cursor=pointer]:
+                - /url: /dashboard/api-keys
+              - text: page.
+            - paragraph [ref=e208]: "2. Use the key to make requests to the gateway:"
+            - generic [ref=e209]: "curl https://api.opendoor.ai/v1/chat/completions \\ -H \"Authorization: Bearer YOUR_API_KEY\" \\ -H \"Content-Type: application/json\" \\ -d '{ \"model\": \"gpt-4o\", \"messages\": [{\"role\": \"user\", \"content\": \"Hello!\"}] }'"

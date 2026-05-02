@@ -13,6 +13,8 @@ import {
   Users,
   LogOut,
   DoorOpen,
+  Server,
+  Calculator,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -20,6 +22,8 @@ const navItems = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
   { href: "/dashboard/api-keys", label: "API Keys", icon: Key },
   { href: "/dashboard/usage", label: "Usage", icon: BarChart3 },
+  { href: "/dashboard/pricing", label: "Pricing", icon: Calculator },
+  { href: "/dashboard/deployments", label: "Deployments", icon: Server },
   { href: "/dashboard/billing", label: "Billing", icon: CreditCard },
   { href: "/dashboard/playground", label: "Playground", icon: Play },
   { href: "/dashboard/team", label: "Team", icon: Users },
