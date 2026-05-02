@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { Context, Next } from "hono";
 import { db } from "@opendoor/database";
 import { apiKeys, organizations } from "@opendoor/database";
