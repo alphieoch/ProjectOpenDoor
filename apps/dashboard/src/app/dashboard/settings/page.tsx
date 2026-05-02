@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Shield, Save, Loader2, Check, Globe } from "lucide-react";
+import { Shield, Save, Loader2, Check, Globe, Mail } from "lucide-react";
 
 interface SsoSettings {
   id: string;
@@ -235,6 +235,41 @@ export default function SettingsPage() {
               </p>
             </div>
           </div>
+        </div>
+
+        <div className="rounded-lg border border-gray-200 bg-white p-6">
+          <div className="flex items-center gap-2">
+            <Mail className="h-5 w-5 text-primary-600" />
+            <h2 className="text-lg font-semibold text-gray-900">
+              Email Notifications
+            </h2>
+          </div>
+          <p className="mt-1 text-sm text-gray-600">
+            Invitation emails are sent via Azure Communication Services. To
+            enable email delivery, set the following environment variables:
+          </p>
+          <div className="mt-4 space-y-3 font-mono text-xs text-gray-700">
+            <div className="rounded bg-gray-50 p-3">
+              <strong>AZURE_COMMUNICATION_CONNECTION_STRING</strong>
+              <p className="mt-1 text-gray-500">
+                Your Azure Communication Services connection string
+              </p>
+            </div>
+            <div className="rounded bg-gray-50 p-3">
+              <strong>EMAIL_SENDER_ADDRESS</strong>
+              <p className="mt-1 text-gray-500">
+                Verified sender domain email (e.g. noreply@opendoor.ai)
+              </p>
+            </div>
+          </div>
+          {!process.env.AZURE_COMMUNICATION_CONNECTION_STRING && (
+            <div className="mt-4 rounded-md bg-amber-50 p-3 text-sm text-amber-800">
+              <strong>Note:</strong> Email is currently in console-only mode.
+              Invitations will still work, but no emails will be sent. Set the
+              Azure Communication Services connection string to enable real
+              email delivery.
+            </div>
+          )}
         </div>
 
         <div className="flex items-center gap-3">

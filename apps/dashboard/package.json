@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@azure/communication-email": "^1.1.0",
     "@opendoor/database": "workspace:*",
     "@opendoor/shared": "workspace:*",
     "@workos-inc/node": "^9.1.1",

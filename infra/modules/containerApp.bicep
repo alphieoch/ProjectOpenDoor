@@ -50,6 +50,17 @@ param workosApiKey string = ''
 @description('WorkOS client ID')
 param workosClientId string = ''
 
+@description('Azure Communication Services connection string')
+@secure()
+param communicationConnectionString string = ''
+
+@description('Email sender address')
+param emailSenderAddress string = ''
+
+@description('Application Insights connection string')
+@secure()
+param appInsightsConnectionString string = ''
+
 @description('Container registry login server')
 param registryLoginServer string
 
@@ -151,6 +162,10 @@ resource gatewayApp 'Microsoft.App/containerApps@2023-05-01' = {
               secretRef: 'api-key-hash-secret'
             }
             {
+              name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
+              secretRef: 'app-insights-connection'
+            }
+            {
               name: 'AZURE_REGION'
               value: azureRegion
             }
@@ -226,6 +241,14 @@ resource dashboardApp 'Microsoft.App/containerApps@2023-05-01' = {
           name: 'workos-api-key'
           value: workosApiKey
         }
+        {
+          name: 'communication-connection'
+          value: communicationConnectionString
+        }
+        {
+          name: 'app-insights-connection'
+          value: appInsightsConnectionString
+        }
       ]
     }
     template: {
@@ -265,6 +288,18 @@ resource dashboardApp 'Microsoft.App/containerApps@2023-05-01' = {
             {
               name: 'WORKOS_CLIENT_ID'
               value: workosClientId
+            }
+            {
+              name: 'AZURE_COMMUNICATION_CONNECTION_STRING'
+              secretRef: 'communication-connection'
+            }
+            {
+              name: 'EMAIL_SENDER_ADDRESS'
+              value: emailSenderAddress
+            }
+            {
+              name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
+              secretRef: 'app-insights-connection'
             }
             {
               name: 'NEXT_PUBLIC_APP_URL'

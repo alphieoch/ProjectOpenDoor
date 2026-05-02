@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
-import { invitations, users } from "@opendoor/database";
+import { invitations, users, organizations } from "@opendoor/database";
 import { eq, and, isNull, gt } from "drizzle-orm";
 import { requireAuth } from "@/lib/auth";
 import { logAuditEvent } from "@/lib/audit";
+import { sendEmail, buildInviteEmail } from "@/lib/email";
 import { randomBytes } from "crypto";
 
 export async function GET() {
@@ -92,6 +93,32 @@ export async function POST(req: NextRequest) {
         expiresAt,
       })
       .returning();
+
+    // Send invitation email
+    try {
+      const org = await db.query.organizations.findFirst({
+        where: eq(organizations.id, orgId),
+        columns: { name: true },
+      });
+      const inviter = await db.query.users.findFirst({
+        where: eq(users.id, session.sub as string),
+        columns: { name: true, email: true },
+      });
+
+      const inviteLink = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/invite?token=${token}`;
+      const { subject, html, text } = buildInviteEmail({
+        inviteeEmail: email,
+        orgName: org?.name || "OpenDoor",
+        invitedByName: inviter?.name || inviter?.email || "A team member",
+        inviteLink,
+        role: role || "member",
+      });
+
+      await sendEmail({ to: email, subject, html, text });
+    } catch (emailErr) {
+      console.error("Failed to send invitation email:", emailErr);
+      // Don't fail the invitation creation if email fails
+    }
 
     await logAuditEvent({
       organizationId: orgId,

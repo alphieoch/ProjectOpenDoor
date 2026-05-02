@@ -58,6 +58,17 @@ param gatewayCustomDomain string = ''
 @description('Custom domain for dashboard')
 param dashboardCustomDomain string = ''
 
+@description('Azure Communication Services connection string')
+@secure()
+param communicationConnectionString string = ''
+
+@description('Email sender address')
+param emailSenderAddress string = ''
+
+@description('Application Insights connection string')
+@secure()
+param appInsightsConnectionString string = ''
+
 // Container Registry
 module registry 'modules/registry.bicep' = {
   name: 'registry'
@@ -106,6 +117,9 @@ module containerEnvPrimary 'modules/containerApp.bicep' = {
     appUrl: appUrl
     workosApiKey: workosApiKey
     workosClientId: workosClientId
+    communicationConnectionString: communicationConnectionString
+    emailSenderAddress: emailSenderAddress
+    appInsightsConnectionString: appInsightsConnectionString
     registryLoginServer: registry.outputs.loginServer
     registryUsername: registry.outputs.username
     registryPassword: registry.outputs.password
@@ -141,6 +155,9 @@ module containerEnvSecondary 'modules/containerApp.bicep' = {
     appUrl: appUrl
     workosApiKey: workosApiKey
     workosClientId: workosClientId
+    communicationConnectionString: communicationConnectionString
+    emailSenderAddress: emailSenderAddress
+    appInsightsConnectionString: appInsightsConnectionString
     registryLoginServer: registry.outputs.loginServer
     registryUsername: registry.outputs.username
     registryPassword: registry.outputs.password
