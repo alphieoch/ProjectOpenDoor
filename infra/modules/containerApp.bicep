@@ -43,6 +43,13 @@ param stripeEnterprisePriceId string = ''
 @description('Public app URL')
 param appUrl string = ''
 
+@description('WorkOS API key')
+@secure()
+param workosApiKey string = ''
+
+@description('WorkOS client ID')
+param workosClientId string = ''
+
 @description('Container registry login server')
 param registryLoginServer string
 
@@ -215,6 +222,10 @@ resource dashboardApp 'Microsoft.App/containerApps@2023-05-01' = {
           name: 'stripe-webhook-secret'
           value: stripeWebhookSecret
         }
+        {
+          name: 'workos-api-key'
+          value: workosApiKey
+        }
       ]
     }
     template: {
@@ -246,6 +257,14 @@ resource dashboardApp 'Microsoft.App/containerApps@2023-05-01' = {
             {
               name: 'STRIPE_ENTERPRISE_PRICE_ID'
               value: stripeEnterprisePriceId
+            }
+            {
+              name: 'WORKOS_API_KEY'
+              secretRef: 'workos-api-key'
+            }
+            {
+              name: 'WORKOS_CLIENT_ID'
+              value: workosClientId
             }
             {
               name: 'NEXT_PUBLIC_APP_URL'

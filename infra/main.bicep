@@ -45,6 +45,13 @@ param stripeEnterprisePriceId string = ''
 @description('Public app URL')
 param appUrl string = ''
 
+@description('WorkOS API key')
+@secure()
+param workosApiKey string = ''
+
+@description('WorkOS client ID')
+param workosClientId string = ''
+
 // Container Registry
 module registry 'modules/registry.bicep' = {
   name: 'registry'
@@ -91,6 +98,8 @@ module containerEnvPrimary 'modules/containerApp.bicep' = {
     stripeProPriceId: stripeProPriceId
     stripeEnterprisePriceId: stripeEnterprisePriceId
     appUrl: appUrl
+    workosApiKey: workosApiKey
+    workosClientId: workosClientId
     registryLoginServer: registry.outputs.loginServer
     registryUsername: registry.outputs.username
     registryPassword: registry.outputs.password
@@ -124,6 +133,8 @@ module containerEnvSecondary 'modules/containerApp.bicep' = {
     stripeProPriceId: stripeProPriceId
     stripeEnterprisePriceId: stripeEnterprisePriceId
     appUrl: appUrl
+    workosApiKey: workosApiKey
+    workosClientId: workosClientId
     registryLoginServer: registry.outputs.loginServer
     registryUsername: registry.outputs.username
     registryPassword: registry.outputs.password
