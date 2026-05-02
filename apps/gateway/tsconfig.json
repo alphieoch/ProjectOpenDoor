@@ -1,0 +1,20 @@
+{
+  "extends": "@opendoor/config/typescript/base.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "strict": false,
+    "noImplicitAny": false,
+    "noEmitOnError": false,
+    "moduleResolution": "bundler",
+    "module": "ESNext",
+    "paths": {
+      "@opendoor/database": ["../../packages/database/src"],
+      "@opendoor/database/*": ["../../packages/database/src/*"],
+      "@opendoor/shared": ["../../packages/shared/src"],
+      "@opendoor/shared/*": ["../../packages/shared/src/*"]
+    }
+  },
+  "include": ["src"]
+}

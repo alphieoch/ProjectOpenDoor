@@ -1,0 +1,22 @@
+{
+  "name": "opendoor",
+  "private": true,
+  "version": "1.0.0",
+  "description": "OpenDoor — Multi-region LLM API Gateway on Azure",
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "turbo run lint",
+    "db:generate": "pnpm --filter @opendoor/database db:generate",
+    "db:migrate": "pnpm --filter @opendoor/database db:migrate",
+    "db:studio": "pnpm --filter @opendoor/database db:studio",
+    "gateway:dev": "pnpm --filter @opendoor/gateway dev",
+    "dashboard:dev": "pnpm --filter @opendoor/dashboard dev",
+    "typecheck": "turbo run typecheck"
+  },
+  "devDependencies": {
+    "turbo": "^2.0.0",
+    "typescript": "^5.4.0"
+  },
+  "packageManager": "pnpm@9.0.0"
+}

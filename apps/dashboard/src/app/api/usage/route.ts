@@ -1,0 +1,36 @@
+import { NextRequest, NextResponse } from "next/server";
+import { getDb } from "@/lib/db";
+import { requests } from "@opendoor/database";
+import { eq, and, gte, sql } from "drizzle-orm";
+import { requireAuth } from "@/lib/auth";
+
+export async function GET(req: NextRequest) {
+  const session = await requireAuth();
+  const orgId = session.orgId as string;
+
+  const { searchParams } = new URL(req.url);
+  const days = parseInt(searchParams.get("days") || "30", 10);
+  const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+  const db = getDb();
+  const daily = await db
+    .select({
+      date: sql<string>`DATE(${requests.createdAt})`,
+      requests: sql<number>`COUNT(*)`,
+      promptTokens: sql<number>`SUM(${requests.promptTokens})`,
+      completionTokens: sql<number>`SUM(${requests.completionTokens})`,
+      totalTokens: sql<number>`SUM(${requests.totalTokens})`,
+      costUsd: sql<number>`SUM(${requests.costUsd})`,
+    })
+    .from(requests)
+    .where(
+      and(
+        eq(requests.organizationId, orgId),
+        gte(requests.createdAt, since)
+      )
+    )
+    .groupBy(sql`DATE(${requests.createdAt})`)
+    .orderBy(sql`DATE(${requests.createdAt})`);
+
+  return NextResponse.json({ daily });
+}

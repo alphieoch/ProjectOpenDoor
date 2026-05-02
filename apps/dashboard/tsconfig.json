@@ -1,0 +1,17 @@
+{
+  "extends": "@opendoor/config/typescript/nextjs.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": [
+        "./src/*"
+      ]
+    },
+    "isolatedModules": true
+  },
+  "include": [
+    "../../packages/config/typescript/src",
+    "../../packages/config/typescript/.next/types/**/*.ts",
+    ".next/types/**/*.ts"
+  ]
+}
