@@ -8,6 +8,7 @@ import {
   BarChart3,
   CreditCard,
   Play,
+  Settings,
   LogOut,
   DoorOpen,
 } from "lucide-react";
@@ -19,6 +20,7 @@ const navItems = [
   { href: "/dashboard/usage", label: "Usage", icon: BarChart3 },
   { href: "/dashboard/billing", label: "Billing", icon: CreditCard },
   { href: "/dashboard/playground", label: "Playground", icon: Play },
+  { href: "/dashboard/settings", label: "Settings", icon: Settings },
 ];
 
 export default function Sidebar() {

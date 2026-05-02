@@ -26,6 +26,19 @@ chatRouter.post("/completions", async (c) => {
     return c.json({ error: "Messages are required" }, 400);
   }
 
+  // Check model permissions
+  const allowedModels = apiKey.allowedModels as string[] | null;
+  if (allowedModels && allowedModels.length > 0) {
+    if (!allowedModels.includes(body.model)) {
+      return c.json(
+        {
+          error: `Model '${body.model}' is not allowed for this API key. Allowed models: ${allowedModels.join(", ")}`,
+        },
+        403
+      );
+    }
+  }
+
   const resolved = await resolveProvider(body.model);
   if (!resolved) {
     return c.json({ error: `Model not found: ${body.model}` }, 404);

@@ -19,6 +19,7 @@ export async function GET() {
       id: true,
       name: true,
       keyPrefix: true,
+      allowedModels: true,
       createdAt: true,
       lastUsedAt: true,
     },
@@ -30,7 +31,7 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   const session = await requireAuth();
   const orgId = session.orgId as string;
-  const { name } = await req.json();
+  const { name, allowedModels } = await req.json();
 
   const rawKey = `opd_${randomBytes(32).toString("hex")}`;
   const prefix = rawKey.slice(0, 16);
@@ -42,6 +43,7 @@ export async function POST(req: NextRequest) {
     keyHash: hash,
     keyPrefix: prefix,
     organizationId: orgId,
+    allowedModels: allowedModels && allowedModels.length > 0 ? allowedModels : null,
   });
 
   return NextResponse.json({ key: rawKey });

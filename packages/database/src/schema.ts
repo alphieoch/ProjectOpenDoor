@@ -38,6 +38,10 @@ export const organizations = pgTable("organizations", {
   stripeSubscriptionId: varchar("stripe_subscription_id", { length: 255 }),
   stripePriceId: varchar("stripe_price_id", { length: 255 }),
   subscriptionStatus: varchar("subscription_status", { length: 50 }).default("inactive"),
+  workosOrganizationId: varchar("workos_organization_id", { length: 255 }),
+  workosConnectionId: varchar("workos_connection_id", { length: 255 }),
+  ssoEnabled: boolean("sso_enabled").default(false),
+  ssoDefaultRole: varchar("sso_default_role", { length: 50 }).default("member"),
   metadata: jsonb("metadata"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
@@ -74,6 +78,7 @@ export const apiKeys = pgTable(
       .notNull(),
     revokedAt: timestamp("revoked_at", { withTimezone: true }),
     lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+    allowedModels: jsonb("allowed_models"),
     rateLimitRpm: integer("rate_limit_rpm").default(60),
     rateLimitTpm: integer("rate_limit_tpm").default(100000),
     createdAt: timestamp("created_at", { withTimezone: true })
