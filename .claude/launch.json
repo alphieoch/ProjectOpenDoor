@@ -1,0 +1,27 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "Dashboard",
+      "runtimeExecutable": "bun",
+      "runtimeArgs": ["next", "dev"],
+      "cwd": "apps/dashboard",
+      "port": 3000,
+      "autoPort": false
+    },
+    {
+      "name": "Gateway",
+      "runtimeExecutable": "bun",
+      "runtimeArgs": ["--watch", "src/index.ts"],
+      "cwd": "apps/gateway",
+      "port": 3001
+    },
+    {
+      "name": "Docs",
+      "runtimeExecutable": "bun",
+      "runtimeArgs": ["run", "start", "--port", "3002"],
+      "cwd": "apps/docs",
+      "port": 3002
+    }
+  ]
+}

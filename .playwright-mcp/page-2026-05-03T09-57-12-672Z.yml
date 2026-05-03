@@ -1,0 +1,214 @@
+- generic [ref=e2]:
+  - complementary [ref=e3]:
+    - generic [ref=e4]:
+      - generic [ref=e7]: O
+      - generic [ref=e8]: OpenDoor
+    - generic [ref=e9] [cursor=pointer]:
+      - generic [ref=e10]: A
+      - generic [ref=e11]:
+        - generic [ref=e12]: Acme Robotics
+        - generic [ref=e13]: Pro · 142 seats
+      - img [ref=e14]
+    - generic [ref=e16]:
+      - generic [ref=e17]:
+        - button "Workspace" [ref=e18] [cursor=pointer]:
+          - generic [ref=e19]: Workspace
+          - img [ref=e20]
+        - generic [ref=e22]:
+          - link "Overview" [ref=e23] [cursor=pointer]:
+            - /url: /dashboard
+            - img [ref=e24]
+            - generic [ref=e29]: Overview
+          - link "API Keys" [ref=e30] [cursor=pointer]:
+            - /url: /dashboard/api-keys
+            - img [ref=e31]
+            - generic [ref=e35]: API Keys
+          - link "Usage" [ref=e36] [cursor=pointer]:
+            - /url: /dashboard/usage
+            - img [ref=e37]
+            - generic [ref=e39]: Usage
+          - link "Pricing" [ref=e40] [cursor=pointer]:
+            - /url: /dashboard/pricing
+            - img [ref=e41]
+            - generic [ref=e43]: Pricing
+          - link "Deployments 5" [ref=e44] [cursor=pointer]:
+            - /url: /dashboard/deployments
+            - img [ref=e45]
+            - generic [ref=e48]: Deployments
+            - generic [ref=e49]: "5"
+          - link "Billing" [ref=e50] [cursor=pointer]:
+            - /url: /dashboard/billing
+            - img [ref=e51]
+            - generic [ref=e53]: Billing
+          - link "Playground" [ref=e54] [cursor=pointer]:
+            - /url: /dashboard/playground
+            - img [ref=e55]
+            - generic [ref=e57]: Playground
+          - link "Team" [ref=e58] [cursor=pointer]:
+            - /url: /dashboard/team
+            - img [ref=e59]
+            - generic [ref=e64]: Team
+          - link "Settings" [ref=e65] [cursor=pointer]:
+            - /url: /dashboard/settings
+            - img [ref=e66]
+            - generic [ref=e69]: Settings
+          - link "Audit Logs" [ref=e70] [cursor=pointer]:
+            - /url: /dashboard/audit-logs
+            - img [ref=e71]
+            - generic [ref=e74]: Audit Logs
+      - generic [ref=e75]:
+        - button "Governance" [ref=e76] [cursor=pointer]:
+          - generic [ref=e77]: Governance
+          - img [ref=e78]
+        - generic [ref=e80]:
+          - link "Trust Center" [ref=e81] [cursor=pointer]:
+            - /url: /dashboard/governance
+            - img [ref=e82]
+            - generic [ref=e85]: Trust Center
+          - link "Policies" [ref=e86] [cursor=pointer]:
+            - /url: /dashboard/governance/policies
+            - img [ref=e87]
+            - generic [ref=e93]: Policies
+          - link "Violations 3" [ref=e94] [cursor=pointer]:
+            - /url: /dashboard/governance/violations
+            - img [ref=e95]
+            - generic [ref=e97]: Violations
+            - generic [ref=e98]: "3"
+          - link "Approvals" [ref=e99] [cursor=pointer]:
+            - /url: /dashboard/governance/approvals
+            - img [ref=e100]
+            - generic [ref=e104]: Approvals
+          - link "Compliance" [ref=e105] [cursor=pointer]:
+            - /url: /dashboard/governance/compliance
+            - img [ref=e106]
+            - generic [ref=e109]: Compliance
+          - link "Sector Packs" [ref=e110] [cursor=pointer]:
+            - /url: /dashboard/governance/sector-templates
+            - img [ref=e111]
+            - generic [ref=e115]: Sector Packs
+    - generic [ref=e116]:
+      - heading "Invite your team" [level=4] [ref=e117]
+      - paragraph [ref=e118]: New members get access to API keys, usage, and audit trails.
+      - link "Invite people" [ref=e119] [cursor=pointer]:
+        - /url: /dashboard/team
+        - img [ref=e120]
+        - text: Invite people
+    - generic [ref=e123]:
+      - generic [ref=e124]: U
+      - generic [ref=e125]:
+        - generic [ref=e126]: Your Account
+        - generic [ref=e127]: OpenDoor Pro
+      - button "Sign out" [ref=e128] [cursor=pointer]:
+        - img [ref=e129]
+  - generic [ref=e132]:
+    - generic [ref=e133]:
+      - generic [ref=e134]:
+        - generic [ref=e135]: Workspace
+        - generic [ref=e136]: ›
+        - strong [ref=e137]: Overview
+      - generic [ref=e138]:
+        - img [ref=e139]
+        - generic [ref=e142]: Search models, keys, policies…
+        - generic [ref=e143]: ⌘K
+      - generic [ref=e144]:
+        - button [ref=e145] [cursor=pointer]:
+          - img [ref=e146]
+        - button [ref=e149] [cursor=pointer]:
+          - img [ref=e150]
+        - link "Docs" [ref=e154] [cursor=pointer]:
+          - /url: https://docs.opendoor.ai
+          - img [ref=e155]
+          - text: Docs
+    - main [ref=e159]:
+      - generic [ref=e160]:
+        - generic [ref=e161]:
+          - generic [ref=e162]:
+            - generic [ref=e163]: Sun, May 3
+            - heading "Welcome back." [level=1] [ref=e164]
+            - heading "How can I help you today?" [level=1] [ref=e165]
+          - generic [ref=e166]:
+            - button "Ask AI" [ref=e167] [cursor=pointer]:
+              - img [ref=e168]
+              - text: Ask AI
+            - link "Usage updates" [ref=e170] [cursor=pointer]:
+              - /url: /dashboard/usage
+            - link "Create API key" [ref=e171] [cursor=pointer]:
+              - /url: /dashboard/api-keys
+              - img [ref=e172]
+              - text: Create API key
+        - generic [ref=e176]:
+          - generic [ref=e177]:
+            - generic [ref=e178]:
+              - img [ref=e179]
+              - text: Requests
+            - generic [ref=e181]: "0"
+            - generic [ref=e182]: ↑ +18.4%
+          - generic [ref=e183]:
+            - generic [ref=e184]:
+              - img [ref=e185]
+              - text: Tokens
+            - generic [ref=e188]: "0"
+            - generic [ref=e189]: ↑ +21.7%
+          - generic [ref=e190]:
+            - generic [ref=e191]:
+              - img [ref=e192]
+              - text: Spend
+            - generic [ref=e194]: $0.0000
+            - generic [ref=e195]: ↑ +14.2%
+          - generic [ref=e196]:
+            - generic [ref=e197]:
+              - img [ref=e198]
+              - text: P50 Latency
+            - generic [ref=e201]: —
+            - generic [ref=e202]: ↑ −3.8% faster
+        - generic [ref=e203]:
+          - generic [ref=e204]:
+            - generic [ref=e205]:
+              - generic [ref=e206]: Access
+              - heading "API Keys" [level=2] [ref=e207]
+            - generic [ref=e208]:
+              - generic [ref=e209]:
+                - generic [ref=e210]: "0"
+                - generic [ref=e211]: active keys
+              - link "Manage" [ref=e212] [cursor=pointer]:
+                - /url: /dashboard/api-keys
+                - img [ref=e213]
+                - text: Manage
+                - img [ref=e217]
+          - generic [ref=e219]:
+            - generic [ref=e220]: Quick nav
+            - generic [ref=e221]:
+              - link "Usage & Costs" [ref=e222] [cursor=pointer]:
+                - /url: /dashboard/usage
+                - img [ref=e223]
+                - text: Usage & Costs
+                - img [ref=e226]
+              - link "Playground" [ref=e228] [cursor=pointer]:
+                - /url: /dashboard/playground
+                - img [ref=e229]
+                - text: Playground
+                - img [ref=e231]
+              - link "Trust Center" [ref=e233] [cursor=pointer]:
+                - /url: /dashboard/governance
+                - img [ref=e234]
+                - text: Trust Center
+                - img [ref=e238]
+              - link "Billing" [ref=e240] [cursor=pointer]:
+                - /url: /dashboard/billing
+                - img [ref=e241]
+                - text: Billing
+                - img [ref=e243]
+        - generic [ref=e247]:
+          - generic [ref=e248]: Quick start
+          - heading "Make your first call." [level=2] [ref=e249]
+          - paragraph [ref=e250]: Drop the gateway URL in your existing OpenAI client. No SDK changes — just point and go.
+          - generic [ref=e251]:
+            - button "Copy snippet" [ref=e252] [cursor=pointer]:
+              - img [ref=e253]
+              - text: Copy snippet
+            - link "Read docs" [ref=e256] [cursor=pointer]:
+              - /url: /dashboard/api-keys
+              - text: Read docs
+              - img [ref=e257]
+        - button "Ask AI" [ref=e259] [cursor=pointer]:
+          - img [ref=e260]

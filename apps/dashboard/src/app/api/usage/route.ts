@@ -3,6 +3,10 @@ import { getDb } from "@/lib/db";
 import { requests } from "@opendoor/database";
 import { eq, and, gte, sql } from "drizzle-orm";
 import { requireAuth } from "@/lib/auth";
+import {
+  DuckDBAnalyticsClient,
+  getUsageDaily,
+} from "@opendoor/analytics";
 
 export async function GET(req: NextRequest) {
   const session = await requireAuth();
@@ -12,6 +16,25 @@ export async function GET(req: NextRequest) {
   const days = parseInt(searchParams.get("days") || "30", 10);
   const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
 
+  // ── DuckDB path for large ranges (> 7 days) ───────────────────────────────
+  if (days > 7) {
+    const client = new DuckDBAnalyticsClient();
+    if (client.isEnabled()) {
+      try {
+        await client.init();
+        const daily = await getUsageDaily(client, {
+          organizationId: orgId,
+          dateFrom: since,
+        });
+        return NextResponse.json({ daily, engine: "duckdb" });
+      } catch (err) {
+        console.error("[DuckDB] Dashboard usage failed, falling back:", err);
+        // Fall through to Drizzle
+      }
+    }
+  }
+
+  // ── Default Drizzle path ──────────────────────────────────────────────────
   const db = getDb();
   const daily = await db
     .select({

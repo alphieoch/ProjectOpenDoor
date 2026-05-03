@@ -14,6 +14,22 @@ declare module "hono" {
       id: string;
       name: string;
       slug: string;
+      plan: string;
+      creditsUsdCents?: number | null;
+    };
+    chatRequestBody?: {
+      model?: string;
+      messages?: Array<{ content?: string }>;
+      max_tokens?: number;
+      stream?: boolean;
+    };
+    billingContext?: {
+      plan: "free" | "pro" | "enterprise";
+      family: "closed" | "open_weight";
+      providerSlug: string;
+      useFromPlan: boolean;
+      useFromCredits: boolean;
+      estimatedCostUsd?: number;
     };
   }
 }

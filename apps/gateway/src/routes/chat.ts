@@ -1,15 +1,33 @@
 // @ts-nocheck
 import { Hono } from "hono";
-import { db, requests, providers } from "@opendoor/database";
+import { db, requests, providers, models } from "@opendoor/database";
 import type { ChatCompletionRequest } from "@opendoor/shared";
 import { resolveProvider, getProvider, getFallbackChain } from "../providers/index.js";
 import { calculateCost } from "../utils/pricing.js";
 import { encodeSSE, encodeSSEDone } from "../utils/streaming.js";
 import { recordTokens } from "../middleware/rate-limit.js";
 import { estimateTokens } from "../utils/streaming.js";
-import { eq } from "drizzle-orm";
+import { debitUsage, shouldUsePlanBudget, usdToCents } from "../utils/billing.js";
+import { eq, and } from "drizzle-orm";
+import {
+  assistantChoicesFromText,
+  captureAiGeneration,
+  captureGatewayEvent,
+  sanitizeMessagesForAi,
+} from "../lib/posthog.js";
 
 const chatRouter = new Hono();
+
+function normalizeFamily(
+  preferred: "closed" | "open_weight" | undefined,
+  providerSlug: string
+): "closed" | "open_weight" {
+  if (preferred) return preferred;
+  if (providerSlug === "deepseek" || providerSlug === "qwen" || providerSlug === "mistral") {
+    return "open_weight";
+  }
+  return "closed";
+}
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -46,10 +64,20 @@ async function tryProvider(
 
 chatRouter.post("/completions", async (c) => {
   const startTime = Date.now();
-  const body = (await c.req.json()) as ChatCompletionRequest;
+  const body = ((c.get("chatRequestBody") as ChatCompletionRequest | undefined) ||
+    ((await c.req.json()) as ChatCompletionRequest));
   const apiKey = c.get("apiKey");
   const organization = c.get("organization");
+  const billingContext = c.get("billingContext");
   const region = process.env.AZURE_REGION || "unknown";
+  const policyResult = c.get("policyResult");
+  const dataClass = c.get("dataClass") || "internal";
+  const overrideModel = c.get("overrideModel");
+
+  // Apply policy fallback model override
+  if (overrideModel) {
+    body.model = overrideModel;
+  }
 
   if (!body.model) {
     return c.json({ error: "Model is required" }, 400);
@@ -72,9 +100,97 @@ chatRouter.post("/completions", async (c) => {
     }
   }
 
+  // Check if model exists and its deployment status
+  const modelRows = await db
+    .select({ deploymentStatus: models.deploymentStatus, displayName: models.displayName })
+    .from(models)
+    .where(eq(models.modelId, body.model))
+    .limit(1);
+
+  const modelStatus = modelRows[0]?.deploymentStatus || null;
+
+  if (modelStatus === "available_on_request") {
+    return c.json(
+      {
+        error: `Model '${body.model}' is available upon request`,
+        message: `This model is not currently deployed. Contact your administrator to enable '${modelRows[0]?.displayName || body.model}'`,
+        status: "available_on_request",
+        model: body.model,
+      },
+      400
+    );
+  }
+
+  if (modelStatus === "coming_soon") {
+    return c.json(
+      {
+        error: `Model '${body.model}' is coming soon`,
+        message: `'${modelRows[0]?.displayName || body.model}' will be available shortly. Check back soon or contact your administrator for early access.`,
+        status: "coming_soon",
+        model: body.model,
+      },
+      400
+    );
+  }
+
   const resolved = await resolveProvider(body.model);
   if (!resolved) {
     return c.json({ error: `Model not found: ${body.model}` }, 404);
+  }
+
+  // Pre-authorize affordability before provider execution.
+  try {
+    const promptTokensEstimate = body.messages.reduce((sum, m) => {
+      const content =
+        typeof m?.content === "string" ? m.content : JSON.stringify(m?.content ?? "");
+      return sum + estimateTokens(content);
+    }, 0);
+    const completionEstimate =
+      typeof body.max_tokens === "number" && body.max_tokens > 0 ? body.max_tokens : 1024;
+    const requestFamily = normalizeFamily(
+      billingContext?.family as "closed" | "open_weight" | undefined,
+      resolved.provider.slug
+    );
+    const estimatedCost = await calculateCost({
+      providerSlug: resolved.provider.slug,
+      modelId: body.model,
+      promptTokens: promptTokensEstimate,
+      completionTokens: completionEstimate,
+      region,
+      plan: (billingContext?.plan || organization.plan || "free") as
+        | "free"
+        | "pro"
+        | "enterprise",
+      family: requestFamily,
+    });
+    const estimatedCostCents = usdToCents(estimatedCost.totalCost);
+    const canUsePlan = await shouldUsePlanBudget(
+      organization.id,
+      (billingContext?.plan || organization.plan || "free") as
+        | "free"
+        | "pro"
+        | "enterprise",
+      estimatedCostCents
+    );
+    const credits = Number(organization.creditsUsdCents || 0);
+
+    if (!canUsePlan && credits < estimatedCostCents) {
+      return c.json(
+        {
+          error: "Insufficient balance",
+          detail:
+            "Your current 4-hour plan allowance and prepaid credits cannot cover this request estimate.",
+          estimatedCostUsd: estimatedCost.totalCost,
+          creditsUsdCents: credits,
+          topupUrl: `${
+            process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
+          }/dashboard/billing`,
+        },
+        402
+      );
+    }
+  } catch {
+    // If cost estimate is unavailable, do not block the request.
   }
 
   // Build fallback chain
@@ -132,6 +248,8 @@ chatRouter.post("/completions", async (c) => {
           async start(controller) {
             let promptTokens = 0;
             let completionTokens = 0;
+            let assistantText = "";
+            let firstTokenAt: number | null = null;
 
             try {
               // Estimate prompt tokens
@@ -143,6 +261,8 @@ chatRouter.post("/completions", async (c) => {
               for await (const chunk of result.streamGenerator) {
                 for (const choice of chunk.choices) {
                   if (choice.delta && choice.delta.content) {
+                    if (firstTokenAt === null) firstTokenAt = Date.now();
+                    assistantText += choice.delta.content;
                     completionTokens += estimateTokens(choice.delta.content);
                   }
                 }
@@ -155,24 +275,35 @@ chatRouter.post("/completions", async (c) => {
 
               const totalTokens = promptTokens + completionTokens;
               let costUsd = 0;
+              const requestFamily = normalizeFamily(
+                billingContext?.family as "closed" | "open_weight" | undefined,
+                usedProviderSlug
+              );
               try {
-                const cost = await calculateCost(
-                  usedProviderSlug,
-                  resolved.model,
+                const cost = await calculateCost({
+                  providerSlug: usedProviderSlug,
+                  modelId: body.model,
                   promptTokens,
                   completionTokens,
-                  region
-                );
+                  region,
+                  plan: (billingContext?.plan || organization.plan || "free") as
+                    | "free"
+                    | "pro"
+                    | "enterprise",
+                  family: requestFamily,
+                });
                 costUsd = cost.totalCost;
               } catch {
                 // pricing not configured
               }
 
-              await db.insert(requests).values({
+              const inserted = await db
+                .insert(requests)
+                .values({
                 apiKeyId: apiKey.id,
                 organizationId: organization.id,
                 providerId: providerId || usedProviderSlug,
-                modelId: resolved.model,
+                modelId: body.model,
                 requestType: "chat",
                 promptTokens,
                 completionTokens,
@@ -181,10 +312,61 @@ chatRouter.post("/completions", async (c) => {
                 costUsd: costUsd.toString(),
                 status: "success",
                 region,
-                metadata: fallbackFrom ? { fallbackFrom, providerChain: chainSlugs } : undefined,
-              });
+                dataClass,
+                policyViolationId: policyResult?.violationId || undefined,
+                guardrailOutcome: policyResult?.guardrailResults || undefined,
+                metadata: {
+                  fallbackFrom,
+                  providerChain: chainSlugs,
+                  originalModel: c.get("originalModel"),
+                  policyAction: policyResult?.action,
+                  governanceModelId: policyResult?.governance?.id,
+                  businessUnit: c.get("businessUnit"),
+                  clientId: c.get("clientId"),
+                },
+                })
+                .returning({ id: requests.id });
+
+              if (costUsd > 0) {
+                try {
+                  await debitUsage(organization.id, costUsd, inserted[0]?.id, {
+                    plan: (billingContext?.plan || organization.plan || "free") as
+                      | "free"
+                      | "pro"
+                      | "enterprise",
+                    family: requestFamily,
+                    providerSlug: usedProviderSlug,
+                    useFromPlan: Boolean(billingContext?.useFromPlan),
+                    useFromCredits: !billingContext?.useFromPlan,
+                  });
+                } catch (billingError) {
+                  console.error("Failed to debit usage after stream completion:", billingError);
+                }
+              }
 
               await recordTokens(apiKey.keyPrefix, totalTokens);
+
+              const latencySec = (Date.now() - startTime) / 1000;
+              captureAiGeneration({
+                distinctId: organization.id,
+                model: body.model,
+                providerSlug: usedProviderSlug,
+                input: sanitizeMessagesForAi(body.messages),
+                outputChoices: assistantChoicesFromText(assistantText),
+                inputTokens: promptTokens,
+                outputTokens: completionTokens,
+                latencySeconds: latencySec,
+                stream: true,
+                timeToFirstTokenSeconds:
+                  firstTokenAt != null
+                    ? (firstTokenAt - startTime) / 1000
+                    : undefined,
+                extra: {
+                  organization_id: organization.id,
+                  region,
+                  request_id: inserted[0]?.id,
+                },
+              });
             } catch (error: any) {
               controller.enqueue(
                 new TextEncoder().encode(
@@ -204,7 +386,17 @@ chatRouter.post("/completions", async (c) => {
                 latencyMs: Date.now() - startTime,
                 costUsd: "0",
                 region,
-                metadata: fallbackFrom ? { fallbackFrom, providerChain: chainSlugs } : undefined,
+                dataClass,
+                policyViolationId: policyResult?.violationId || undefined,
+                guardrailOutcome: policyResult?.guardrailResults || undefined,
+                metadata: {
+                  fallbackFrom,
+                  providerChain: chainSlugs,
+                  originalModel: c.get("originalModel"),
+                  policyAction: policyResult?.action,
+                  businessUnit: c.get("businessUnit"),
+                  clientId: c.get("clientId"),
+                },
               });
             } finally {
               controller.close();
@@ -220,24 +412,35 @@ chatRouter.post("/completions", async (c) => {
         const totalTokens = response.usage.total_tokens;
 
         let costUsd = 0;
+        const requestFamily = normalizeFamily(
+          billingContext?.family as "closed" | "open_weight" | undefined,
+          usedProviderSlug
+        );
         try {
-          const cost = await calculateCost(
-            usedProviderSlug,
-            resolved.model,
+          const cost = await calculateCost({
+            providerSlug: usedProviderSlug,
+            modelId: body.model,
             promptTokens,
             completionTokens,
-            region
-          );
+            region,
+            plan: (billingContext?.plan || organization.plan || "free") as
+              | "free"
+              | "pro"
+              | "enterprise",
+            family: requestFamily,
+          });
           costUsd = cost.totalCost;
         } catch {
           // pricing not configured
         }
 
-        await db.insert(requests).values({
+        const inserted = await db
+          .insert(requests)
+          .values({
           apiKeyId: apiKey.id,
           organizationId: organization.id,
           providerId: providerId || usedProviderSlug,
-          modelId: resolved.model,
+          modelId: body.model,
           requestType: "chat",
           promptTokens,
           completionTokens,
@@ -246,10 +449,65 @@ chatRouter.post("/completions", async (c) => {
           costUsd: costUsd.toString(),
           status: "success",
           region,
-          metadata: fallbackFrom ? { fallbackFrom, providerChain: chainSlugs } : undefined,
-        });
+          dataClass,
+          policyViolationId: policyResult?.violationId || undefined,
+          guardrailOutcome: policyResult?.guardrailResults || undefined,
+          metadata: {
+            fallbackFrom,
+            providerChain: chainSlugs,
+            originalModel: c.get("originalModel"),
+            policyAction: policyResult?.action,
+            governanceModelId: policyResult?.governance?.id,
+            businessUnit: c.get("businessUnit"),
+            clientId: c.get("clientId"),
+          },
+          })
+          .returning({ id: requests.id });
+
+        if (costUsd > 0) {
+          try {
+            await debitUsage(organization.id, costUsd, inserted[0]?.id, {
+              plan: (billingContext?.plan || organization.plan || "free") as
+                | "free"
+                | "pro"
+                | "enterprise",
+              family: requestFamily,
+              providerSlug: usedProviderSlug,
+              useFromPlan: Boolean(billingContext?.useFromPlan),
+              useFromCredits: !billingContext?.useFromPlan,
+            });
+          } catch (billingError) {
+            console.error("Failed to debit usage after completion:", billingError);
+          }
+        }
 
         await recordTokens(apiKey.keyPrefix, totalTokens);
+
+        const latencySec = (Date.now() - startTime) / 1000;
+        const outputChoices =
+          response.choices?.map((c: any) => ({
+            role: c.message?.role,
+            content:
+              typeof c.message?.content === "string"
+                ? c.message.content.slice(0, 8000)
+                : JSON.stringify(c.message?.content ?? "").slice(0, 8000),
+          })) ?? [];
+        captureAiGeneration({
+          distinctId: organization.id,
+          model: body.model,
+          providerSlug: usedProviderSlug,
+          input: sanitizeMessagesForAi(body.messages),
+          outputChoices,
+          inputTokens: promptTokens,
+          outputTokens: completionTokens,
+          latencySeconds: latencySec,
+          stream: false,
+          extra: {
+            organization_id: organization.id,
+            region,
+            request_id: inserted[0]?.id,
+          },
+        });
 
         return c.json(response);
       }
@@ -264,14 +522,30 @@ chatRouter.post("/completions", async (c) => {
     apiKeyId: apiKey.id,
     organizationId: organization.id,
     providerId: providerId || chainSlugs[0],
-    modelId: resolved.model,
+    modelId: body.model,
     requestType: "chat",
     status: "error",
     errorMessage: lastError?.message || "All providers failed",
     latencyMs: Date.now() - startTime,
     costUsd: "0",
     region,
-    metadata: { providerChain: chainSlugs, allFailed: true },
+    dataClass,
+    policyViolationId: policyResult?.violationId || undefined,
+    guardrailOutcome: policyResult?.guardrailResults || undefined,
+    metadata: {
+      providerChain: chainSlugs,
+      allFailed: true,
+      originalModel: c.get("originalModel"),
+      policyAction: policyResult?.action,
+      businessUnit: c.get("businessUnit"),
+      clientId: c.get("clientId"),
+    },
+  });
+
+  captureGatewayEvent(organization.id, "gateway_chat_all_providers_failed", {
+    model: body.model,
+    error: lastError?.message,
+    tried_providers: chainSlugs,
   });
 
   return c.json(

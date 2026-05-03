@@ -43,7 +43,6 @@ export default function ApiKeysPage() {
   const [loading, setLoading] = useState(false);
   const [fullAccess, setFullAccess] = useState(true);
   const [selectedModels, setSelectedModels] = useState<string[]>([]);
-  const [showModelSelector, setShowModelSelector] = useState(false);
 
   async function fetchKeys() {
     const res = await fetch("/api/keys");
@@ -53,9 +52,7 @@ export default function ApiKeysPage() {
     }
   }
 
-  useEffect(() => {
-    fetchKeys();
-  }, []);
+  useEffect(() => { fetchKeys(); }, []);
 
   async function createKey(e: React.FormEvent) {
     e.preventDefault();
@@ -64,10 +61,7 @@ export default function ApiKeysPage() {
     const res = await fetch("/api/keys", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name: newKeyName,
-        allowedModels,
-      }),
+      body: JSON.stringify({ name: newKeyName, allowedModels }),
     });
     if (res.ok) {
       const data = await res.json();
@@ -94,197 +88,147 @@ export default function ApiKeysPage() {
 
   function toggleModel(modelId: string) {
     setSelectedModels((prev) =>
-      prev.includes(modelId)
-        ? prev.filter((m) => m !== modelId)
-        : [...prev, modelId]
+      prev.includes(modelId) ? prev.filter((m) => m !== modelId) : [...prev, modelId]
     );
   }
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900">API Keys</h1>
-      <p className="mt-1 text-gray-600">
-        Manage API keys for accessing the OpenDoor gateway. Each key can have
-        full access or be restricted to specific models.
-      </p>
+      <div className="mb-8">
+        <h1 className="page-title">API Keys</h1>
+        <p className="page-desc">
+          Manage API keys for the OpenDoor gateway. Each key can have full access or be restricted to specific models.
+        </p>
+      </div>
 
       {newKeyValue && (
-        <div className="mt-6 rounded-lg border border-green-200 bg-green-50 p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-green-800">
-                New API key created
-              </p>
-              <p className="mt-1 font-mono text-sm text-green-700">
-                {newKeyValue}
-              </p>
-            </div>
-            <button
-              onClick={copyKey}
-              className="rounded-md bg-green-100 px-3 py-1.5 text-sm font-medium text-green-700 hover:bg-green-200"
-            >
-              {copied ? (
-                <Check className="inline h-4 w-4" />
-              ) : (
-                <Copy className="inline h-4 w-4" />
-              )}
-              {copied ? " Copied" : " Copy"}
-            </button>
+        <div className="mb-6 alert-success flex items-start justify-between gap-4">
+          <div>
+            <p className="font-medium text-emerald-900">New API key created</p>
+            <p className="mt-1 font-mono text-sm text-emerald-800">{newKeyValue}</p>
+            <p className="mt-1.5 text-xs text-emerald-700">
+              Copy this key now — you won&apos;t be able to see it again.
+            </p>
           </div>
-          <p className="mt-2 text-xs text-green-600">
-            Copy this key now — you won&apos;t be able to see it again.
-          </p>
+          <button onClick={copyKey} className="btn btn-sm bg-emerald-100 text-emerald-800 hover:bg-emerald-200 shrink-0">
+            {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+            {copied ? "Copied" : "Copy"}
+          </button>
         </div>
       )}
 
-      <form onSubmit={createKey} className="mt-6 max-w-2xl space-y-4">
-        <div>
-          <label className="mb-1 block text-sm font-medium text-gray-700">
-            Key Name
-          </label>
-          <input
-            type="text"
-            value={newKeyName}
-            onChange={(e) => setNewKeyName(e.target.value)}
-            placeholder="Production Key"
-            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-            required
-          />
-        </div>
-
-        <div>
-          <label className="mb-2 block text-sm font-medium text-gray-700">
-            Model Access
-          </label>
-          <div className="flex items-center gap-4">
-            <label className="flex cursor-pointer items-center gap-2">
-              <input
-                type="radio"
-                checked={fullAccess}
-                onChange={() => {
-                  setFullAccess(true);
-                  setShowModelSelector(false);
-                }}
-                className="h-4 w-4 text-primary-600"
-              />
-              <span className="flex items-center gap-1 text-sm text-gray-700">
-                <ShieldCheck className="h-4 w-4 text-green-500" />
-                Full Access (all models)
-              </span>
-            </label>
-            <label className="flex cursor-pointer items-center gap-2">
-              <input
-                type="radio"
-                checked={!fullAccess}
-                onChange={() => {
-                  setFullAccess(false);
-                  setShowModelSelector(true);
-                }}
-                className="h-4 w-4 text-primary-600"
-              />
-              <span className="flex items-center gap-1 text-sm text-gray-700">
-                <Shield className="h-4 w-4 text-amber-500" />
-                Restricted
-              </span>
-            </label>
+      <div className="card p-6">
+        <h2 className="section-title mb-4">Create new key</h2>
+        <form onSubmit={createKey} className="space-y-4">
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-zinc-700">Key Name</label>
+            <input
+              type="text"
+              value={newKeyName}
+              onChange={(e) => setNewKeyName(e.target.value)}
+              placeholder="Production Key"
+              className="input max-w-sm"
+              required
+            />
           </div>
 
-          {!fullAccess && (
-            <div className="mt-3 rounded-lg border border-gray-200 bg-gray-50 p-4">
-              <p className="mb-2 text-xs text-gray-500">
-                Select which models this key can access:
-              </p>
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                {ALL_MODELS.map((m) => (
-                  <label
-                    key={m.id}
-                    className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 hover:bg-gray-100"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={selectedModels.includes(m.id)}
-                      onChange={() => toggleModel(m.id)}
-                      className="h-4 w-4 rounded border-gray-300 text-primary-600"
-                    />
-                    <span className="text-sm text-gray-700">{m.name}</span>
-                    <span className="ml-auto text-xs text-gray-400">
-                      {m.provider}
-                    </span>
-                  </label>
-                ))}
-              </div>
+          <div>
+            <label className="mb-2 block text-sm font-medium text-zinc-700">Model Access</label>
+            <div className="flex items-center gap-5">
+              <label className="flex cursor-pointer items-center gap-2">
+                <input
+                  type="radio"
+                  checked={fullAccess}
+                  onChange={() => setFullAccess(true)}
+                  className="h-4 w-4 accent-indigo-600"
+                />
+                <span className="flex items-center gap-1.5 text-sm text-zinc-700">
+                  <ShieldCheck className="h-4 w-4 text-emerald-500" />
+                  Full Access
+                </span>
+              </label>
+              <label className="flex cursor-pointer items-center gap-2">
+                <input
+                  type="radio"
+                  checked={!fullAccess}
+                  onChange={() => setFullAccess(false)}
+                  className="h-4 w-4 accent-indigo-600"
+                />
+                <span className="flex items-center gap-1.5 text-sm text-zinc-700">
+                  <Shield className="h-4 w-4 text-amber-500" />
+                  Restricted
+                </span>
+              </label>
             </div>
-          )}
-        </div>
 
-        <button
-          type="submit"
-          disabled={loading || (!fullAccess && selectedModels.length === 0)}
-          className="rounded-md bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-50"
-        >
-          {loading ? "Creating..." : "Create Key"}
-        </button>
-      </form>
+            {!fullAccess && (
+              <div className="mt-3 rounded-lg border border-zinc-200 bg-zinc-50 p-4">
+                <p className="mb-3 text-xs text-zinc-500">Select which models this key can access:</p>
+                <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+                  {ALL_MODELS.map((m) => (
+                    <label key={m.id} className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 hover:bg-zinc-100">
+                      <input
+                        type="checkbox"
+                        checked={selectedModels.includes(m.id)}
+                        onChange={() => toggleModel(m.id)}
+                        className="h-4 w-4 rounded accent-indigo-600"
+                      />
+                      <span className="text-sm text-zinc-700">{m.name}</span>
+                      <span className="ml-auto text-xs text-zinc-400">{m.provider}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
 
-      <div className="mt-8 overflow-hidden rounded-lg border border-gray-200 bg-white">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                Name
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                Key
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                Access
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                Created
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                Last Used
-              </th>
-              <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
-                Actions
-              </th>
+          <button
+            type="submit"
+            disabled={loading || (!fullAccess && selectedModels.length === 0)}
+            className="btn-primary"
+          >
+            <Key className="h-4 w-4" />
+            {loading ? "Creating…" : "Create Key"}
+          </button>
+        </form>
+      </div>
+
+      <div className="mt-6 card overflow-hidden">
+        <table className="min-w-full">
+          <thead>
+            <tr className="border-b border-zinc-100">
+              <th className="table-header-cell">Name</th>
+              <th className="table-header-cell">Key</th>
+              <th className="table-header-cell">Access</th>
+              <th className="table-header-cell">Created</th>
+              <th className="table-header-cell">Last Used</th>
+              <th className="table-header-cell text-right">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200 bg-white">
+          <tbody>
             {keys.map((key) => (
-              <tr key={key.id}>
-                <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900">
-                  {key.name}
-                </td>
-                <td className="whitespace-nowrap px-6 py-4 text-sm font-mono text-gray-500">
-                  {key.keyPrefix}••••••••
-                </td>
-                <td className="whitespace-nowrap px-6 py-4 text-sm">
+              <tr key={key.id} className="table-row">
+                <td className="table-cell font-medium text-zinc-900">{key.name}</td>
+                <td className="table-cell font-mono text-zinc-500">{key.keyPrefix}••••••••</td>
+                <td className="table-cell">
                   {key.allowedModels && key.allowedModels.length > 0 ? (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700">
+                    <span className="badge-warning">
                       <Shield className="h-3 w-3" />
                       {key.allowedModels.length} models
                     </span>
                   ) : (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700">
+                    <span className="badge-success">
                       <ShieldCheck className="h-3 w-3" />
                       Full Access
                     </span>
                   )}
                 </td>
-                <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
-                  {new Date(key.createdAt).toLocaleDateString()}
+                <td className="table-cell text-zinc-500">{new Date(key.createdAt).toLocaleDateString()}</td>
+                <td className="table-cell text-zinc-500">
+                  {key.lastUsedAt ? new Date(key.lastUsedAt).toLocaleDateString() : "Never"}
                 </td>
-                <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
-                  {key.lastUsedAt
-                    ? new Date(key.lastUsedAt).toLocaleDateString()
-                    : "Never"}
-                </td>
-                <td className="whitespace-nowrap px-6 py-4 text-right text-sm">
-                  <button
-                    onClick={() => revokeKey(key.id)}
-                    className="text-red-600 hover:text-red-900"
-                  >
+                <td className="table-cell text-right">
+                  <button onClick={() => revokeKey(key.id)} className="btn-danger btn-sm">
                     <Trash2 className="h-4 w-4" />
                   </button>
                 </td>
@@ -292,10 +236,7 @@ export default function ApiKeysPage() {
             ))}
             {keys.length === 0 && (
               <tr>
-                <td
-                  colSpan={6}
-                  className="px-6 py-8 text-center text-sm text-gray-500"
-                >
+                <td colSpan={6} className="px-4 py-10 text-center text-sm text-zinc-400">
                   No API keys yet. Create one above.
                 </td>
               </tr>

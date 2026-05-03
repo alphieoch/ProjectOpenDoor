@@ -1,0 +1,34 @@
+---
+sidebar_position: 5
+---
+
+# Mistral AI
+
+Mistral models are available via Azure AI Foundry.
+
+## Live Models
+
+| Model | Type | Status |
+|-------|------|--------|
+| `Mistral-Large-3` | Chat | ✅ Live |
+
+## Available on Request
+
+| Model | Type |
+|-------|------|
+| `mistral-small-2503` | Chat |
+| `mistral-document-ai-2505` | Document OCR |
+| `mistral-ocr-2503` | OCR |
+| `Ministral-3B` | Chat |
+
+## Azure Deployment
+
+```bash
+az cognitiveservices account deployment create \
+  --name your-account --resource-group your-rg \
+  --deployment-name Mistral-Large-3 \
+  --model-name Mistral-Large-3 \
+  --model-version "1" \
+  --model-format "Mistral AI" \
+  --sku-capacity 1 --sku-name GlobalStandard
+```

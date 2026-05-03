@@ -74,6 +74,13 @@ param registryPassword string
 @description('Azure region identifier')
 param azureRegion string
 
+@description('Storage account name')
+param storageAccountName string = ''
+
+@description('Storage account key')
+@secure()
+param storageAccountKey string = ''
+
 resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2022-10-01' = {
   name: '${name}-logs'
   location: location
@@ -137,6 +144,10 @@ resource gatewayApp 'Microsoft.App/containerApps@2023-05-01' = {
           name: 'api-key-hash-secret'
           value: apiKeyHashSecret
         }
+        {
+          name: 'storage-account-key'
+          value: storageAccountKey
+        }
       ]
     }
     template: {
@@ -172,6 +183,18 @@ resource gatewayApp 'Microsoft.App/containerApps@2023-05-01' = {
             {
               name: 'PORT'
               value: '3001'
+            }
+            {
+              name: 'AZURE_STORAGE_ACCOUNT_NAME'
+              value: storageAccountName
+            }
+            {
+              name: 'AZURE_STORAGE_ACCOUNT_KEY'
+              secretRef: 'storage-account-key'
+            }
+            {
+              name: 'AZURE_STORAGE_CONTAINER_NAME'
+              value: 'analytics'
             }
           ]
           resources: {
@@ -249,6 +272,10 @@ resource dashboardApp 'Microsoft.App/containerApps@2023-05-01' = {
           name: 'app-insights-connection'
           value: appInsightsConnectionString
         }
+        {
+          name: 'storage-account-key'
+          value: storageAccountKey
+        }
       ]
     }
     template: {
@@ -312,6 +339,18 @@ resource dashboardApp 'Microsoft.App/containerApps@2023-05-01' = {
             {
               name: 'PORT'
               value: '3000'
+            }
+            {
+              name: 'AZURE_STORAGE_ACCOUNT_NAME'
+              value: storageAccountName
+            }
+            {
+              name: 'AZURE_STORAGE_ACCOUNT_KEY'
+              secretRef: 'storage-account-key'
+            }
+            {
+              name: 'AZURE_STORAGE_CONTAINER_NAME'
+              value: 'analytics'
             }
           ]
           resources: {

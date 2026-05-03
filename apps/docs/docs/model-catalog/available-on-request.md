@@ -1,0 +1,48 @@
+---
+sidebar_position: 3
+---
+
+# Available on Request
+
+These models are in the Azure AI Foundry catalog but not currently deployed. Contact your administrator to enable them.
+
+## Why On-Request?
+
+Deploying all 160+ models would be expensive and impractical. Instead, OpenDoor maintains a curated set of live models and makes the rest available on demand.
+
+## How to Request
+
+When you try to use an on-request model, you'll receive:
+
+```json
+{
+  "error": "Model 'gpt-5.4' is available upon request",
+  "message": "This model is not currently deployed. Contact your administrator to enable 'GPT 5.4'",
+  "status": "available_on_request",
+  "model": "gpt-5.4"
+}
+```
+
+Contact your administrator with the model ID to request deployment.
+
+## Popular On-Request Models
+
+| Model | Provider | Type |
+|-------|----------|------|
+| `gpt-5.4` | OpenAI | Chat |
+| `gpt-5.4-pro` | OpenAI | Chat |
+| `claude-opus-4-5` | Anthropic | Chat |
+| `claude-sonnet-4-5` | Anthropic | Chat |
+| `grok-4` | xAI | Chat |
+| `grok-4-fast-reasoning` | xAI | Chat |
+| `Llama-4-Maverick-17B-128E` | Meta | Chat |
+| `Llama-3.3-70B-Instruct` | Meta | Chat |
+| `dall-e-3` | OpenAI | Image |
+| `sora` | OpenAI | Video |
+| `Stable-Diffusion-3.5-Large` | Stability AI | Image |
+
+## Coming Soon
+
+| Model | Provider | Expected |
+|-------|----------|----------|
+| `DeepSeek-V4-Pro` | DeepSeek | Q2 2026 |

@@ -1,0 +1,299 @@
+- generic [ref=e2]:
+  - region "Skip to main content":
+    - link "Skip to main content" [ref=e434] [cursor=pointer]:
+      - /url: "#__docusaurus_skipToContent_fallback"
+  - navigation "Main" [ref=e435]:
+    - generic [ref=e436]:
+      - generic [ref=e437]:
+        - link "OpenDoor Logo OpenDoor" [ref=e438] [cursor=pointer]:
+          - /url: /
+          - img "OpenDoor Logo" [ref=e440]
+          - generic [ref=e441]: OpenDoor
+        - link "Docs" [ref=e442] [cursor=pointer]:
+          - /url: /docs/
+        - link "Blog" [ref=e443] [cursor=pointer]:
+          - /url: /blog
+      - generic [ref=e444]:
+        - link "Dashboard(opens in new tab)" [ref=e445] [cursor=pointer]:
+          - /url: http://localhost:3000
+          - text: Dashboard
+          - img "(opens in new tab)" [ref=e446]
+        - link "GitHub(opens in new tab)" [ref=e448] [cursor=pointer]:
+          - /url: https://github.com/OchiengandCo/opendoor
+          - text: GitHub
+          - img "(opens in new tab)" [ref=e449]
+        - button "Switch between dark and light mode (currently system mode)" [ref=e452] [cursor=pointer]:
+          - img [ref=e453]
+  - generic [ref=e457]:
+    - complementary [ref=e458]:
+      - navigation "Docs sidebar" [ref=e461]:
+        - list [ref=e462]:
+          - listitem [ref=e463]:
+            - link "OpenDoor Documentation" [ref=e464] [cursor=pointer]:
+              - /url: /docs/
+              - generic "OpenDoor Documentation" [ref=e465]
+          - listitem [ref=e466]:
+            - button "Getting Started" [ref=e468] [cursor=pointer]:
+              - generic "Getting Started" [ref=e469]
+          - listitem [ref=e470]:
+            - button "API Reference" [ref=e472] [cursor=pointer]:
+              - generic "API Reference" [ref=e473]
+          - listitem [ref=e474]:
+            - button "Model Catalog" [ref=e476] [cursor=pointer]:
+              - generic "Model Catalog" [ref=e477]
+          - listitem [ref=e478]:
+            - button "Providers" [ref=e480] [cursor=pointer]:
+              - generic "Providers" [ref=e481]
+          - listitem [ref=e482]:
+            - button "Deployment" [ref=e484] [cursor=pointer]:
+              - generic "Deployment" [ref=e485]
+    - main [ref=e486]:
+      - generic [ref=e488]:
+        - generic [ref=e490]:
+          - article [ref=e491]:
+            - navigation "Breadcrumbs" [ref=e492]:
+              - list [ref=e493]:
+                - listitem [ref=e494]:
+                  - link "Home page" [ref=e495] [cursor=pointer]:
+                    - /url: /
+                    - img [ref=e496]
+                - listitem [ref=e498]:
+                  - generic [ref=e499]: OpenDoor Documentation
+            - generic [ref=e500]:
+              - heading "OpenDoor Documentation" [level=1] [ref=e502]
+              - paragraph [ref=e503]:
+                - strong [ref=e504]: OpenDoor
+                - text: is a multi-region LLM API Gateway built on Azure, designed to route requests across multiple AI providers with intelligent fallback chains, usage tracking, and cost management.
+              - heading "What is OpenDoor?Direct link to What is OpenDoor?" [level=2] [ref=e505]:
+                - text: What is OpenDoor?
+                - link "Direct link to What is OpenDoor?" [ref=e506] [cursor=pointer]:
+                  - /url: "#what-is-opendoor"
+                  - text: "#"
+              - paragraph [ref=e507]: "OpenDoor sits between your applications and various LLM providers (OpenAI, Azure AI Foundry, Anthropic, Mistral, Cohere, DeepSeek, and more), providing:"
+              - list [ref=e508]:
+                - listitem [ref=e509]:
+                  - strong [ref=e510]: Unified API
+                  - text: — One endpoint for all models, OpenAI-compatible
+                - listitem [ref=e511]:
+                  - strong [ref=e512]: Intelligent Routing
+                  - text: — Automatic fallback across providers when one fails
+                - listitem [ref=e513]:
+                  - strong [ref=e514]: Model Catalog
+                  - text: — 160+ models from top providers, with "live" and "available on request" status
+                - listitem [ref=e515]:
+                  - strong [ref=e516]: Usage Tracking
+                  - text: — Per-request logging, token counting, and cost calculation
+                - listitem [ref=e517]:
+                  - strong [ref=e518]: Rate Limiting
+                  - text: — API-key based rate limits with Redis-backed counters
+                - listitem [ref=e519]:
+                  - strong [ref=e520]: Admin Dashboard
+                  - text: — Manage API keys, view usage, configure pricing
+              - heading "Quick StartDirect link to Quick Start" [level=2] [ref=e521]:
+                - text: Quick Start
+                - link "Direct link to Quick Start" [ref=e522] [cursor=pointer]:
+                  - /url: "#quick-start"
+                  - text: "#"
+              - generic [ref=e524]:
+                - code [ref=e526]:
+                  - generic [ref=e527]: "# Clone the repository"
+                  - generic [ref=e528]: git clone https://github.com/OchiengandCo/opendoor.git
+                  - generic [ref=e529]: cd opendoor
+                  - generic [ref=e531]: "# Install dependencies"
+                  - generic [ref=e532]: pnpm install
+                  - generic [ref=e534]: "# Start PostgreSQL and Redis (Docker)"
+                  - generic [ref=e535]: docker-compose up -d postgres redis
+                  - generic [ref=e537]: "# Run database migrations"
+                  - generic [ref=e538]: pnpm db:migrate
+                  - generic [ref=e540]: "# Start the gateway"
+                  - generic [ref=e541]: pnpm gateway:dev
+                  - generic [ref=e543]: "# Start the dashboard"
+                  - generic [ref=e544]: pnpm dashboard:dev
+                - button "Copy code to clipboard" [ref=e546] [cursor=pointer]:
+                  - generic [ref=e547]:
+                    - img [ref=e548]
+                    - img [ref=e550]
+              - heading "ArchitectureDirect link to Architecture" [level=2] [ref=e552]:
+                - text: Architecture
+                - link "Direct link to Architecture" [ref=e553] [cursor=pointer]:
+                  - /url: "#architecture"
+                  - text: "#"
+              - generic [ref=e555]:
+                - code [ref=e557]:
+                  - generic [ref=e558]: ┌─────────────┐ ┌──────────────┐ ┌─────────────────┐
+                  - generic [ref=e559]: │ Your App │────▶│ OpenDoor │────▶│ Azure OpenAI │
+                  - generic [ref=e560]: │ (Any SDK) │ │ Gateway │ │ (GPT-4o, etc.) │
+                  - generic [ref=e561]: └─────────────┘ │ (Bun/Hono) │ └─────────────────┘
+                  - generic [ref=e562]: │ │ ┌─────────────────┐
+                  - generic [ref=e563]: │ │────▶│ Azure AI │
+                  - generic [ref=e564]: │ │ │ Foundry │
+                  - generic [ref=e565]: │ │ │ (DeepSeek, etc)│
+                  - generic [ref=e566]: │ │ └─────────────────┘
+                  - generic [ref=e567]: │ │ ┌─────────────────┐
+                  - generic [ref=e568]: │ │────▶│ Other Providers│
+                  - generic [ref=e569]: │ │ │ (Fallback) │
+                  - generic [ref=e570]: └──────────────┘ └─────────────────┘
+                  - generic [ref=e571]: │
+                  - generic [ref=e572]: ┌──────┴──────┐
+                  - generic [ref=e573]: │ PostgreSQL │
+                  - generic [ref=e574]: │ + Redis │
+                  - generic [ref=e575]: └─────────────┘
+                - button "Copy code to clipboard" [ref=e577] [cursor=pointer]:
+                  - generic [ref=e578]:
+                    - img [ref=e579]
+                    - img [ref=e581]
+              - heading "FeaturesDirect link to Features" [level=2] [ref=e583]:
+                - text: Features
+                - link "Direct link to Features" [ref=e584] [cursor=pointer]:
+                  - /url: "#features"
+                  - text: "#"
+              - table [ref=e585]:
+                - rowgroup [ref=e586]:
+                  - row "Feature Status" [ref=e587]:
+                    - columnheader "Feature" [ref=e588]
+                    - columnheader "Status" [ref=e589]
+                - rowgroup [ref=e590]:
+                  - row "Chat Completions ✅ Live" [ref=e591]:
+                    - cell "Chat Completions" [ref=e592]
+                    - cell "✅ Live" [ref=e593]
+                  - row "Streaming (SSE) ✅ Live" [ref=e594]:
+                    - cell "Streaming (SSE)" [ref=e595]
+                    - cell "✅ Live" [ref=e596]
+                  - row "Embeddings ✅ Live" [ref=e597]:
+                    - cell "Embeddings" [ref=e598]
+                    - cell "✅ Live" [ref=e599]
+                  - row "Model Listing ✅ Live" [ref=e600]:
+                    - cell "Model Listing" [ref=e601]
+                    - cell "✅ Live" [ref=e602]
+                  - row "Usage Tracking ✅ Live" [ref=e603]:
+                    - cell "Usage Tracking" [ref=e604]
+                    - cell "✅ Live" [ref=e605]
+                  - row "Rate Limiting ✅ Live" [ref=e606]:
+                    - cell "Rate Limiting" [ref=e607]
+                    - cell "✅ Live" [ref=e608]
+                  - row "Multi-provider Fallback ✅ Live" [ref=e609]:
+                    - cell "Multi-provider Fallback" [ref=e610]
+                    - cell "✅ Live" [ref=e611]
+                  - row "Admin Dashboard ✅ Live" [ref=e612]:
+                    - cell "Admin Dashboard" [ref=e613]
+                    - cell "✅ Live" [ref=e614]
+                  - row "Image Generation 📋 Available on request" [ref=e615]:
+                    - cell "Image Generation" [ref=e616]
+                    - cell "📋 Available on request" [ref=e617]
+                  - row "Audio (TTS/STT) 📋 Available on request" [ref=e618]:
+                    - cell "Audio (TTS/STT)" [ref=e619]
+                    - cell "📋 Available on request" [ref=e620]
+                  - row "Video Generation 📋 Available on request" [ref=e621]:
+                    - cell "Video Generation" [ref=e622]
+                    - cell "📋 Available on request" [ref=e623]
+              - heading "ProvidersDirect link to Providers" [level=2] [ref=e624]:
+                - text: Providers
+                - link "Direct link to Providers" [ref=e625] [cursor=pointer]:
+                  - /url: "#providers"
+                  - text: "#"
+              - paragraph [ref=e626]: "OpenDoor supports the following providers:"
+              - list [ref=e627]:
+                - listitem [ref=e628]:
+                  - strong [ref=e629]: Azure AI Foundry
+                  - text: — Primary provider with 15+ deployed models
+                - listitem [ref=e630]:
+                  - strong [ref=e631]: OpenAI
+                  - text: — Direct API integration
+                - listitem [ref=e632]:
+                  - strong [ref=e633]: Anthropic
+                  - text: — Claude models
+                - listitem [ref=e634]:
+                  - strong [ref=e635]: Cohere
+                  - text: — Command and Embed models
+                - listitem [ref=e636]:
+                  - strong [ref=e637]: Mistral AI
+                  - text: — Mistral Large and Small models
+                - listitem [ref=e638]:
+                  - strong [ref=e639]: DeepSeek
+                  - text: — DeepSeek-R1, V3.2, V4-Flash
+                - listitem [ref=e640]:
+                  - strong [ref=e641]: Moonshot AI
+                  - text: — Kimi K2.5, K2.6
+              - heading "Next StepsDirect link to Next Steps" [level=2] [ref=e642]:
+                - text: Next Steps
+                - link "Direct link to Next Steps" [ref=e643] [cursor=pointer]:
+                  - /url: "#next-steps"
+                  - text: "#"
+              - list [ref=e644]:
+                - listitem [ref=e645]:
+                  - link "Install OpenDoor" [ref=e646] [cursor=pointer]:
+                    - /url: /docs/getting-started/installation
+                - listitem [ref=e647]:
+                  - link "Explore the API" [ref=e648] [cursor=pointer]:
+                    - /url: /docs/api-reference/chat-completions
+                - listitem [ref=e649]:
+                  - link "Browse the Model Catalog" [ref=e650] [cursor=pointer]:
+                    - /url: /docs/model-catalog/overview
+            - link "Edit this page" [ref=e654] [cursor=pointer]:
+              - /url: https://github.com/OchiengandCo/opendoor/tree/main/apps/docs/docs/intro.md
+              - img [ref=e655]
+              - text: Edit this page
+          - navigation "Docs pages" [ref=e659]:
+            - link "Next Installation »" [ref=e660] [cursor=pointer]:
+              - /url: /docs/getting-started/installation
+              - generic [ref=e661]: Next
+              - generic [ref=e662]: Installation »
+        - list [ref=e665]:
+          - listitem [ref=e666]:
+            - link "What is OpenDoor?" [ref=e667] [cursor=pointer]:
+              - /url: "#what-is-opendoor"
+          - listitem [ref=e668]:
+            - link "Quick Start" [ref=e669] [cursor=pointer]:
+              - /url: "#quick-start"
+          - listitem [ref=e670]:
+            - link "Architecture" [ref=e671] [cursor=pointer]:
+              - /url: "#architecture"
+          - listitem [ref=e672]:
+            - link "Features" [ref=e673] [cursor=pointer]:
+              - /url: "#features"
+          - listitem [ref=e674]:
+            - link "Providers" [ref=e675] [cursor=pointer]:
+              - /url: "#providers"
+          - listitem [ref=e676]:
+            - link "Next Steps" [ref=e677] [cursor=pointer]:
+              - /url: "#next-steps"
+  - contentinfo [ref=e678]:
+    - generic [ref=e679]:
+      - generic [ref=e680]:
+        - generic [ref=e681]:
+          - generic [ref=e682]: Docs
+          - list [ref=e683]:
+            - listitem [ref=e684]:
+              - link "Getting Started" [ref=e685] [cursor=pointer]:
+                - /url: /docs/getting-started/installation
+            - listitem [ref=e686]:
+              - link "API Reference" [ref=e687] [cursor=pointer]:
+                - /url: /docs/api-reference/chat-completions
+            - listitem [ref=e688]:
+              - link "Model Catalog" [ref=e689] [cursor=pointer]:
+                - /url: /docs/model-catalog/overview
+        - generic [ref=e690]:
+          - generic [ref=e691]: Community
+          - list [ref=e692]:
+            - listitem [ref=e693]:
+              - link "GitHub(opens in new tab)" [ref=e694] [cursor=pointer]:
+                - /url: https://github.com/OchiengandCo/opendoor
+                - text: GitHub
+                - img "(opens in new tab)" [ref=e695]
+            - listitem [ref=e697]:
+              - link "Issues(opens in new tab)" [ref=e698] [cursor=pointer]:
+                - /url: https://github.com/OchiengandCo/opendoor/issues
+                - text: Issues
+                - img "(opens in new tab)" [ref=e699]
+        - generic [ref=e701]:
+          - generic [ref=e702]: More
+          - list [ref=e703]:
+            - listitem [ref=e704]:
+              - link "Blog" [ref=e705] [cursor=pointer]:
+                - /url: /blog
+            - listitem [ref=e706]:
+              - link "Dashboard(opens in new tab)" [ref=e707] [cursor=pointer]:
+                - /url: http://localhost:3000
+                - text: Dashboard
+                - img "(opens in new tab)" [ref=e708]
+      - generic [ref=e711]: Copyright © 2026 Ochieng and Co. Built with Docusaurus.

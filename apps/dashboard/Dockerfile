@@ -10,11 +10,17 @@ RUN npm install -g pnpm@9.0.0 && pnpm install --frozen-lockfile
 
 FROM base AS builder
 WORKDIR /app
+ARG NEXT_PUBLIC_APP_URL=http://localhost:3000
+ARG NEXT_PUBLIC_STRIPE_PRO_PRICE_ID=
+ARG NEXT_PUBLIC_STRIPE_ENTERPRISE_PRICE_ID=
+ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL
+ENV NEXT_PUBLIC_STRIPE_PRO_PRICE_ID=$NEXT_PUBLIC_STRIPE_PRO_PRICE_ID
+ENV NEXT_PUBLIC_STRIPE_ENTERPRISE_PRICE_ID=$NEXT_PUBLIC_STRIPE_ENTERPRISE_PRICE_ID
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/packages ./packages
 COPY --from=deps /app/apps/dashboard/node_modules ./apps/dashboard/node_modules
 COPY . .
-RUN npm install -g pnpm@9.0.0 && pnpm --filter @opendoor/dashboard build
+RUN npm install -g pnpm@9.0.0 && pnpm turbo run build --filter=@opendoor/dashboard...
 
 FROM base AS runner
 WORKDIR /app

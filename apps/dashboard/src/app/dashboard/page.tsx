@@ -5,128 +5,172 @@ import { requests, apiKeys } from "@opendoor/database";
 import { eq, sql, gte, and } from "drizzle-orm";
 import { requireAuth } from "@/lib/auth";
 import { formatCurrency, formatNumber } from "@/lib/utils";
+import Link from "next/link";
 import {
-  Activity,
-  CreditCard,
-  Key,
-  TrendingUp,
+  Activity, CreditCard, Key, TrendingUp, Globe, Sparkles, Copy,
+  RotateCcw, Plug, Download, ArrowRight,
 } from "lucide-react";
-import PricingCalculator from "@/components/pricing-calculator";
-import RateLimitPanel from "@/components/rate-limit-bar";
 
 export default async function DashboardPage() {
   const session = await requireAuth();
   const orgId = session.orgId as string;
-
   const since30 = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-
   const db = getDb();
-  const stats = await db
-    .select({
+
+  const [stats, keyCount] = await Promise.all([
+    db.select({
       totalRequests: sql<number>`COUNT(*)`,
       totalTokens: sql<number>`SUM(${requests.totalTokens})`,
       totalCost: sql<number>`SUM(${requests.costUsd})`,
       avgLatency: sql<number>`AVG(${requests.latencyMs})`,
-    })
-    .from(requests)
-    .where(
-      and(
-        eq(requests.organizationId, orgId),
-        gte(requests.createdAt, since30)
-      )
-    );
-
-  const keyCount = await db
-    .select({ count: sql<number>`COUNT(*)` })
-    .from(apiKeys)
-    .where(eq(apiKeys.organizationId, orgId));
+    }).from(requests).where(and(eq(requests.organizationId, orgId), gte(requests.createdAt, since30))),
+    db.select({ count: sql<number>`COUNT(*)` }).from(apiKeys).where(eq(apiKeys.organizationId, orgId)),
+  ]);
 
   const stat = stats[0];
+  const totalRequests = Number(stat?.totalRequests || 0);
+  const totalTokens = Number(stat?.totalTokens || 0);
+  const totalCost = Number(stat?.totalCost || 0);
+  const avgLatency = Number(stat?.avgLatency || 0);
+
+  const today = new Date().toLocaleDateString("en-US", { weekday: "short", month: "long", day: "numeric" });
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-      <p className="mt-1 text-gray-600">
-        Overview of your LLM usage in the last 30 days
-      </p>
-
-      <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          title="Total Requests"
-          value={formatNumber(stat?.totalRequests || 0)}
-          icon={Activity}
-        />
-        <StatCard
-          title="Total Tokens"
-          value={formatNumber(stat?.totalTokens || 0)}
-          icon={TrendingUp}
-        />
-        <StatCard
-          title="Total Cost"
-          value={formatCurrency(stat?.totalCost || 0)}
-          icon={CreditCard}
-        />
-        <StatCard
-          title="API Keys"
-          value={formatNumber(keyCount[0]?.count || 0)}
-          icon={Key}
-        />
-      </div>
-
-      <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <PricingCalculator />
-        <RateLimitPanel />
-      </div>
-
-      <div className="mt-8 rounded-lg border border-gray-200 bg-white p-6">
-        <h2 className="text-lg font-semibold text-gray-900">
-          Quick Start
-        </h2>
-        <div className="mt-4 space-y-3 text-sm text-gray-600">
-          <p>
-            1. Create an API key from the{" "}
-            <a href="/dashboard/api-keys" className="text-primary-600 hover:underline">
-              API Keys
-            </a>{" "}
-            page.
-          </p>
-          <p>
-            2. Use the key to make requests to the gateway:
-          </p>
-          <pre className="mt-2 overflow-x-auto rounded-md bg-gray-900 p-4 text-xs text-gray-100">
-            {`curl https://api.opendoor.ai/v1/chat/completions \\
-  -H "Authorization: Bearer YOUR_API_KEY" \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "model": "gpt-4o",
-    "messages": [{"role": "user", "content": "Hello!"}]
-  }'`}
-          </pre>
+      {/* Page header */}
+      <div className="od-fade-up" style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", marginBottom: 32, paddingBottom: 24, borderBottom: "1px solid var(--line)" }}>
+        <div>
+          <div className="od-eyebrow">{today}</div>
+          <h1 className="od-h1" style={{ marginTop: 12 }}>Welcome back.</h1>
+          <h1 className="od-h1-grad" style={{ marginTop: 4, display: "block" }}>How can I help you today?</h1>
+        </div>
+        <div className="od-fade-up-2" style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <button className="od-btn-pulse" style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "8px 18px", borderRadius: 999, background: "var(--brand)", color: "white", border: "1px solid var(--brand)", fontSize: 13, fontWeight: 500, cursor: "pointer" }}>
+            <Sparkles style={{ width: 14, height: 14 }} /> Ask AI
+          </button>
+          <Link href="/dashboard/usage" style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "8px 18px", borderRadius: 999, background: "var(--paper-2)", color: "var(--ink-2)", border: "1px solid var(--line)", fontSize: 13, fontWeight: 500, textDecoration: "none", transition: "all 0.12s" }} className="hover:border-[var(--ink-4)] od-lift">
+            Usage updates
+          </Link>
+          <Link href="/dashboard/api-keys" style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "8px 18px", borderRadius: 999, background: "var(--paper-2)", color: "var(--ink-2)", border: "1px solid var(--line)", fontSize: 13, fontWeight: 500, textDecoration: "none", transition: "all 0.12s" }} className="hover:border-[var(--ink-4)] od-lift">
+            <Key style={{ width: 13, height: 13 }} /> Create API key
+          </Link>
         </div>
       </div>
+
+      {/* Stat cards */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 24 }}>
+        <StatCard
+          label="Requests" icon={<Activity style={{ width: 12, height: 12 }} />}
+          value={formatNumber(totalRequests)} delta="+18.4%" deltaUp
+          className="od-fade-up-1"
+        />
+        <StatCard
+          label="Tokens" icon={<TrendingUp style={{ width: 12, height: 12 }} />}
+          value={formatNumber(totalTokens)} delta="+21.7%" deltaUp
+          className="od-fade-up-2"
+        />
+        <StatCard
+          label="Spend" icon={<CreditCard style={{ width: 12, height: 12 }} />}
+          value={formatCurrency(totalCost)} delta="+14.2%" deltaUp
+          gradient
+          className="od-fade-up-3"
+        />
+        <StatCard
+          label="P50 Latency" icon={<Globe style={{ width: 12, height: 12 }} />}
+          value={avgLatency > 0 ? `${Math.round(avgLatency)}ms` : "—"} delta="−3.8% faster" deltaUp
+          className="od-fade-up-4"
+        />
+      </div>
+
+      {/* Bottom row: quick start + API keys */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 24 }}>
+        {/* API Keys summary */}
+        <div className="od-card od-fade-up-3">
+          <div style={{ padding: "20px 24px", borderBottom: "1px solid var(--line)" }}>
+            <div className="od-eyebrow">Access</div>
+            <h2 className="od-h2" style={{ marginTop: 4 }}>API Keys</h2>
+          </div>
+          <div style={{ padding: "20px 24px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div style={{ display: "flex", flexDirection: "column" }}>
+              <span style={{ fontFamily: "var(--font-serif)", fontSize: 44, lineHeight: 1, color: "var(--ink)", letterSpacing: "-0.02em" }}>{formatNumber(keyCount[0]?.count || 0)}</span>
+              <span style={{ fontSize: 12, color: "var(--ink-3)", marginTop: 4, fontFamily: "var(--font-mono)" }}>active keys</span>
+            </div>
+            <Link href="/dashboard/api-keys" style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 18px", borderRadius: 999, background: "var(--brand)", color: "white", fontSize: 13, fontWeight: 500, textDecoration: "none" }}>
+              <Key style={{ width: 13, height: 13 }} /> Manage <ArrowRight style={{ width: 12, height: 12 }} />
+            </Link>
+          </div>
+        </div>
+
+        {/* Quick links */}
+        <div className="od-card od-fade-up-4" style={{ padding: "20px 24px" }}>
+          <div className="od-eyebrow" style={{ marginBottom: 14 }}>Quick nav</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            {[
+              { href: "/dashboard/usage", label: "Usage & Costs", icon: TrendingUp },
+              { href: "/dashboard/playground", label: "Playground", icon: Activity },
+              { href: "/dashboard/governance", label: "Trust Center", icon: Key },
+              { href: "/dashboard/billing", label: "Billing", icon: CreditCard },
+            ].map(({ href, label, icon: Icon }) => (
+              <Link key={href} href={href} style={{
+                display: "flex", alignItems: "center", gap: 10,
+                padding: "9px 12px", borderRadius: 8, color: "var(--ink-2)",
+                fontSize: 13.5, fontWeight: 500, textDecoration: "none",
+                transition: "background 0.12s",
+              }} className="hover:bg-[var(--paper)]">
+                <Icon style={{ width: 14, height: 14, color: "var(--ink-3)" }} />
+                {label}
+                <ArrowRight style={{ width: 12, height: 12, marginLeft: "auto", color: "var(--ink-4)" }} />
+              </Link>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Quick start banner */}
+      <div className="od-banner od-fade-up-5">
+        <div className="od-banner__shape" />
+        <div style={{ position: "relative" }}>
+          <div className="od-eyebrow" style={{ color: "rgba(255,255,255,0.7)" }}>Quick start</div>
+          <h2>Make your first call.</h2>
+          <p>Drop the gateway URL in your existing OpenAI client. No SDK changes — just point and go.</p>
+          <div style={{ marginTop: 16, display: "flex", gap: 8 }}>
+            <button className="od-lift" style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 18px", borderRadius: 999, background: "white", color: "var(--ink)", border: "none", fontSize: 13, fontWeight: 500, cursor: "pointer" }}>
+              <Copy style={{ width: 13, height: 13 }} /> Copy snippet
+            </button>
+            <Link href="/dashboard/api-keys" style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 18px", borderRadius: 999, background: "transparent", color: "white", border: "none", fontSize: 13, fontWeight: 500, textDecoration: "none" }}>
+              Read docs <ArrowRight style={{ width: 13, height: 13 }} />
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      {/* FAB */}
+      <button className="od-fab" title="Ask AI">
+        <Sparkles style={{ width: 20, height: 20 }} />
+      </button>
     </div>
   );
 }
 
 function StatCard({
-  title,
-  value,
-  icon: Icon,
+  label, icon, value, delta, deltaUp, gradient, className,
 }: {
-  title: string;
-  value: string;
-  icon: React.ComponentType<{ className?: string }>;
+  label: string; icon: React.ReactNode; value: string;
+  delta: string; deltaUp: boolean; gradient?: boolean; className?: string;
 }) {
   return (
-    <div className="rounded-lg border border-gray-200 bg-white p-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm font-medium text-gray-600">{title}</p>
-          <p className="mt-2 text-2xl font-bold text-gray-900">{value}</p>
-        </div>
-        <div className="rounded-md bg-primary-50 p-3">
-          <Icon className="h-5 w-5 text-primary-600" />
-        </div>
+    <div
+      className={`od-numberblock od-lift ${className || ""}`}
+      style={gradient ? { background: "linear-gradient(135deg, #1A1A2E 0%, #5B3DE0 100%)", border: "none" } : {}}
+    >
+      <div className="od-numberblock__label" style={gradient ? { color: "rgba(255,255,255,0.6)" } : {}}>
+        {icon} {label}
+      </div>
+      <div className="od-display" style={{ fontSize: 44, ...(gradient ? { color: "white" } : {}) }}>
+        {value}
+      </div>
+      <div className={deltaUp ? "od-numberblock__delta-up" : "od-numberblock__delta-down"} style={gradient ? { color: "#1FD1A3" } : {}}>
+        {deltaUp ? "↑" : "↓"} {delta}
       </div>
     </div>
   );

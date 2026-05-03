@@ -28,9 +28,7 @@ export default function PricingCalculator() {
       if (res.ok) {
         const data = await res.json();
         setRules(data.rules);
-        if (data.rules.length > 0) {
-          setSelectedModel(data.rules[0].modelId);
-        }
+        if (data.rules.length > 0) setSelectedModel(data.rules[0].modelId);
       }
       setLoading(false);
     }
@@ -58,48 +56,43 @@ export default function PricingCalculator() {
     const baseDailyInput = (inputTokens / 1000) * baseInputCost * requestsPerDay;
     const baseDailyOutput = (outputTokens / 1000) * baseOutputCost * requestsPerDay;
     const baseMonthlyTotal = (baseDailyInput + baseDailyOutput) * 30;
-    const markupAmount = monthlyTotal - baseMonthlyTotal;
 
     return {
       daily: dailyTotal,
       monthly: monthlyTotal,
       baseMonthly: baseMonthlyTotal,
-      markup: markupAmount,
-      inputCost: dailyInputCost,
-      outputCost: dailyOutputCost,
+      markup: monthlyTotal - baseMonthlyTotal,
     };
   }, [selectedRule, requestsPerDay, inputTokens, outputTokens]);
 
   if (loading) {
     return (
-      <div className="rounded-lg border border-gray-200 bg-white p-6">
-        <p className="text-gray-500">Loading pricing data...</p>
+      <div className="card p-6">
+        <p className="text-sm text-zinc-400">Loading pricing data…</p>
       </div>
     );
   }
 
   if (rules.length === 0) {
     return (
-      <div className="rounded-lg border border-gray-200 bg-white p-6">
-        <p className="text-gray-500">No pricing data available.</p>
+      <div className="card p-6">
+        <p className="text-sm text-zinc-400">No pricing data available.</p>
       </div>
     );
   }
 
   return (
-    <div className="rounded-lg border border-gray-200 bg-white p-6">
-      <h2 className="text-lg font-semibold text-gray-900">Pricing Calculator</h2>
-      <p className="mt-1 text-sm text-gray-600">
-        Estimate your monthly LLM costs
-      </p>
+    <div className="card p-6">
+      <h2 className="section-title">Pricing Calculator</h2>
+      <p className="mt-1 text-sm text-zinc-500">Estimate your monthly LLM costs</p>
 
-      <div className="mt-4 space-y-4">
+      <div className="mt-5 space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700">Model</label>
+          <label className="mb-1.5 block text-sm font-medium text-zinc-700">Model</label>
           <select
             value={selectedModel}
             onChange={(e) => setSelectedModel(e.target.value)}
-            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+            className="input"
           >
             {rules.map((rule) => (
               <option key={rule.id} value={rule.modelId}>
@@ -110,8 +103,8 @@ export default function PricingCalculator() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Requests per day: {requestsPerDay.toLocaleString()}
+          <label className="mb-1.5 block text-sm font-medium text-zinc-700">
+            Requests per day: <span className="font-semibold">{requestsPerDay.toLocaleString()}</span>
           </label>
           <input
             type="range"
@@ -120,14 +113,14 @@ export default function PricingCalculator() {
             step={10}
             value={requestsPerDay}
             onChange={(e) => setRequestsPerDay(Number(e.target.value))}
-            className="mt-1 w-full"
+            className="w-full accent-zinc-900"
           />
         </div>
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Avg input tokens: {inputTokens.toLocaleString()}
+            <label className="mb-1.5 block text-sm font-medium text-zinc-700">
+              Avg input tokens: <span className="font-semibold">{inputTokens.toLocaleString()}</span>
             </label>
             <input
               type="range"
@@ -136,12 +129,12 @@ export default function PricingCalculator() {
               step={10}
               value={inputTokens}
               onChange={(e) => setInputTokens(Number(e.target.value))}
-              className="mt-1 w-full"
+              className="w-full accent-zinc-900"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Avg output tokens: {outputTokens.toLocaleString()}
+            <label className="mb-1.5 block text-sm font-medium text-zinc-700">
+              Avg output tokens: <span className="font-semibold">{outputTokens.toLocaleString()}</span>
             </label>
             <input
               type="range"
@@ -150,7 +143,7 @@ export default function PricingCalculator() {
               step={10}
               value={outputTokens}
               onChange={(e) => setOutputTokens(Number(e.target.value))}
-              className="mt-1 w-full"
+              className="w-full accent-zinc-900"
             />
           </div>
         </div>
@@ -158,43 +151,33 @@ export default function PricingCalculator() {
 
       {estimate && (
         <div className="mt-6 space-y-3">
-          <div className="rounded-lg bg-primary-50 p-4">
-            <p className="text-sm text-gray-600">Estimated monthly cost</p>
-            <p className="mt-1 text-3xl font-bold text-primary-700">
-              {formatCurrency(estimate.monthly)}
-            </p>
+          <div className="rounded-xl bg-zinc-950 p-5 text-center">
+            <p className="text-xs font-medium uppercase tracking-wider text-zinc-400">Monthly estimate</p>
+            <p className="mt-1.5 text-3xl font-semibold text-white">{formatCurrency(estimate.monthly)}</p>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 text-sm">
-            <div className="rounded-md border border-gray-100 bg-gray-50 p-3">
-              <p className="text-gray-500">Base provider cost</p>
-              <p className="mt-1 font-semibold text-gray-900">
-                {formatCurrency(estimate.baseMonthly)}
-              </p>
+          <div className="grid grid-cols-2 gap-2 text-sm">
+            <div className="rounded-lg border border-zinc-100 bg-zinc-50 p-3">
+              <p className="text-xs text-zinc-500">Base provider cost</p>
+              <p className="mt-1 font-semibold text-zinc-900">{formatCurrency(estimate.baseMonthly)}</p>
             </div>
-            <div className="rounded-md border border-gray-100 bg-gray-50 p-3">
-              <p className="text-gray-500">OpenDoor markup</p>
-              <p className="mt-1 font-semibold text-gray-900">
-                {formatCurrency(estimate.markup)}
-              </p>
+            <div className="rounded-lg border border-zinc-100 bg-zinc-50 p-3">
+              <p className="text-xs text-zinc-500">OpenDoor markup</p>
+              <p className="mt-1 font-semibold text-zinc-900">{formatCurrency(estimate.markup)}</p>
             </div>
-            <div className="rounded-md border border-gray-100 bg-gray-50 p-3">
-              <p className="text-gray-500">Daily cost</p>
-              <p className="mt-1 font-semibold text-gray-900">
-                {formatCurrency(estimate.daily)}
-              </p>
+            <div className="rounded-lg border border-zinc-100 bg-zinc-50 p-3">
+              <p className="text-xs text-zinc-500">Daily cost</p>
+              <p className="mt-1 font-semibold text-zinc-900">{formatCurrency(estimate.daily)}</p>
             </div>
-            <div className="rounded-md border border-gray-100 bg-gray-50 p-3">
-              <p className="text-gray-500">Per-request cost</p>
-              <p className="mt-1 font-semibold text-gray-900">
-                {formatCurrency(estimate.daily / requestsPerDay)}
-              </p>
+            <div className="rounded-lg border border-zinc-100 bg-zinc-50 p-3">
+              <p className="text-xs text-zinc-500">Per-request cost</p>
+              <p className="mt-1 font-semibold text-zinc-900">{formatCurrency(estimate.daily / requestsPerDay)}</p>
             </div>
           </div>
 
-          <div className="text-xs text-gray-500">
-            Rates: ${parseFloat(selectedRule!.finalInputCostPer1K).toFixed(6)}/1K input tokens, ${parseFloat(selectedRule!.finalOutputCostPer1K).toFixed(6)}/1K output tokens
-          </div>
+          <p className="text-xs text-zinc-400">
+            Rates: ${parseFloat(selectedRule!.finalInputCostPer1K).toFixed(6)}/1K input · ${parseFloat(selectedRule!.finalOutputCostPer1K).toFixed(6)}/1K output
+          </p>
         </div>
       )}
     </div>

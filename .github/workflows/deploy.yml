@@ -67,6 +67,10 @@ jobs:
           tags: |
             ${{ secrets.AZURE_REGISTRY_NAME }}.azurecr.io/opendoor-dashboard:${{ github.sha }}
             ${{ secrets.AZURE_REGISTRY_NAME }}.azurecr.io/opendoor-dashboard:latest
+          build-args: |
+            NEXT_PUBLIC_APP_URL=https://${{ secrets.AZURE_DASHBOARD_DOMAIN || secrets.AZURE_FRONTDOOR_HOST }}
+            NEXT_PUBLIC_STRIPE_PRO_PRICE_ID=${{ secrets.STRIPE_PRO_PRICE_ID }}
+            NEXT_PUBLIC_STRIPE_ENTERPRISE_PRICE_ID=${{ secrets.STRIPE_ENTERPRISE_PRICE_ID }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 

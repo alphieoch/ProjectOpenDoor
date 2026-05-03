@@ -3,6 +3,7 @@ import { getDb } from "@/lib/db";
 import { users } from "@opendoor/database";
 import { eq } from "drizzle-orm";
 import { verifyPassword, createToken } from "@/lib/auth";
+import { posthogServerCapture } from "@/lib/posthog-server";
 
 export async function POST(req: NextRequest) {
   const { email, password } = await req.json();
@@ -36,12 +37,22 @@ export async function POST(req: NextRequest) {
 
   const token = await createToken({
     sub: user.id,
+    userId: user.id,
     email: user.email,
     orgId: user.organizationId,
     role: user.role,
+    isSiteAdmin: user.isSiteAdmin ?? false,
   });
 
-  const response = NextResponse.json({ success: true });
+  posthogServerCapture(req, user.id, "user_signed_in", {
+    email: user.email,
+    auth_method: "password",
+  });
+
+  const response = NextResponse.json({
+    success: true,
+    user: { id: user.id, email: user.email },
+  });
   response.cookies.set("session", token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",

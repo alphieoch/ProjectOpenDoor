@@ -1,10 +1,21 @@
 import { SignJWT, jwtVerify } from "jose";
 import bcrypt from "bcryptjs";
 import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 
 const secret = new TextEncoder().encode(
   process.env.AUTH_SECRET || "opendoor-default-secret-change-me"
 );
+
+export interface SessionPayload {
+  userId: string;
+  email: string;
+  orgId: string;
+  role: string;
+  isSiteAdmin: boolean;
+  impersonatingOrgId?: string;
+  [key: string]: unknown;
+}
 
 export async function hashPassword(password: string): Promise<string> {
   return bcrypt.hash(password, 12);
@@ -36,17 +47,41 @@ export async function verifyToken(token: string) {
   }
 }
 
-export async function getSession() {
-  const cookieStore = cookies();
+export async function getSession(): Promise<SessionPayload | null> {
+  const cookieStore = await cookies();
   const token = cookieStore.get("session")?.value;
   if (!token) return null;
-  return verifyToken(token);
+  const payload = await verifyToken(token);
+  if (!payload) return null;
+  return payload as unknown as SessionPayload;
 }
 
-export async function requireAuth() {
+export async function requireAuth(): Promise<SessionPayload> {
   const session = await getSession();
   if (!session) {
     throw new Error("Unauthorized");
   }
+  // Transparently apply impersonation: callers just use session.orgId
+  if (session.impersonatingOrgId) {
+    return { ...session, orgId: session.impersonatingOrgId as string };
+  }
   return session;
+}
+
+export async function requireSiteAdmin(): Promise<SessionPayload> {
+  const session = await getSession();
+  if (!session) redirect("/login");
+  if (!session.isSiteAdmin) redirect("/dashboard");
+  return session;
+}
+
+export async function verifySiteAdmin(): Promise<{ session: SessionPayload } | { error: string; status: number }> {
+  const session = await getSession();
+  if (!session) return { error: "Unauthorized", status: 401 };
+  if (!session.isSiteAdmin) return { error: "Forbidden", status: 403 };
+  return { session };
+}
+
+export function getEffectiveOrgId(session: SessionPayload): string {
+  return (session.impersonatingOrgId as string) || (session.orgId as string);
 }

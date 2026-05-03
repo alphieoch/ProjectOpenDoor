@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
-import { users, organizations } from "@opendoor/database";
+import { users, organizations, creditTransactions } from "@opendoor/database";
 import { eq } from "drizzle-orm";
 import { hashPassword, createToken } from "@/lib/auth";
+import { posthogServerCapture } from "@/lib/posthog-server";
 
 export async function POST(req: NextRequest) {
   const { email, password, name, orgName } = await req.json();
@@ -22,6 +23,10 @@ export async function POST(req: NextRequest) {
   }
 
   const db = getDb();
+  const signupCreditCents = Number.parseInt(
+    process.env.SIGNUP_CREDIT_USD_CENTS || "2000",
+    10
+  );
 
   // Check if email already exists
   const existing = await db.query.users.findFirst({
@@ -61,8 +66,18 @@ export async function POST(req: NextRequest) {
       name: orgName || `${name}'s Organization`,
       slug,
       plan: "free",
+      creditsUsdCents: signupCreditCents,
+      signupCreditGranted: true,
     })
     .returning();
+
+  await db.insert(creditTransactions).values({
+    organizationId: org.id,
+    kind: "signup",
+    amountCents: signupCreditCents,
+    balanceAfterCents: signupCreditCents,
+    metadata: { source: "signup_bonus" },
+  });
 
   // Hash password and create user
   const passwordHash = await hashPassword(password);
@@ -80,9 +95,16 @@ export async function POST(req: NextRequest) {
   // Create session token
   const token = await createToken({
     sub: user.id,
+    userId: user.id,
     email: user.email,
     orgId: org.id,
     role: user.role,
+    isSiteAdmin: false,
+  });
+
+  posthogServerCapture(req, user.id, "user_signed_up", {
+    email: user.email,
+    organization_id: org.id,
   });
 
   const response = NextResponse.json({

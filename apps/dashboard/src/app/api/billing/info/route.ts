@@ -20,6 +20,7 @@ export async function GET() {
         stripeSubscriptionId: true,
         subscriptionStatus: true,
         monthlyBudgetUsd: true,
+        creditsUsdCents: true,
       },
     });
 

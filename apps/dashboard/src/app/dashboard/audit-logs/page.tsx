@@ -36,17 +36,11 @@ function formatAction(action: string): string {
   return ACTION_LABELS[action] || action;
 }
 
-function getActionColor(action: string): string {
-  if (action.includes("created") || action.includes("accepted")) {
-    return "bg-green-100 text-green-800";
-  }
-  if (action.includes("revoked") || action.includes("disabled")) {
-    return "bg-red-100 text-red-800";
-  }
-  if (action.includes("updated") || action.includes("configured")) {
-    return "bg-blue-100 text-blue-800";
-  }
-  return "bg-gray-100 text-gray-800";
+function getActionBadgeClass(action: string): string {
+  if (action.includes("created") || action.includes("accepted")) return "badge-success";
+  if (action.includes("revoked") || action.includes("disabled")) return "badge-error";
+  if (action.includes("updated") || action.includes("configured")) return "badge-info";
+  return "badge-neutral";
 }
 
 export default function AuditLogsPage() {
@@ -68,80 +62,61 @@ export default function AuditLogsPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900">Audit Logs</h1>
-      <p className="mt-1 text-gray-600">
-        Track all administrative actions across your organization
-      </p>
+      <div className="mb-8">
+        <h1 className="page-title">Audit Logs</h1>
+        <p className="page-desc">Track all administrative actions across your organization</p>
+      </div>
 
-      <div className="mt-6 overflow-hidden rounded-lg border border-gray-200 bg-white">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                Action
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                User
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                Details
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                IP
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                Time
-              </th>
+      <div className="card overflow-hidden">
+        <table className="min-w-full">
+          <thead>
+            <tr className="border-b border-zinc-100">
+              <th className="table-header-cell">Action</th>
+              <th className="table-header-cell">User</th>
+              <th className="table-header-cell">Details</th>
+              <th className="table-header-cell">IP</th>
+              <th className="table-header-cell">Time</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200 bg-white">
+          <tbody>
             {loading ? (
               <tr>
-                <td colSpan={5} className="px-4 py-8 text-center">
-                  <Loader2 className="mx-auto h-5 w-5 animate-spin text-gray-400" />
+                <td colSpan={5} className="px-4 py-10 text-center">
+                  <Loader2 className="mx-auto h-5 w-5 animate-spin text-zinc-400" />
                 </td>
               </tr>
             ) : logs.length === 0 ? (
               <tr>
-                <td
-                  colSpan={5}
-                  className="px-4 py-8 text-center text-sm text-gray-500"
-                >
-                  <ClipboardList className="mx-auto mb-2 h-8 w-8 text-gray-300" />
-                  No audit logs yet. Actions will appear here as they happen.
+                <td colSpan={5} className="px-4 py-12 text-center">
+                  <ClipboardList className="mx-auto mb-3 h-8 w-8 text-zinc-300" />
+                  <p className="text-sm text-zinc-400">No audit logs yet. Actions will appear here as they happen.</p>
                 </td>
               </tr>
             ) : (
               logs.map((log) => (
-                <tr key={log.id}>
-                  <td className="whitespace-nowrap px-4 py-3">
-                    <span
-                      className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${getActionColor(
-                        log.action
-                      )}`}
-                    >
+                <tr key={log.id} className="table-row">
+                  <td className="table-cell">
+                    <span className={getActionBadgeClass(log.action)}>
                       {formatAction(log.action)}
                     </span>
                   </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">
+                  <td className="table-cell text-zinc-700 whitespace-nowrap">
                     {log.userName || log.userEmail || "System"}
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-600">
+                  <td className="table-cell text-zinc-500">
                     {log.entityType && (
-                      <span className="text-xs text-gray-400">
+                      <span className="text-xs text-zinc-400">
                         {log.entityType}:{log.entityId?.slice(0, 8)}
                       </span>
                     )}
                     {log.metadata && (
-                      <pre className="mt-1 max-w-xs overflow-hidden text-xs text-gray-500">
+                      <pre className="mt-1 max-w-xs overflow-hidden text-xs text-zinc-400">
                         {JSON.stringify(log.metadata, null, 2).slice(0, 100)}
                       </pre>
                     )}
                   </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-xs text-gray-400">
-                    {log.ipAddress || "—"}
-                  </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-xs text-gray-500">
+                  <td className="table-cell text-xs text-zinc-400 whitespace-nowrap">{log.ipAddress || "—"}</td>
+                  <td className="table-cell text-xs text-zinc-500 whitespace-nowrap">
                     {new Date(log.createdAt).toLocaleString()}
                   </td>
                 </tr>

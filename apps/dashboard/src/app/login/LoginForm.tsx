@@ -2,13 +2,28 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { LogIn, Shield, UserPlus } from "lucide-react";
+import { LogIn, Shield, UserPlus, DoorOpen } from "lucide-react";
+import posthog from "posthog-js";
+
+function posthogRequestHeaders(): Record<string, string> {
+  const h: Record<string, string> = {};
+  try {
+    const sid = posthog.get_session_id();
+    const did = posthog.get_distinct_id();
+    if (typeof sid === "string" && sid) h["x-posthog-session-id"] = sid;
+    if (typeof did === "string" && did) h["x-posthog-distinct-id"] = did;
+  } catch {
+    /* PostHog not initialized */
+  }
+  return h;
+}
 
 export default function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [orgName, setOrgName] = useState("");
+  const [orgSlug, setOrgSlug] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [ssoLoading, setSsoLoading] = useState(false);
@@ -21,7 +36,6 @@ export default function LoginForm() {
     signupParam ? "signup" : "password"
   );
 
-  // Auto-redirect to SSO if ?sso=slug is present
   useEffect(() => {
     if (ssoSlug) {
       setOrgSlug(ssoSlug);
@@ -34,14 +48,24 @@ export default function LoginForm() {
     e.preventDefault();
     setLoading(true);
     setError("");
-
     const res = await fetch("/api/auth/login", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        ...posthogRequestHeaders(),
+      },
       body: JSON.stringify({ email, password }),
     });
-
     if (res.ok) {
+      const data = await res.json().catch(() => ({}));
+      try {
+        if (data.user?.id) {
+          posthog.identify(data.user.id, { email: data.user.email });
+        }
+        posthog.capture("user_logged_in_client", { auth_method: "password" });
+      } catch {
+        /* analytics optional */
+      }
       router.push("/dashboard");
       router.refresh();
     } else {
@@ -55,14 +79,27 @@ export default function LoginForm() {
     e.preventDefault();
     setLoading(true);
     setError("");
-
     const res = await fetch("/api/auth/signup", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        ...posthogRequestHeaders(),
+      },
       body: JSON.stringify({ email, password, name, orgName }),
     });
-
     if (res.ok) {
+      const data = await res.json().catch(() => ({}));
+      try {
+        if (data.user?.id) {
+          posthog.identify(data.user.id, {
+            email: data.user.email,
+            name: data.user.name,
+          });
+        }
+        posthog.capture("user_signed_up_client", { auth_method: "password" });
+      } catch {
+        /* analytics optional */
+      }
       router.push("/dashboard");
       router.refresh();
     } else {
@@ -79,207 +116,251 @@ export default function LoginForm() {
     window.location.href = `/api/auth/sso?org=${encodeURIComponent(orgSlug.trim())}`;
   }
 
-  const [orgSlug, setOrgSlug] = useState("");
+  const ssoErrorMessage =
+    ssoError === "sso_failed" ? "SSO authentication failed" :
+    ssoError === "org_not_found" ? "Organization not found" :
+    ssoError === "sso_disabled" ? "SSO is not enabled for your organization" :
+    ssoError === "invalid_org" ? "Invalid organization" :
+    ssoError ? "SSO callback failed" : null;
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-100">
-      <div className="w-full max-w-md rounded-lg bg-white p-8 shadow-lg">
-        <h1 className="mb-2 text-2xl font-bold text-gray-900">OpenDoor</h1>
-        <p className="mb-6 text-gray-600">
-          {mode === "signup"
-            ? "Create your LLM Gateway account"
-            : "Sign in to your LLM Gateway"}
-        </p>
-
-        {(error || ssoError) && (
-          <div className="mb-4 rounded bg-red-50 p-3 text-sm text-red-600">
-            {error ||
-              (ssoError === "sso_failed"
-                ? "SSO authentication failed"
-                : ssoError === "org_not_found"
-                ? "Organization not found"
-                : ssoError === "sso_disabled"
-                ? "SSO is not enabled for your organization"
-                : ssoError === "invalid_org"
-                ? "Invalid organization"
-                : "SSO callback failed")}
+    <div className="flex min-h-screen">
+      {/* Left — brand panel */}
+      <div className="hidden flex-col justify-between bg-zinc-950 p-12 lg:flex lg:w-[420px] xl:w-[480px]">
+        <div className="flex items-center gap-2.5">
+          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-indigo-500/15">
+            <DoorOpen className="h-5 w-5 text-indigo-400" />
           </div>
-        )}
-
-        <div className="mb-4 flex rounded-lg border border-gray-200 bg-gray-50 p-1">
-          <button
-            onClick={() => setMode("password")}
-            className={`flex-1 rounded-md py-2 text-sm font-medium transition-colors ${
-              mode === "password"
-                ? "bg-white text-gray-900 shadow-sm"
-                : "text-gray-500 hover:text-gray-700"
-            }`}
-          >
-            Email & Password
-          </button>
-          <button
-            onClick={() => setMode("sso")}
-            className={`flex-1 rounded-md py-2 text-sm font-medium transition-colors ${
-              mode === "sso"
-                ? "bg-white text-gray-900 shadow-sm"
-                : "text-gray-500 hover:text-gray-700"
-            }`}
-          >
-            Enterprise SSO
-          </button>
+          <span className="text-base font-semibold text-white">OpenDoor</span>
         </div>
 
-        {mode === "password" && (
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">
-                Email
-              </label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-                required
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">
-                Password
-              </label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-                required
-              />
-            </div>
-            <button
-              type="submit"
-              disabled={loading}
-              className="flex w-full items-center justify-center gap-2 rounded-md bg-primary-600 px-4 py-2 font-medium text-white hover:bg-primary-700 disabled:opacity-50"
-            >
-              <LogIn className="h-4 w-4" />
-              {loading ? "Signing in..." : "Sign In"}
-            </button>
-            <p className="text-center text-sm text-gray-600">
-              Don&apos;t have an account?{" "}
-              <button
-                type="button"
-                onClick={() => setMode("signup")}
-                className="font-medium text-primary-600 hover:underline"
-              >
-                Sign up
-              </button>
-            </p>
-          </form>
-        )}
+        <div className="space-y-6">
+          <h2 className="text-3xl font-semibold leading-tight text-white">
+            The LLM gateway<br />built for teams
+          </h2>
+          <ul className="space-y-3 text-sm text-zinc-400">
+            <li className="flex items-start gap-2.5">
+              <span className="mt-0.5 h-4 w-4 shrink-0 text-indigo-400">→</span>
+              Route to GPT-4o, Claude, Gemini and open models through one API
+            </li>
+            <li className="flex items-start gap-2.5">
+              <span className="mt-0.5 h-4 w-4 shrink-0 text-indigo-400">→</span>
+              Per-key model access controls, rate limits, and spend budgets
+            </li>
+            <li className="flex items-start gap-2.5">
+              <span className="mt-0.5 h-4 w-4 shrink-0 text-indigo-400">→</span>
+              Enterprise SSO, audit logs, and governance policies built-in
+            </li>
+          </ul>
+        </div>
 
-        {mode === "signup" && (
-          <form onSubmit={handleSignup} className="space-y-4">
-            <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">
-                Full Name
-              </label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-                required
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">
-                Organization Name (optional)
-              </label>
-              <input
-                type="text"
-                value={orgName}
-                onChange={(e) => setOrgName(e.target.value)}
-                placeholder="e.g. Acme Corp"
-                className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">
-                Email
-              </label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-                required
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">
-                Password
-              </label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-                required
-                minLength={8}
-              />
-              <p className="mt-1 text-xs text-gray-500">
-                Must be at least 8 characters
-              </p>
-            </div>
-            <button
-              type="submit"
-              disabled={loading}
-              className="flex w-full items-center justify-center gap-2 rounded-md bg-primary-600 px-4 py-2 font-medium text-white hover:bg-primary-700 disabled:opacity-50"
-            >
-              <UserPlus className="h-4 w-4" />
-              {loading ? "Creating account..." : "Sign Up"}
-            </button>
-            <p className="text-center text-sm text-gray-600">
-              Already have an account?{" "}
-              <button
-                type="button"
-                onClick={() => setMode("password")}
-                className="font-medium text-primary-600 hover:underline"
-              >
-                Sign in
-              </button>
-            </p>
-          </form>
-        )}
+        <p className="text-xs text-zinc-600">
+          &copy; {new Date().getFullYear()} OpenDoor. All rights reserved.
+        </p>
+      </div>
 
-        {mode === "sso" && (
-          <form onSubmit={handleSSO} className="space-y-4">
-            <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">
-                Organization Slug
-              </label>
-              <input
-                type="text"
-                value={orgSlug}
-                onChange={(e) => setOrgSlug(e.target.value)}
-                placeholder="e.g. ocheing-co"
-                className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-                required
-              />
-              <p className="mt-1 text-xs text-gray-500">
-                Enter your organization slug to sign in via your company&apos;s
-                identity provider (Okta, Azure AD, Google Workspace, etc.)
-              </p>
+      {/* Right — form panel */}
+      <div className="flex flex-1 items-center justify-center bg-white px-6 py-12">
+        <div className="w-full max-w-sm">
+          {/* Mobile logo */}
+          <div className="mb-8 flex items-center gap-2 lg:hidden">
+            <DoorOpen className="h-5 w-5 text-indigo-600" />
+            <span className="text-base font-semibold text-zinc-900">OpenDoor</span>
+          </div>
+
+          <h1 className="text-xl font-semibold text-zinc-900">
+            {mode === "signup" ? "Create your account" : "Welcome back"}
+          </h1>
+          <p className="mt-1 text-sm text-zinc-500">
+            {mode === "signup"
+              ? "Get started with the LLM gateway"
+              : "Sign in to your LLM Gateway"}
+          </p>
+
+          {(error || ssoErrorMessage) && (
+            <div className="mt-4 alert-error">
+              {error || ssoErrorMessage}
             </div>
+          )}
+
+          {/* Tab switcher */}
+          <div className="mt-6 flex rounded-lg border border-zinc-200 bg-zinc-50 p-1">
             <button
-              type="submit"
-              disabled={ssoLoading}
-              className="flex w-full items-center justify-center gap-2 rounded-md bg-gray-900 px-4 py-2 font-medium text-white hover:bg-gray-800 disabled:opacity-50"
+              onClick={() => setMode("password")}
+              className={`flex-1 rounded-md py-1.5 text-sm font-medium transition-colors ${
+                mode === "password" || mode === "signup"
+                  ? "bg-white text-zinc-900 shadow-sm"
+                  : "text-zinc-500 hover:text-zinc-700"
+              }`}
             >
-              <Shield className="h-4 w-4" />
-              {ssoLoading ? "Redirecting..." : "Sign in with SSO"}
+              {mode === "signup" ? "Sign up" : "Email"}
             </button>
-          </form>
-        )}
+            <button
+              onClick={() => setMode("sso")}
+              className={`flex-1 rounded-md py-1.5 text-sm font-medium transition-colors ${
+                mode === "sso"
+                  ? "bg-white text-zinc-900 shadow-sm"
+                  : "text-zinc-500 hover:text-zinc-700"
+              }`}
+            >
+              Enterprise SSO
+            </button>
+          </div>
+
+          {/* Email/password form */}
+          {mode === "password" && (
+            <form onSubmit={handleLogin} className="mt-5 space-y-4">
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-zinc-700">
+                  Email
+                </label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="input"
+                  placeholder="you@company.com"
+                  required
+                />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-zinc-700">
+                  Password
+                </label>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="input"
+                  required
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={loading}
+                className="btn-primary w-full"
+              >
+                <LogIn className="h-4 w-4" />
+                {loading ? "Signing in…" : "Sign In"}
+              </button>
+              <p className="text-center text-sm text-zinc-500">
+                No account?{" "}
+                <button
+                  type="button"
+                  onClick={() => setMode("signup")}
+                  className="font-medium text-indigo-600 hover:text-indigo-700"
+                >
+                  Sign up free
+                </button>
+              </p>
+            </form>
+          )}
+
+          {/* Sign up form */}
+          {mode === "signup" && (
+            <form onSubmit={handleSignup} className="mt-5 space-y-4">
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-zinc-700">
+                  Full Name
+                </label>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="input"
+                  required
+                />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-zinc-700">
+                  Organization <span className="font-normal text-zinc-400">(optional)</span>
+                </label>
+                <input
+                  type="text"
+                  value={orgName}
+                  onChange={(e) => setOrgName(e.target.value)}
+                  placeholder="Acme Corp"
+                  className="input"
+                />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-zinc-700">
+                  Email
+                </label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="input"
+                  placeholder="you@company.com"
+                  required
+                />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-zinc-700">
+                  Password
+                </label>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="input"
+                  required
+                  minLength={8}
+                />
+                <p className="mt-1 text-xs text-zinc-400">At least 8 characters</p>
+              </div>
+              <button
+                type="submit"
+                disabled={loading}
+                className="btn-primary w-full"
+              >
+                <UserPlus className="h-4 w-4" />
+                {loading ? "Creating account…" : "Create Account"}
+              </button>
+              <p className="text-center text-sm text-zinc-500">
+                Already have an account?{" "}
+                <button
+                  type="button"
+                  onClick={() => setMode("password")}
+                  className="font-medium text-indigo-600 hover:text-indigo-700"
+                >
+                  Sign in
+                </button>
+              </p>
+            </form>
+          )}
+
+          {/* SSO form */}
+          {mode === "sso" && (
+            <form onSubmit={handleSSO} className="mt-5 space-y-4">
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-zinc-700">
+                  Organization Slug
+                </label>
+                <input
+                  type="text"
+                  value={orgSlug}
+                  onChange={(e) => setOrgSlug(e.target.value)}
+                  placeholder="acme-corp"
+                  className="input"
+                  required
+                />
+                <p className="mt-1.5 text-xs text-zinc-400">
+                  Enter your organization slug to sign in via Okta, Azure AD, Google Workspace, etc.
+                </p>
+              </div>
+              <button
+                type="submit"
+                disabled={ssoLoading}
+                className="btn-primary w-full"
+              >
+                <Shield className="h-4 w-4" />
+                {ssoLoading ? "Redirecting…" : "Continue with SSO"}
+              </button>
+            </form>
+          )}
+        </div>
       </div>
     </div>
   );

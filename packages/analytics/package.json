@@ -1,0 +1,23 @@
+{
+  "name": "@opendoor/analytics",
+  "version": "1.0.0",
+  "private": true,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test src/__tests__"
+  },
+  "dependencies": {
+    "@duckdb/node-api": "1.5.2-r.1"
+  },
+  "devDependencies": {
+    "@opendoor/config": "workspace:*",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.4.0"
+  },
+  "peerDependencies": {
+    "@opendoor/database": "workspace:*"
+  }
+}

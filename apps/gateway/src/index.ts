@@ -7,9 +7,11 @@ import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import { authMiddleware } from "./middleware/auth.js";
 import { rateLimitMiddleware } from "./middleware/rate-limit.js";
+import { policyMiddleware } from "./middleware/policy.js";
 import chatRouter from "./routes/chat.js";
 import modelsRouter from "./routes/models.js";
 import usageRouter from "./routes/usage.js";
+import analyticsRouter from "./routes/analytics.js";
 
 const app = new Hono();
 
@@ -27,10 +29,12 @@ app.get("/health", (c) => {
 
 app.use("/v1/*", authMiddleware);
 app.use("/v1/*", rateLimitMiddleware);
+app.use("/v1/*", policyMiddleware);
 
 app.route("/v1/chat", chatRouter);
 app.route("/v1/models", modelsRouter);
 app.route("/v1/usage", usageRouter);
+app.route("/v1/analytics", analyticsRouter);
 
 app.get("/v1/models/:model", async (c) => {
   const modelId = c.req.param("model");
@@ -55,3 +59,17 @@ serve({
 });
 
 console.log(`🚪 OpenDoor Gateway running on port ${port}`);
+
+async function gracefulShutdown(signal: string) {
+  console.log(`Received ${signal}, flushing PostHog…`);
+  try {
+    const { shutdownGatewayPostHog } = await import("./lib/posthog.js");
+    await shutdownGatewayPostHog();
+  } catch {
+    /* noop */
+  }
+  process.exit(0);
+}
+
+process.once("SIGINT", () => void gracefulShutdown("SIGINT"));
+process.once("SIGTERM", () => void gracefulShutdown("SIGTERM"));

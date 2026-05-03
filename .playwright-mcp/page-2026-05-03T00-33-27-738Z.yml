@@ -1,0 +1,52 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e3]:
+      - generic [ref=e4]:
+        - img [ref=e6]
+        - generic [ref=e9]: OpenDoor
+      - generic [ref=e10]:
+        - heading "The LLM gateway built for teams" [level=2] [ref=e11]:
+          - text: The LLM gateway
+          - text: built for teams
+        - list [ref=e12]:
+          - listitem [ref=e13]:
+            - generic [ref=e14]: →
+            - text: Route to GPT-4o, Claude, Gemini and open models through one API
+          - listitem [ref=e15]:
+            - generic [ref=e16]: →
+            - text: Per-key model access controls, rate limits, and spend budgets
+          - listitem [ref=e17]:
+            - generic [ref=e18]: →
+            - text: Enterprise SSO, audit logs, and governance policies built-in
+      - paragraph [ref=e19]: © 2026 OpenDoor. All rights reserved.
+    - generic [ref=e21]:
+      - heading "Welcome back" [level=1] [ref=e22]
+      - paragraph [ref=e23]: Sign in to your LLM Gateway
+      - generic [ref=e24]:
+        - button "Email" [ref=e25] [cursor=pointer]
+        - button "Enterprise SSO" [ref=e26] [cursor=pointer]
+      - generic [ref=e27]:
+        - generic [ref=e28]:
+          - generic [ref=e29]: Email
+          - textbox "you@company.com" [ref=e30]: admin@ocheingco.com
+        - generic [ref=e31]:
+          - generic [ref=e32]: Password
+          - textbox [ref=e33]: admin123!
+        - button "Signing in…" [disabled] [ref=e50]:
+          - img [ref=e35]
+          - text: Signing in…
+        - paragraph [ref=e38]:
+          - text: No account?
+          - button "Sign up free" [ref=e39] [cursor=pointer]
+  - generic [ref=e45] [cursor=pointer]:
+    - button "Open Next.js Dev Tools" [ref=e46]:
+      - img [ref=e47]
+    - generic [ref=e51]:
+      - button "Open issues overlay" [ref=e52]:
+        - generic [ref=e53]:
+          - generic [ref=e54]: "0"
+          - generic [ref=e55]: "1"
+        - generic [ref=e56]: Issue
+      - button "Collapse issues badge" [ref=e57]:
+        - img [ref=e58]
+  - alert [ref=e40]

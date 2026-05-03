@@ -1,0 +1,89 @@
+---
+sidebar_position: 1
+---
+
+# Installation
+
+## Prerequisites
+
+- **Bun** >= 1.0.0
+- **pnpm** >= 9.0.0
+- **Docker** (for PostgreSQL and Redis)
+- **Azure CLI** (for Azure deployments)
+
+## Clone and Setup
+
+```bash
+git clone https://github.com/OchiengandCo/opendoor.git
+cd opendoor
+```
+
+## Install Dependencies
+
+```bash
+pnpm install
+```
+
+This installs dependencies for all workspace packages and apps.
+
+## Environment Variables
+
+Copy the example environment file:
+
+```bash
+cp .env.example .env
+```
+
+Edit `.env` with your values:
+
+```bash
+# Database
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/opendoor
+
+# Redis
+REDIS_URL=redis://localhost:6379
+
+# Auth
+AUTH_SECRET=your-secret-key
+GATEWAY_API_KEY_HASH_SECRET=your-api-key-secret
+
+# Azure
+AZURE_AI_FOUNDRY_ENDPOINT=https://your-account.openai.azure.com/
+AZURE_AI_FOUNDRY_KEY=your-azure-key
+AZURE_SUBSCRIPTION_ID=your-subscription-id
+AZURE_RESOURCE_GROUP=your-resource-group
+AZURE_OPENAI_ACCOUNT=your-openai-account
+```
+
+## Start Infrastructure
+
+```bash
+# Start PostgreSQL and Redis containers
+docker-compose up -d postgres redis
+```
+
+Or start them individually:
+
+```bash
+docker run -d --name postgres -p 5432:5432 -e POSTGRES_PASSWORD=postgres postgres:16
+docker run -d --name redis -p 6379:6379 redis:7
+```
+
+## Run Database Migrations
+
+```bash
+pnpm db:migrate
+```
+
+## Seed the Database
+
+```bash
+bun run scripts/seed.ts
+```
+
+This creates the initial organization, admin user, and API key.
+
+## Next Steps
+
+- [Configure the Gateway](/docs/getting-started/configuration)
+- [Start Local Development](/docs/getting-started/local-development)

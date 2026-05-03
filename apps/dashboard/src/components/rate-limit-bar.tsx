@@ -16,10 +16,7 @@ export default function RateLimitPanel() {
   useEffect(() => {
     async function fetchLimits() {
       const res = await fetch("/api/rate-limits");
-      if (res.ok) {
-        const data = await res.json();
-        setLimits(data);
-      }
+      if (res.ok) setLimits(await res.json());
       setLoading(false);
     }
     fetchLimits();
@@ -29,77 +26,57 @@ export default function RateLimitPanel() {
 
   if (loading) {
     return (
-      <div className="rounded-lg border border-gray-200 bg-white p-6">
-        <p className="text-sm text-gray-500">Loading rate limits...</p>
+      <div className="card p-6">
+        <p className="text-sm text-zinc-400">Loading rate limits…</p>
       </div>
     );
   }
 
   if (!limits) {
     return (
-      <div className="rounded-lg border border-gray-200 bg-white p-6">
-        <p className="text-sm text-gray-500">Unable to load rate limits.</p>
+      <div className="card p-6">
+        <p className="text-sm text-zinc-400">Unable to load rate limits.</p>
       </div>
     );
   }
 
   return (
-    <div className="rounded-lg border border-gray-200 bg-white p-6">
-      <h2 className="text-lg font-semibold text-gray-900">Rate Limits</h2>
-      <p className="mt-1 text-sm text-gray-600">
-        Current usage against your API key limits
-      </p>
+    <div className="card p-6">
+      <h2 className="section-title">Rate Limits</h2>
+      <p className="mt-1 text-sm text-zinc-500">Current usage against your API key limits</p>
 
-      <div className="mt-4 space-y-4">
-        <RateBar
-          label="Requests / minute"
-          used={limits.rpm.used}
-          limit={limits.rpm.limit}
-        />
-        <RateBar
-          label="Tokens / minute"
-          used={limits.tpm.used}
-          limit={limits.tpm.limit}
-        />
+      <div className="mt-5 space-y-4">
+        <RateBar label="Requests / minute" used={limits.rpm.used} limit={limits.rpm.limit} />
+        <RateBar label="Tokens / minute" used={limits.tpm.used} limit={limits.tpm.limit} />
       </div>
 
-      <p className="mt-3 text-xs text-gray-500">
+      <p className="mt-4 text-xs text-zinc-400">
         Resets at {new Date(limits.resetAt).toLocaleTimeString()}
       </p>
     </div>
   );
 }
 
-function RateBar({
-  label,
-  used,
-  limit,
-}: {
-  label: string;
-  used: number;
-  limit: number;
-}) {
+function RateBar({ label, used, limit }: { label: string; used: number; limit: number }) {
   const pct = Math.min(100, Math.round((used / limit) * 100));
 
   const barColor = cn(
-    "h-2 rounded-full transition-all",
-    pct < 50 && "bg-green-500",
-    pct >= 50 && pct < 80 && "bg-yellow-500",
+    "h-1.5 rounded-full transition-all",
+    pct < 50 && "bg-emerald-500",
+    pct >= 50 && pct < 80 && "bg-amber-500",
     pct >= 80 && "bg-red-500"
   );
 
   return (
     <div>
       <div className="flex items-center justify-between text-sm">
-        <span className="font-medium text-gray-700">{label}</span>
-        <span className="text-gray-500">
-          {used.toLocaleString()} / {limit.toLocaleString()}
-        </span>
+        <span className="font-medium text-zinc-700">{label}</span>
+        <span className="text-xs text-zinc-400">{used.toLocaleString()} / {limit.toLocaleString()}</span>
       </div>
-      <div className="mt-1 h-2 w-full rounded-full bg-gray-100">
+      <div className="mt-2 h-1.5 w-full rounded-full bg-zinc-100">
         <div className={barColor} style={{ width: `${pct}%` }} />
       </div>
-      <p className="mt-1 text-xs text-gray-500">{pct}% used</p>
+      <p className="mt-1 text-xs text-zinc-400">{pct}%</p>
     </div>
   );
 }

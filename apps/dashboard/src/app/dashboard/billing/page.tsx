@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { CreditCard, Check, Loader2, ExternalLink } from "lucide-react";
+import { CreditCard, Check, Loader2, ExternalLink, Wallet } from "lucide-react";
 
 interface BillingInfo {
   id: string;
@@ -11,6 +11,31 @@ interface BillingInfo {
   stripeSubscriptionId: string | null;
   subscriptionStatus: string | null;
   monthlyBudgetUsd: string | null;
+  creditsUsdCents: number | null;
+}
+
+interface CreditTransaction {
+  id: string;
+  kind: string;
+  amountCents: number;
+  balanceAfterCents: number;
+  createdAt: string;
+}
+
+interface BalanceData {
+  creditsUsdCents: number;
+  planBudget: {
+    usedCents: number;
+    totalCents: number;
+    remainingCents: number;
+    resetsAt: string;
+  };
+  autoRecharge: {
+    enabled: boolean;
+    amountCents: number;
+    thresholdCents: number;
+  };
+  recentTransactions: CreditTransaction[];
 }
 
 const PLANS = [
@@ -31,14 +56,14 @@ const PLANS = [
   {
     id: "pro",
     name: "Pro",
-    description: "Reduced markup for high-volume teams",
+    description: "Lower markups plus rolling included usage",
     price: "$49/mo",
     features: [
-      "10% reduced markup on all models",
+      "$5 usage allowance every 4 hours",
+      "3% markup on OpenAI/Claude/Grok/Gemini",
+      "30% markup on open-weight models",
       "Priority API routing",
-      "Advanced analytics & exports",
-      "Email support",
-      "Up to 5 team members",
+      "Priority support",
     ],
     cta: "Upgrade to Pro",
     disabled: false,
@@ -47,54 +72,66 @@ const PLANS = [
   {
     id: "enterprise",
     name: "Enterprise",
-    description: "Custom pricing & dedicated infrastructure",
-    price: "$299/mo",
+    description: "Highest allowance and lowest markups",
+    price: "$299.99/mo",
     features: [
-      "Custom markup rates",
-      "Dedicated Azure capacity",
+      "$30 usage allowance every 4 hours",
+      "2% markup on OpenAI/Claude/Grok/Gemini",
+      "25% markup on open-weight models",
       "SSO & advanced security",
-      "24/7 phone support",
+      "Dedicated Azure capacity",
+      "24/7 support",
       "Unlimited team members",
-      "Custom model deployments",
     ],
-    cta: "Contact Sales",
+    cta: "Upgrade to Enterprise",
     disabled: false,
     priceIdEnv: "STRIPE_ENTERPRISE_PRICE_ID",
   },
 ];
 
+const TOPUP_PRESETS = [3000, 5000, 10000, 20000];
+
+function centsToUsd(cents: number): string {
+  return `$${(cents / 100).toFixed(2)}`;
+}
+
 export default function BillingPage() {
   const [info, setInfo] = useState<BillingInfo | null>(null);
+  const [balance, setBalance] = useState<BalanceData | null>(null);
   const [loading, setLoading] = useState(true);
   const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
+  const [topupLoading, setTopupLoading] = useState<number | null>(null);
+  const [customTopup, setCustomTopup] = useState("50");
   const [portalLoading, setPortalLoading] = useState(false);
 
+  async function loadState() {
+    const [infoRes, balanceRes] = await Promise.all([
+      fetch("/api/billing/info"),
+      fetch("/api/billing/balance"),
+    ]);
+    const infoData = await infoRes.json();
+    const balanceData = await balanceRes.json();
+    setInfo(infoData.org || null);
+    setBalance(balanceData || null);
+  }
+
   useEffect(() => {
-    fetch("/api/billing/info")
-      .then((r) => r.json())
-      .then((data) => {
-        setInfo(data.org || null);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
+    loadState().then(() => setLoading(false)).catch(() => setLoading(false));
   }, []);
 
   async function subscribe(planId: string) {
     const plan = PLANS.find((p) => p.id === planId);
     if (!plan || plan.disabled) return;
-
     const priceId =
       planId === "pro"
         ? process.env.NEXT_PUBLIC_STRIPE_PRO_PRICE_ID
         : planId === "enterprise"
         ? process.env.NEXT_PUBLIC_STRIPE_ENTERPRISE_PRICE_ID
         : null;
-
     if (!priceId) {
-      alert("Stripe price ID not configured. Please set environment variables.");
+      alert("Stripe price ID not configured.");
       return;
     }
-
     setCheckoutLoading(planId);
     try {
       const res = await fetch("/api/billing/checkout", {
@@ -103,15 +140,30 @@ export default function BillingPage() {
         body: JSON.stringify({ priceId }),
       });
       const data = await res.json();
-      if (data.url) {
-        window.location.href = data.url;
-      } else {
-        alert(data.error || "Failed to start checkout");
-      }
-    } catch (e) {
+      if (data.url) window.location.href = data.url;
+      else alert(data.error || "Failed to start checkout");
+    } catch {
       alert("Checkout failed");
     } finally {
       setCheckoutLoading(null);
+    }
+  }
+
+  async function topup(amountCents: number) {
+    setTopupLoading(amountCents);
+    try {
+      const res = await fetch("/api/billing/topup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amountCents }),
+      });
+      const data = await res.json();
+      if (data.url) window.location.href = data.url;
+      else alert(data.error || "Failed to start top-up");
+    } catch {
+      alert("Top-up failed");
+    } finally {
+      setTopupLoading(null);
     }
   }
 
@@ -120,12 +172,9 @@ export default function BillingPage() {
     try {
       const res = await fetch("/api/billing/portal", { method: "POST" });
       const data = await res.json();
-      if (data.url) {
-        window.location.href = data.url;
-      } else {
-        alert(data.error || "Failed to open billing portal");
-      }
-    } catch (e) {
+      if (data.url) window.location.href = data.url;
+      else alert(data.error || "Failed to open billing portal");
+    } catch {
       alert("Portal failed");
     } finally {
       setPortalLoading(false);
@@ -135,37 +184,66 @@ export default function BillingPage() {
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center">
-        <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+        <Loader2 className="h-5 w-5 animate-spin text-zinc-400" />
       </div>
     );
   }
 
   const isSubscribed =
     info?.subscriptionStatus === "active" || info?.subscriptionStatus === "trialing";
+  const progressPercent =
+    balance?.planBudget.totalCents && balance.planBudget.totalCents > 0
+      ? Math.min(100, Math.round((balance.planBudget.usedCents / balance.planBudget.totalCents) * 100))
+      : 0;
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900">Billing</h1>
-      <p className="mt-1 text-gray-600">
-        Manage your OpenDoor subscription and payment methods
-      </p>
+      <div className="mb-8">
+        <h1 className="page-title">Billing</h1>
+        <p className="page-desc">Manage subscriptions, prepaid credits, and token-based usage</p>
+      </div>
 
+      {/* Balance cards */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <div className="card p-6">
+          <div className="flex items-center gap-2 text-zinc-500">
+            <Wallet className="h-4 w-4" />
+            <p className="text-sm font-medium">Prepaid Balance</p>
+          </div>
+          <p className="mt-3 text-3xl font-semibold text-zinc-900">
+            {centsToUsd(balance?.creditsUsdCents || 0)}
+          </p>
+          <p className="mt-1 text-xs text-zinc-400">$20 signup credit on first organization creation.</p>
+        </div>
+
+        <div className="card p-6">
+          <p className="text-sm font-medium text-zinc-500">4h Plan Allowance</p>
+          <p className="mt-2 text-lg font-semibold text-zinc-900 capitalize">{info?.plan || "free"}</p>
+          <div className="mt-4 h-1.5 w-full rounded-full bg-zinc-100">
+            <div
+              className="h-1.5 rounded-full bg-zinc-900 transition-all"
+              style={{ width: `${progressPercent}%` }}
+            />
+          </div>
+          <p className="mt-2 text-xs text-zinc-500">
+            {centsToUsd(balance?.planBudget.usedCents || 0)} used of{" "}
+            {centsToUsd(balance?.planBudget.totalCents || 0)}. Resets at{" "}
+            {balance?.planBudget.resetsAt
+              ? new Date(balance.planBudget.resetsAt).toLocaleTimeString()
+              : "—"}
+          </p>
+        </div>
+      </div>
+
+      {/* Subscription status */}
       {info && (
-        <div className="mt-6 rounded-lg border border-gray-200 bg-white p-6">
+        <div className="mt-4 card p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Current Plan</p>
-              <p className="mt-1 text-3xl font-bold text-gray-900 capitalize">
-                {info.plan}
-              </p>
+              <p className="text-sm text-zinc-500">Subscription</p>
+              <p className="mt-1 text-2xl font-semibold text-zinc-900 capitalize">{info.plan}</p>
               {info.subscriptionStatus && (
-                <span
-                  className={`mt-2 inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                    isSubscribed
-                      ? "bg-green-100 text-green-800"
-                      : "bg-yellow-100 text-yellow-800"
-                  }`}
-                >
+                <span className={`mt-2 inline-block ${isSubscribed ? "badge-success" : "badge-warning"}`}>
                   {info.subscriptionStatus}
                 </span>
               )}
@@ -174,13 +252,9 @@ export default function BillingPage() {
               <button
                 onClick={openPortal}
                 disabled={portalLoading}
-                className="inline-flex items-center gap-2 rounded-md bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 disabled:opacity-50"
+                className="btn-secondary"
               >
-                {portalLoading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <ExternalLink className="h-4 w-4" />
-                )}
+                {portalLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ExternalLink className="h-4 w-4" />}
                 Manage Subscription
               </button>
             )}
@@ -188,95 +262,141 @@ export default function BillingPage() {
         </div>
       )}
 
-      <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-3">
+      {/* Top up */}
+      <div className="mt-4 card p-6">
+        <div className="flex items-start gap-3">
+          <CreditCard className="mt-0.5 h-4 w-4 shrink-0 text-zinc-400" />
+          <div className="w-full">
+            <h3 className="section-title">Top up API credits</h3>
+            <p className="mt-1 text-sm text-zinc-500">
+              Buy prepaid credit — we deduct usage costs automatically per request.
+            </p>
+
+            <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {TOPUP_PRESETS.map((amount) => (
+                <button
+                  key={amount}
+                  onClick={() => topup(amount)}
+                  disabled={topupLoading !== null}
+                  className="btn-secondary"
+                >
+                  {topupLoading === amount ? "Loading…" : centsToUsd(amount)}
+                </button>
+              ))}
+            </div>
+
+            <div className="mt-3 flex gap-2">
+              <input
+                type="number"
+                min={5}
+                max={5000}
+                step={1}
+                value={customTopup}
+                onChange={(e) => setCustomTopup(e.target.value)}
+                placeholder="Amount (USD)"
+                aria-label="Custom top-up amount in USD"
+                className="input w-36"
+              />
+              <button
+                onClick={() => topup(Math.round(Number(customTopup || 0) * 100))}
+                disabled={topupLoading !== null}
+                className="btn-primary"
+              >
+                Top up
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Plan cards */}
+      <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
         {PLANS.map((plan) => {
           const isCurrent = info?.plan === plan.id;
           return (
             <div
               key={plan.id}
-              className={`rounded-lg border bg-white p-6 ${
-                isCurrent
-                  ? "border-primary-500 ring-1 ring-primary-500"
-                  : "border-gray-200"
-              }`}
+              className={`card p-6 ${isCurrent ? "ring-2 ring-zinc-900" : ""}`}
             >
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-gray-900">
-                  {plan.name}
-                </h3>
-                {isCurrent && (
-                  <span className="inline-flex items-center rounded-full bg-primary-50 px-2 py-1 text-xs font-medium text-primary-700">
-                    Current
-                  </span>
-                )}
+                <h3 className="font-semibold text-zinc-900">{plan.name}</h3>
+                {isCurrent && <span className="badge-neutral">Current</span>}
               </div>
-              <p className="mt-1 text-sm text-gray-600">{plan.description}</p>
-              <p className="mt-4 text-3xl font-bold text-gray-900">
-                {plan.price}
-              </p>
+              <p className="mt-1 text-xs text-zinc-500">{plan.description}</p>
+              <p className="mt-4 text-2xl font-semibold text-zinc-900">{plan.price}</p>
 
-              <ul className="mt-6 space-y-3">
+              <ul className="mt-5 space-y-2.5">
                 {plan.features.map((feature) => (
                   <li key={feature} className="flex items-start gap-2 text-sm">
-                    <Check className="h-4 w-4 shrink-0 text-green-500" />
-                    <span className="text-gray-600">{feature}</span>
+                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
+                    <span className="text-zinc-600">{feature}</span>
                   </li>
                 ))}
               </ul>
 
               <button
-                onClick={() =>
-                  plan.id === "enterprise" && !isCurrent
-                    ? (window.location.href = "mailto:sales@opendoor.ai")
-                    : subscribe(plan.id)
-                }
-                disabled={
-                  isCurrent ||
-                  plan.disabled ||
-                  checkoutLoading === plan.id ||
-                  (plan.id !== "free" && isSubscribed && !isCurrent)
-                }
-                className={`mt-6 w-full rounded-md px-4 py-2 text-sm font-medium disabled:opacity-50 ${
-                  isCurrent
-                    ? "bg-gray-100 text-gray-500"
-                    : "bg-primary-600 text-white hover:bg-primary-700"
-                }`}
+                onClick={() => subscribe(plan.id)}
+                disabled={isCurrent || plan.disabled || checkoutLoading === plan.id || (plan.id !== "free" && isSubscribed && !isCurrent)}
+                className={`mt-6 w-full ${isCurrent || plan.disabled ? "btn-secondary opacity-60" : "btn-primary"}`}
               >
                 {checkoutLoading === plan.id ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Loading...
-                  </span>
-                ) : isCurrent ? (
-                  "Current Plan"
-                ) : plan.id === "enterprise" ? (
-                  "Contact Sales"
-                ) : isSubscribed && plan.id !== "free" ? (
-                  "Switch Plan"
-                ) : (
-                  plan.cta
-                )}
+                  <><Loader2 className="h-4 w-4 animate-spin" />Loading…</>
+                ) : isCurrent ? "Current Plan" : isSubscribed && plan.id !== "free" ? "Switch Plan" : plan.cta}
               </button>
             </div>
           );
         })}
       </div>
 
-      <div className="mt-8 rounded-lg border border-gray-200 bg-gray-50 p-6">
-        <div className="flex items-start gap-3">
-          <CreditCard className="h-5 w-5 text-gray-500" />
-          <div>
-            <h3 className="text-sm font-medium text-gray-900">
-              Usage-Based Billing
-            </h3>
-            <p className="mt-1 text-sm text-gray-600">
-              All plans are charged based on actual LLM usage. Your API key gives
-              you access to <strong>all supported models</strong> — GPT-4o, Claude,
-              Gemini, Mistral, DeepSeek, Qwen, and more. We apply a transparent
-              markup on top of provider costs. Upgrade to Pro or Enterprise for
-              reduced markups.
-            </p>
-          </div>
+      {/* Markup table */}
+      <div className="mt-6 card p-6">
+        <h3 className="section-title mb-4">Markup by model family</h3>
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-sm">
+            <thead>
+              <tr className="border-b border-zinc-100">
+                <th className="table-header-cell">Family</th>
+                <th className="table-header-cell">Free</th>
+                <th className="table-header-cell">Pro</th>
+                <th className="table-header-cell">Enterprise</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr className="table-row">
+                <td className="table-cell text-zinc-700">Closed (OpenAI/Claude/Grok/Gemini)</td>
+                <td className="table-cell text-zinc-600">5%</td>
+                <td className="table-cell text-zinc-600">3%</td>
+                <td className="table-cell text-zinc-600">2%</td>
+              </tr>
+              <tr className="table-row">
+                <td className="table-cell text-zinc-700">Open-weight (Mistral/DeepSeek/Qwen/custom)</td>
+                <td className="table-cell text-zinc-600">35%</td>
+                <td className="table-cell text-zinc-600">30%</td>
+                <td className="table-cell text-zinc-600">25%</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Transactions */}
+      <div className="mt-6 card p-6">
+        <h3 className="section-title mb-4">Recent credit transactions</h3>
+        <div className="space-y-1.5">
+          {(balance?.recentTransactions || []).slice(0, 8).map((txn) => (
+            <div
+              key={txn.id}
+              className="flex items-center justify-between rounded-lg border border-zinc-100 px-3 py-2.5 text-sm"
+            >
+              <span className="capitalize text-zinc-700">{txn.kind.replace("_", " ")}</span>
+              <span className={txn.amountCents >= 0 ? "font-medium text-emerald-600" : "font-medium text-red-600"}>
+                {txn.amountCents >= 0 ? "+" : "−"}{centsToUsd(Math.abs(txn.amountCents))}
+              </span>
+            </div>
+          ))}
+          {(!balance?.recentTransactions || balance.recentTransactions.length === 0) && (
+            <p className="py-4 text-center text-sm text-zinc-400">No credit transactions yet.</p>
+          )}
         </div>
       </div>
     </div>

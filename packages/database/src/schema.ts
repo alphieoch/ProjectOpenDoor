@@ -6,6 +6,7 @@ import {
   timestamp,
   boolean,
   integer,
+  bigint,
   numeric,
   jsonb,
   index,
@@ -34,6 +35,52 @@ export const deploymentStatusEnum = pgEnum("deployment_status", [
   "deleting",
 ]);
 
+export const dataClassEnum = pgEnum("data_class", [
+  "public",
+  "internal",
+  "confidential",
+  "restricted",
+]);
+
+export const approvalStatusEnum = pgEnum("approval_status", [
+  "pending",
+  "in_review",
+  "approved",
+  "rejected",
+  "deprecated",
+]);
+
+export const riskLevelEnum = pgEnum("risk_level", [
+  "low",
+  "medium",
+  "high",
+  "critical",
+]);
+
+export const policyActionEnum = pgEnum("policy_action", [
+  "allow",
+  "deny",
+  "require_approval",
+  "route_fallback",
+]);
+
+export const complianceFrameworkEnum = pgEnum("compliance_framework", [
+  "gdpr",
+  "eu_ai_act",
+  "nist_ai_rmf",
+  "ico_uk",
+  "iso_42001",
+]);
+
+export const sectorEnum = pgEnum("sector", [
+  "general",
+  "legal",
+  "finance",
+  "property",
+  "healthcare",
+  "government",
+]);
+
 export const organizations = pgTable("organizations", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: varchar("name", { length: 255 }).notNull(),
@@ -43,6 +90,14 @@ export const organizations = pgTable("organizations", {
     precision: 10,
     scale: 2,
   }).default("0"),
+  creditsUsdCents: bigint("credits_usd_cents", { mode: "number" }).notNull().default(0),
+  signupCreditGranted: boolean("signup_credit_granted").notNull().default(false),
+  autoRechargeEnabled: boolean("auto_recharge_enabled").default(false),
+  autoRechargeThresholdCents: bigint("auto_recharge_threshold_cents", {
+    mode: "number",
+  }),
+  autoRechargeAmountCents: bigint("auto_recharge_amount_cents", { mode: "number" }),
+  defaultPaymentMethodId: varchar("default_payment_method_id", { length: 255 }),
   stripeCustomerId: varchar("stripe_customer_id", { length: 255 }),
   stripeSubscriptionId: varchar("stripe_subscription_id", { length: 255 }),
   stripePriceId: varchar("stripe_price_id", { length: 255 }),
@@ -52,6 +107,8 @@ export const organizations = pgTable("organizations", {
   ssoEnabled: boolean("sso_enabled").default(false),
   ssoDefaultRole: varchar("sso_default_role", { length: 50 }).default("member"),
   metadata: jsonb("metadata"),
+  sector: sectorEnum("sector").notNull().default("general"),
+  dataResidency: varchar("data_residency", { length: 50 }).default("uk"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -67,6 +124,7 @@ export const users = pgTable("users", {
   passwordHash: text("password_hash"),
   organizationId: uuid("organization_id").references(() => organizations.id),
   role: varchar("role", { length: 50 }).notNull().default("member"),
+  isSiteAdmin: boolean("is_site_admin").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -135,6 +193,8 @@ export const models = pgTable(
     supportsTools: boolean("supports_tools").default(false),
     supportsJsonMode: boolean("supports_json_mode").default(false),
     enabled: boolean("enabled").notNull().default(true),
+    deploymentStatus: varchar("deployment_status", { length: 30 }).default("available_on_request"),
+    family: varchar("family", { length: 20 }).notNull().default("closed"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -196,6 +256,34 @@ export const pricingRules = pgTable(
   })
 );
 
+export const creditTransactions = pgTable(
+  "credit_transactions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: uuid("organization_id")
+      .references(() => organizations.id)
+      .notNull(),
+    kind: varchar("kind", { length: 30 }).notNull(),
+    amountCents: bigint("amount_cents", { mode: "number" }).notNull(),
+    balanceAfterCents: bigint("balance_after_cents", { mode: "number" }).notNull(),
+    requestId: uuid("request_id"),
+    stripePaymentIntentId: varchar("stripe_payment_intent_id", { length: 255 }),
+    metadata: jsonb("metadata"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    orgCreatedIdx: index("credit_transactions_org_created_idx").on(
+      table.organizationId,
+      table.createdAt
+    ),
+    paymentIntentIdx: uniqueIndex("credit_transactions_payment_intent_idx").on(
+      table.stripePaymentIntentId
+    ),
+  })
+);
+
 export const requests = pgTable(
   "requests",
   {
@@ -220,6 +308,9 @@ export const requests = pgTable(
     ),
     status: requestStatusEnum("status").notNull().default("success"),
     errorMessage: text("error_message"),
+    dataClass: dataClassEnum("data_class").default("internal"),
+    policyViolationId: uuid("policy_violation_id"),
+    guardrailOutcome: jsonb("guardrail_outcome"),
     metadata: jsonb("metadata"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
@@ -371,5 +462,289 @@ export const usageDaily = pgTable(
       table.providerId,
       table.modelId
     ),
+  })
+);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ENTERPRISE GOVERNANCE SCHEMA
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Curated enterprise model registry with governance metadata
+export const modelGovernance = pgTable(
+  "model_governance",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    modelId: varchar("model_id", { length: 100 }).notNull().unique(),
+    displayName: varchar("display_name", { length: 255 }).notNull(),
+    description: text("description"),
+    providerId: uuid("provider_id").references(() => providers.id),
+    approvalStatus: approvalStatusEnum("approval_status").notNull().default("pending"),
+    riskLevel: riskLevelEnum("risk_level").notNull().default("medium"),
+    businessLabels: jsonb("business_labels").$type<string[]>().default([]),
+    allowedUseCases: jsonb("allowed_use_cases").$type<string[]>().default([]),
+    bannedUseCases: jsonb("banned_use_cases").$type<string[]>().default([]),
+    dataClassesAllowed: jsonb("data_classes_allowed").$type<string[]>().default(["public", "internal"]),
+    licenseType: varchar("license_type", { length: 100 }),
+    licenseUrl: text("license_url"),
+    provenanceVerified: boolean("provenance_verified").default(false),
+    biasReviewed: boolean("bias_reviewed").default(false),
+    safetyReviewed: boolean("safety_reviewed").default(false),
+    redTeamResults: jsonb("red_team_results"),
+    contextWindow: integer("context_window"),
+    parameterScale: varchar("parameter_scale", { length: 50 }),
+    reasoningModes: jsonb("reasoning_modes").$type<string[]>().default([]),
+    costTier: varchar("cost_tier", { length: 50 }).default("standard"),
+    sectorTags: jsonb("sector_tags").$type<string[]>().default([]),
+    ownerTeam: varchar("owner_team", { length: 255 }),
+    businessCriticality: varchar("business_criticality", { length: 50 }).default("standard"),
+    allowedRegions: jsonb("allowed_regions").$type<string[]>().default(["uk", "eu"]),
+    lastReviewedBy: uuid("last_reviewed_by").references(() => users.id),
+    lastReviewedAt: timestamp("last_reviewed_at", { withTimezone: true }),
+    metadata: jsonb("metadata"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    approvalIdx: index("gov_approval_idx").on(table.approvalStatus),
+    riskIdx: index("gov_risk_idx").on(table.riskLevel),
+  })
+);
+
+// Approval workflow tracking for models
+export const modelApprovals = pgTable(
+  "model_approvals",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    modelGovernanceId: uuid("model_governance_id")
+      .references(() => modelGovernance.id)
+      .notNull(),
+    organizationId: uuid("organization_id")
+      .references(() => organizations.id)
+      .notNull(),
+    requestedBy: uuid("requested_by")
+      .references(() => users.id)
+      .notNull(),
+    reviewedBy: uuid("reviewed_by").references(() => users.id),
+    status: approvalStatusEnum("status").notNull().default("pending"),
+    reviewNotes: text("review_notes"),
+    requestedAt: timestamp("requested_at", { withTimezone: true }).notNull().defaultNow(),
+    reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    modelOrgIdx: index("approvals_model_org_idx").on(table.modelGovernanceId, table.organizationId),
+    statusIdx: index("approvals_status_idx").on(table.status),
+  })
+);
+
+// Model evaluations / benchmark results
+export const modelEvaluations = pgTable(
+  "model_evaluations",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    modelGovernanceId: uuid("model_governance_id")
+      .references(() => modelGovernance.id)
+      .notNull(),
+    organizationId: uuid("organization_id")
+      .references(() => organizations.id),
+    evaluationName: varchar("evaluation_name", { length: 255 }).notNull(),
+    evaluationType: varchar("evaluation_type", { length: 100 }).notNull(), // "benchmark", "red_team", "business_task", "safety"
+    score: numeric("score", { precision: 6, scale: 3 }),
+    scoreUnit: varchar("score_unit", { length: 50 }).default("percent"),
+    passThreshold: numeric("pass_threshold", { precision: 6, scale: 3 }),
+    passed: boolean("passed"),
+    details: jsonb("details"),
+    datasetRef: text("dataset_ref"),
+    evaluatedBy: uuid("evaluated_by").references(() => users.id),
+    evaluatedAt: timestamp("evaluated_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    modelIdx: index("evals_model_idx").on(table.modelGovernanceId),
+    typeIdx: index("evals_type_idx").on(table.evaluationType),
+  })
+);
+
+// Data classification policies
+export const modelPolicies = pgTable(
+  "model_policies",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: uuid("organization_id")
+      .references(() => organizations.id)
+      .notNull(),
+    name: varchar("name", { length: 255 }).notNull(),
+    description: text("description"),
+    dataClass: dataClassEnum("data_class").notNull(),
+    modelGovernanceId: uuid("model_governance_id")
+      .references(() => modelGovernance.id),
+    modelIdPattern: varchar("model_id_pattern", { length: 255 }), // regex/wildcard for matching models
+    userRolePattern: varchar("user_role_pattern", { length: 255 }), // e.g. "admin|compliance"
+    action: policyActionEnum("action").notNull().default("allow"),
+    fallbackModelId: varchar("fallback_model_id", { length: 100 }),
+    requireHumanApproval: boolean("require_human_approval").default(false),
+    scope: varchar("scope", { length: 50 }).notNull().default("organization"),
+    enabled: boolean("enabled").notNull().default(true),
+    priority: integer("priority").notNull().default(100),
+    metadata: jsonb("metadata"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    orgIdx: index("policies_org_idx").on(table.organizationId),
+    enabledIdx: index("policies_enabled_idx").on(table.enabled),
+  })
+);
+
+// Policy violations logged at request time
+export const policyViolations = pgTable(
+  "policy_violations",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: uuid("organization_id")
+      .references(() => organizations.id)
+      .notNull(),
+    policyId: uuid("policy_id")
+      .references(() => modelPolicies.id),
+    apiKeyId: uuid("api_key_id")
+      .references(() => apiKeys.id),
+    modelId: varchar("model_id", { length: 100 }).notNull(),
+    dataClass: dataClassEnum("data_class").notNull(),
+    violationType: varchar("violation_type", { length: 100 }).notNull(), // "unapproved_model", "data_class_mismatch", "rate_limit", "cost_limit"
+    severity: riskLevelEnum("severity").notNull().default("medium"),
+    actionTaken: varchar("action_taken", { length: 100 }).notNull(), // "blocked", "routed_fallback", "flagged", "allowed_with_approval"
+    details: jsonb("details"),
+    resolvedAt: timestamp("resolved_at", { withTimezone: true }),
+    resolvedBy: uuid("resolved_by").references(() => users.id),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    orgIdx: index("violations_org_idx").on(table.organizationId),
+    severityIdx: index("violations_severity_idx").on(table.severity),
+    createdAtIdx: index("violations_created_at_idx").on(table.createdAt),
+  })
+);
+
+// Compliance framework controls
+export const complianceControls = pgTable(
+  "compliance_controls",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    framework: complianceFrameworkEnum("framework").notNull(),
+    controlCode: varchar("control_code", { length: 100 }).notNull(),
+    controlName: varchar("control_name", { length: 255 }).notNull(),
+    description: text("description"),
+    requirementLevel: varchar("requirement_level", { length: 50 }).default("required"), // "required", "recommended", "optional"
+    guidance: text("guidance"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    frameworkCodeIdx: uniqueIndex("compliance_framework_code_idx").on(table.framework, table.controlCode),
+  })
+);
+
+// Model-to-compliance-control mappings
+export const modelComplianceMappings = pgTable(
+  "model_compliance_mappings",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    modelGovernanceId: uuid("model_governance_id")
+      .references(() => modelGovernance.id)
+      .notNull(),
+    controlId: uuid("control_id")
+      .references(() => complianceControls.id)
+      .notNull(),
+    status: varchar("status", { length: 50 }).notNull().default("not_assessed"), // "compliant", "partial", "non_compliant", "not_assessed"
+    evidence: text("evidence"),
+    assessedBy: uuid("assessed_by").references(() => users.id),
+    assessedAt: timestamp("assessed_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    modelControlIdx: uniqueIndex("compliance_model_control_idx").on(table.modelGovernanceId, table.controlId),
+  })
+);
+
+// Sector-specific templates
+export const sectorTemplates = pgTable(
+  "sector_templates",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    sector: sectorEnum("sector").notNull(),
+    name: varchar("name", { length: 255 }).notNull(),
+    description: text("description"),
+    defaultModels: jsonb("default_models").$type<string[]>().default([]),
+    defaultPolicies: jsonb("default_policies"),
+    promptTemplates: jsonb("prompt_templates"),
+    guardrailConfig: jsonb("guardrail_config"),
+    complianceRequirements: jsonb("compliance_requirements").$type<string[]>().default([]),
+    enabled: boolean("enabled").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    sectorIdx: index("templates_sector_idx").on(table.sector),
+  })
+);
+
+// Agent run tracking
+export const agentRuns = pgTable(
+  "agent_runs",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: uuid("organization_id")
+      .references(() => organizations.id)
+      .notNull(),
+    apiKeyId: uuid("api_key_id")
+      .references(() => apiKeys.id),
+    agentName: varchar("agent_name", { length: 255 }).notNull(),
+    modelId: varchar("model_id", { length: 100 }).notNull(),
+    threadId: varchar("thread_id", { length: 255 }),
+    status: varchar("status", { length: 50 }).notNull().default("running"), // "running", "completed", "failed", "halted"
+    promptTokens: integer("prompt_tokens").default(0),
+    completionTokens: integer("completion_tokens").default(0),
+    costUsd: numeric("cost_usd", { precision: 12, scale: 8 }).default("0"),
+    toolsUsed: jsonb("tools_used").$type<string[]>().default([]),
+    steps: jsonb("steps"), // array of step objects
+    guardrailOutcomes: jsonb("guardrail_outcomes"),
+    humanApprovalRequired: boolean("human_approval_required").default(false),
+    humanApprovedBy: uuid("human_approved_by").references(() => users.id),
+    humanApprovedAt: timestamp("human_approved_at", { withTimezone: true }),
+    decisionTrace: jsonb("decision_trace"),
+    startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    orgIdx: index("agent_runs_org_idx").on(table.organizationId),
+    statusIdx: index("agent_runs_status_idx").on(table.status),
+    createdAtIdx: index("agent_runs_created_at_idx").on(table.createdAt),
+  })
+);
+
+// Guardrail outcome logs
+export const guardrailOutcomes = pgTable(
+  "guardrail_outcomes",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    requestId: uuid("request_id"),
+    agentRunId: uuid("agent_run_id").references(() => agentRuns.id),
+    organizationId: uuid("organization_id")
+      .references(() => organizations.id)
+      .notNull(),
+    modelId: varchar("model_id", { length: 100 }).notNull(),
+    guardrailType: varchar("guardrail_type", { length: 100 }).notNull(), // "pii_detection", "prompt_injection", "toxicity", "bias", "secret_scanning"
+    triggered: boolean("triggered").notNull().default(false),
+    severity: riskLevelEnum("severity").default("low"),
+    details: jsonb("details"),
+    actionTaken: varchar("action_taken", { length: 100 }).default("none"), // "blocked", "redacted", "flagged", "allowed"
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    orgIdx: index("guardrails_org_idx").on(table.organizationId),
+    typeIdx: index("guardrails_type_idx").on(table.guardrailType),
+    triggeredIdx: index("guardrails_triggered_idx").on(table.triggered),
   })
 );

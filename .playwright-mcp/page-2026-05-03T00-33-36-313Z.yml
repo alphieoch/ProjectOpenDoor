@@ -1,0 +1,43 @@
+- generic [active] [ref=e1]:
+  - button "Open Next.js Dev Tools" [ref=e46] [cursor=pointer]:
+    - img [ref=e47]
+  - alert [ref=e40]
+  - generic [ref=e60]:
+    - generic [ref=e61]:
+      - generic [ref=e62]:
+        - img [ref=e64]
+        - generic [ref=e67]: OpenDoor
+      - generic [ref=e68]:
+        - heading "The LLM gateway built for teams" [level=2] [ref=e69]:
+          - text: The LLM gateway
+          - text: built for teams
+        - list [ref=e70]:
+          - listitem [ref=e71]:
+            - generic [ref=e72]: →
+            - text: Route to GPT-4o, Claude, Gemini and open models through one API
+          - listitem [ref=e73]:
+            - generic [ref=e74]: →
+            - text: Per-key model access controls, rate limits, and spend budgets
+          - listitem [ref=e75]:
+            - generic [ref=e76]: →
+            - text: Enterprise SSO, audit logs, and governance policies built-in
+      - paragraph [ref=e77]: © 2026 OpenDoor. All rights reserved.
+    - generic [ref=e79]:
+      - heading "Welcome back" [level=1] [ref=e80]
+      - paragraph [ref=e81]: Sign in to your LLM Gateway
+      - generic [ref=e82]:
+        - button "Email" [ref=e83] [cursor=pointer]
+        - button "Enterprise SSO" [ref=e84] [cursor=pointer]
+      - generic [ref=e85]:
+        - generic [ref=e86]:
+          - generic [ref=e87]: Email
+          - textbox "you@company.com" [ref=e88]: admin@ocheingco.com
+        - generic [ref=e89]:
+          - generic [ref=e90]: Password
+          - textbox [ref=e91]: admin123!
+        - button "Sign In" [ref=e92] [cursor=pointer]:
+          - img [ref=e93]
+          - text: Sign In
+        - paragraph [ref=e96]:
+          - text: No account?
+          - button "Sign up free" [ref=e97] [cursor=pointer]

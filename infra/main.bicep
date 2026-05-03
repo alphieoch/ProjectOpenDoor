@@ -65,6 +65,9 @@ param communicationConnectionString string = ''
 @description('Email sender address')
 param emailSenderAddress string = ''
 
+@description('Storage account name')
+param storageAccountName string = 'opendooranalytics${uniqueString(resourceGroup().id)}'
+
 @description('Application Insights connection string')
 @secure()
 param appInsightsConnectionString string = ''
@@ -74,6 +77,15 @@ module registry 'modules/registry.bicep' = {
   name: 'registry'
   params: {
     name: containerRegistryName
+    location: primaryLocation
+  }
+}
+
+// Storage Account
+module storage 'modules/storage.bicep' = {
+  name: 'storage'
+  params: {
+    name: storageAccountName
     location: primaryLocation
   }
 }
@@ -124,6 +136,8 @@ module containerEnvPrimary 'modules/containerApp.bicep' = {
     registryUsername: registry.outputs.username
     registryPassword: registry.outputs.password
     azureRegion: primaryLocation
+    storageAccountName: storage.outputs.accountName
+    storageAccountKey: storage.outputs.accountKey
   }
 }
 
@@ -162,6 +176,8 @@ module containerEnvSecondary 'modules/containerApp.bicep' = {
     registryUsername: registry.outputs.username
     registryPassword: registry.outputs.password
     azureRegion: secondaryLocation
+    storageAccountName: storage.outputs.accountName
+    storageAccountKey: storage.outputs.accountKey
   }
 }
 

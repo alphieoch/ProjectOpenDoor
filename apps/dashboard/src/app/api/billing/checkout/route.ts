@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getStripeInstance } from "@/lib/stripe";
+import { getStripeInstance, getPlanFromPriceId } from "@/lib/stripe";
 import { getDb } from "@/lib/db";
 import { organizations } from "@opendoor/database";
 import { eq } from "drizzle-orm";
@@ -26,6 +26,7 @@ export async function POST(req: NextRequest) {
     }
 
     const stripe = getStripeInstance();
+    const plan = getPlanFromPriceId(priceId);
 
     let customerId = org.stripeCustomerId;
     if (!customerId) {
@@ -46,8 +47,13 @@ export async function POST(req: NextRequest) {
       mode: "subscription",
       success_url: `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/dashboard/billing?success=true`,
       cancel_url: `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/dashboard/billing?canceled=true`,
+      metadata: {
+        organizationId: orgId,
+        plan,
+        priceId,
+      },
       subscription_data: {
-        metadata: { organizationId: orgId },
+        metadata: { organizationId: orgId, plan, priceId },
       },
     });
 

@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node -e \"const t = require\\('./tailwind.config.ts'\\); console.log\\('ok'\\)\")",
+      "Bash(bun run *)",
+      "WebFetch(domain:api.anthropic.com)",
+      "Bash(cp \"/Users/alphie/.claude/projects/-Users-alphie-ProjectOpenDoor/d418ea17-746c-4487-a048-46afe63a62c2/tool-results/webfetch-1777770868945-xs65ti.bin\" /tmp/design.gz)",
+      "Bash(gunzip -f /tmp/design.gz)",
+      "Read(//tmp/**)",
+      "Bash(mkdir -p /tmp/design-extracted)",
+      "Bash(tar -xf /tmp/design -C /tmp/design-extracted)",
+      "WebFetch(domain:github.com)",
+      "Bash(bun next *)",
+      "mcp__Claude_in_Chrome__tabs_context_mcp",
+      "mcp__Claude_in_Chrome__navigate",
+      "mcp__Claude_in_Chrome__read_console_messages",
+      "Bash(curl -s http://localhost:3000)",
+      "Bash(pkill -f \"next dev\")"
+    ]
+  }
+}

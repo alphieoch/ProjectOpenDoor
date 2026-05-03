@@ -14,6 +14,11 @@
     "gateway:start": "pnpm --filter @opendoor/gateway start",
     "dashboard:dev": "pnpm --filter @opendoor/dashboard dev",
     "dashboard:start": "pnpm --filter @opendoor/dashboard start",
+    "docs:dev": "pnpm --filter @opendoor/docs start --port 3002",
+    "docs:build": "pnpm --filter @opendoor/docs build",
+    "docs:serve": "pnpm --filter @opendoor/docs serve",
+    "stripe:setup": "bun --env-file=.env apps/dashboard/scripts/setup-stripe-products.ts",
+    "etl:run": "DUCKDB_ANALYTICS_ENABLED=true bun --env-file=.env apps/gateway/src/scripts/etl-to-parquet.ts",
     "typecheck": "turbo run typecheck"
   },
   "devDependencies": {
@@ -23,5 +28,9 @@
   "packageManager": "pnpm@9.0.0",
   "engines": {
     "bun": ">=1.0.0"
-  }
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ]
 }

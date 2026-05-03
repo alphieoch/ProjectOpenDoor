@@ -11,7 +11,7 @@ const PROVIDERS = [
   { name: "OpenAI", slug: "openai", healthUrl: "https://api.openai.com/v1/models" },
   { name: "Anthropic", slug: "anthropic", healthUrl: "https://api.anthropic.com/v1/health" },
   { name: "Google", slug: "google", healthUrl: "https://generativelanguage.googleapis.com/v1beta/models" },
-  { name: "Azure AI Foundry", slug: "azure-foundry", healthUrl: null },
+  { name: "Azure AI Foundry", slug: "azure-foundry", healthUrl: "https://ochiengandco-openai.cognitiveservices.azure.com/openai/models?api-version=2024-06-01" },
   { name: "Mistral", slug: "mistral", healthUrl: "https://api.mistral.ai/v1/models" },
   { name: "DeepSeek", slug: "deepseek", healthUrl: "https://api.deepseek.com/v1/models" },
   { name: "Cohere", slug: "cohere", healthUrl: "https://api.cohere.com/v1/models" },
@@ -31,10 +31,12 @@ async function checkProvider(provider: (typeof PROVIDERS)[0]): Promise<ProviderS
       signal: controller.signal,
     });
     clearTimeout(timeout);
+    // Azure returns 401 without key, which means the service is up
+    const isUp = res.status < 500 || (provider.slug === "azure-foundry" && res.status === 401);
     return {
       name: provider.name,
       slug: provider.slug,
-      status: res.status < 500 ? "up" : "down",
+      status: isUp ? "up" : "down",
       latencyMs: Date.now() - start,
     };
   } catch {

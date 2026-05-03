@@ -2,6 +2,7 @@
 import { Hono } from "hono";
 import { db, requests } from "@opendoor/database";
 import { eq, and, gte, sql } from "drizzle-orm";
+import { DuckDBAnalyticsClient, getUsageDaily, getUsageTotals } from "@opendoor/analytics";
 import Redis from "ioredis";
 
 const redis = new (Redis as any)(process.env.REDIS_URL || "redis://localhost:6379");
@@ -11,8 +12,42 @@ const usageRouter = new Hono();
 usageRouter.get("/", async (c) => {
   const organization = c.get("organization");
   const days = parseInt(c.req.query("days") || "30", 10);
+  const engine = c.req.query("engine");
   const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
 
+  // ── DuckDB-enhanced path ─────────────────────────────────────────────────
+  if (engine === "duckdb") {
+    const client = new DuckDBAnalyticsClient();
+    if (!client.isEnabled()) {
+      return c.json({ error: "DuckDB analytics not enabled" }, 503);
+    }
+
+    try {
+      await client.init();
+      const [daily, totals] = await Promise.all([
+        getUsageDaily(client, {
+          organizationId: organization.id,
+          dateFrom: since,
+        }),
+        getUsageTotals(client, {
+          organizationId: organization.id,
+          dateFrom: since,
+        }),
+      ]);
+
+      return c.json({
+        days,
+        daily,
+        totals,
+        engine: "duckdb",
+      });
+    } catch (err) {
+      console.error("[DuckDB] Usage query failed, falling back to PostgreSQL:", err);
+      // Fall through to default Drizzle path
+    }
+  }
+
+  // ── Default Drizzle path ──────────────────────────────────────────────────
   const daily = await db
     .select({
       date: sql<string>`DATE(${requests.createdAt})`,

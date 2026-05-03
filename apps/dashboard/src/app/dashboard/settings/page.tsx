@@ -56,114 +56,80 @@ export default function SettingsPage() {
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center">
-        <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+        <Loader2 className="h-5 w-5 animate-spin text-zinc-400" />
       </div>
     );
   }
 
   if (!settings) {
-    return (
-      <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-600">
-        Failed to load settings
-      </div>
-    );
+    return <div className="alert-error">Failed to load settings</div>;
   }
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
-      <p className="mt-1 text-gray-600">
-        Manage your organization&apos;s authentication and access settings
-      </p>
+      <div className="mb-8">
+        <h1 className="page-title">Settings</h1>
+        <p className="page-desc">Manage your organization&apos;s authentication and access settings</p>
+      </div>
 
-      <form onSubmit={saveSettings} className="mt-6 max-w-2xl space-y-6">
-        <div className="rounded-lg border border-gray-200 bg-white p-6">
-          <div className="flex items-center gap-2">
-            <Shield className="h-5 w-5 text-primary-600" />
-            <h2 className="text-lg font-semibold text-gray-900">
-              Single Sign-On (SSO)
-            </h2>
+      <form onSubmit={saveSettings} className="max-w-2xl space-y-5">
+        {/* SSO */}
+        <div className="card p-6">
+          <div className="flex items-center gap-2.5">
+            <Shield className="h-5 w-5 text-zinc-500" />
+            <h2 className="section-title">Single Sign-On (SSO)</h2>
           </div>
-          <p className="mt-1 text-sm text-gray-600">
-            Allow your team members to sign in using your company&apos;s identity
-            provider (Okta, Azure AD, Google Workspace, etc.) via WorkOS.
+          <p className="mt-1 text-sm text-zinc-500">
+            Allow your team to sign in via Okta, Azure AD, Google Workspace, etc. through WorkOS.
           </p>
 
-          <div className="mt-4 space-y-4">
+          <div className="mt-5 space-y-4">
             <label className="flex cursor-pointer items-center gap-3">
               <input
                 type="checkbox"
                 checked={settings.ssoEnabled || false}
-                onChange={(e) =>
-                  setSettings({ ...settings, ssoEnabled: e.target.checked })
-                }
-                className="h-4 w-4 rounded border-gray-300 text-primary-600"
+                onChange={(e) => setSettings({ ...settings, ssoEnabled: e.target.checked })}
+                className="h-4 w-4 rounded accent-indigo-600"
               />
-              <span className="text-sm font-medium text-gray-700">
-                Enable SSO for this organization
-              </span>
+              <span className="text-sm font-medium text-zinc-700">Enable SSO for this organization</span>
             </label>
 
             <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">
-                WorkOS Organization ID
-              </label>
+              <label className="mb-1.5 block text-sm font-medium text-zinc-700">WorkOS Organization ID</label>
               <input
                 type="text"
                 value={settings.workosOrganizationId || ""}
-                onChange={(e) =>
-                  setSettings({
-                    ...settings,
-                    workosOrganizationId: e.target.value,
-                  })
-                }
+                onChange={(e) => setSettings({ ...settings, workosOrganizationId: e.target.value })}
                 placeholder="org_xxxxxxxxxxxx"
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                className="input"
               />
-              <p className="mt-1 text-xs text-gray-500">
+              <p className="mt-1 text-xs text-zinc-400">
                 Find this in your{" "}
-                <a
-                  href="https://dashboard.workos.com/organizations"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-primary-600 hover:underline"
-                >
+                <a href="https://dashboard.workos.com/organizations" target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:text-indigo-700">
                   WorkOS Dashboard
                 </a>
               </p>
             </div>
 
             <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">
-                WorkOS Connection ID (optional)
+              <label className="mb-1.5 block text-sm font-medium text-zinc-700">
+                WorkOS Connection ID <span className="font-normal text-zinc-400">(optional)</span>
               </label>
               <input
                 type="text"
                 value={settings.workosConnectionId || ""}
-                onChange={(e) =>
-                  setSettings({
-                    ...settings,
-                    workosConnectionId: e.target.value,
-                  })
-                }
+                onChange={(e) => setSettings({ ...settings, workosConnectionId: e.target.value })}
                 placeholder="conn_xxxxxxxxxxxx"
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                className="input"
               />
             </div>
 
             <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">
-                Default Role for SSO Users
-              </label>
+              <label className="mb-1.5 block text-sm font-medium text-zinc-700">Default Role for SSO Users</label>
               <select
                 value={settings.ssoDefaultRole || "member"}
-                onChange={(e) =>
-                  setSettings({
-                    ...settings,
-                    ssoDefaultRole: e.target.value,
-                  })
-                }
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                onChange={(e) => setSettings({ ...settings, ssoDefaultRole: e.target.value })}
+                className="input"
               >
                 <option value="member">Member</option>
                 <option value="admin">Admin</option>
@@ -171,121 +137,80 @@ export default function SettingsPage() {
             </div>
 
             {settings.ssoEnabled && settings.workosOrganizationId && (
-              <div className="rounded-md bg-blue-50 p-3">
-                <p className="text-sm text-blue-800">
-                  <strong>SSO Login URL:</strong>
-                </p>
-                <code className="mt-1 block break-all text-xs text-blue-700">
+              <div className="alert-info">
+                <p className="font-medium text-indigo-900">SSO Login URL</p>
+                <code className="mt-1 block break-all text-xs text-indigo-700">
                   {typeof window !== "undefined"
                     ? `${window.location.origin}/login?sso=${settings.slug}`
                     : `/login?sso=${settings.slug}`}
                 </code>
-                <p className="mt-1 text-xs text-blue-600">
-                  Share this link with your team to sign in via SSO.
-                </p>
+                <p className="mt-1 text-xs text-indigo-600">Share this link with your team to sign in via SSO.</p>
               </div>
             )}
           </div>
         </div>
 
-        <div className="rounded-lg border border-gray-200 bg-white p-6">
-          <div className="flex items-center gap-2">
-            <Globe className="h-5 w-5 text-primary-600" />
-            <h2 className="text-lg font-semibold text-gray-900">
-              Custom Domain
-            </h2>
+        {/* Custom Domain */}
+        <div className="card p-6">
+          <div className="flex items-center gap-2.5">
+            <Globe className="h-5 w-5 text-zinc-500" />
+            <h2 className="section-title">Custom Domain</h2>
           </div>
-          <p className="mt-1 text-sm text-gray-600">
-            Configure a custom domain for your OpenDoor dashboard and API
-            gateway. This requires DNS configuration via your domain registrar.
+          <p className="mt-1 text-sm text-zinc-500">
+            Configure a custom domain for your OpenDoor dashboard and API gateway.
           </p>
 
-          <div className="mt-4 space-y-4">
-            <div className="rounded-md bg-blue-50 p-4">
-              <h3 className="text-sm font-medium text-blue-900">
-                DNS Configuration
-              </h3>
-              <p className="mt-1 text-sm text-blue-700">
-                To use a custom domain, create the following CNAME records with
-                your DNS provider:
-              </p>
-              <div className="mt-3 space-y-2 font-mono text-xs text-blue-800">
-                <div className="rounded bg-white p-2">
-                  <strong>Dashboard:</strong>
-                  <br />
-                  CNAME app.yourdomain.com →{" "}
-                  {typeof window !== "undefined"
-                    ? window.location.host
-                    : "your-frontdoor.azurefd.net"}
-                </div>
-                <div className="rounded bg-white p-2">
-                  <strong>Gateway API:</strong>
-                  <br />
-                  CNAME api.yourdomain.com →{" "}
-                  {typeof window !== "undefined"
-                    ? window.location.host
-                    : "your-frontdoor.azurefd.net"}
-                </div>
+          <div className="mt-5 alert-info">
+            <p className="font-medium text-indigo-900">DNS Configuration</p>
+            <p className="mt-1 text-sm text-indigo-700">Create these CNAME records with your DNS provider:</p>
+            <div className="mt-3 space-y-2 font-mono text-xs text-indigo-800">
+              <div className="rounded-lg bg-white/70 p-3">
+                <strong>Dashboard:</strong>
+                <br />
+                CNAME app.yourdomain.com →{" "}
+                {typeof window !== "undefined" ? window.location.host : "your-frontdoor.azurefd.net"}
               </div>
-              <p className="mt-2 text-xs text-blue-600">
-                After creating the DNS records, add{" "}
-                <code>AZURE_GATEWAY_DOMAIN</code> and{" "}
-                <code>AZURE_DASHBOARD_DOMAIN</code> to your GitHub Actions
-                secrets and redeploy.
-              </p>
+              <div className="rounded-lg bg-white/70 p-3">
+                <strong>Gateway API:</strong>
+                <br />
+                CNAME api.yourdomain.com →{" "}
+                {typeof window !== "undefined" ? window.location.host : "your-frontdoor.azurefd.net"}
+              </div>
             </div>
+            <p className="mt-2 text-xs text-indigo-600">
+              Then add <code>AZURE_GATEWAY_DOMAIN</code> and <code>AZURE_DASHBOARD_DOMAIN</code> to your GitHub Actions secrets and redeploy.
+            </p>
           </div>
         </div>
 
-        <div className="rounded-lg border border-gray-200 bg-white p-6">
-          <div className="flex items-center gap-2">
-            <Mail className="h-5 w-5 text-primary-600" />
-            <h2 className="text-lg font-semibold text-gray-900">
-              Email Notifications
-            </h2>
+        {/* Email Notifications */}
+        <div className="card p-6">
+          <div className="flex items-center gap-2.5">
+            <Mail className="h-5 w-5 text-zinc-500" />
+            <h2 className="section-title">Email Notifications</h2>
           </div>
-          <p className="mt-1 text-sm text-gray-600">
-            Invitation emails are sent via Azure Communication Services. To
-            enable email delivery, set the following environment variables:
+          <p className="mt-1 text-sm text-zinc-500">
+            Invitation emails are sent via Azure Communication Services. Set these environment variables to enable delivery:
           </p>
-          <div className="mt-4 space-y-3 font-mono text-xs text-gray-700">
-            <div className="rounded bg-gray-50 p-3">
+          <div className="mt-4 space-y-3">
+            <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-3 font-mono text-xs text-zinc-700">
               <strong>AZURE_COMMUNICATION_CONNECTION_STRING</strong>
-              <p className="mt-1 text-gray-500">
-                Your Azure Communication Services connection string
-              </p>
+              <p className="mt-1 font-sans text-zinc-500">Your Azure Communication Services connection string</p>
             </div>
-            <div className="rounded bg-gray-50 p-3">
+            <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-3 font-mono text-xs text-zinc-700">
               <strong>EMAIL_SENDER_ADDRESS</strong>
-              <p className="mt-1 text-gray-500">
-                Verified sender domain email (e.g. noreply@opendoor.ai)
-              </p>
+              <p className="mt-1 font-sans text-zinc-500">Verified sender email (e.g. noreply@opendoor.ai)</p>
             </div>
           </div>
-          {!process.env.AZURE_COMMUNICATION_CONNECTION_STRING && (
-            <div className="mt-4 rounded-md bg-amber-50 p-3 text-sm text-amber-800">
-              <strong>Note:</strong> Email is currently in console-only mode.
-              Invitations will still work, but no emails will be sent. Set the
-              Azure Communication Services connection string to enable real
-              email delivery.
-            </div>
-          )}
+          <div className="mt-4 alert-warning text-xs">
+            Email is currently in console-only mode. Set the Azure Communication Services connection string to enable real email delivery.
+          </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <button
-            type="submit"
-            disabled={saving}
-            className="inline-flex items-center gap-2 rounded-md bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-50"
-          >
-            {saving ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : saved ? (
-              <Check className="h-4 w-4" />
-            ) : (
-              <Save className="h-4 w-4" />
-            )}
-            {saving ? "Saving..." : saved ? "Saved!" : "Save Settings"}
+        <div>
+          <button type="submit" disabled={saving} className="btn-primary">
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : saved ? <Check className="h-4 w-4" /> : <Save className="h-4 w-4" />}
+            {saving ? "Saving…" : saved ? "Saved!" : "Save Settings"}
           </button>
         </div>
       </form>
