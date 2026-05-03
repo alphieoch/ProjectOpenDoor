@@ -48,6 +48,7 @@ const sidebars: SidebarsConfig = {
       items: [
         'deployment/azure-setup',
         'deployment/docker',
+        'deployment/production-readiness-handoff',
       ],
     },
   ],
