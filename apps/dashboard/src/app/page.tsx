@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import {
   ArrowRight,
   BarChart3,
@@ -18,10 +17,21 @@ import { getSession } from "@/lib/auth";
 
 export default async function Home() {
   const session = await getSession();
-  if (session) redirect("/dashboard");
+  const signedIn = session != null;
 
   return (
     <main className="min-h-screen overflow-hidden bg-[#f7f9ff] text-slate-950">
+      {signedIn ? (
+        <div className="relative z-20 border-b border-slate-200/90 bg-white/95 px-6 py-3 text-center text-sm text-slate-700 backdrop-blur-md">
+          <span className="font-medium text-slate-900">You are signed in.</span>{" "}
+          <Link
+            href="/dashboard"
+            className="font-semibold text-blue-700 underline-offset-2 hover:underline"
+          >
+            Open your dashboard
+          </Link>
+        </div>
+      ) : null}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <div className="absolute left-1/2 top-[-24rem] h-[48rem] w-[48rem] -translate-x-1/2 rounded-full bg-blue-200/50 blur-3xl" />
         <div className="absolute right-[-14rem] top-40 h-[32rem] w-[32rem] rounded-full bg-emerald-200/40 blur-3xl" />
@@ -53,18 +63,29 @@ export default async function Home() {
           </nav>
 
           <div className="flex items-center gap-3">
-            <Link
-              href="/login"
-              className="hidden rounded-full px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 sm:inline-flex"
-            >
-              Sign in
-            </Link>
-            <Link
-              href="/get-started"
-              className="inline-flex items-center gap-2 rounded-full bg-slate-950 px-5 py-2.5 text-sm font-semibold text-white shadow-xl shadow-slate-950/10 transition hover:-translate-y-0.5 hover:bg-slate-800"
-            >
-              Get started <ArrowRight className="h-4 w-4" />
-            </Link>
+            {signedIn ? (
+              <Link
+                href="/dashboard"
+                className="inline-flex items-center gap-2 rounded-full bg-slate-950 px-5 py-2.5 text-sm font-semibold text-white shadow-xl shadow-slate-950/10 transition hover:-translate-y-0.5 hover:bg-slate-800"
+              >
+                Open dashboard <ArrowRight className="h-4 w-4" />
+              </Link>
+            ) : (
+              <>
+                <Link
+                  href="/login"
+                  className="hidden rounded-full px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 sm:inline-flex"
+                >
+                  Sign in
+                </Link>
+                <Link
+                  href="/get-started"
+                  className="inline-flex items-center gap-2 rounded-full bg-slate-950 px-5 py-2.5 text-sm font-semibold text-white shadow-xl shadow-slate-950/10 transition hover:-translate-y-0.5 hover:bg-slate-800"
+                >
+                  Get started <ArrowRight className="h-4 w-4" />
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </header>
@@ -86,18 +107,37 @@ export default async function Home() {
           </p>
 
           <div className="mt-10 flex flex-col gap-3 sm:flex-row">
-            <Link
-              href="/get-started"
-              className="inline-flex items-center justify-center gap-2 rounded-full bg-blue-600 px-7 py-4 text-base font-semibold text-white shadow-2xl shadow-blue-600/25 transition hover:-translate-y-0.5 hover:bg-blue-700"
-            >
-              Create your workspace <ArrowRight className="h-5 w-5" />
-            </Link>
-            <Link
-              href="/login"
-              className="inline-flex items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-7 py-4 text-base font-semibold text-slate-800 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300"
-            >
-              View demo dashboard <ChevronRight className="h-5 w-5" />
-            </Link>
+            {signedIn ? (
+              <>
+                <Link
+                  href="/dashboard"
+                  className="inline-flex items-center justify-center gap-2 rounded-full bg-blue-600 px-7 py-4 text-base font-semibold text-white shadow-2xl shadow-blue-600/25 transition hover:-translate-y-0.5 hover:bg-blue-700"
+                >
+                  Open dashboard <ArrowRight className="h-5 w-5" />
+                </Link>
+                <Link
+                  href="/dashboard/api-keys"
+                  className="inline-flex items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-7 py-4 text-base font-semibold text-slate-800 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300"
+                >
+                  API keys <KeyRound className="h-5 w-5" />
+                </Link>
+              </>
+            ) : (
+              <>
+                <Link
+                  href="/get-started"
+                  className="inline-flex items-center justify-center gap-2 rounded-full bg-blue-600 px-7 py-4 text-base font-semibold text-white shadow-2xl shadow-blue-600/25 transition hover:-translate-y-0.5 hover:bg-blue-700"
+                >
+                  Create your workspace <ArrowRight className="h-5 w-5" />
+                </Link>
+                <Link
+                  href="/login"
+                  className="inline-flex items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-7 py-4 text-base font-semibold text-slate-800 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300"
+                >
+                  View demo dashboard <ChevronRight className="h-5 w-5" />
+                </Link>
+              </>
+            )}
           </div>
 
           <div className="mt-12 grid max-w-2xl grid-cols-3 gap-4">
@@ -218,10 +258,11 @@ export default async function Home() {
                 team.
               </p>
               <Link
-                href="/get-started"
+                href={signedIn ? "/dashboard/onboarding" : "/get-started"}
                 className="mt-8 inline-flex items-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-semibold text-slate-950 transition hover:-translate-y-0.5"
               >
-                Start onboarding <ArrowRight className="h-4 w-4" />
+                {signedIn ? "Continue setup" : "Start onboarding"}{" "}
+                <ArrowRight className="h-4 w-4" />
               </Link>
             </div>
 
@@ -277,10 +318,11 @@ export default async function Home() {
           </p>
           <div className="mt-9 flex flex-col justify-center gap-3 sm:flex-row">
             <Link
-              href="/get-started"
+              href={signedIn ? "/dashboard" : "/get-started"}
               className="inline-flex items-center justify-center gap-2 rounded-full bg-white px-7 py-4 font-semibold text-blue-700 transition hover:-translate-y-0.5"
             >
-              Get started free <ArrowRight className="h-5 w-5" />
+              {signedIn ? "Open dashboard" : "Get started free"}{" "}
+              <ArrowRight className="h-5 w-5" />
             </Link>
             <Link
               href="/status"
@@ -299,16 +341,24 @@ export default async function Home() {
             <span className="font-semibold text-slate-900">OpenDoor</span>
             <span>Multi-region LLM gateway</span>
           </div>
-          <div className="flex gap-5">
+          <div className="flex flex-wrap gap-5">
             <Link href="/status" className="hover:text-slate-950">
               Status
             </Link>
-            <Link href="/login" className="hover:text-slate-950">
-              Sign in
-            </Link>
-            <Link href="/get-started" className="hover:text-slate-950">
-              Get started
-            </Link>
+            {signedIn ? (
+              <Link href="/dashboard" className="hover:text-slate-950">
+                Dashboard
+              </Link>
+            ) : (
+              <>
+                <Link href="/login" className="hover:text-slate-950">
+                  Sign in
+                </Link>
+                <Link href="/get-started" className="hover:text-slate-950">
+                  Get started
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </footer>
