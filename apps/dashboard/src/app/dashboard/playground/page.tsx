@@ -494,6 +494,14 @@ export default function PlaygroundPage() {
         }
       }
       posthog.capture("playground_request_completed", { model: modelId, response_length: chars });
+      await fetch("/api/onboarding", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ step: "first_chat_completed" }),
+      });
+      posthog.capture("onboarding_step_completed", {
+        onboarding_step: "first_chat_completed",
+      });
     } catch (err: any) {
       setError(err.message || "Something went wrong");
       setMessages(prev => prev.filter(m => m.id !== assistantMsg.id));

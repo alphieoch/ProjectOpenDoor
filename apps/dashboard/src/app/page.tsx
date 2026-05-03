@@ -60,10 +60,10 @@ export default async function Home() {
               Sign in
             </Link>
             <Link
-              href="/signup"
+              href="/get-started"
               className="inline-flex items-center gap-2 rounded-full bg-slate-950 px-5 py-2.5 text-sm font-semibold text-white shadow-xl shadow-slate-950/10 transition hover:-translate-y-0.5 hover:bg-slate-800"
             >
-              Start free <ArrowRight className="h-4 w-4" />
+              Get started <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
         </div>
@@ -87,7 +87,7 @@ export default async function Home() {
 
           <div className="mt-10 flex flex-col gap-3 sm:flex-row">
             <Link
-              href="/signup"
+              href="/get-started"
               className="inline-flex items-center justify-center gap-2 rounded-full bg-blue-600 px-7 py-4 text-base font-semibold text-white shadow-2xl shadow-blue-600/25 transition hover:-translate-y-0.5 hover:bg-blue-700"
             >
               Create your workspace <ArrowRight className="h-5 w-5" />
@@ -218,7 +218,7 @@ export default async function Home() {
                 team.
               </p>
               <Link
-                href="/signup"
+                href="/get-started"
                 className="mt-8 inline-flex items-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-semibold text-slate-950 transition hover:-translate-y-0.5"
               >
                 Start onboarding <ArrowRight className="h-4 w-4" />
@@ -277,7 +277,7 @@ export default async function Home() {
           </p>
           <div className="mt-9 flex flex-col justify-center gap-3 sm:flex-row">
             <Link
-              href="/signup"
+              href="/get-started"
               className="inline-flex items-center justify-center gap-2 rounded-full bg-white px-7 py-4 font-semibold text-blue-700 transition hover:-translate-y-0.5"
             >
               Get started free <ArrowRight className="h-5 w-5" />
@@ -306,8 +306,8 @@ export default async function Home() {
             <Link href="/login" className="hover:text-slate-950">
               Sign in
             </Link>
-            <Link href="/signup" className="hover:text-slate-950">
-              Start free
+            <Link href="/get-started" className="hover:text-slate-950">
+              Get started
             </Link>
           </div>
         </div>

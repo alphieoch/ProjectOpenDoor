@@ -1,7 +1,12 @@
-import { Suspense } from "react";
 import { redirect } from "next/navigation";
+import { normalizeOnboardingSegment } from "@/lib/onboarding";
 
-export default function SignupPage() {
-  // Redirect to login page with signup mode
-  redirect("/login?signup=1");
+export default async function SignupPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ segment?: string }>;
+}) {
+  const params = await searchParams;
+  const segment = normalizeOnboardingSegment(params.segment);
+  redirect(`/login?signup=1&segment=${segment}`);
 }

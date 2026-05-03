@@ -4,10 +4,18 @@ import { SessionNavBar } from "@/components/ui/sidebar";
 import ImpersonationBanner from "@/components/ImpersonationBanner";
 import { PostHogIdentify } from "@/components/PostHogIdentify";
 import DashboardTopBar from "@/components/DashboardTopBar";
+import { getDb } from "@/lib/db";
+import { organizations } from "@opendoor/database";
+import { eq } from "drizzle-orm";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const session = await getSession();
   if (!session) redirect("/login");
+  const db = getDb();
+  const org = await db.query.organizations.findFirst({
+    where: eq(organizations.id, session.orgId as string),
+    columns: { onboardingSegment: true },
+  });
 
   return (
     <div style={{ display: "flex", height: "100vh", background: "var(--paper)" }}>
@@ -18,6 +26,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         role={session.role}
         isSiteAdmin={session.isSiteAdmin}
         impersonatingOrgId={session.impersonatingOrgId as string | undefined}
+        onboardingSegment={org?.onboardingSegment}
       />
       <SessionNavBar />
       <div style={{ marginLeft: 248, flex: 1, display: "flex", flexDirection: "column", minWidth: 0, overflow: "hidden" }}>

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Key, Copy, Trash2, Check, Shield, ShieldCheck } from "lucide-react";
+import posthog from "posthog-js";
 
 interface ApiKeyItem {
   id: string;
@@ -70,6 +71,9 @@ export default function ApiKeysPage() {
       setSelectedModels([]);
       setFullAccess(true);
       fetchKeys();
+      posthog.capture("onboarding_step_completed", {
+        onboarding_step: "api_key_created",
+      });
     }
     setLoading(false);
   }

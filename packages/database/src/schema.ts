@@ -81,11 +81,20 @@ export const sectorEnum = pgEnum("sector", [
   "government",
 ]);
 
+export const organizationSegmentEnum = pgEnum("organization_segment", [
+  "standard",
+  "education",
+  "enterprise_intent",
+]);
+
 export const organizations = pgTable("organizations", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: varchar("name", { length: 255 }).notNull(),
   slug: varchar("slug", { length: 100 }).notNull().unique(),
   plan: varchar("plan", { length: 50 }).notNull().default("free"),
+  onboardingSegment: organizationSegmentEnum("onboarding_segment")
+    .notNull()
+    .default("standard"),
   monthlyBudgetUsd: numeric("monthly_budget_usd", {
     precision: 10,
     scale: 2,

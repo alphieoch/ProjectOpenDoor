@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
-import { apiKeys } from "@opendoor/database";
+import { apiKeys, organizations } from "@opendoor/database";
 import { eq, and, isNull } from "drizzle-orm";
 import { requireAuth } from "@/lib/auth";
 import { logAuditEvent } from "@/lib/audit";
 import { createHash, randomBytes } from "crypto";
+import { parseOnboardingChecklist } from "@/lib/onboarding";
 
 export async function GET() {
   const session = await requireAuth();
@@ -58,6 +59,28 @@ export async function POST(req: NextRequest) {
       allowedModels: allowedModels || null,
     },
   });
+
+  const org = await db2.query.organizations.findFirst({
+    where: eq(organizations.id, orgId),
+    columns: { metadata: true },
+  });
+  const metadata = (org?.metadata as Record<string, unknown> | null) || {};
+  const checklist = parseOnboardingChecklist(metadata.onboarding_checklist);
+  if (!checklist.apiKeyCreated) {
+    await db2
+      .update(organizations)
+      .set({
+        metadata: {
+          ...metadata,
+          onboarding_checklist: {
+            ...checklist,
+            apiKeyCreated: true,
+          },
+        },
+        updatedAt: new Date(),
+      })
+      .where(eq(organizations.id, orgId));
+  }
 
   return NextResponse.json({ key: rawKey });
 }

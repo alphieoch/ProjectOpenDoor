@@ -4,9 +4,10 @@ import { users, organizations, creditTransactions } from "@opendoor/database";
 import { eq } from "drizzle-orm";
 import { hashPassword, createToken } from "@/lib/auth";
 import { posthogServerCapture } from "@/lib/posthog-server";
+import { isOnboardingSegment, OnboardingSegment } from "@/lib/onboarding";
 
 export async function POST(req: NextRequest) {
-  const { email, password, name, orgName } = await req.json();
+  const { email, password, name, orgName, segment } = await req.json();
 
   if (!email || !password || !name) {
     return NextResponse.json(
@@ -21,6 +22,9 @@ export async function POST(req: NextRequest) {
       { status: 400 }
     );
   }
+
+  const onboardingSegment: OnboardingSegment =
+    isOnboardingSegment(segment) ? segment : "standard";
 
   const db = getDb();
   const signupCreditCents = Number.parseInt(
@@ -66,8 +70,12 @@ export async function POST(req: NextRequest) {
       name: orgName || `${name}'s Organization`,
       slug,
       plan: "free",
+      onboardingSegment,
       creditsUsdCents: signupCreditCents,
       signupCreditGranted: true,
+      metadata: {
+        onboarding_checklist: {},
+      },
     })
     .returning();
 
@@ -105,6 +113,7 @@ export async function POST(req: NextRequest) {
   posthogServerCapture(req, user.id, "user_signed_up", {
     email: user.email,
     organization_id: org.id,
+    onboarding_segment: onboardingSegment,
   });
 
   const response = NextResponse.json({

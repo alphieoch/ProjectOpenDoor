@@ -1,11 +1,17 @@
 export const dynamic = "force-dynamic";
 
 import { getDb } from "@/lib/db";
-import { requests, apiKeys } from "@opendoor/database";
+import { requests, apiKeys, organizations } from "@opendoor/database";
 import { eq, sql, gte, and } from "drizzle-orm";
 import { requireAuth } from "@/lib/auth";
 import { formatCurrency, formatNumber } from "@/lib/utils";
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import {
+  isChecklistComplete,
+  normalizeOnboardingSegment,
+  parseOnboardingChecklist,
+} from "@/lib/onboarding";
 import {
   Activity, CreditCard, Key, TrendingUp, Globe, Sparkles, Copy,
   RotateCcw, Plug, Download, ArrowRight,
@@ -16,6 +22,21 @@ export default async function DashboardPage() {
   const orgId = session.orgId as string;
   const since30 = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
   const db = getDb();
+
+  const org = await db.query.organizations.findFirst({
+    where: eq(organizations.id, orgId),
+    columns: {
+      onboardingSegment: true,
+      metadata: true,
+    },
+  });
+  const segment = normalizeOnboardingSegment(org?.onboardingSegment);
+  const metadata = (org?.metadata as Record<string, unknown> | null) || {};
+  const checklist = parseOnboardingChecklist(metadata.onboarding_checklist);
+
+  if (!isChecklistComplete(segment, checklist)) {
+    redirect("/dashboard/onboarding");
+  }
 
   const [stats, keyCount] = await Promise.all([
     db.select({

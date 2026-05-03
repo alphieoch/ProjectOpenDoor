@@ -17,6 +17,24 @@ import { cn } from '@/lib/utils';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useTheme } from 'next-themes';
 import Link from 'next/link';
+import posthog from 'posthog-js';
+
+const QUOTES = [
+	"Every model. Every provider. One key to rule them all.",
+	"Stop juggling API keys. One gateway, every frontier model.",
+	"GPT-4o, Claude, Gemini — one endpoint to reach them all.",
+	"Your AI stack, unified. Route anywhere from a single key.",
+	"From prototype to production — one API for every LLM.",
+	"Switch models without changing code. That's the OpenDoor promise.",
+	"The last API key you'll ever provision for AI.",
+	"All the models, none of the vendor lock-in.",
+];
+
+const SEGMENT_LABELS = {
+	standard: 'Self-serve setup',
+	education: 'Education onboarding',
+	enterprise_intent: 'Enterprise evaluation',
+} as const;
 
 export function AuthPage() {
 	const [email, setEmail] = useState('');
@@ -35,15 +53,41 @@ export function AuthPage() {
 	const [orgSlug, setOrgSlug] = useState('');
 	const ssoError = searchParams.get('error');
 	const ssoSlug = searchParams.get('sso');
+	const segmentParam = searchParams.get('segment');
+	const modeParam = searchParams.get('mode');
 	const { theme, setTheme } = useTheme();
+	const quote = React.useMemo(() => QUOTES[Math.floor(Math.random() * QUOTES.length)], []);
+	const segment =
+		segmentParam === 'education' || segmentParam === 'enterprise_intent'
+			? segmentParam
+			: 'standard';
+
+	function posthogRequestHeaders(): Record<string, string> {
+		const h: Record<string, string> = {};
+		try {
+			const sid = posthog.get_session_id();
+			const did = posthog.get_distinct_id();
+			if (typeof sid === 'string' && sid) h['x-posthog-session-id'] = sid;
+			if (typeof did === 'string' && did) h['x-posthog-distinct-id'] = did;
+		} catch {
+			// PostHog may be unavailable in some environments.
+		}
+		return h;
+	}
 
 	React.useEffect(() => {
+		if (signupParam) {
+			setMode('signup');
+		}
+		if (modeParam === 'sso') {
+			setMode('sso');
+		}
 		if (ssoSlug) {
 			setOrgSlug(ssoSlug);
 			setMode('sso');
 			window.location.href = `/api/auth/sso?org=${encodeURIComponent(ssoSlug)}`;
 		}
-	}, [ssoSlug]);
+	}, [modeParam, signupParam, ssoSlug]);
 
 	async function handleLogin(e: React.FormEvent) {
 		e.preventDefault();
@@ -51,10 +95,19 @@ export function AuthPage() {
 		setError('');
 		const res = await fetch('/api/auth/login', {
 			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
+			headers: { 'Content-Type': 'application/json', ...posthogRequestHeaders() },
 			body: JSON.stringify({ email, password }),
 		});
 		if (res.ok) {
+			const data = await res.json().catch(() => ({}));
+			try {
+				if (data.user?.id) {
+					posthog.identify(data.user.id, { email: data.user.email });
+				}
+				posthog.capture('user_logged_in_client', { auth_method: 'password' });
+			} catch {
+				// Analytics is optional.
+			}
 			router.push('/dashboard');
 			router.refresh();
 		} else {
@@ -70,11 +123,27 @@ export function AuthPage() {
 		setError('');
 		const res = await fetch('/api/auth/signup', {
 			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ email, password, name, orgName }),
+			headers: { 'Content-Type': 'application/json', ...posthogRequestHeaders() },
+			body: JSON.stringify({ email, password, name, orgName, segment }),
 		});
 		if (res.ok) {
-			router.push('/onboarding');
+			const data = await res.json().catch(() => ({}));
+			try {
+				if (data.user?.id) {
+					posthog.identify(data.user.id, {
+						email: data.user.email,
+						name: data.user.name,
+						onboarding_segment: segment,
+					});
+				}
+				posthog.capture('user_signed_up_client', {
+					auth_method: 'password',
+					onboarding_segment: segment,
+				});
+			} catch {
+				// Analytics is optional.
+			}
+			router.push('/dashboard/onboarding');
 			router.refresh();
 		} else {
 			const data = await res.json();
@@ -117,8 +186,7 @@ export function AuthPage() {
 				<div className="z-10 mt-auto">
 					<blockquote className="space-y-2">
 						<p className="text-lg italic text-zinc-600 dark:text-zinc-300">
-							&ldquo;The LLM gateway built for teams. Route to GPT-4o, Claude,
-							Gemini and open models through one API.&rdquo;
+							&ldquo;{quote}&rdquo;
 						</p>
 						<footer className="font-mono text-sm font-semibold text-zinc-500 dark:text-zinc-400">
 							~ OpenDoor
@@ -156,15 +224,27 @@ export function AuthPage() {
 						<p className="text-xl font-semibold text-zinc-900 dark:text-white">OpenDoor</p>
 					</Link>
 					<div className="flex flex-col space-y-1">
+						{mode === 'signup' && (
+							<span className="inline-flex w-fit items-center rounded-full border border-zinc-200 bg-zinc-50 px-2.5 py-1 text-xs font-medium text-zinc-600 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300">
+								{SEGMENT_LABELS[segment]}
+							</span>
+						)}
 						<h1 className="text-2xl font-bold tracking-wide text-zinc-900 dark:text-white">
 							{mode === 'signup' ? 'Create your account' : 'Welcome back'}
 						</h1>
 						<p className="text-base text-zinc-500 dark:text-zinc-400">
 							{mode === 'signup'
-								? 'Get started with the LLM gateway'
+								? segment === 'education'
+									? 'Get started with an education-focused setup'
+									: 'Get started with the LLM gateway'
 								: 'Sign in to your LLM Gateway'}
 						</p>
 					</div>
+					{mode === 'signup' && segment === 'enterprise_intent' && (
+						<div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-300">
+							Enterprise SSO is provisioned by your admin team. If you are joining an existing enterprise org, use the Enterprise SSO tab.
+						</div>
+					)}
 
 					{(error || ssoErrorMessage) && (
 						<div className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600 dark:bg-red-950/30 dark:text-red-400">

@@ -10,6 +10,7 @@ type Props = {
   role: string;
   isSiteAdmin: boolean;
   impersonatingOrgId?: string | null;
+  onboardingSegment?: string | null;
 };
 
 export function PostHogIdentify({
@@ -19,6 +20,7 @@ export function PostHogIdentify({
   role,
   isSiteAdmin,
   impersonatingOrgId,
+  onboardingSegment,
 }: Props) {
   useEffect(() => {
     const hasKey =
@@ -31,11 +33,12 @@ export function PostHogIdentify({
       org_id: orgId,
       role,
       is_site_admin: isSiteAdmin,
+      onboarding_segment: onboardingSegment || "standard",
       ...(impersonatingOrgId
         ? { impersonating_org_id: impersonatingOrgId }
         : {}),
     });
-  }, [userId, email, orgId, role, isSiteAdmin, impersonatingOrgId]);
+  }, [userId, email, orgId, role, isSiteAdmin, impersonatingOrgId, onboardingSegment]);
 
   return null;
 }
