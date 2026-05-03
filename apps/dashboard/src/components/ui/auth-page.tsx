@@ -5,7 +5,6 @@ import { motion } from 'framer-motion';
 import { Button } from './button';
 import {
 	AtSignIcon,
-	ChevronLeftIcon,
 	DoorOpen,
 	LogIn,
 	UserPlus,
@@ -27,10 +26,13 @@ export function AuthPage() {
 	const [error, setError] = useState('');
 	const [loading, setLoading] = useState(false);
 	const [ssoLoading, setSsoLoading] = useState(false);
-	const [mode, setMode] = useState<'password' | 'sso' | 'signup'>('password');
-	const [orgSlug, setOrgSlug] = useState('');
 	const router = useRouter();
 	const searchParams = useSearchParams();
+	const signupParam = searchParams.get('signup');
+	const [mode, setMode] = useState<'password' | 'sso' | 'signup'>(
+		signupParam ? 'signup' : 'password'
+	);
+	const [orgSlug, setOrgSlug] = useState('');
 	const ssoError = searchParams.get('error');
 	const ssoSlug = searchParams.get('sso');
 	const { theme, setTheme } = useTheme();
@@ -72,7 +74,7 @@ export function AuthPage() {
 			body: JSON.stringify({ email, password, name, orgName }),
 		});
 		if (res.ok) {
-			router.push('/dashboard');
+			router.push('/onboarding');
 			router.refresh();
 		} else {
 			const data = await res.json();
