@@ -1,75 +1,121 @@
 import { NextResponse } from "next/server";
 
-interface ProviderStatus {
+type ProviderRow = {
   name: string;
   slug: string;
-  status: "up" | "down" | "unknown";
+  status: "up" | "down" | "unknown" | "not_configured";
   latencyMs: number | null;
+};
+
+function gatewayBaseUrl(): string {
+  const raw =
+    process.env.NEXT_PUBLIC_GATEWAY_URL ||
+    process.env.GATEWAY_URL ||
+    "http://localhost:3001";
+  return raw.replace(/\/$/, "");
 }
 
-const PROVIDERS = [
-  { name: "OpenAI", slug: "openai", healthUrl: "https://api.openai.com/v1/models" },
-  { name: "Anthropic", slug: "anthropic", healthUrl: "https://api.anthropic.com/v1/health" },
-  { name: "Google", slug: "google", healthUrl: "https://generativelanguage.googleapis.com/v1beta/models" },
-  { name: "Azure AI Foundry", slug: "azure-foundry", healthUrl: "https://ochiengandco-openai.cognitiveservices.azure.com/openai/models?api-version=2024-06-01" },
-  { name: "Mistral", slug: "mistral", healthUrl: "https://api.mistral.ai/v1/models" },
-  { name: "DeepSeek", slug: "deepseek", healthUrl: "https://api.deepseek.com/v1/models" },
-  { name: "Cohere", slug: "cohere", healthUrl: "https://api.cohere.com/v1/models" },
-  { name: "Qwen", slug: "qwen", healthUrl: "https://dashscope.aliyuncs.com/compatible-mode/v1/models" },
-];
-
-async function checkProvider(provider: (typeof PROVIDERS)[0]): Promise<ProviderStatus> {
-  if (!provider.healthUrl) {
-    return { name: provider.name, slug: provider.slug, status: "unknown", latencyMs: null };
-  }
+async function legacyGatewayHealth(gatewayUrl: string): Promise<{
+  gateway: { status: "up" | "down"; latencyMs: number | null; url: string };
+}> {
   const start = Date.now();
   try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 5000);
-    const res = await fetch(provider.healthUrl, {
-      method: "HEAD",
-      signal: controller.signal,
-    });
-    clearTimeout(timeout);
-    // Azure returns 401 without key, which means the service is up
-    const isUp = res.status < 500 || (provider.slug === "azure-foundry" && res.status === 401);
+    const res = await fetch(`${gatewayUrl}/health`, { cache: "no-store" });
     return {
-      name: provider.name,
-      slug: provider.slug,
-      status: isUp ? "up" : "down",
-      latencyMs: Date.now() - start,
+      gateway: {
+        status: res.ok ? "up" : "down",
+        latencyMs: Date.now() - start,
+        url: gatewayUrl,
+      },
     };
   } catch {
-    return { name: provider.name, slug: provider.slug, status: "down", latencyMs: null };
+    return { gateway: { status: "down", latencyMs: null, url: gatewayUrl } };
   }
 }
 
 export async function GET() {
-  const gatewayUrl = process.env.NEXT_PUBLIC_GATEWAY_URL || "http://localhost:3001";
+  const gatewayUrl = gatewayBaseUrl();
+  const started = Date.now();
 
-  // Check gateway health
-  let gatewayStatus: "up" | "down" = "down";
-  let gatewayLatency: number | null = null;
+  let res: Response;
   try {
-    const start = Date.now();
-    const res = await fetch(`${gatewayUrl}/health`, { cache: "no-store" });
-    gatewayLatency = Date.now() - start;
-    gatewayStatus = res.ok ? "up" : "down";
+    res = await fetch(`${gatewayUrl}/status`, {
+      cache: "no-store",
+      signal: AbortSignal.timeout(10_000),
+    });
   } catch {
-    gatewayStatus = "down";
+    const { gateway } = await legacyGatewayHealth(gatewayUrl);
+    return NextResponse.json({
+      status: "degraded",
+      timestamp: new Date().toISOString(),
+      gateway,
+      database: { status: "unknown" as const, latencyMs: null },
+      redis: { status: "unknown" as const, latencyMs: null },
+      providers: [] as ProviderRow[],
+      source: "gateway_unreachable",
+    });
   }
 
-  // Check providers in parallel
-  const providerStatuses = await Promise.all(PROVIDERS.map(checkProvider));
+  const gatewayLatency = Date.now() - started;
+
+  if (res.status === 404) {
+    const { gateway } = await legacyGatewayHealth(gatewayUrl);
+    return NextResponse.json({
+      status: gateway.status === "up" ? "operational" : "degraded",
+      timestamp: new Date().toISOString(),
+      gateway: { ...gateway, latencyMs: gateway.latencyMs ?? gatewayLatency },
+      database: { status: "unknown" as const, latencyMs: null },
+      redis: { status: "unknown" as const, latencyMs: null },
+      providers: [] as ProviderRow[],
+      source: "gateway_legacy_no_status_route",
+    });
+  }
+
+  if (!res.ok) {
+    const { gateway } = await legacyGatewayHealth(gatewayUrl);
+    return NextResponse.json({
+      status: "degraded",
+      timestamp: new Date().toISOString(),
+      gateway: { ...gateway, latencyMs: gatewayLatency },
+      database: { status: "unknown" as const, latencyMs: null },
+      redis: { status: "unknown" as const, latencyMs: null },
+      providers: [] as ProviderRow[],
+      source: "gateway_status_http_error",
+    });
+  }
+
+  const body = (await res.json()) as {
+    timestamp?: string;
+    status?: string;
+    database?: { status: "up" | "down"; latencyMs: number | null };
+    redis?: { status: "up" | "down"; latencyMs: number | null };
+    providers?: { slug: string; name: string; configured: boolean }[];
+  };
+
+  const database = body.database ?? { status: "unknown" as const, latencyMs: null };
+  const redis = body.redis ?? { status: "unknown" as const, latencyMs: null };
+
+  const providers: ProviderRow[] = (body.providers ?? []).map((p) => ({
+    name: p.name,
+    slug: p.slug,
+    status: p.configured ? "up" : "not_configured",
+    latencyMs: null,
+  }));
+
+  const gatewayUp = true;
+  const infraUp = database.status === "up" && redis.status === "up";
 
   return NextResponse.json({
-    status: gatewayStatus === "up" ? "operational" : "degraded",
-    timestamp: new Date().toISOString(),
+    status: body.status || (infraUp ? "operational" : "degraded"),
+    timestamp: body.timestamp || new Date().toISOString(),
     gateway: {
-      status: gatewayStatus,
+      status: gatewayUp ? "up" : "down",
       latencyMs: gatewayLatency,
       url: gatewayUrl,
     },
-    providers: providerStatuses,
+    database,
+    redis,
+    providers,
+    source: "gateway",
   });
 }

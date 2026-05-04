@@ -16,6 +16,11 @@ import {
 interface ProviderStatus {
   name: string;
   slug: string;
+  status: "up" | "down" | "unknown" | "not_configured";
+  latencyMs: number | null;
+}
+
+interface SubsystemStatus {
   status: "up" | "down" | "unknown";
   latencyMs: number | null;
 }
@@ -28,7 +33,10 @@ interface StatusData {
     latencyMs: number | null;
     url: string;
   };
+  database?: SubsystemStatus;
+  redis?: SubsystemStatus;
   providers: ProviderStatus[];
+  source?: string;
 }
 
 export default function StatusPage() {
@@ -57,9 +65,17 @@ export default function StatusPage() {
     return () => clearInterval(interval);
   }, []);
 
-  const allUp =
-    data?.gateway.status === "up" &&
-    data?.providers.every((p) => p.status === "up" || p.status === "unknown");
+  const infraUp =
+    data &&
+    data.gateway.status === "up" &&
+    data.database?.status !== "down" &&
+    data.redis?.status !== "down";
+  const anyProviderDown = data?.providers.some((p) => p.status === "down");
+  const allUp = Boolean(
+    infraUp &&
+      !anyProviderDown &&
+      data?.providers.every((p) => p.status === "up" || p.status === "not_configured" || p.status === "unknown")
+  );
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -74,7 +90,7 @@ export default function StatusPage() {
                 OpenDoor Status
               </h1>
               <p className="text-sm text-gray-500">
-                Real-time system health and provider availability
+                Live checks from your OpenDoor gateway (database, Redis, configured LLM providers)
               </p>
             </div>
           </div>
@@ -124,6 +140,8 @@ export default function StatusPage() {
                   ? "All Systems Operational"
                   : data?.gateway.status === "down"
                   ? "Gateway Unavailable"
+                  : data?.database?.status === "down" || data?.redis?.status === "down"
+                  ? "Infrastructure Degraded"
                   : "Partial Outage"}
               </h2>
               <p className="text-sm text-gray-600">
@@ -156,10 +174,67 @@ export default function StatusPage() {
                 {data.gateway.status === "up" ? "Operational" : "Down"}
               </span>
             </div>
-            {data.gateway.latencyMs && (
+            {data.gateway.latencyMs != null && (
               <div className="mt-3 flex items-center gap-2 text-sm text-gray-600">
                 <Clock className="h-4 w-4" />
-                Response time: {data.gateway.latencyMs}ms
+                Status round-trip: {data.gateway.latencyMs}ms
+              </div>
+            )}
+            <p className="mt-2 text-xs text-gray-500 break-all">{data.gateway.url}</p>
+          </div>
+        )}
+
+        {/* Database & Redis */}
+        {data && (data.database || data.redis) && (
+          <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {data.database && (
+              <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-semibold text-gray-900">PostgreSQL</h3>
+                  <span
+                    className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                      data.database.status === "up"
+                        ? "bg-green-100 text-green-700"
+                        : data.database.status === "down"
+                        ? "bg-red-100 text-red-700"
+                        : "bg-gray-100 text-gray-600"
+                    }`}
+                  >
+                    {data.database.status === "up"
+                      ? "Connected"
+                      : data.database.status === "down"
+                      ? "Down"
+                      : "Unknown"}
+                  </span>
+                </div>
+                {data.database.latencyMs != null && (
+                  <p className="mt-2 text-xs text-gray-500">Query latency: {data.database.latencyMs}ms</p>
+                )}
+              </div>
+            )}
+            {data.redis && (
+              <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-semibold text-gray-900">Redis</h3>
+                  <span
+                    className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                      data.redis.status === "up"
+                        ? "bg-green-100 text-green-700"
+                        : data.redis.status === "down"
+                        ? "bg-red-100 text-red-700"
+                        : "bg-gray-100 text-gray-600"
+                    }`}
+                  >
+                    {data.redis.status === "up"
+                      ? "Connected"
+                      : data.redis.status === "down"
+                      ? "Down"
+                      : "Unknown"}
+                  </span>
+                </div>
+                {data.redis.latencyMs != null && (
+                  <p className="mt-2 text-xs text-gray-500">PING latency: {data.redis.latencyMs}ms</p>
+                )}
               </div>
             )}
           </div>
@@ -167,7 +242,7 @@ export default function StatusPage() {
 
         {/* Providers Grid */}
         <h3 className="mb-4 text-lg font-semibold text-gray-900">
-          LLM Provider Status
+          LLM providers (loaded in your gateway)
         </h3>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {data?.providers.map((provider) => (
@@ -188,6 +263,8 @@ export default function StatusPage() {
                       ? "bg-green-100 text-green-700"
                       : provider.status === "down"
                       ? "bg-red-100 text-red-700"
+                      : provider.status === "not_configured"
+                      ? "bg-slate-100 text-slate-600"
                       : "bg-gray-100 text-gray-600"
                   }`}
                 >
@@ -199,9 +276,11 @@ export default function StatusPage() {
                     <HelpCircle className="h-3 w-3" />
                   )}
                   {provider.status === "up"
-                    ? "Up"
+                    ? "Ready"
                     : provider.status === "down"
                     ? "Down"
+                    : provider.status === "not_configured"
+                    ? "Not configured"
                     : "Unknown"}
                 </span>
               </div>
@@ -223,9 +302,12 @@ export default function StatusPage() {
 
         <div className="mt-8 text-center text-xs text-gray-400">
           <p>
-            Status checks run every 30 seconds. Provider health is checked via
-            public API endpoints.
+            Refreshes every 30 seconds. Data comes from your gateway&apos;s{" "}
+            <code className="rounded bg-gray-100 px-1">/status</code> (Postgres, Redis, env-backed providers).
           </p>
+          {data?.source && (
+            <p className="mt-1 font-mono text-[10px] text-gray-400">Source: {data.source}</p>
+          )}
           <p className="mt-1">
             For incident reports, contact{" "}
             <a

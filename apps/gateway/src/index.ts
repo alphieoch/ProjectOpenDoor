@@ -12,6 +12,7 @@ import chatRouter from "./routes/chat.js";
 import modelsRouter from "./routes/models.js";
 import usageRouter from "./routes/usage.js";
 import analyticsRouter from "./routes/analytics.js";
+import { statusHandler } from "./routes/status.js";
 
 const app = new Hono();
 
@@ -26,6 +27,9 @@ app.get("/health", (c) => {
     region: process.env.AZURE_REGION || "unknown",
   });
 });
+
+/** Public status: Postgres, Redis, and which LLM providers loaded (real env configuration). */
+app.get("/status", (c) => statusHandler(c));
 
 app.use("/v1/*", authMiddleware);
 app.use("/v1/*", rateLimitMiddleware);

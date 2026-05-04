@@ -29,7 +29,8 @@ pnpm dev
 |---------|-----|-------------|
 | Dashboard | http://localhost:3000 | Admin UI |
 | Gateway | http://localhost:3001 | API endpoint |
-| Gateway Health | http://localhost:3001/health | Health check |
+| Gateway Health | http://localhost:3001/health | Load-balancer / probe (minimal JSON) |
+| Gateway Status | http://localhost:3001/status | Postgres, Redis, configured LLM providers (dashboard reads this at http://localhost:3000/status) |
 | Docs | http://localhost:3002 | Documentation |
 
 ## Default Login
