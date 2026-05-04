@@ -217,6 +217,19 @@ export class AzureFoundryProvider implements ProviderAdapter {
     this.inferenceKey = process.env.AZURE_INFERENCE_KEY;
   }
 
+  /**
+   * Live deployment inventory from Azure OpenAI (for status page).
+   * Always hits the Azure API; does not rely on listModels() cache.
+   */
+  async getLiveDeployments(): Promise<{ id: string; model: string; status: string }[]> {
+    const deps = await this.fetchDeployments();
+    return deps.map((d) => ({
+      id: d.id,
+      model: d.model || d.id,
+      status: d.status || "unknown",
+    }));
+  }
+
   /** Discover deployed models from Azure OpenAI */
   private async fetchDeployments(): Promise<AzureDeployment[]> {
     try {

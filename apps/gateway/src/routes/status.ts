@@ -1,7 +1,8 @@
 import type { Context } from "hono";
 import Redis from "ioredis";
 import { db } from "@opendoor/database";
-import { listProviders } from "../providers/index.js";
+import { AzureFoundryProvider } from "../providers/azure-foundry.js";
+import { getProvider, listProviders } from "../providers/index.js";
 
 const PROVIDER_LABELS: Record<string, string> = {
   "azure-foundry": "Azure AI Foundry",
@@ -70,6 +71,33 @@ export async function statusHandler(c: Context) {
     configured: registered.has(slug),
   }));
 
+  const azureConfigured = registered.has("azure-foundry");
+  let azureHost: string | null = null;
+  const rawEp = process.env.AZURE_AI_FOUNDRY_ENDPOINT;
+  if (rawEp) {
+    try {
+      azureHost = new URL(rawEp.replace(/\/$/, "")).hostname;
+    } catch {
+      azureHost = null;
+    }
+  }
+
+  let azureDeployments: { id: string; model: string; status: string }[] = [];
+  let azureDeploymentTotal = 0;
+  let azureFetchError: string | null = null;
+  if (azureConfigured) {
+    const azure = getProvider("azure-foundry");
+    if (azure instanceof AzureFoundryProvider) {
+      try {
+        const all = await azure.getLiveDeployments();
+        azureDeploymentTotal = all.length;
+        azureDeployments = all.slice(0, 200);
+      } catch (e) {
+        azureFetchError = e instanceof Error ? e.message : "azure_list_failed";
+      }
+    }
+  }
+
   const infraUp = database.status === "up" && redis.status === "up";
   const overall =
     infraUp && providers.some((p) => p.configured)
@@ -87,5 +115,12 @@ export async function statusHandler(c: Context) {
     database,
     redis,
     providers,
+    azure: {
+      configured: azureConfigured,
+      host: azureHost,
+      deploymentCount: azureDeploymentTotal,
+      deployments: azureDeployments,
+      fetchError: azureFetchError,
+    },
   });
 }

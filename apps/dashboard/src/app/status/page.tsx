@@ -11,6 +11,7 @@ import {
   Zap,
   RefreshCw,
   Loader2,
+  Cloud,
 } from "lucide-react";
 
 interface ProviderStatus {
@@ -25,6 +26,14 @@ interface SubsystemStatus {
   latencyMs: number | null;
 }
 
+interface AzureStatusPayload {
+  configured: boolean;
+  host: string | null;
+  deploymentCount: number;
+  deployments: { id: string; model: string; status: string }[];
+  fetchError: string | null;
+}
+
 interface StatusData {
   status: string;
   timestamp: string;
@@ -36,6 +45,7 @@ interface StatusData {
   database?: SubsystemStatus;
   redis?: SubsystemStatus;
   providers: ProviderStatus[];
+  azure?: AzureStatusPayload;
   source?: string;
 }
 
@@ -90,7 +100,8 @@ export default function StatusPage() {
                 OpenDoor Status
               </h1>
               <p className="text-sm text-gray-500">
-                Live checks from your OpenDoor gateway (database, Redis, configured LLM providers)
+                Live gateway checks: Postgres, Redis, provider adapters, and Azure OpenAI deployments when
+                configured.
               </p>
             </div>
           </div>
@@ -242,7 +253,7 @@ export default function StatusPage() {
 
         {/* Providers Grid */}
         <h3 className="mb-4 text-lg font-semibold text-gray-900">
-          LLM providers (loaded in your gateway)
+          Provider adapters (env registration in gateway)
         </h3>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {data?.providers.map((provider) => (
@@ -300,10 +311,73 @@ export default function StatusPage() {
             ))}
         </div>
 
+        {data?.azure?.configured && (
+          <div className="mt-10">
+            <div className="mb-4 flex items-center gap-2">
+              <Cloud className="h-5 w-5 text-sky-600" />
+              <h3 className="text-lg font-semibold text-gray-900">Azure AI — live deployments</h3>
+            </div>
+            <p className="mb-4 text-sm text-gray-600">
+              Listed from Azure OpenAI{" "}
+              <code className="rounded bg-gray-100 px-1 text-xs">GET /openai/deployments</code>
+              {data.azure.host ? (
+                <>
+                  {" "}
+                  for <span className="font-medium text-gray-800">{data.azure.host}</span>
+                </>
+              ) : null}
+              . These deployment ids are what your gateway uses for <code className="rounded bg-gray-100 px-1 text-xs">model</code>{" "}
+              when routing through Azure.
+            </p>
+            {data.azure.fetchError ? (
+              <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+                Could not list deployments: {data.azure.fetchError}
+              </div>
+            ) : null}
+            {!data.azure.fetchError && data.azure.deployments.length === 0 ? (
+              <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+                No deployments returned. Confirm the API key can read deployments and that your resource exposes the
+                OpenAI control plane API.
+              </p>
+            ) : null}
+            {data.azure.deployments.length > 0 ? (
+              <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+                <div className="max-h-[min(420px,50vh)] overflow-auto">
+                  <table className="w-full text-left text-sm">
+                    <thead className="sticky top-0 border-b border-gray-200 bg-gray-50 text-xs font-semibold uppercase tracking-wide text-gray-600">
+                      <tr>
+                        <th className="px-4 py-3">Deployment id</th>
+                        <th className="px-4 py-3">Model</th>
+                        <th className="px-4 py-3">Azure status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {data.azure.deployments.map((d) => (
+                        <tr key={d.id} className="text-gray-900">
+                          <td className="px-4 py-2 font-mono text-xs">{d.id}</td>
+                          <td className="px-4 py-2">{d.model}</td>
+                          <td className="px-4 py-2 text-gray-600">{d.status}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <p className="border-t border-gray-100 px-4 py-2 text-xs text-gray-500">
+                  Showing {data.azure.deployments.length}
+                  {data.azure.deploymentCount > data.azure.deployments.length
+                    ? ` of ${data.azure.deploymentCount} total (list truncated at 200)`
+                    : ""}{" "}
+                  deployment{data.azure.deployments.length !== 1 ? "s" : ""}.
+                </p>
+              </div>
+            ) : null}
+          </div>
+        )}
+
         <div className="mt-8 text-center text-xs text-gray-400">
           <p>
             Refreshes every 30 seconds. Data comes from your gateway&apos;s{" "}
-            <code className="rounded bg-gray-100 px-1">/status</code> (Postgres, Redis, env-backed providers).
+            <code className="rounded bg-gray-100 px-1">/status</code> (Postgres, Redis, providers, Azure deployments).
           </p>
           {data?.source && (
             <p className="mt-1 font-mono text-[10px] text-gray-400">Source: {data.source}</p>

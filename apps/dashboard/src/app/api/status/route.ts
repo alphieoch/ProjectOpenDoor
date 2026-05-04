@@ -90,6 +90,13 @@ export async function GET() {
     database?: { status: "up" | "down"; latencyMs: number | null };
     redis?: { status: "up" | "down"; latencyMs: number | null };
     providers?: { slug: string; name: string; configured: boolean }[];
+    azure?: {
+      configured: boolean;
+      host: string | null;
+      deploymentCount?: number;
+      deployments: { id: string; model: string; status: string }[];
+      fetchError: string | null;
+    };
   };
 
   const database = body.database ?? { status: "unknown" as const, latencyMs: null };
@@ -102,20 +109,30 @@ export async function GET() {
     latencyMs: null,
   }));
 
-  const gatewayUp = true;
   const infraUp = database.status === "up" && redis.status === "up";
+
+  const azure = body.azure
+    ? {
+        configured: body.azure.configured,
+        host: body.azure.host ?? null,
+        deploymentCount: body.azure.deploymentCount ?? body.azure.deployments?.length ?? 0,
+        deployments: body.azure.deployments ?? [],
+        fetchError: body.azure.fetchError ?? null,
+      }
+    : undefined;
 
   return NextResponse.json({
     status: body.status || (infraUp ? "operational" : "degraded"),
     timestamp: body.timestamp || new Date().toISOString(),
     gateway: {
-      status: gatewayUp ? "up" : "down",
+      status: "up",
       latencyMs: gatewayLatency,
       url: gatewayUrl,
     },
     database,
     redis,
     providers,
+    azure,
     source: "gateway",
   });
 }
