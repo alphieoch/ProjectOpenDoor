@@ -58,6 +58,13 @@ param gatewayCustomDomain string = ''
 @description('Custom domain for dashboard')
 param dashboardCustomDomain string = ''
 
+@description('Custom domain for docs (e.g. docs.opendoor.ai)')
+param docsCustomDomain string = ''
+
+@description('Cachet Laravel APP_KEY')
+@secure()
+param cachetAppKey string = ''
+
 @description('Azure Communication Services connection string')
 @secure()
 param communicationConnectionString string = ''
@@ -138,6 +145,7 @@ module containerEnvPrimary 'modules/containerApp.bicep' = {
     azureRegion: primaryLocation
     storageAccountName: storage.outputs.accountName
     storageAccountKey: storage.outputs.accountKey
+    cachetAppKey: cachetAppKey
   }
 }
 
@@ -178,6 +186,7 @@ module containerEnvSecondary 'modules/containerApp.bicep' = {
     azureRegion: secondaryLocation
     storageAccountName: storage.outputs.accountName
     storageAccountKey: storage.outputs.accountKey
+    cachetAppKey: cachetAppKey
   }
 }
 
@@ -192,6 +201,9 @@ module frontDoor 'modules/frontDoor.bicep' = {
     secondaryDashboardEndpoint: containerEnvSecondary.outputs.dashboardFqdn
     gatewayCustomDomain: gatewayCustomDomain
     dashboardCustomDomain: dashboardCustomDomain
+    primaryDocsEndpoint: containerEnvPrimary.outputs.docsFqdn
+    secondaryDocsEndpoint: containerEnvSecondary.outputs.docsFqdn
+    docsCustomDomain: docsCustomDomain
   }
 }
 
@@ -201,6 +213,10 @@ output gatewayEndpoint string = !empty(gatewayCustomDomain)
 output dashboardEndpoint string = !empty(dashboardCustomDomain)
   ? 'https://${dashboardCustomDomain}'
   : 'https://${frontDoor.outputs.dashboardHostName}'
+output docsEndpoint string = !empty(docsCustomDomain)
+  ? 'https://${docsCustomDomain}'
+  : 'https://${frontDoor.outputs.docsHostName}'
+output cachetEndpoint string = 'https://${containerEnvPrimary.outputs.cachetFqdn}'
 output registryLoginServer string = registry.outputs.loginServer
 output primaryWorkloadEnvId string = containerEnvPrimary.outputs.userWorkloadEnvId
 output secondaryWorkloadEnvId string = containerEnvSecondary.outputs.userWorkloadEnvId

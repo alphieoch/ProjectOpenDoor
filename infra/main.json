@@ -1,0 +1,2799 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.42.1.51946",
+      "templateHash": "8153866848306405352"
+    }
+  },
+  "parameters": {
+    "primaryLocation": {
+      "type": "string",
+      "defaultValue": "westeurope",
+      "metadata": {
+        "description": "Primary Azure region for deployment"
+      }
+    },
+    "secondaryLocation": {
+      "type": "string",
+      "defaultValue": "eastus",
+      "metadata": {
+        "description": "Secondary Azure region for deployment"
+      }
+    },
+    "resourceGroupName": {
+      "type": "string",
+      "defaultValue": "rg-opendoor-ocheingco",
+      "metadata": {
+        "description": "Resource group name"
+      }
+    },
+    "environmentName": {
+      "type": "string",
+      "defaultValue": "opendoor",
+      "metadata": {
+        "description": "Environment name"
+      }
+    },
+    "postgresAdminUser": {
+      "type": "string",
+      "defaultValue": "opendooradmin",
+      "metadata": {
+        "description": "PostgreSQL admin username"
+      }
+    },
+    "postgresAdminPassword": {
+      "type": "securestring",
+      "metadata": {
+        "description": "PostgreSQL admin password"
+      }
+    },
+    "containerRegistryName": {
+      "type": "string",
+      "defaultValue": "[format('acropendoor{0}', uniqueString(resourceGroup().id))]",
+      "metadata": {
+        "description": "Container registry name"
+      }
+    },
+    "authSecret": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Auth secret for the application"
+      }
+    },
+    "apiKeyHashSecret": {
+      "type": "securestring",
+      "metadata": {
+        "description": "API key hash secret"
+      }
+    },
+    "stripeSecretKey": {
+      "type": "securestring",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Stripe secret key"
+      }
+    },
+    "stripeWebhookSecret": {
+      "type": "securestring",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Stripe webhook secret"
+      }
+    },
+    "stripeProPriceId": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Stripe Pro price ID"
+      }
+    },
+    "stripeEnterprisePriceId": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Stripe Enterprise price ID"
+      }
+    },
+    "appUrl": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Public app URL"
+      }
+    },
+    "workosApiKey": {
+      "type": "securestring",
+      "defaultValue": "",
+      "metadata": {
+        "description": "WorkOS API key"
+      }
+    },
+    "workosClientId": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "WorkOS client ID"
+      }
+    },
+    "gatewayCustomDomain": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Custom domain for gateway API"
+      }
+    },
+    "dashboardCustomDomain": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Custom domain for dashboard"
+      }
+    },
+    "docsCustomDomain": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Custom domain for docs (e.g. docs.opendoor.ai)"
+      }
+    },
+    "cachetAppKey": {
+      "type": "securestring",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Cachet Laravel APP_KEY"
+      }
+    },
+    "communicationConnectionString": {
+      "type": "securestring",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Azure Communication Services connection string"
+      }
+    },
+    "emailSenderAddress": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Email sender address"
+      }
+    },
+    "storageAccountName": {
+      "type": "string",
+      "defaultValue": "[format('opendooranalytics{0}', uniqueString(resourceGroup().id))]",
+      "metadata": {
+        "description": "Storage account name"
+      }
+    },
+    "appInsightsConnectionString": {
+      "type": "securestring",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Application Insights connection string"
+      }
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "registry",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "name": {
+            "value": "[parameters('containerRegistryName')]"
+          },
+          "location": {
+            "value": "[parameters('primaryLocation')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.42.1.51946",
+              "templateHash": "13677347981565257082"
+            }
+          },
+          "parameters": {
+            "name": {
+              "type": "string",
+              "metadata": {
+                "description": "Container registry name"
+              }
+            },
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Azure region"
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.ContainerRegistry/registries",
+              "apiVersion": "2023-07-01",
+              "name": "[parameters('name')]",
+              "location": "[parameters('location')]",
+              "sku": {
+                "name": "Basic"
+              },
+              "properties": {
+                "adminUserEnabled": true
+              }
+            }
+          ],
+          "outputs": {
+            "loginServer": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.ContainerRegistry/registries', parameters('name')), '2023-07-01').loginServer]"
+            },
+            "username": {
+              "type": "string",
+              "value": "[listCredentials(resourceId('Microsoft.ContainerRegistry/registries', parameters('name')), '2023-07-01').username]"
+            },
+            "password": {
+              "type": "string",
+              "value": "[listCredentials(resourceId('Microsoft.ContainerRegistry/registries', parameters('name')), '2023-07-01').passwords[0].value]"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "storage",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "name": {
+            "value": "[parameters('storageAccountName')]"
+          },
+          "location": {
+            "value": "[parameters('primaryLocation')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.42.1.51946",
+              "templateHash": "12511143745713023701"
+            }
+          },
+          "parameters": {
+            "name": {
+              "type": "string",
+              "metadata": {
+                "description": "Storage account name"
+              }
+            },
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Azure region"
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Storage/storageAccounts",
+              "apiVersion": "2023-05-01",
+              "name": "[parameters('name')]",
+              "location": "[parameters('location')]",
+              "sku": {
+                "name": "Standard_LRS"
+              },
+              "kind": "StorageV2",
+              "properties": {
+                "accessTier": "Hot",
+                "allowBlobPublicAccess": false,
+                "minimumTlsVersion": "TLS1_2",
+                "supportsHttpsTrafficOnly": true
+              }
+            },
+            {
+              "type": "Microsoft.Storage/storageAccounts/blobServices",
+              "apiVersion": "2023-05-01",
+              "name": "[format('{0}/{1}', parameters('name'), 'default')]",
+              "properties": {
+                "deleteRetentionPolicy": {
+                  "enabled": true,
+                  "days": 7
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', parameters('name'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
+              "apiVersion": "2023-05-01",
+              "name": "[format('{0}/{1}/{2}', parameters('name'), 'default', 'analytics')]",
+              "properties": {
+                "publicAccess": "None"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts/blobServices', parameters('name'), 'default')]"
+              ]
+            }
+          ],
+          "outputs": {
+            "accountName": {
+              "type": "string",
+              "value": "[parameters('name')]"
+            },
+            "accountKey": {
+              "type": "string",
+              "value": "[listKeys(resourceId('Microsoft.Storage/storageAccounts', parameters('name')), '2023-05-01').keys[0].value]"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "postgresPrimary",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "name": {
+            "value": "[format('{0}-postgres', parameters('environmentName'))]"
+          },
+          "location": {
+            "value": "[parameters('primaryLocation')]"
+          },
+          "adminUsername": {
+            "value": "[parameters('postgresAdminUser')]"
+          },
+          "adminPassword": {
+            "value": "[parameters('postgresAdminPassword')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.42.1.51946",
+              "templateHash": "8059277170564108735"
+            }
+          },
+          "parameters": {
+            "name": {
+              "type": "string",
+              "metadata": {
+                "description": "PostgreSQL server name"
+              }
+            },
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Azure region"
+              }
+            },
+            "adminUsername": {
+              "type": "string",
+              "metadata": {
+                "description": "Admin username"
+              }
+            },
+            "adminPassword": {
+              "type": "securestring",
+              "metadata": {
+                "description": "Admin password"
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.DBforPostgreSQL/flexibleServers",
+              "apiVersion": "2023-06-01-preview",
+              "name": "[parameters('name')]",
+              "location": "[parameters('location')]",
+              "sku": {
+                "name": "Standard_B1ms",
+                "tier": "Burstable"
+              },
+              "properties": {
+                "administratorLogin": "[parameters('adminUsername')]",
+                "administratorLoginPassword": "[parameters('adminPassword')]",
+                "version": "16",
+                "storage": {
+                  "storageSizeGB": 32
+                },
+                "backup": {
+                  "backupRetentionDays": 7,
+                  "geoRedundantBackup": "Disabled"
+                },
+                "highAvailability": {
+                  "mode": "Disabled"
+                }
+              }
+            },
+            {
+              "type": "Microsoft.DBforPostgreSQL/flexibleServers/databases",
+              "apiVersion": "2023-06-01-preview",
+              "name": "[format('{0}/{1}', parameters('name'), 'opendoor')]",
+              "dependsOn": [
+                "[resourceId('Microsoft.DBforPostgreSQL/flexibleServers', parameters('name'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "fqdn": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.DBforPostgreSQL/flexibleServers', parameters('name')), '2023-06-01-preview').fullyQualifiedDomainName]"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "redisPrimary",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "name": {
+            "value": "[format('{0}-redis', parameters('environmentName'))]"
+          },
+          "location": {
+            "value": "[parameters('primaryLocation')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.42.1.51946",
+              "templateHash": "12999568771695005479"
+            }
+          },
+          "parameters": {
+            "name": {
+              "type": "string",
+              "metadata": {
+                "description": "Redis cache name"
+              }
+            },
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Azure region"
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Cache/redis",
+              "apiVersion": "2023-08-01",
+              "name": "[parameters('name')]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "sku": {
+                  "name": "Basic",
+                  "family": "C",
+                  "capacity": 0
+                },
+                "enableNonSslPort": false,
+                "minimumTlsVersion": "1.2"
+              }
+            }
+          ],
+          "outputs": {
+            "hostName": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Cache/redis', parameters('name')), '2023-08-01').hostName]"
+            },
+            "primaryKey": {
+              "type": "string",
+              "value": "[listKeys(resourceId('Microsoft.Cache/redis', parameters('name')), '2023-08-01').primaryKey]"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "containerEnvPrimary",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "name": {
+            "value": "[format('{0}-primary', parameters('environmentName'))]"
+          },
+          "location": {
+            "value": "[parameters('primaryLocation')]"
+          },
+          "postgresHost": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'postgresPrimary'), '2025-04-01').outputs.fqdn.value]"
+          },
+          "postgresPassword": {
+            "value": "[parameters('postgresAdminPassword')]"
+          },
+          "redisHost": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'redisPrimary'), '2025-04-01').outputs.hostName.value]"
+          },
+          "redisKey": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'redisPrimary'), '2025-04-01').outputs.primaryKey.value]"
+          },
+          "authSecret": {
+            "value": "[parameters('authSecret')]"
+          },
+          "apiKeyHashSecret": {
+            "value": "[parameters('apiKeyHashSecret')]"
+          },
+          "stripeSecretKey": {
+            "value": "[parameters('stripeSecretKey')]"
+          },
+          "stripeWebhookSecret": {
+            "value": "[parameters('stripeWebhookSecret')]"
+          },
+          "stripeProPriceId": {
+            "value": "[parameters('stripeProPriceId')]"
+          },
+          "stripeEnterprisePriceId": {
+            "value": "[parameters('stripeEnterprisePriceId')]"
+          },
+          "appUrl": {
+            "value": "[parameters('appUrl')]"
+          },
+          "workosApiKey": {
+            "value": "[parameters('workosApiKey')]"
+          },
+          "workosClientId": {
+            "value": "[parameters('workosClientId')]"
+          },
+          "communicationConnectionString": {
+            "value": "[parameters('communicationConnectionString')]"
+          },
+          "emailSenderAddress": {
+            "value": "[parameters('emailSenderAddress')]"
+          },
+          "appInsightsConnectionString": {
+            "value": "[parameters('appInsightsConnectionString')]"
+          },
+          "registryLoginServer": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'registry'), '2025-04-01').outputs.loginServer.value]"
+          },
+          "registryUsername": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'registry'), '2025-04-01').outputs.username.value]"
+          },
+          "registryPassword": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'registry'), '2025-04-01').outputs.password.value]"
+          },
+          "azureRegion": {
+            "value": "[parameters('primaryLocation')]"
+          },
+          "storageAccountName": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'storage'), '2025-04-01').outputs.accountName.value]"
+          },
+          "storageAccountKey": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'storage'), '2025-04-01').outputs.accountKey.value]"
+          },
+          "cachetAppKey": {
+            "value": "[parameters('cachetAppKey')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.42.1.51946",
+              "templateHash": "5574629778882265040"
+            }
+          },
+          "parameters": {
+            "name": {
+              "type": "string",
+              "metadata": {
+                "description": "Container App Environment name"
+              }
+            },
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Azure region"
+              }
+            },
+            "postgresHost": {
+              "type": "string",
+              "metadata": {
+                "description": "PostgreSQL host"
+              }
+            },
+            "postgresPassword": {
+              "type": "securestring",
+              "metadata": {
+                "description": "PostgreSQL password"
+              }
+            },
+            "redisHost": {
+              "type": "string",
+              "metadata": {
+                "description": "Redis host"
+              }
+            },
+            "redisKey": {
+              "type": "securestring",
+              "metadata": {
+                "description": "Redis key"
+              }
+            },
+            "authSecret": {
+              "type": "securestring",
+              "metadata": {
+                "description": "Auth secret"
+              }
+            },
+            "apiKeyHashSecret": {
+              "type": "securestring",
+              "metadata": {
+                "description": "API key hash secret"
+              }
+            },
+            "stripeSecretKey": {
+              "type": "securestring",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Stripe secret key"
+              }
+            },
+            "stripeWebhookSecret": {
+              "type": "securestring",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Stripe webhook secret"
+              }
+            },
+            "stripeProPriceId": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Stripe Pro price ID"
+              }
+            },
+            "stripeEnterprisePriceId": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Stripe Enterprise price ID"
+              }
+            },
+            "appUrl": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Public app URL"
+              }
+            },
+            "workosApiKey": {
+              "type": "securestring",
+              "defaultValue": "",
+              "metadata": {
+                "description": "WorkOS API key"
+              }
+            },
+            "workosClientId": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "WorkOS client ID"
+              }
+            },
+            "communicationConnectionString": {
+              "type": "securestring",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Azure Communication Services connection string"
+              }
+            },
+            "emailSenderAddress": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Email sender address"
+              }
+            },
+            "appInsightsConnectionString": {
+              "type": "securestring",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Application Insights connection string"
+              }
+            },
+            "registryLoginServer": {
+              "type": "string",
+              "metadata": {
+                "description": "Container registry login server"
+              }
+            },
+            "registryUsername": {
+              "type": "string",
+              "metadata": {
+                "description": "Container registry username"
+              }
+            },
+            "registryPassword": {
+              "type": "securestring",
+              "metadata": {
+                "description": "Container registry password"
+              }
+            },
+            "azureRegion": {
+              "type": "string",
+              "metadata": {
+                "description": "Azure region identifier"
+              }
+            },
+            "storageAccountName": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Storage account name"
+              }
+            },
+            "storageAccountKey": {
+              "type": "securestring",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Storage account key"
+              }
+            },
+            "cachetAppKey": {
+              "type": "securestring",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Cachet Laravel APP_KEY"
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.OperationalInsights/workspaces",
+              "apiVersion": "2022-10-01",
+              "name": "[format('{0}-logs', parameters('name'))]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "sku": {
+                  "name": "PerGB2018"
+                }
+              }
+            },
+            {
+              "type": "Microsoft.App/managedEnvironments",
+              "apiVersion": "2023-05-01",
+              "name": "[parameters('name')]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "appLogsConfiguration": {
+                  "destination": "log-analytics",
+                  "logAnalyticsConfiguration": {
+                    "customerId": "[reference(resourceId('Microsoft.OperationalInsights/workspaces', format('{0}-logs', parameters('name'))), '2022-10-01').customerId]",
+                    "sharedKey": "[listKeys(resourceId('Microsoft.OperationalInsights/workspaces', format('{0}-logs', parameters('name'))), '2022-10-01').primarySharedKey]"
+                  }
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.OperationalInsights/workspaces', format('{0}-logs', parameters('name')))]"
+              ]
+            },
+            {
+              "type": "Microsoft.App/containerApps",
+              "apiVersion": "2023-05-01",
+              "name": "[format('{0}-gateway', parameters('name'))]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "managedEnvironmentId": "[resourceId('Microsoft.App/managedEnvironments', parameters('name'))]",
+                "configuration": {
+                  "ingress": {
+                    "external": true,
+                    "targetPort": 3001,
+                    "transport": "auto"
+                  },
+                  "registries": [
+                    {
+                      "server": "[parameters('registryLoginServer')]",
+                      "username": "[parameters('registryUsername')]",
+                      "passwordSecretRef": "registry-password"
+                    }
+                  ],
+                  "secrets": [
+                    {
+                      "name": "registry-password",
+                      "value": "[parameters('registryPassword')]"
+                    },
+                    {
+                      "name": "postgres-password",
+                      "value": "[parameters('postgresPassword')]"
+                    },
+                    {
+                      "name": "redis-key",
+                      "value": "[parameters('redisKey')]"
+                    },
+                    {
+                      "name": "auth-secret",
+                      "value": "[parameters('authSecret')]"
+                    },
+                    {
+                      "name": "api-key-hash-secret",
+                      "value": "[parameters('apiKeyHashSecret')]"
+                    },
+                    {
+                      "name": "storage-account-key",
+                      "value": "[parameters('storageAccountKey')]"
+                    }
+                  ]
+                },
+                "template": {
+                  "containers": [
+                    {
+                      "name": "gateway",
+                      "image": "[format('{0}/opendoor-gateway:latest', parameters('registryLoginServer'))]",
+                      "env": [
+                        {
+                          "name": "DATABASE_URL",
+                          "value": "[format('postgresql://{0}:5432/opendoor?user=opendooradmin&password={1}&sslmode=require', parameters('postgresHost'), parameters('postgresPassword'))]"
+                        },
+                        {
+                          "name": "REDIS_URL",
+                          "value": "[format('rediss://:{0}@{1}:6380', parameters('redisKey'), parameters('redisHost'))]"
+                        },
+                        {
+                          "name": "AUTH_SECRET",
+                          "secretRef": "auth-secret"
+                        },
+                        {
+                          "name": "GATEWAY_API_KEY_HASH_SECRET",
+                          "secretRef": "api-key-hash-secret"
+                        },
+                        {
+                          "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
+                          "secretRef": "app-insights-connection"
+                        },
+                        {
+                          "name": "AZURE_REGION",
+                          "value": "[parameters('azureRegion')]"
+                        },
+                        {
+                          "name": "PORT",
+                          "value": "3001"
+                        },
+                        {
+                          "name": "AZURE_STORAGE_ACCOUNT_NAME",
+                          "value": "[parameters('storageAccountName')]"
+                        },
+                        {
+                          "name": "AZURE_STORAGE_ACCOUNT_KEY",
+                          "secretRef": "storage-account-key"
+                        },
+                        {
+                          "name": "AZURE_STORAGE_CONTAINER_NAME",
+                          "value": "analytics"
+                        }
+                      ],
+                      "resources": {
+                        "cpu": "[json('0.5')]",
+                        "memory": "1Gi"
+                      }
+                    }
+                  ],
+                  "scale": {
+                    "minReplicas": 1,
+                    "maxReplicas": 10,
+                    "rules": [
+                      {
+                        "name": "http-rule",
+                        "http": {
+                          "metadata": {
+                            "concurrentRequests": "100"
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.App/managedEnvironments', parameters('name'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.App/containerApps",
+              "apiVersion": "2023-05-01",
+              "name": "[format('{0}-dashboard', parameters('name'))]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "managedEnvironmentId": "[resourceId('Microsoft.App/managedEnvironments', parameters('name'))]",
+                "configuration": {
+                  "ingress": {
+                    "external": true,
+                    "targetPort": 3000,
+                    "transport": "auto"
+                  },
+                  "registries": [
+                    {
+                      "server": "[parameters('registryLoginServer')]",
+                      "username": "[parameters('registryUsername')]",
+                      "passwordSecretRef": "registry-password"
+                    }
+                  ],
+                  "secrets": [
+                    {
+                      "name": "registry-password",
+                      "value": "[parameters('registryPassword')]"
+                    },
+                    {
+                      "name": "postgres-password",
+                      "value": "[parameters('postgresPassword')]"
+                    },
+                    {
+                      "name": "auth-secret",
+                      "value": "[parameters('authSecret')]"
+                    },
+                    {
+                      "name": "stripe-secret",
+                      "value": "[parameters('stripeSecretKey')]"
+                    },
+                    {
+                      "name": "stripe-webhook-secret",
+                      "value": "[parameters('stripeWebhookSecret')]"
+                    },
+                    {
+                      "name": "workos-api-key",
+                      "value": "[parameters('workosApiKey')]"
+                    },
+                    {
+                      "name": "communication-connection",
+                      "value": "[parameters('communicationConnectionString')]"
+                    },
+                    {
+                      "name": "app-insights-connection",
+                      "value": "[parameters('appInsightsConnectionString')]"
+                    },
+                    {
+                      "name": "storage-account-key",
+                      "value": "[parameters('storageAccountKey')]"
+                    }
+                  ]
+                },
+                "template": {
+                  "containers": [
+                    {
+                      "name": "dashboard",
+                      "image": "[format('{0}/opendoor-dashboard:latest', parameters('registryLoginServer'))]",
+                      "env": [
+                        {
+                          "name": "DATABASE_URL",
+                          "value": "[format('postgresql://{0}:5432/opendoor?user=opendooradmin&password={1}&sslmode=require', parameters('postgresHost'), parameters('postgresPassword'))]"
+                        },
+                        {
+                          "name": "AUTH_SECRET",
+                          "secretRef": "auth-secret"
+                        },
+                        {
+                          "name": "STRIPE_SECRET_KEY",
+                          "secretRef": "stripe-secret"
+                        },
+                        {
+                          "name": "STRIPE_WEBHOOK_SECRET",
+                          "secretRef": "stripe-webhook-secret"
+                        },
+                        {
+                          "name": "STRIPE_PRO_PRICE_ID",
+                          "value": "[parameters('stripeProPriceId')]"
+                        },
+                        {
+                          "name": "STRIPE_ENTERPRISE_PRICE_ID",
+                          "value": "[parameters('stripeEnterprisePriceId')]"
+                        },
+                        {
+                          "name": "WORKOS_API_KEY",
+                          "secretRef": "workos-api-key"
+                        },
+                        {
+                          "name": "WORKOS_CLIENT_ID",
+                          "value": "[parameters('workosClientId')]"
+                        },
+                        {
+                          "name": "AZURE_COMMUNICATION_CONNECTION_STRING",
+                          "secretRef": "communication-connection"
+                        },
+                        {
+                          "name": "EMAIL_SENDER_ADDRESS",
+                          "value": "[parameters('emailSenderAddress')]"
+                        },
+                        {
+                          "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
+                          "secretRef": "app-insights-connection"
+                        },
+                        {
+                          "name": "NEXT_PUBLIC_APP_URL",
+                          "value": "[parameters('appUrl')]"
+                        },
+                        {
+                          "name": "AZURE_REGION",
+                          "value": "[parameters('azureRegion')]"
+                        },
+                        {
+                          "name": "PORT",
+                          "value": "3000"
+                        },
+                        {
+                          "name": "AZURE_STORAGE_ACCOUNT_NAME",
+                          "value": "[parameters('storageAccountName')]"
+                        },
+                        {
+                          "name": "AZURE_STORAGE_ACCOUNT_KEY",
+                          "secretRef": "storage-account-key"
+                        },
+                        {
+                          "name": "AZURE_STORAGE_CONTAINER_NAME",
+                          "value": "analytics"
+                        },
+                        {
+                          "name": "CACHET_URL",
+                          "value": "[format('https://{0}-cachet.{1}', parameters('name'), reference(resourceId('Microsoft.App/managedEnvironments', parameters('name')), '2023-05-01').defaultDomain)]"
+                        }
+                      ],
+                      "resources": {
+                        "cpu": "[json('0.5')]",
+                        "memory": "1Gi"
+                      }
+                    }
+                  ],
+                  "scale": {
+                    "minReplicas": 1,
+                    "maxReplicas": 5,
+                    "rules": [
+                      {
+                        "name": "http-rule",
+                        "http": {
+                          "metadata": {
+                            "concurrentRequests": "50"
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.App/managedEnvironments', parameters('name'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.App/containerApps",
+              "apiVersion": "2023-05-01",
+              "name": "[format('{0}-cachet', parameters('name'))]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "managedEnvironmentId": "[resourceId('Microsoft.App/managedEnvironments', parameters('name'))]",
+                "configuration": {
+                  "ingress": {
+                    "external": true,
+                    "targetPort": 8000,
+                    "transport": "auto"
+                  },
+                  "secrets": [
+                    {
+                      "name": "postgres-password",
+                      "value": "[parameters('postgresPassword')]"
+                    },
+                    {
+                      "name": "cachet-app-key",
+                      "value": "[parameters('cachetAppKey')]"
+                    }
+                  ]
+                },
+                "template": {
+                  "containers": [
+                    {
+                      "name": "cachet",
+                      "image": "cachethq/docker:latest",
+                      "env": [
+                        {
+                          "name": "DB_DRIVER",
+                          "value": "pgsql"
+                        },
+                        {
+                          "name": "DB_HOST",
+                          "value": "[parameters('postgresHost')]"
+                        },
+                        {
+                          "name": "DB_PORT",
+                          "value": "5432"
+                        },
+                        {
+                          "name": "DB_DATABASE",
+                          "value": "cachet"
+                        },
+                        {
+                          "name": "DB_USERNAME",
+                          "value": "opendooradmin"
+                        },
+                        {
+                          "name": "DB_PASSWORD",
+                          "secretRef": "postgres-password"
+                        },
+                        {
+                          "name": "DB_PREFIX",
+                          "value": "chq_"
+                        },
+                        {
+                          "name": "APP_KEY",
+                          "secretRef": "cachet-app-key"
+                        },
+                        {
+                          "name": "APP_ENV",
+                          "value": "production"
+                        },
+                        {
+                          "name": "APP_LOG",
+                          "value": "errorlog"
+                        },
+                        {
+                          "name": "APP_DEBUG",
+                          "value": "false"
+                        },
+                        {
+                          "name": "DEBUG",
+                          "value": "false"
+                        },
+                        {
+                          "name": "CACHE_DRIVER",
+                          "value": "database"
+                        },
+                        {
+                          "name": "SESSION_DRIVER",
+                          "value": "database"
+                        },
+                        {
+                          "name": "QUEUE_DRIVER",
+                          "value": "database"
+                        }
+                      ],
+                      "resources": {
+                        "cpu": "[json('0.25')]",
+                        "memory": "0.5Gi"
+                      },
+                      "probes": [
+                        {
+                          "type": "startup",
+                          "httpGet": {
+                            "path": "/",
+                            "port": 8000
+                          },
+                          "initialDelaySeconds": 30,
+                          "periodSeconds": 10,
+                          "failureThreshold": 18
+                        },
+                        {
+                          "type": "liveness",
+                          "httpGet": {
+                            "path": "/",
+                            "port": 8000
+                          },
+                          "periodSeconds": 30,
+                          "failureThreshold": 3
+                        },
+                        {
+                          "type": "readiness",
+                          "httpGet": {
+                            "path": "/",
+                            "port": 8000
+                          },
+                          "periodSeconds": 10,
+                          "failureThreshold": 3
+                        }
+                      ]
+                    }
+                  ],
+                  "scale": {
+                    "minReplicas": 1,
+                    "maxReplicas": 2,
+                    "rules": [
+                      {
+                        "name": "http-rule",
+                        "http": {
+                          "metadata": {
+                            "concurrentRequests": "50"
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.App/managedEnvironments', parameters('name'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.App/containerApps",
+              "apiVersion": "2023-05-01",
+              "name": "[format('{0}-docs', parameters('name'))]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "managedEnvironmentId": "[resourceId('Microsoft.App/managedEnvironments', parameters('name'))]",
+                "configuration": {
+                  "ingress": {
+                    "external": true,
+                    "targetPort": 3000,
+                    "transport": "auto"
+                  },
+                  "registries": [
+                    {
+                      "server": "[parameters('registryLoginServer')]",
+                      "username": "[parameters('registryUsername')]",
+                      "passwordSecretRef": "registry-password"
+                    }
+                  ],
+                  "secrets": [
+                    {
+                      "name": "registry-password",
+                      "value": "[parameters('registryPassword')]"
+                    }
+                  ]
+                },
+                "template": {
+                  "containers": [
+                    {
+                      "name": "docs",
+                      "image": "[format('{0}/opendoor-docs:latest', parameters('registryLoginServer'))]",
+                      "resources": {
+                        "cpu": "[json('0.25')]",
+                        "memory": "0.5Gi"
+                      },
+                      "probes": [
+                        {
+                          "type": "liveness",
+                          "httpGet": {
+                            "path": "/",
+                            "port": 3000
+                          },
+                          "periodSeconds": 30,
+                          "failureThreshold": 3
+                        },
+                        {
+                          "type": "readiness",
+                          "httpGet": {
+                            "path": "/",
+                            "port": 3000
+                          },
+                          "periodSeconds": 10,
+                          "failureThreshold": 3
+                        }
+                      ]
+                    }
+                  ],
+                  "scale": {
+                    "minReplicas": 1,
+                    "maxReplicas": 3,
+                    "rules": [
+                      {
+                        "name": "http-rule",
+                        "http": {
+                          "metadata": {
+                            "concurrentRequests": "50"
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.App/managedEnvironments', parameters('name'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.App/managedEnvironments",
+              "apiVersion": "2023-05-01",
+              "name": "[format('{0}-workloads', parameters('name'))]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "appLogsConfiguration": {
+                  "destination": "log-analytics",
+                  "logAnalyticsConfiguration": {
+                    "customerId": "[reference(resourceId('Microsoft.OperationalInsights/workspaces', format('{0}-logs', parameters('name'))), '2022-10-01').customerId]",
+                    "sharedKey": "[listKeys(resourceId('Microsoft.OperationalInsights/workspaces', format('{0}-logs', parameters('name'))), '2022-10-01').primarySharedKey]"
+                  }
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.OperationalInsights/workspaces', format('{0}-logs', parameters('name')))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "gatewayFqdn": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.App/containerApps', format('{0}-gateway', parameters('name'))), '2023-05-01').configuration.ingress.fqdn]"
+            },
+            "dashboardFqdn": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.App/containerApps', format('{0}-dashboard', parameters('name'))), '2023-05-01').configuration.ingress.fqdn]"
+            },
+            "cachetFqdn": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.App/containerApps', format('{0}-cachet', parameters('name'))), '2023-05-01').configuration.ingress.fqdn]"
+            },
+            "docsFqdn": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.App/containerApps', format('{0}-docs', parameters('name'))), '2023-05-01').configuration.ingress.fqdn]"
+            },
+            "userWorkloadEnvId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.App/managedEnvironments', format('{0}-workloads', parameters('name')))]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'postgresPrimary')]",
+        "[resourceId('Microsoft.Resources/deployments', 'redisPrimary')]",
+        "[resourceId('Microsoft.Resources/deployments', 'registry')]",
+        "[resourceId('Microsoft.Resources/deployments', 'storage')]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "redisSecondary",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "name": {
+            "value": "[format('{0}-redis-sec', parameters('environmentName'))]"
+          },
+          "location": {
+            "value": "[parameters('secondaryLocation')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.42.1.51946",
+              "templateHash": "12999568771695005479"
+            }
+          },
+          "parameters": {
+            "name": {
+              "type": "string",
+              "metadata": {
+                "description": "Redis cache name"
+              }
+            },
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Azure region"
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Cache/redis",
+              "apiVersion": "2023-08-01",
+              "name": "[parameters('name')]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "sku": {
+                  "name": "Basic",
+                  "family": "C",
+                  "capacity": 0
+                },
+                "enableNonSslPort": false,
+                "minimumTlsVersion": "1.2"
+              }
+            }
+          ],
+          "outputs": {
+            "hostName": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Cache/redis', parameters('name')), '2023-08-01').hostName]"
+            },
+            "primaryKey": {
+              "type": "string",
+              "value": "[listKeys(resourceId('Microsoft.Cache/redis', parameters('name')), '2023-08-01').primaryKey]"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "containerEnvSecondary",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "name": {
+            "value": "[format('{0}-secondary', parameters('environmentName'))]"
+          },
+          "location": {
+            "value": "[parameters('secondaryLocation')]"
+          },
+          "postgresHost": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'postgresPrimary'), '2025-04-01').outputs.fqdn.value]"
+          },
+          "postgresPassword": {
+            "value": "[parameters('postgresAdminPassword')]"
+          },
+          "redisHost": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'redisSecondary'), '2025-04-01').outputs.hostName.value]"
+          },
+          "redisKey": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'redisSecondary'), '2025-04-01').outputs.primaryKey.value]"
+          },
+          "authSecret": {
+            "value": "[parameters('authSecret')]"
+          },
+          "apiKeyHashSecret": {
+            "value": "[parameters('apiKeyHashSecret')]"
+          },
+          "stripeSecretKey": {
+            "value": "[parameters('stripeSecretKey')]"
+          },
+          "stripeWebhookSecret": {
+            "value": "[parameters('stripeWebhookSecret')]"
+          },
+          "stripeProPriceId": {
+            "value": "[parameters('stripeProPriceId')]"
+          },
+          "stripeEnterprisePriceId": {
+            "value": "[parameters('stripeEnterprisePriceId')]"
+          },
+          "appUrl": {
+            "value": "[parameters('appUrl')]"
+          },
+          "workosApiKey": {
+            "value": "[parameters('workosApiKey')]"
+          },
+          "workosClientId": {
+            "value": "[parameters('workosClientId')]"
+          },
+          "communicationConnectionString": {
+            "value": "[parameters('communicationConnectionString')]"
+          },
+          "emailSenderAddress": {
+            "value": "[parameters('emailSenderAddress')]"
+          },
+          "appInsightsConnectionString": {
+            "value": "[parameters('appInsightsConnectionString')]"
+          },
+          "registryLoginServer": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'registry'), '2025-04-01').outputs.loginServer.value]"
+          },
+          "registryUsername": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'registry'), '2025-04-01').outputs.username.value]"
+          },
+          "registryPassword": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'registry'), '2025-04-01').outputs.password.value]"
+          },
+          "azureRegion": {
+            "value": "[parameters('secondaryLocation')]"
+          },
+          "storageAccountName": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'storage'), '2025-04-01').outputs.accountName.value]"
+          },
+          "storageAccountKey": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'storage'), '2025-04-01').outputs.accountKey.value]"
+          },
+          "cachetAppKey": {
+            "value": "[parameters('cachetAppKey')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.42.1.51946",
+              "templateHash": "5574629778882265040"
+            }
+          },
+          "parameters": {
+            "name": {
+              "type": "string",
+              "metadata": {
+                "description": "Container App Environment name"
+              }
+            },
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Azure region"
+              }
+            },
+            "postgresHost": {
+              "type": "string",
+              "metadata": {
+                "description": "PostgreSQL host"
+              }
+            },
+            "postgresPassword": {
+              "type": "securestring",
+              "metadata": {
+                "description": "PostgreSQL password"
+              }
+            },
+            "redisHost": {
+              "type": "string",
+              "metadata": {
+                "description": "Redis host"
+              }
+            },
+            "redisKey": {
+              "type": "securestring",
+              "metadata": {
+                "description": "Redis key"
+              }
+            },
+            "authSecret": {
+              "type": "securestring",
+              "metadata": {
+                "description": "Auth secret"
+              }
+            },
+            "apiKeyHashSecret": {
+              "type": "securestring",
+              "metadata": {
+                "description": "API key hash secret"
+              }
+            },
+            "stripeSecretKey": {
+              "type": "securestring",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Stripe secret key"
+              }
+            },
+            "stripeWebhookSecret": {
+              "type": "securestring",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Stripe webhook secret"
+              }
+            },
+            "stripeProPriceId": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Stripe Pro price ID"
+              }
+            },
+            "stripeEnterprisePriceId": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Stripe Enterprise price ID"
+              }
+            },
+            "appUrl": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Public app URL"
+              }
+            },
+            "workosApiKey": {
+              "type": "securestring",
+              "defaultValue": "",
+              "metadata": {
+                "description": "WorkOS API key"
+              }
+            },
+            "workosClientId": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "WorkOS client ID"
+              }
+            },
+            "communicationConnectionString": {
+              "type": "securestring",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Azure Communication Services connection string"
+              }
+            },
+            "emailSenderAddress": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Email sender address"
+              }
+            },
+            "appInsightsConnectionString": {
+              "type": "securestring",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Application Insights connection string"
+              }
+            },
+            "registryLoginServer": {
+              "type": "string",
+              "metadata": {
+                "description": "Container registry login server"
+              }
+            },
+            "registryUsername": {
+              "type": "string",
+              "metadata": {
+                "description": "Container registry username"
+              }
+            },
+            "registryPassword": {
+              "type": "securestring",
+              "metadata": {
+                "description": "Container registry password"
+              }
+            },
+            "azureRegion": {
+              "type": "string",
+              "metadata": {
+                "description": "Azure region identifier"
+              }
+            },
+            "storageAccountName": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Storage account name"
+              }
+            },
+            "storageAccountKey": {
+              "type": "securestring",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Storage account key"
+              }
+            },
+            "cachetAppKey": {
+              "type": "securestring",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Cachet Laravel APP_KEY"
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.OperationalInsights/workspaces",
+              "apiVersion": "2022-10-01",
+              "name": "[format('{0}-logs', parameters('name'))]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "sku": {
+                  "name": "PerGB2018"
+                }
+              }
+            },
+            {
+              "type": "Microsoft.App/managedEnvironments",
+              "apiVersion": "2023-05-01",
+              "name": "[parameters('name')]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "appLogsConfiguration": {
+                  "destination": "log-analytics",
+                  "logAnalyticsConfiguration": {
+                    "customerId": "[reference(resourceId('Microsoft.OperationalInsights/workspaces', format('{0}-logs', parameters('name'))), '2022-10-01').customerId]",
+                    "sharedKey": "[listKeys(resourceId('Microsoft.OperationalInsights/workspaces', format('{0}-logs', parameters('name'))), '2022-10-01').primarySharedKey]"
+                  }
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.OperationalInsights/workspaces', format('{0}-logs', parameters('name')))]"
+              ]
+            },
+            {
+              "type": "Microsoft.App/containerApps",
+              "apiVersion": "2023-05-01",
+              "name": "[format('{0}-gateway', parameters('name'))]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "managedEnvironmentId": "[resourceId('Microsoft.App/managedEnvironments', parameters('name'))]",
+                "configuration": {
+                  "ingress": {
+                    "external": true,
+                    "targetPort": 3001,
+                    "transport": "auto"
+                  },
+                  "registries": [
+                    {
+                      "server": "[parameters('registryLoginServer')]",
+                      "username": "[parameters('registryUsername')]",
+                      "passwordSecretRef": "registry-password"
+                    }
+                  ],
+                  "secrets": [
+                    {
+                      "name": "registry-password",
+                      "value": "[parameters('registryPassword')]"
+                    },
+                    {
+                      "name": "postgres-password",
+                      "value": "[parameters('postgresPassword')]"
+                    },
+                    {
+                      "name": "redis-key",
+                      "value": "[parameters('redisKey')]"
+                    },
+                    {
+                      "name": "auth-secret",
+                      "value": "[parameters('authSecret')]"
+                    },
+                    {
+                      "name": "api-key-hash-secret",
+                      "value": "[parameters('apiKeyHashSecret')]"
+                    },
+                    {
+                      "name": "storage-account-key",
+                      "value": "[parameters('storageAccountKey')]"
+                    }
+                  ]
+                },
+                "template": {
+                  "containers": [
+                    {
+                      "name": "gateway",
+                      "image": "[format('{0}/opendoor-gateway:latest', parameters('registryLoginServer'))]",
+                      "env": [
+                        {
+                          "name": "DATABASE_URL",
+                          "value": "[format('postgresql://{0}:5432/opendoor?user=opendooradmin&password={1}&sslmode=require', parameters('postgresHost'), parameters('postgresPassword'))]"
+                        },
+                        {
+                          "name": "REDIS_URL",
+                          "value": "[format('rediss://:{0}@{1}:6380', parameters('redisKey'), parameters('redisHost'))]"
+                        },
+                        {
+                          "name": "AUTH_SECRET",
+                          "secretRef": "auth-secret"
+                        },
+                        {
+                          "name": "GATEWAY_API_KEY_HASH_SECRET",
+                          "secretRef": "api-key-hash-secret"
+                        },
+                        {
+                          "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
+                          "secretRef": "app-insights-connection"
+                        },
+                        {
+                          "name": "AZURE_REGION",
+                          "value": "[parameters('azureRegion')]"
+                        },
+                        {
+                          "name": "PORT",
+                          "value": "3001"
+                        },
+                        {
+                          "name": "AZURE_STORAGE_ACCOUNT_NAME",
+                          "value": "[parameters('storageAccountName')]"
+                        },
+                        {
+                          "name": "AZURE_STORAGE_ACCOUNT_KEY",
+                          "secretRef": "storage-account-key"
+                        },
+                        {
+                          "name": "AZURE_STORAGE_CONTAINER_NAME",
+                          "value": "analytics"
+                        }
+                      ],
+                      "resources": {
+                        "cpu": "[json('0.5')]",
+                        "memory": "1Gi"
+                      }
+                    }
+                  ],
+                  "scale": {
+                    "minReplicas": 1,
+                    "maxReplicas": 10,
+                    "rules": [
+                      {
+                        "name": "http-rule",
+                        "http": {
+                          "metadata": {
+                            "concurrentRequests": "100"
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.App/managedEnvironments', parameters('name'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.App/containerApps",
+              "apiVersion": "2023-05-01",
+              "name": "[format('{0}-dashboard', parameters('name'))]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "managedEnvironmentId": "[resourceId('Microsoft.App/managedEnvironments', parameters('name'))]",
+                "configuration": {
+                  "ingress": {
+                    "external": true,
+                    "targetPort": 3000,
+                    "transport": "auto"
+                  },
+                  "registries": [
+                    {
+                      "server": "[parameters('registryLoginServer')]",
+                      "username": "[parameters('registryUsername')]",
+                      "passwordSecretRef": "registry-password"
+                    }
+                  ],
+                  "secrets": [
+                    {
+                      "name": "registry-password",
+                      "value": "[parameters('registryPassword')]"
+                    },
+                    {
+                      "name": "postgres-password",
+                      "value": "[parameters('postgresPassword')]"
+                    },
+                    {
+                      "name": "auth-secret",
+                      "value": "[parameters('authSecret')]"
+                    },
+                    {
+                      "name": "stripe-secret",
+                      "value": "[parameters('stripeSecretKey')]"
+                    },
+                    {
+                      "name": "stripe-webhook-secret",
+                      "value": "[parameters('stripeWebhookSecret')]"
+                    },
+                    {
+                      "name": "workos-api-key",
+                      "value": "[parameters('workosApiKey')]"
+                    },
+                    {
+                      "name": "communication-connection",
+                      "value": "[parameters('communicationConnectionString')]"
+                    },
+                    {
+                      "name": "app-insights-connection",
+                      "value": "[parameters('appInsightsConnectionString')]"
+                    },
+                    {
+                      "name": "storage-account-key",
+                      "value": "[parameters('storageAccountKey')]"
+                    }
+                  ]
+                },
+                "template": {
+                  "containers": [
+                    {
+                      "name": "dashboard",
+                      "image": "[format('{0}/opendoor-dashboard:latest', parameters('registryLoginServer'))]",
+                      "env": [
+                        {
+                          "name": "DATABASE_URL",
+                          "value": "[format('postgresql://{0}:5432/opendoor?user=opendooradmin&password={1}&sslmode=require', parameters('postgresHost'), parameters('postgresPassword'))]"
+                        },
+                        {
+                          "name": "AUTH_SECRET",
+                          "secretRef": "auth-secret"
+                        },
+                        {
+                          "name": "STRIPE_SECRET_KEY",
+                          "secretRef": "stripe-secret"
+                        },
+                        {
+                          "name": "STRIPE_WEBHOOK_SECRET",
+                          "secretRef": "stripe-webhook-secret"
+                        },
+                        {
+                          "name": "STRIPE_PRO_PRICE_ID",
+                          "value": "[parameters('stripeProPriceId')]"
+                        },
+                        {
+                          "name": "STRIPE_ENTERPRISE_PRICE_ID",
+                          "value": "[parameters('stripeEnterprisePriceId')]"
+                        },
+                        {
+                          "name": "WORKOS_API_KEY",
+                          "secretRef": "workos-api-key"
+                        },
+                        {
+                          "name": "WORKOS_CLIENT_ID",
+                          "value": "[parameters('workosClientId')]"
+                        },
+                        {
+                          "name": "AZURE_COMMUNICATION_CONNECTION_STRING",
+                          "secretRef": "communication-connection"
+                        },
+                        {
+                          "name": "EMAIL_SENDER_ADDRESS",
+                          "value": "[parameters('emailSenderAddress')]"
+                        },
+                        {
+                          "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
+                          "secretRef": "app-insights-connection"
+                        },
+                        {
+                          "name": "NEXT_PUBLIC_APP_URL",
+                          "value": "[parameters('appUrl')]"
+                        },
+                        {
+                          "name": "AZURE_REGION",
+                          "value": "[parameters('azureRegion')]"
+                        },
+                        {
+                          "name": "PORT",
+                          "value": "3000"
+                        },
+                        {
+                          "name": "AZURE_STORAGE_ACCOUNT_NAME",
+                          "value": "[parameters('storageAccountName')]"
+                        },
+                        {
+                          "name": "AZURE_STORAGE_ACCOUNT_KEY",
+                          "secretRef": "storage-account-key"
+                        },
+                        {
+                          "name": "AZURE_STORAGE_CONTAINER_NAME",
+                          "value": "analytics"
+                        },
+                        {
+                          "name": "CACHET_URL",
+                          "value": "[format('https://{0}-cachet.{1}', parameters('name'), reference(resourceId('Microsoft.App/managedEnvironments', parameters('name')), '2023-05-01').defaultDomain)]"
+                        }
+                      ],
+                      "resources": {
+                        "cpu": "[json('0.5')]",
+                        "memory": "1Gi"
+                      }
+                    }
+                  ],
+                  "scale": {
+                    "minReplicas": 1,
+                    "maxReplicas": 5,
+                    "rules": [
+                      {
+                        "name": "http-rule",
+                        "http": {
+                          "metadata": {
+                            "concurrentRequests": "50"
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.App/managedEnvironments', parameters('name'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.App/containerApps",
+              "apiVersion": "2023-05-01",
+              "name": "[format('{0}-cachet', parameters('name'))]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "managedEnvironmentId": "[resourceId('Microsoft.App/managedEnvironments', parameters('name'))]",
+                "configuration": {
+                  "ingress": {
+                    "external": true,
+                    "targetPort": 8000,
+                    "transport": "auto"
+                  },
+                  "secrets": [
+                    {
+                      "name": "postgres-password",
+                      "value": "[parameters('postgresPassword')]"
+                    },
+                    {
+                      "name": "cachet-app-key",
+                      "value": "[parameters('cachetAppKey')]"
+                    }
+                  ]
+                },
+                "template": {
+                  "containers": [
+                    {
+                      "name": "cachet",
+                      "image": "cachethq/docker:latest",
+                      "env": [
+                        {
+                          "name": "DB_DRIVER",
+                          "value": "pgsql"
+                        },
+                        {
+                          "name": "DB_HOST",
+                          "value": "[parameters('postgresHost')]"
+                        },
+                        {
+                          "name": "DB_PORT",
+                          "value": "5432"
+                        },
+                        {
+                          "name": "DB_DATABASE",
+                          "value": "cachet"
+                        },
+                        {
+                          "name": "DB_USERNAME",
+                          "value": "opendooradmin"
+                        },
+                        {
+                          "name": "DB_PASSWORD",
+                          "secretRef": "postgres-password"
+                        },
+                        {
+                          "name": "DB_PREFIX",
+                          "value": "chq_"
+                        },
+                        {
+                          "name": "APP_KEY",
+                          "secretRef": "cachet-app-key"
+                        },
+                        {
+                          "name": "APP_ENV",
+                          "value": "production"
+                        },
+                        {
+                          "name": "APP_LOG",
+                          "value": "errorlog"
+                        },
+                        {
+                          "name": "APP_DEBUG",
+                          "value": "false"
+                        },
+                        {
+                          "name": "DEBUG",
+                          "value": "false"
+                        },
+                        {
+                          "name": "CACHE_DRIVER",
+                          "value": "database"
+                        },
+                        {
+                          "name": "SESSION_DRIVER",
+                          "value": "database"
+                        },
+                        {
+                          "name": "QUEUE_DRIVER",
+                          "value": "database"
+                        }
+                      ],
+                      "resources": {
+                        "cpu": "[json('0.25')]",
+                        "memory": "0.5Gi"
+                      },
+                      "probes": [
+                        {
+                          "type": "startup",
+                          "httpGet": {
+                            "path": "/",
+                            "port": 8000
+                          },
+                          "initialDelaySeconds": 30,
+                          "periodSeconds": 10,
+                          "failureThreshold": 18
+                        },
+                        {
+                          "type": "liveness",
+                          "httpGet": {
+                            "path": "/",
+                            "port": 8000
+                          },
+                          "periodSeconds": 30,
+                          "failureThreshold": 3
+                        },
+                        {
+                          "type": "readiness",
+                          "httpGet": {
+                            "path": "/",
+                            "port": 8000
+                          },
+                          "periodSeconds": 10,
+                          "failureThreshold": 3
+                        }
+                      ]
+                    }
+                  ],
+                  "scale": {
+                    "minReplicas": 1,
+                    "maxReplicas": 2,
+                    "rules": [
+                      {
+                        "name": "http-rule",
+                        "http": {
+                          "metadata": {
+                            "concurrentRequests": "50"
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.App/managedEnvironments', parameters('name'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.App/containerApps",
+              "apiVersion": "2023-05-01",
+              "name": "[format('{0}-docs', parameters('name'))]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "managedEnvironmentId": "[resourceId('Microsoft.App/managedEnvironments', parameters('name'))]",
+                "configuration": {
+                  "ingress": {
+                    "external": true,
+                    "targetPort": 3000,
+                    "transport": "auto"
+                  },
+                  "registries": [
+                    {
+                      "server": "[parameters('registryLoginServer')]",
+                      "username": "[parameters('registryUsername')]",
+                      "passwordSecretRef": "registry-password"
+                    }
+                  ],
+                  "secrets": [
+                    {
+                      "name": "registry-password",
+                      "value": "[parameters('registryPassword')]"
+                    }
+                  ]
+                },
+                "template": {
+                  "containers": [
+                    {
+                      "name": "docs",
+                      "image": "[format('{0}/opendoor-docs:latest', parameters('registryLoginServer'))]",
+                      "resources": {
+                        "cpu": "[json('0.25')]",
+                        "memory": "0.5Gi"
+                      },
+                      "probes": [
+                        {
+                          "type": "liveness",
+                          "httpGet": {
+                            "path": "/",
+                            "port": 3000
+                          },
+                          "periodSeconds": 30,
+                          "failureThreshold": 3
+                        },
+                        {
+                          "type": "readiness",
+                          "httpGet": {
+                            "path": "/",
+                            "port": 3000
+                          },
+                          "periodSeconds": 10,
+                          "failureThreshold": 3
+                        }
+                      ]
+                    }
+                  ],
+                  "scale": {
+                    "minReplicas": 1,
+                    "maxReplicas": 3,
+                    "rules": [
+                      {
+                        "name": "http-rule",
+                        "http": {
+                          "metadata": {
+                            "concurrentRequests": "50"
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.App/managedEnvironments', parameters('name'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.App/managedEnvironments",
+              "apiVersion": "2023-05-01",
+              "name": "[format('{0}-workloads', parameters('name'))]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "appLogsConfiguration": {
+                  "destination": "log-analytics",
+                  "logAnalyticsConfiguration": {
+                    "customerId": "[reference(resourceId('Microsoft.OperationalInsights/workspaces', format('{0}-logs', parameters('name'))), '2022-10-01').customerId]",
+                    "sharedKey": "[listKeys(resourceId('Microsoft.OperationalInsights/workspaces', format('{0}-logs', parameters('name'))), '2022-10-01').primarySharedKey]"
+                  }
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.OperationalInsights/workspaces', format('{0}-logs', parameters('name')))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "gatewayFqdn": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.App/containerApps', format('{0}-gateway', parameters('name'))), '2023-05-01').configuration.ingress.fqdn]"
+            },
+            "dashboardFqdn": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.App/containerApps', format('{0}-dashboard', parameters('name'))), '2023-05-01').configuration.ingress.fqdn]"
+            },
+            "cachetFqdn": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.App/containerApps', format('{0}-cachet', parameters('name'))), '2023-05-01').configuration.ingress.fqdn]"
+            },
+            "docsFqdn": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.App/containerApps', format('{0}-docs', parameters('name'))), '2023-05-01').configuration.ingress.fqdn]"
+            },
+            "userWorkloadEnvId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.App/managedEnvironments', format('{0}-workloads', parameters('name')))]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'postgresPrimary')]",
+        "[resourceId('Microsoft.Resources/deployments', 'redisSecondary')]",
+        "[resourceId('Microsoft.Resources/deployments', 'registry')]",
+        "[resourceId('Microsoft.Resources/deployments', 'storage')]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "frontDoor",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "name": {
+            "value": "[format('{0}-fd', parameters('environmentName'))]"
+          },
+          "primaryEndpoint": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'containerEnvPrimary'), '2025-04-01').outputs.gatewayFqdn.value]"
+          },
+          "secondaryEndpoint": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'containerEnvSecondary'), '2025-04-01').outputs.gatewayFqdn.value]"
+          },
+          "primaryDashboardEndpoint": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'containerEnvPrimary'), '2025-04-01').outputs.dashboardFqdn.value]"
+          },
+          "secondaryDashboardEndpoint": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'containerEnvSecondary'), '2025-04-01').outputs.dashboardFqdn.value]"
+          },
+          "gatewayCustomDomain": {
+            "value": "[parameters('gatewayCustomDomain')]"
+          },
+          "dashboardCustomDomain": {
+            "value": "[parameters('dashboardCustomDomain')]"
+          },
+          "primaryDocsEndpoint": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'containerEnvPrimary'), '2025-04-01').outputs.docsFqdn.value]"
+          },
+          "secondaryDocsEndpoint": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'containerEnvSecondary'), '2025-04-01').outputs.docsFqdn.value]"
+          },
+          "docsCustomDomain": {
+            "value": "[parameters('docsCustomDomain')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.42.1.51946",
+              "templateHash": "9693348481242251214"
+            }
+          },
+          "parameters": {
+            "name": {
+              "type": "string",
+              "metadata": {
+                "description": "Front Door profile name"
+              }
+            },
+            "primaryEndpoint": {
+              "type": "string",
+              "metadata": {
+                "description": "Primary gateway endpoint"
+              }
+            },
+            "secondaryEndpoint": {
+              "type": "string",
+              "metadata": {
+                "description": "Secondary gateway endpoint"
+              }
+            },
+            "primaryDashboardEndpoint": {
+              "type": "string",
+              "metadata": {
+                "description": "Primary dashboard endpoint"
+              }
+            },
+            "secondaryDashboardEndpoint": {
+              "type": "string",
+              "metadata": {
+                "description": "Secondary dashboard endpoint"
+              }
+            },
+            "gatewayCustomDomain": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Custom domain for gateway (e.g. api.opendoor.ai)"
+              }
+            },
+            "dashboardCustomDomain": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Custom domain for dashboard (e.g. app.opendoor.ai)"
+              }
+            },
+            "primaryDocsEndpoint": {
+              "type": "string",
+              "metadata": {
+                "description": "Primary docs endpoint"
+              }
+            },
+            "secondaryDocsEndpoint": {
+              "type": "string",
+              "metadata": {
+                "description": "Secondary docs endpoint"
+              }
+            },
+            "docsCustomDomain": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Custom domain for docs (e.g. docs.opendoor.ai)"
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Cdn/profiles",
+              "apiVersion": "2023-07-01-preview",
+              "name": "[parameters('name')]",
+              "location": "Global",
+              "sku": {
+                "name": "Standard_AzureFrontDoor"
+              }
+            },
+            {
+              "type": "Microsoft.Cdn/profiles/originGroups",
+              "apiVersion": "2023-07-01-preview",
+              "name": "[format('{0}/{1}', parameters('name'), 'gateway-og')]",
+              "properties": {
+                "loadBalancingSettings": {
+                  "sampleSize": 4,
+                  "successfulSamplesRequired": 3
+                },
+                "healthProbeSettings": {
+                  "probePath": "/health",
+                  "probeRequestType": "GET",
+                  "probeProtocol": "Https",
+                  "probeIntervalInSeconds": 100
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Cdn/profiles', parameters('name'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Cdn/profiles/originGroups/origins",
+              "apiVersion": "2023-07-01-preview",
+              "name": "[format('{0}/{1}/{2}', parameters('name'), 'gateway-og', 'primary')]",
+              "properties": {
+                "hostName": "[parameters('primaryEndpoint')]",
+                "httpPort": 80,
+                "httpsPort": 443,
+                "priority": 1,
+                "weight": 1000
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Cdn/profiles/originGroups', parameters('name'), 'gateway-og')]"
+              ]
+            },
+            {
+              "type": "Microsoft.Cdn/profiles/originGroups/origins",
+              "apiVersion": "2023-07-01-preview",
+              "name": "[format('{0}/{1}/{2}', parameters('name'), 'gateway-og', 'secondary')]",
+              "properties": {
+                "hostName": "[parameters('secondaryEndpoint')]",
+                "httpPort": 80,
+                "httpsPort": 443,
+                "priority": 2,
+                "weight": 1000
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Cdn/profiles/originGroups', parameters('name'), 'gateway-og')]"
+              ]
+            },
+            {
+              "type": "Microsoft.Cdn/profiles/afdEndpoints",
+              "apiVersion": "2023-07-01-preview",
+              "name": "[format('{0}/{1}', parameters('name'), 'gateway')]",
+              "location": "Global",
+              "properties": {
+                "enabledState": "Enabled"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Cdn/profiles', parameters('name'))]"
+              ]
+            },
+            {
+              "condition": "[not(empty(parameters('gatewayCustomDomain')))]",
+              "type": "Microsoft.Cdn/profiles/customDomains",
+              "apiVersion": "2023-07-01-preview",
+              "name": "[format('{0}/{1}', parameters('name'), replace(replace(parameters('gatewayCustomDomain'), '.', '-'), '*', 'wildcard'))]",
+              "properties": {
+                "hostName": "[parameters('gatewayCustomDomain')]",
+                "tlsSettings": {
+                  "certificateType": "ManagedCertificate",
+                  "minimumTlsVersion": "TLS12"
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Cdn/profiles', parameters('name'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Cdn/profiles/afdEndpoints/routes",
+              "apiVersion": "2023-07-01-preview",
+              "name": "[format('{0}/{1}/{2}', parameters('name'), 'gateway', 'default')]",
+              "properties": {
+                "originGroup": {
+                  "id": "[resourceId('Microsoft.Cdn/profiles/originGroups', parameters('name'), 'gateway-og')]"
+                },
+                "customDomains": "[if(not(empty(parameters('gatewayCustomDomain'))), createArray(createObject('id', resourceId('Microsoft.Cdn/profiles/customDomains', parameters('name'), replace(replace(parameters('gatewayCustomDomain'), '.', '-'), '*', 'wildcard')))), createArray())]",
+                "supportedProtocols": [
+                  "Https"
+                ],
+                "patternsToMatch": [
+                  "/*"
+                ],
+                "forwardingProtocol": "HttpsOnly",
+                "linkToDefaultDomain": "Enabled",
+                "httpsRedirect": "Enabled"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Cdn/profiles/customDomains', parameters('name'), replace(replace(parameters('gatewayCustomDomain'), '.', '-'), '*', 'wildcard'))]",
+                "[resourceId('Microsoft.Cdn/profiles/afdEndpoints', parameters('name'), 'gateway')]",
+                "[resourceId('Microsoft.Cdn/profiles/originGroups', parameters('name'), 'gateway-og')]",
+                "[resourceId('Microsoft.Cdn/profiles/originGroups/origins', parameters('name'), 'gateway-og', 'primary')]",
+                "[resourceId('Microsoft.Cdn/profiles/originGroups/origins', parameters('name'), 'gateway-og', 'secondary')]"
+              ]
+            },
+            {
+              "type": "Microsoft.Cdn/profiles/originGroups",
+              "apiVersion": "2023-07-01-preview",
+              "name": "[format('{0}/{1}', parameters('name'), 'dashboard-og')]",
+              "properties": {
+                "loadBalancingSettings": {
+                  "sampleSize": 4,
+                  "successfulSamplesRequired": 3
+                },
+                "healthProbeSettings": {
+                  "probePath": "/",
+                  "probeRequestType": "GET",
+                  "probeProtocol": "Https",
+                  "probeIntervalInSeconds": 100
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Cdn/profiles', parameters('name'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Cdn/profiles/originGroups/origins",
+              "apiVersion": "2023-07-01-preview",
+              "name": "[format('{0}/{1}/{2}', parameters('name'), 'dashboard-og', 'primary')]",
+              "properties": {
+                "hostName": "[parameters('primaryDashboardEndpoint')]",
+                "httpPort": 80,
+                "httpsPort": 443,
+                "priority": 1,
+                "weight": 1000
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Cdn/profiles/originGroups', parameters('name'), 'dashboard-og')]"
+              ]
+            },
+            {
+              "type": "Microsoft.Cdn/profiles/originGroups/origins",
+              "apiVersion": "2023-07-01-preview",
+              "name": "[format('{0}/{1}/{2}', parameters('name'), 'dashboard-og', 'secondary')]",
+              "properties": {
+                "hostName": "[parameters('secondaryDashboardEndpoint')]",
+                "httpPort": 80,
+                "httpsPort": 443,
+                "priority": 2,
+                "weight": 1000
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Cdn/profiles/originGroups', parameters('name'), 'dashboard-og')]"
+              ]
+            },
+            {
+              "type": "Microsoft.Cdn/profiles/afdEndpoints",
+              "apiVersion": "2023-07-01-preview",
+              "name": "[format('{0}/{1}', parameters('name'), 'dashboard')]",
+              "location": "Global",
+              "properties": {
+                "enabledState": "Enabled"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Cdn/profiles', parameters('name'))]"
+              ]
+            },
+            {
+              "condition": "[not(empty(parameters('dashboardCustomDomain')))]",
+              "type": "Microsoft.Cdn/profiles/customDomains",
+              "apiVersion": "2023-07-01-preview",
+              "name": "[format('{0}/{1}', parameters('name'), replace(replace(parameters('dashboardCustomDomain'), '.', '-'), '*', 'wildcard'))]",
+              "properties": {
+                "hostName": "[parameters('dashboardCustomDomain')]",
+                "tlsSettings": {
+                  "certificateType": "ManagedCertificate",
+                  "minimumTlsVersion": "TLS12"
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Cdn/profiles', parameters('name'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Cdn/profiles/afdEndpoints/routes",
+              "apiVersion": "2023-07-01-preview",
+              "name": "[format('{0}/{1}/{2}', parameters('name'), 'dashboard', 'default')]",
+              "properties": {
+                "originGroup": {
+                  "id": "[resourceId('Microsoft.Cdn/profiles/originGroups', parameters('name'), 'dashboard-og')]"
+                },
+                "customDomains": "[if(not(empty(parameters('dashboardCustomDomain'))), createArray(createObject('id', resourceId('Microsoft.Cdn/profiles/customDomains', parameters('name'), replace(replace(parameters('dashboardCustomDomain'), '.', '-'), '*', 'wildcard')))), createArray())]",
+                "supportedProtocols": [
+                  "Https"
+                ],
+                "patternsToMatch": [
+                  "/*"
+                ],
+                "forwardingProtocol": "HttpsOnly",
+                "linkToDefaultDomain": "Enabled",
+                "httpsRedirect": "Enabled"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Cdn/profiles/customDomains', parameters('name'), replace(replace(parameters('dashboardCustomDomain'), '.', '-'), '*', 'wildcard'))]",
+                "[resourceId('Microsoft.Cdn/profiles/afdEndpoints', parameters('name'), 'dashboard')]",
+                "[resourceId('Microsoft.Cdn/profiles/originGroups', parameters('name'), 'dashboard-og')]",
+                "[resourceId('Microsoft.Cdn/profiles/originGroups/origins', parameters('name'), 'dashboard-og', 'primary')]",
+                "[resourceId('Microsoft.Cdn/profiles/originGroups/origins', parameters('name'), 'dashboard-og', 'secondary')]"
+              ]
+            },
+            {
+              "type": "Microsoft.Cdn/profiles/originGroups",
+              "apiVersion": "2023-07-01-preview",
+              "name": "[format('{0}/{1}', parameters('name'), 'docs-og')]",
+              "properties": {
+                "loadBalancingSettings": {
+                  "sampleSize": 4,
+                  "successfulSamplesRequired": 3
+                },
+                "healthProbeSettings": {
+                  "probePath": "/",
+                  "probeRequestType": "GET",
+                  "probeProtocol": "Https",
+                  "probeIntervalInSeconds": 100
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Cdn/profiles', parameters('name'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Cdn/profiles/originGroups/origins",
+              "apiVersion": "2023-07-01-preview",
+              "name": "[format('{0}/{1}/{2}', parameters('name'), 'docs-og', 'primary')]",
+              "properties": {
+                "hostName": "[parameters('primaryDocsEndpoint')]",
+                "httpPort": 80,
+                "httpsPort": 443,
+                "priority": 1,
+                "weight": 1000
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Cdn/profiles/originGroups', parameters('name'), 'docs-og')]"
+              ]
+            },
+            {
+              "type": "Microsoft.Cdn/profiles/originGroups/origins",
+              "apiVersion": "2023-07-01-preview",
+              "name": "[format('{0}/{1}/{2}', parameters('name'), 'docs-og', 'secondary')]",
+              "properties": {
+                "hostName": "[parameters('secondaryDocsEndpoint')]",
+                "httpPort": 80,
+                "httpsPort": 443,
+                "priority": 2,
+                "weight": 1000
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Cdn/profiles/originGroups', parameters('name'), 'docs-og')]"
+              ]
+            },
+            {
+              "type": "Microsoft.Cdn/profiles/afdEndpoints",
+              "apiVersion": "2023-07-01-preview",
+              "name": "[format('{0}/{1}', parameters('name'), 'docs')]",
+              "location": "Global",
+              "properties": {
+                "enabledState": "Enabled"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Cdn/profiles', parameters('name'))]"
+              ]
+            },
+            {
+              "condition": "[not(empty(parameters('docsCustomDomain')))]",
+              "type": "Microsoft.Cdn/profiles/customDomains",
+              "apiVersion": "2023-07-01-preview",
+              "name": "[format('{0}/{1}', parameters('name'), replace(replace(parameters('docsCustomDomain'), '.', '-'), '*', 'wildcard'))]",
+              "properties": {
+                "hostName": "[parameters('docsCustomDomain')]",
+                "tlsSettings": {
+                  "certificateType": "ManagedCertificate",
+                  "minimumTlsVersion": "TLS12"
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Cdn/profiles', parameters('name'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Cdn/profiles/afdEndpoints/routes",
+              "apiVersion": "2023-07-01-preview",
+              "name": "[format('{0}/{1}/{2}', parameters('name'), 'docs', 'default')]",
+              "properties": {
+                "originGroup": {
+                  "id": "[resourceId('Microsoft.Cdn/profiles/originGroups', parameters('name'), 'docs-og')]"
+                },
+                "customDomains": "[if(not(empty(parameters('docsCustomDomain'))), createArray(createObject('id', resourceId('Microsoft.Cdn/profiles/customDomains', parameters('name'), replace(replace(parameters('docsCustomDomain'), '.', '-'), '*', 'wildcard')))), createArray())]",
+                "supportedProtocols": [
+                  "Https"
+                ],
+                "patternsToMatch": [
+                  "/*"
+                ],
+                "forwardingProtocol": "HttpsOnly",
+                "linkToDefaultDomain": "Enabled",
+                "httpsRedirect": "Enabled"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Cdn/profiles/customDomains', parameters('name'), replace(replace(parameters('docsCustomDomain'), '.', '-'), '*', 'wildcard'))]",
+                "[resourceId('Microsoft.Cdn/profiles/afdEndpoints', parameters('name'), 'docs')]",
+                "[resourceId('Microsoft.Cdn/profiles/originGroups', parameters('name'), 'docs-og')]",
+                "[resourceId('Microsoft.Cdn/profiles/originGroups/origins', parameters('name'), 'docs-og', 'primary')]",
+                "[resourceId('Microsoft.Cdn/profiles/originGroups/origins', parameters('name'), 'docs-og', 'secondary')]"
+              ]
+            }
+          ],
+          "outputs": {
+            "gatewayHostName": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Cdn/profiles/afdEndpoints', parameters('name'), 'gateway'), '2023-07-01-preview').hostName]"
+            },
+            "dashboardHostName": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Cdn/profiles/afdEndpoints', parameters('name'), 'dashboard'), '2023-07-01-preview').hostName]"
+            },
+            "docsHostName": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Cdn/profiles/afdEndpoints', parameters('name'), 'docs'), '2023-07-01-preview').hostName]"
+            },
+            "gatewayCustomDomainValidation": {
+              "type": "string",
+              "value": "[if(not(empty(parameters('gatewayCustomDomain'))), format('Create CNAME: {0} -> {1}', parameters('gatewayCustomDomain'), reference(resourceId('Microsoft.Cdn/profiles/afdEndpoints', parameters('name'), 'gateway'), '2023-07-01-preview').hostName), 'No custom domain configured')]"
+            },
+            "dashboardCustomDomainValidation": {
+              "type": "string",
+              "value": "[if(not(empty(parameters('dashboardCustomDomain'))), format('Create CNAME: {0} -> {1}', parameters('dashboardCustomDomain'), reference(resourceId('Microsoft.Cdn/profiles/afdEndpoints', parameters('name'), 'dashboard'), '2023-07-01-preview').hostName), 'No custom domain configured')]"
+            },
+            "docsCustomDomainValidation": {
+              "type": "string",
+              "value": "[if(not(empty(parameters('docsCustomDomain'))), format('Create CNAME: {0} -> {1}', parameters('docsCustomDomain'), reference(resourceId('Microsoft.Cdn/profiles/afdEndpoints', parameters('name'), 'docs'), '2023-07-01-preview').hostName), 'No custom domain configured')]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'containerEnvPrimary')]",
+        "[resourceId('Microsoft.Resources/deployments', 'containerEnvSecondary')]"
+      ]
+    }
+  ],
+  "outputs": {
+    "gatewayEndpoint": {
+      "type": "string",
+      "value": "[if(not(empty(parameters('gatewayCustomDomain'))), format('https://{0}', parameters('gatewayCustomDomain')), format('https://{0}', reference(resourceId('Microsoft.Resources/deployments', 'frontDoor'), '2025-04-01').outputs.gatewayHostName.value))]"
+    },
+    "dashboardEndpoint": {
+      "type": "string",
+      "value": "[if(not(empty(parameters('dashboardCustomDomain'))), format('https://{0}', parameters('dashboardCustomDomain')), format('https://{0}', reference(resourceId('Microsoft.Resources/deployments', 'frontDoor'), '2025-04-01').outputs.dashboardHostName.value))]"
+    },
+    "docsEndpoint": {
+      "type": "string",
+      "value": "[if(not(empty(parameters('docsCustomDomain'))), format('https://{0}', parameters('docsCustomDomain')), format('https://{0}', reference(resourceId('Microsoft.Resources/deployments', 'frontDoor'), '2025-04-01').outputs.docsHostName.value))]"
+    },
+    "cachetEndpoint": {
+      "type": "string",
+      "value": "[format('https://{0}', reference(resourceId('Microsoft.Resources/deployments', 'containerEnvPrimary'), '2025-04-01').outputs.cachetFqdn.value)]"
+    },
+    "registryLoginServer": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'registry'), '2025-04-01').outputs.loginServer.value]"
+    },
+    "primaryWorkloadEnvId": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'containerEnvPrimary'), '2025-04-01').outputs.userWorkloadEnvId.value]"
+    },
+    "secondaryWorkloadEnvId": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'containerEnvSecondary'), '2025-04-01').outputs.userWorkloadEnvId.value]"
+    }
+  }
+}

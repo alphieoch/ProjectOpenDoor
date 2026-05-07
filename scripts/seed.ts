@@ -5,6 +5,7 @@ import {
   providers,
   models,
   pricingRules,
+  creditTransactions,
 } from "@opendoor/database";
 import { hashPassword } from "../apps/dashboard/src/lib/auth.js";
 
@@ -37,6 +38,44 @@ async function seed() {
     .returning();
 
   console.log("Created admin user:", user.email);
+
+  // Create test user
+  const signupCreditCents = 2000;
+  const [testOrg] = await db
+    .insert(organizations)
+    .values({
+      name: "Test Organization",
+      slug: "test-org",
+      plan: "free",
+      creditsUsdCents: signupCreditCents,
+      signupCreditGranted: true,
+      metadata: {
+        onboarding_checklist: {},
+      },
+    })
+    .returning();
+
+  await db.insert(creditTransactions).values({
+    organizationId: testOrg.id,
+    kind: "signup",
+    amountCents: signupCreditCents,
+    balanceAfterCents: signupCreditCents,
+    metadata: { source: "signup_bonus" },
+  });
+
+  const testPasswordHash = await hashPassword("testpass123");
+  const [testUser] = await db
+    .insert(users)
+    .values({
+      email: "test@test.com",
+      name: "Test User",
+      passwordHash: testPasswordHash,
+      organizationId: testOrg.id,
+      role: "admin",
+    })
+    .returning();
+
+  console.log("Created test user:", testUser.email);
 
   // Create providers
   const providerData = [
@@ -211,6 +250,9 @@ async function seed() {
   console.log("\nDefault login:");
   console.log("Email: admin@ocheingco.com");
   console.log("Password: admin123!");
+  console.log("\nTest login:");
+  console.log("Email: test@test.com");
+  console.log("Password: testpass123");
 }
 
 seed().catch((err) => {

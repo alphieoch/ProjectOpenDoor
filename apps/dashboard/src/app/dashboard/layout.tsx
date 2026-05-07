@@ -4,6 +4,7 @@ import { SessionNavBar } from "@/components/ui/sidebar";
 import ImpersonationBanner from "@/components/ImpersonationBanner";
 import { PostHogIdentify } from "@/components/PostHogIdentify";
 import DashboardTopBar from "@/components/DashboardTopBar";
+import { PageTransition } from "@/components/PageTransition";
 import { getDb } from "@/lib/db";
 import { organizations } from "@opendoor/database";
 import { eq } from "drizzle-orm";
@@ -29,11 +30,11 @@ export default async function DashboardLayout({ children }: { children: React.Re
         onboardingSegment={org?.onboardingSegment}
       />
       <SessionNavBar />
-      <div style={{ marginLeft: 248, flex: 1, display: "flex", flexDirection: "column", minWidth: 0, overflow: "hidden" }}>
+      <div style={{ marginLeft: "3.05rem", flex: 1, display: "flex", flexDirection: "column", minWidth: 0, overflow: "hidden" }}>
         {session.impersonatingOrgId && <ImpersonationBanner />}
         <DashboardTopBar />
         <main style={{ flex: 1, overflowY: "auto", padding: "40px 56px 80px", background: "var(--paper)" }}>
-          {children}
+          <PageTransition>{children}</PageTransition>
         </main>
       </div>
     </div>

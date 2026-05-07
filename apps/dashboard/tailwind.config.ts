@@ -91,7 +91,7 @@ const config: Config = {
       scale: { 101: "1.01" },
     },
   },
-  plugins: [],
+  plugins: [require("tailwindcss-animate")],
 };
 
 export default config;

@@ -1,14 +1,14 @@
 // @ts-nocheck
 import { Hono } from "hono";
-import { db, requests, providers, models } from "@opendoor/database";
+import { db, requests, providers, models, apiKeys } from "@opendoor/database";
 import type { ChatCompletionRequest } from "@opendoor/shared";
 import { resolveProvider, getProvider, getFallbackChain } from "../providers/index.js";
 import { calculateCost } from "../utils/pricing.js";
 import { encodeSSE, encodeSSEDone } from "../utils/streaming.js";
 import { recordTokens } from "../middleware/rate-limit.js";
 import { estimateTokens } from "../utils/streaming.js";
-import { debitUsage, shouldUsePlanBudget, usdToCents } from "../utils/billing.js";
-import { eq, and } from "drizzle-orm";
+import { debitUsage, shouldUsePlanBudget, usdToCents, triggerAutoRecharge } from "../utils/billing.js";
+import { eq, and, sql } from "drizzle-orm";
 import {
   assistantChoicesFromText,
   captureAiGeneration,
@@ -202,6 +202,43 @@ chatRouter.post("/completions", async (c) => {
     }
   }
 
+  // Enforce data residency: filter providers by org dataResidency and model governance allowedRegions
+  const allowedRegions = new Set<string>();
+  if (organization.dataResidency) {
+    allowedRegions.add(organization.dataResidency);
+  }
+  if (policyResult?.governance?.allowedRegions) {
+    for (const r of policyResult.governance.allowedRegions) {
+      allowedRegions.add(r);
+    }
+  }
+  if (allowedRegions.size > 0) {
+    const providerRows = await db
+      .select({ slug: providers.slug, region: providers.region })
+      .from(providers)
+      .where(eq(providers.enabled, true));
+    const regionMap = new Map(providerRows.map((p) => [p.slug, p.region]));
+    const filteredChain = chainSlugs.filter((slug) => {
+      const region = regionMap.get(slug);
+      // If provider has no region declared, allow it (backward compatible)
+      if (!region) return true;
+      return allowedRegions.has(region);
+    });
+    if (filteredChain.length === 0) {
+      return c.json(
+        {
+          error: "Data residency constraint violated",
+          detail: `No providers in the fallback chain match the required regions: ${Array.from(allowedRegions).join(", ")}`,
+          requestedRegions: Array.from(allowedRegions),
+          triedChain: chainSlugs,
+        },
+        403
+      );
+    }
+    chainSlugs.length = 0;
+    chainSlugs.push(...filteredChain);
+  }
+
   let providerId: string | null = null;
   let lastError: Error | null = null;
   let usedProviderSlug = resolved.provider.slug;
@@ -339,6 +376,18 @@ chatRouter.post("/completions", async (c) => {
                     useFromPlan: Boolean(billingContext?.useFromPlan),
                     useFromCredits: !billingContext?.useFromPlan,
                   });
+                  // Update per-key spend tracking
+                  const costCents = usdToCents(costUsd);
+                  if (costCents > 0) {
+                    await db
+                      .update(apiKeys)
+                      .set({ spendUsedUsdCents: sql`${apiKeys.spendUsedUsdCents} + ${costCents}` })
+                      .where(eq(apiKeys.id, apiKey.id));
+                  }
+                  // Trigger auto-recharge if applicable
+                  if (!billingContext?.useFromPlan) {
+                    triggerAutoRecharge(organization.id).catch(() => {});
+                  }
                 } catch (billingError) {
                   console.error("Failed to debit usage after stream completion:", billingError);
                 }
@@ -476,6 +525,18 @@ chatRouter.post("/completions", async (c) => {
               useFromPlan: Boolean(billingContext?.useFromPlan),
               useFromCredits: !billingContext?.useFromPlan,
             });
+            // Update per-key spend tracking
+            const costCents = usdToCents(costUsd);
+            if (costCents > 0) {
+              await db
+                .update(apiKeys)
+                .set({ spendUsedUsdCents: sql`${apiKeys.spendUsedUsdCents} + ${costCents}` })
+                .where(eq(apiKeys.id, apiKey.id));
+            }
+            // Trigger auto-recharge if applicable
+            if (!billingContext?.useFromPlan) {
+              triggerAutoRecharge(organization.id).catch(() => {});
+            }
           } catch (billingError) {
             console.error("Failed to debit usage after completion:", billingError);
           }

@@ -1,14 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import {
-  Shield,
-  Plus,
-  Trash2,
-  Edit3,
-  CheckCircle2,
-  XCircle,
-} from "lucide-react";
+import { Plus, Trash2, CheckCircle2, XCircle, Loader2 } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 interface Policy {
   id: string;
@@ -24,28 +18,24 @@ interface Policy {
   priority: number;
 }
 
-const actionColors: Record<string, string> = {
-  allow: "bg-green-100 text-green-800",
-  deny: "bg-red-100 text-red-800",
-  require_approval: "bg-amber-100 text-amber-800",
-  route_fallback: "bg-blue-100 text-blue-800",
+const actionStyle: Record<string, { bg: string; color: string }> = {
+  allow:            { bg: "var(--green-soft)",  color: "var(--green)"  },
+  deny:             { bg: "var(--red-soft)",    color: "var(--red)"    },
+  require_approval: { bg: "var(--yellow-soft)", color: "var(--yellow)" },
+  route_fallback:   { bg: "#DBEAFE",            color: "#1D4ED8"       },
+};
+
+const defaultForm: Partial<Policy> = {
+  action: "allow", dataClass: "internal", enabled: true, priority: 100, requireHumanApproval: false,
 };
 
 export default function PoliciesPage() {
   const [policies, setPolicies] = useState<Policy[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState<Partial<Policy>>({
-    action: "allow",
-    dataClass: "internal",
-    enabled: true,
-    priority: 100,
-    requireHumanApproval: false,
-  });
+  const [form, setForm] = useState<Partial<Policy>>(defaultForm);
 
-  useEffect(() => {
-    loadPolicies();
-  }, []);
+  useEffect(() => { loadPolicies(); }, []);
 
   async function loadPolicies() {
     const res = await fetch("/api/governance/policies");
@@ -61,11 +51,7 @@ export default function PoliciesPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(form),
     });
-    if (res.ok) {
-      setShowForm(false);
-      setForm({ action: "allow", dataClass: "internal", enabled: true, priority: 100, requireHumanApproval: false });
-      loadPolicies();
-    }
+    if (res.ok) { setShowForm(false); setForm(defaultForm); loadPolicies(); }
   }
 
   async function deletePolicy(id: string) {
@@ -83,137 +69,136 @@ export default function PoliciesPage() {
     loadPolicies();
   }
 
-  if (loading) {
-    return (
-      <div className="flex h-64 items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary-600 border-t-transparent" />
-      </div>
-    );
-  }
-
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div>
+      <div className="mb-8 flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Model Policies</h1>
-          <p className="text-sm text-gray-500">Define who can use which models, on what data, with what safeguards.</p>
+          <h1 className="page-title">Policies</h1>
+          <p className="page-desc">Define who can use which models, on what data, with what safeguards.</p>
         </div>
-        <button
-          onClick={() => setShowForm(!showForm)}
-          className="inline-flex items-center gap-2 rounded-md bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700"
-        >
-          <Plus className="h-4 w-4" /> New Policy
+        <button onClick={() => setShowForm(!showForm)} className="btn-primary shrink-0">
+          <Plus className="h-4 w-4" /> New policy
         </button>
       </div>
 
-      {showForm && (
-        <form onSubmit={createPolicy} className="rounded-lg border border-gray-200 bg-white p-6 space-y-4">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Name</label>
-              <input required value={form.name || ""} onChange={(e) => setForm({ ...form, name: e.target.value })} className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Action</label>
-              <select value={form.action} onChange={(e) => setForm({ ...form, action: e.target.value })} className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500">
-                <option value="allow">Allow</option>
-                <option value="deny">Deny</option>
-                <option value="require_approval">Require Approval</option>
-                <option value="route_fallback">Route Fallback</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Data Class</label>
-              <select value={form.dataClass} onChange={(e) => setForm({ ...form, dataClass: e.target.value })} className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500">
-                <option value="public">Public</option>
-                <option value="internal">Internal</option>
-                <option value="confidential">Confidential</option>
-                <option value="restricted">Restricted</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Model Pattern (optional)</label>
-              <input value={form.modelIdPattern || ""} onChange={(e) => setForm({ ...form, modelIdPattern: e.target.value })} placeholder="gpt-* or leave blank for all" className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">User Role Pattern (optional)</label>
-              <input value={form.userRolePattern || ""} onChange={(e) => setForm({ ...form, userRolePattern: e.target.value })} placeholder="admin|compliance" className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Fallback Model (if action is fallback)</label>
-              <input value={form.fallbackModelId || ""} onChange={(e) => setForm({ ...form, fallbackModelId: e.target.value })} className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Priority (lower = first)</label>
-              <input type="number" value={form.priority} onChange={(e) => setForm({ ...form, priority: parseInt(e.target.value) })} className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
-            </div>
-            <div className="flex items-center gap-4 pt-6">
-              <label className="flex items-center gap-2 text-sm">
-                <input type="checkbox" checked={form.requireHumanApproval || false} onChange={(e) => setForm({ ...form, requireHumanApproval: e.target.checked })} />
-                Require human approval
-              </label>
-              <label className="flex items-center gap-2 text-sm">
-                <input type="checkbox" checked={form.enabled || false} onChange={(e) => setForm({ ...form, enabled: e.target.checked })} />
-                Enabled
-              </label>
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Description</label>
-            <textarea value={form.description || ""} onChange={(e) => setForm({ ...form, description: e.target.value })} className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" rows={2} />
-          </div>
-          <div className="flex justify-end gap-3">
-            <button type="button" onClick={() => setShowForm(false)} className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium hover:bg-gray-50">Cancel</button>
-            <button type="submit" className="rounded-md bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700">Create Policy</button>
-          </div>
-        </form>
-      )}
+      {loading ? (
+        <div className="flex h-64 items-center justify-center">
+          <Loader2 className="h-5 w-5 animate-spin" style={{ color: "var(--ink-3)" }} />
+        </div>
+      ) : (
+        <div className="space-y-5">
+          {showForm && (
+            <form onSubmit={createPolicy} className="card p-6 space-y-4">
+              <h2 className="section-title">New policy</h2>
+              <div className="grid gap-4 sm:grid-cols-2">
+                {[
+                  { label: "Name", key: "name", required: true, type: "text", placeholder: "" },
+                  { label: "Model pattern", key: "modelIdPattern", type: "text", placeholder: "gpt-* or leave blank" },
+                  { label: "User role pattern", key: "userRolePattern", type: "text", placeholder: "admin|compliance" },
+                  { label: "Fallback model", key: "fallbackModelId", type: "text", placeholder: "" },
+                  { label: "Priority (lower = first)", key: "priority", type: "number", placeholder: "" },
+                ].map(({ label, key, required, type, placeholder }) => (
+                  <div key={key}>
+                    <label className="mb-1.5 block text-sm font-medium" style={{ color: "var(--ink)" }}>{label}</label>
+                    <input
+                      required={required}
+                      type={type}
+                      value={(form as Record<string, unknown>)[key] as string ?? ""}
+                      placeholder={placeholder}
+                      onChange={(e) => setForm({ ...form, [key]: type === "number" ? parseInt(e.target.value) : e.target.value })}
+                      className="input w-full"
+                    />
+                  </div>
+                ))}
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium" style={{ color: "var(--ink)" }}>Action</label>
+                  <select value={form.action} onChange={(e) => setForm({ ...form, action: e.target.value })} className="input w-full">
+                    {[["allow","Allow"],["deny","Deny"],["require_approval","Require approval"],["route_fallback","Route fallback"]].map(([v,l]) => <option key={v} value={v}>{l}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium" style={{ color: "var(--ink)" }}>Data class</label>
+                  <select value={form.dataClass} onChange={(e) => setForm({ ...form, dataClass: e.target.value })} className="input w-full">
+                    {["public","internal","confidential","restricted"].map((v) => <option key={v} value={v} className="capitalize">{v}</option>)}
+                  </select>
+                </div>
+                <div className="flex items-center gap-6 pt-5 sm:col-span-2">
+                  <label className="flex cursor-pointer items-center gap-2 text-sm">
+                    <input type="checkbox" checked={form.requireHumanApproval || false} onChange={(e) => setForm({ ...form, requireHumanApproval: e.target.checked })} className="h-4 w-4 rounded accent-indigo-600" />
+                    <span style={{ color: "var(--ink-2)" }}>Require human approval</span>
+                  </label>
+                  <label className="flex cursor-pointer items-center gap-2 text-sm">
+                    <input type="checkbox" checked={form.enabled || false} onChange={(e) => setForm({ ...form, enabled: e.target.checked })} className="h-4 w-4 rounded accent-indigo-600" />
+                    <span style={{ color: "var(--ink-2)" }}>Enabled</span>
+                  </label>
+                </div>
+              </div>
+              <div>
+                <label className="mb-1.5 block text-sm font-medium" style={{ color: "var(--ink)" }}>Description</label>
+                <textarea value={form.description || ""} onChange={(e) => setForm({ ...form, description: e.target.value })} className="input w-full" rows={2} />
+              </div>
+              <div className="flex justify-end gap-3">
+                <button type="button" onClick={() => setShowForm(false)} className="btn-ghost btn-sm">Cancel</button>
+                <button type="submit" className="btn-primary">Create policy</button>
+              </div>
+            </form>
+          )}
 
-      <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Policy</th>
-              <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Data Class</th>
-              <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Action</th>
-              <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Priority</th>
-              <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Status</th>
-              <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200 bg-white">
-            {policies.map((p) => (
-              <tr key={p.id}>
-                <td className="px-6 py-4">
-                  <div className="text-sm font-medium text-gray-900">{p.name}</div>
-                  <div className="text-xs text-gray-500">{p.description}</div>
-                </td>
-                <td className="px-6 py-4 text-sm text-gray-700 capitalize">{p.dataClass}</td>
-                <td className="px-6 py-4">
-                  <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${actionColors[p.action] || "bg-gray-100 text-gray-800"}`}>
-                    {p.action.replace("_", " ")}
-                  </span>
-                </td>
-                <td className="px-6 py-4 text-sm text-gray-700">{p.priority}</td>
-                <td className="px-6 py-4">
-                  <button onClick={() => togglePolicy(p.id, p.enabled)} className="text-sm">
-                    {p.enabled ? (
-                      <CheckCircle2 className="h-5 w-5 text-green-600" />
-                    ) : (
-                      <XCircle className="h-5 w-5 text-gray-400" />
-                    )}
-                  </button>
-                </td>
-                <td className="px-6 py-4 text-right">
-                  <button onClick={() => deletePolicy(p.id)} className="text-red-600 hover:text-red-900">
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+          <div className="card overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Policy</TableHead>
+                  <TableHead>Data class</TableHead>
+                  <TableHead>Action</TableHead>
+                  <TableHead>Priority</TableHead>
+                  <TableHead>Enabled</TableHead>
+                  <TableHead className="text-right">Delete</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {policies.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="py-12 text-center" style={{ color: "var(--ink-3)" }}>
+                      No policies yet. Create one to start governing model access.
+                    </TableCell>
+                  </TableRow>
+                ) : policies.map((p) => {
+                  const act = actionStyle[p.action] ?? { bg: "var(--paper-3)", color: "var(--ink-2)" };
+                  return (
+                    <TableRow key={p.id}>
+                      <TableCell>
+                        <div className="font-medium" style={{ color: "var(--ink)" }}>{p.name}</div>
+                        {p.description && <div className="text-xs mt-0.5" style={{ color: "var(--ink-3)" }}>{p.description}</div>}
+                      </TableCell>
+                      <TableCell className="capitalize" style={{ color: "var(--ink-2)" }}>{p.dataClass}</TableCell>
+                      <TableCell>
+                        <span className="inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium capitalize"
+                          style={{ background: act.bg, color: act.color }}>
+                          {p.action.replace("_", " ")}
+                        </span>
+                      </TableCell>
+                      <TableCell style={{ color: "var(--ink-2)" }}>{p.priority}</TableCell>
+                      <TableCell>
+                        <button onClick={() => togglePolicy(p.id, p.enabled)} title={p.enabled ? "Disable" : "Enable"}>
+                          {p.enabled
+                            ? <CheckCircle2 className="h-5 w-5" style={{ color: "var(--green)" }} />
+                            : <XCircle className="h-5 w-5" style={{ color: "var(--ink-4)" }} />}
+                        </button>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <button onClick={() => deletePolicy(p.id)} className="btn-ghost btn-sm" style={{ color: "var(--red)" }}>
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

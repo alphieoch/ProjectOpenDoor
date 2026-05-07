@@ -74,6 +74,18 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      - name: Build and push Docs
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./apps/docs/Dockerfile
+          push: true
+          tags: |
+            ${{ secrets.AZURE_REGISTRY_NAME }}.azurecr.io/opendoor-docs:${{ github.sha }}
+            ${{ secrets.AZURE_REGISTRY_NAME }}.azurecr.io/opendoor-docs:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
   deploy:
     needs: build
     runs-on: ubuntu-latest
@@ -107,7 +119,9 @@ jobs:
               "emailSenderAddress": "${{ secrets.EMAIL_SENDER_ADDRESS }}",
               "appInsightsConnectionString": "${{ secrets.APPLICATIONINSIGHTS_CONNECTION_STRING }}",
               "gatewayCustomDomain": "${{ secrets.AZURE_GATEWAY_DOMAIN }}",
-              "dashboardCustomDomain": "${{ secrets.AZURE_DASHBOARD_DOMAIN }}"
+              "dashboardCustomDomain": "${{ secrets.AZURE_DASHBOARD_DOMAIN }}",
+              "docsCustomDomain": "${{ secrets.AZURE_DOCS_DOMAIN }}",
+              "cachetAppKey": "${{ secrets.CACHET_APP_KEY }}"
             }
           failOnStdErr: false
 
@@ -122,5 +136,26 @@ jobs:
         run: |
           az containerapp revision restart \
             --name opendoor-primary-dashboard \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --subscription ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Restart Cachet (Primary)
+        run: |
+          az containerapp revision restart \
+            --name opendoor-primary-cachet \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --subscription ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Restart Docs (Primary)
+        run: |
+          az containerapp revision restart \
+            --name opendoor-primary-docs \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --subscription ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Restart Docs (Secondary)
+        run: |
+          az containerapp revision restart \
+            --name opendoor-secondary-docs \
             --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
             --subscription ${{ secrets.AZURE_SUBSCRIPTION_ID }}

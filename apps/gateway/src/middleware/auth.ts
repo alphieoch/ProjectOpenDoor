@@ -130,6 +130,24 @@ export async function authMiddleware(c: Context, next: Next) {
           const credits = Number(org.creditsUsdCents || 0);
           const canUseCredits = credits >= estimatedCostCents;
 
+          // Check per-key spend cap
+          const keySpendLimit = Number(keyRecord.spendLimitUsdCents || 0);
+          const keySpendUsed = Number(keyRecord.spendUsedUsdCents || 0);
+          if (keySpendLimit > 0 && keySpendUsed + estimatedCostCents > keySpendLimit) {
+            return c.json(
+              {
+                error: "API key spend limit exceeded",
+                detail: `This key has a spend cap of ${(keySpendLimit / 100).toFixed(2)} USD. ` +
+                        `Used: ${(keySpendUsed / 100).toFixed(2)} USD. ` +
+                        `Estimated request cost: ${(estimatedCostCents / 100).toFixed(2)} USD.`,
+                keySpendLimitUsdCents: keySpendLimit,
+                keySpendUsedUsdCents: keySpendUsed,
+                estimatedCostUsd: estimatedCost.totalCost,
+              },
+              402
+            );
+          }
+
           if (!canUsePlan && !canUseCredits) {
             const topupUrl = `${
               process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"

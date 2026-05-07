@@ -330,6 +330,39 @@ async function logGuardrailOutcomes(
   }
 }
 
+// ── Redaction helper ─────────────────────────────────────────────────────────
+
+export function redactPrompt(prompt: string, guardrailResults: GuardrailResult[]): string {
+  let redacted = prompt;
+
+  const piiResult = guardrailResults.find((g) => g.type === "pii_detection" && g.triggered);
+  if (piiResult) {
+    const piiPatterns = [
+      { regex: /\b[A-CEGHJ-PR-TW-Z]{1}[A-CEGHJ-NPR-TW-Z]{1}\d{6}[A-D]{1}\b/g },
+      { regex: /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g },
+      { regex: /\b(?:(?:\+44)|(?:0))\s?\d{4}\s?\d{6}\b/g },
+      { regex: /\b(?:\d{4}[-\s]?){3}\d{4}\b/g },
+    ];
+    for (const pattern of piiPatterns) {
+      redacted = redacted.replace(pattern.regex, "[REDACTED]");
+    }
+  }
+
+  const secretResult = guardrailResults.find((g) => g.type === "secret_scanning" && g.triggered);
+  if (secretResult) {
+    const secretPatterns = [
+      { regex: /sk-[a-zA-Z0-9]{32,}/g },
+      { regex: /hf_[a-zA-Z0-9]{30,}/g },
+      { regex: /AKIA[0-9A-Z]{16}/g },
+    ];
+    for (const pattern of secretPatterns) {
+      redacted = redacted.replace(pattern.regex, "[REDACTED]");
+    }
+  }
+
+  return redacted;
+}
+
 // ── Main entry point ─────────────────────────────────────────────────────────
 
 export async function checkPolicy(req: PolicyCheckRequest): Promise<PolicyCheckResult> {

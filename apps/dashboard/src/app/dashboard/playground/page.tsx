@@ -65,10 +65,31 @@ type Message = {
   role: "user" | "assistant" | "system";
   content: string;
   images?: string[];
+  documents?: Array<{ id: string; name: string; size: number }>;
   timestamp: Date;
 };
 
 type CanvasMode = "chat" | "code" | "markdown";
+type AttachedDocument = {
+  id: string;
+  name: string;
+  size: number;
+  content: string;
+  truncated: boolean;
+};
+
+const DOC_MAX_BYTES = 1_000_000;
+const DOC_MAX_CHARS = 12_000;
+const SUPPORTED_DOC_EXTENSIONS = [
+  ".txt", ".md", ".csv", ".json", ".js", ".ts", ".tsx",
+  ".py", ".java", ".go", ".rb", ".php", ".xml", ".yml",
+  ".yaml", ".sql", ".log", ".html", ".css",
+];
+const NATIVE_DOC_MODEL_IDS = new Set([
+  "gpt-4o", "gpt-4o-mini",
+  "claude-3-5-sonnet-20241022", "claude-3-opus-20240229", "claude-3-haiku-20240307",
+  "gemini-1.5-pro", "gemini-1.5-flash",
+]);
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -309,6 +330,7 @@ export default function PlaygroundPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [draft, setDraft] = useState("");
   const [images, setImages] = useState<string[]>([]);
+  const [documents, setDocuments] = useState<AttachedDocument[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [showParams, setShowParams] = useState(false);
@@ -326,10 +348,13 @@ export default function PlaygroundPage() {
 
   const chatEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const docInputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const model = useMemo(() => MODELS.find(m => m.id === modelId) || MODELS[0], [modelId]);
+  const modelSupportsDocs = useMemo(() => model.context !== "8K", [model.context]);
+  const modelHasNativeDocs = useMemo(() => NATIVE_DOC_MODEL_IDS.has(model.id), [model.id]);
   const lastAssistant = useMemo(() => [...messages].reverse().find(m => m.role === "assistant"), [messages]);
   const canvasText = lastAssistant?.content || "";
   const codeBlocks = useMemo(() => parseCodeBlocks(canvasText), [canvasText]);
@@ -383,10 +408,45 @@ export default function PlaygroundPage() {
     });
   }
 
+  function isSupportedDocFile(file: File) {
+    const lower = file.name.toLowerCase();
+    return SUPPORTED_DOC_EXTENSIONS.some(ext => lower.endsWith(ext)) || file.type.startsWith("text/");
+  }
+
+  async function handleDocumentFiles(files: FileList | null) {
+    if (!files) return;
+    const nextDocs: AttachedDocument[] = [];
+    for (const file of Array.from(files).slice(0, 4)) {
+      if (!isSupportedDocFile(file)) {
+        setError(`Unsupported file type: ${file.name}. Use text/code formats like .txt, .md, .csv, .json, .ts, .py.`);
+        continue;
+      }
+      if (file.size > DOC_MAX_BYTES) {
+        setError(`File too large: ${file.name}. Max size is ${(DOC_MAX_BYTES / 1_000_000).toFixed(1)}MB.`);
+        continue;
+      }
+      const raw = await file.text();
+      const normalized = raw.trim();
+      if (!normalized) continue;
+      const content = normalized.slice(0, DOC_MAX_CHARS);
+      nextDocs.push({
+        id: uid(),
+        name: file.name,
+        size: file.size,
+        content,
+        truncated: normalized.length > DOC_MAX_CHARS,
+      });
+    }
+    if (nextDocs.length) {
+      setDocuments(prev => [...prev, ...nextDocs].slice(-4));
+    }
+  }
+
   function handleDrop(e: React.DragEvent) {
     e.preventDefault();
     setDragOver(false);
-    handleImageFiles(e.dataTransfer.files);
+    if (model.vision) handleImageFiles(e.dataTransfer.files);
+    void handleDocumentFiles(e.dataTransfer.files);
   }
 
   // Textarea auto-height
@@ -398,6 +458,13 @@ export default function PlaygroundPage() {
 
   // Build messages array for the API call
   function buildApiMessages() {
+    const documentsContext = documents.length
+      ? `\n\nAttached documents:\n${documents
+          .map((d, idx) => `--- [${idx + 1}] ${d.name}${d.truncated ? " (truncated)" : ""} ---\n${d.content}`)
+          .join("\n\n")}`
+      : "";
+    const draftWithDocuments = `${draft}${documentsContext}`;
+
     const history = messages.map(m => {
       if (m.role === "assistant" || m.role === "system") {
         return { role: m.role, content: m.content };
@@ -407,7 +474,10 @@ export default function PlaygroundPage() {
           role: "user" as const,
           content: [
             ...m.images.map(url => ({ type: "image_url" as const, image_url: { url } })),
-            { type: "text" as const, text: m.content },
+            {
+              type: "text" as const,
+              text: m.content + (m.documents?.length ? `\n\nAttached documents: ${m.documents.map(d => d.name).join(", ")}` : ""),
+            },
           ],
         };
       }
@@ -417,9 +487,9 @@ export default function PlaygroundPage() {
     const userContent = model.vision && images.length > 0
       ? [
           ...images.map(url => ({ type: "image_url" as const, image_url: { url } })),
-          { type: "text" as const, text: draft },
+          { type: "text" as const, text: draftWithDocuments },
         ]
-      : draft;
+      : draftWithDocuments;
 
     return [
       ...(systemPrompt ? [{ role: "system", content: systemPrompt }] : []),
@@ -433,12 +503,20 @@ export default function PlaygroundPage() {
     setLoading(true);
     setError("");
 
-    const userMsg: Message = { id: uid(), role: "user", content: draft.trim(), images: [...images], timestamp: new Date() };
+    const userMsg: Message = {
+      id: uid(),
+      role: "user",
+      content: draft.trim(),
+      images: [...images],
+      documents: documents.map(d => ({ id: d.id, name: d.name, size: d.size })),
+      timestamp: new Date(),
+    };
     const assistantMsg: Message = { id: uid(), role: "assistant", content: "", timestamp: new Date() };
 
     setMessages(prev => [...prev, userMsg, assistantMsg]);
     setDraft("");
     setImages([]);
+    setDocuments([]);
     if (textareaRef.current) { textareaRef.current.style.height = "auto"; }
 
     try {
@@ -528,6 +606,7 @@ export default function PlaygroundPage() {
     setMessages([]);
     setError("");
     setImages([]);
+    setDocuments([]);
   }
 
   // ─── Render ──────────────────────────────────────────────────────────────
@@ -555,6 +634,16 @@ export default function PlaygroundPage() {
         {model.code && (
           <div style={{ display: "flex", alignItems: "center", gap: 4, padding: "3px 8px", borderRadius: 6, background: "var(--green-soft)", color: "var(--green)", fontSize: 11, fontFamily: "var(--font-mono)", fontWeight: 500 }}>
             <Code2 style={{ width: 11, height: 11 }} /> Code
+          </div>
+        )}
+        {modelSupportsDocs && (
+          <div style={{ display: "flex", alignItems: "center", gap: 4, padding: "3px 8px", borderRadius: 6, background: "var(--paper-3)", color: "var(--ink-2)", fontSize: 11, fontFamily: "var(--font-mono)", fontWeight: 500 }}>
+            <Paperclip style={{ width: 11, height: 11 }} /> Documents
+          </div>
+        )}
+        {modelHasNativeDocs && (
+          <div style={{ display: "flex", alignItems: "center", gap: 4, padding: "3px 8px", borderRadius: 6, background: "var(--blue-soft)", color: "var(--blue)", fontSize: 11, fontFamily: "var(--font-mono)", fontWeight: 500 }}>
+            <Sparkles style={{ width: 11, height: 11 }} /> Native file APIs
           </div>
         )}
         <div style={{ display: "flex", alignItems: "center", gap: 4, padding: "3px 8px", borderRadius: 6, background: "var(--paper-3)", color: "var(--ink-3)", fontSize: 11, fontFamily: "var(--font-mono)", fontWeight: 500 }}>
@@ -717,6 +806,29 @@ export default function PlaygroundPage() {
               ))}
             </div>
           )}
+          {/* Document previews */}
+          {documents.length > 0 && (
+            <div style={{ display: "flex", gap: 8, padding: "8px 16px", flexWrap: "wrap" }}>
+              {documents.map((doc) => (
+                <div key={doc.id} style={{ display: "flex", alignItems: "center", gap: 8, border: "1px solid var(--line)", background: "var(--paper)", borderRadius: 8, padding: "6px 8px" }}>
+                  <Paperclip style={{ width: 12, height: 12, color: "var(--ink-3)" }} />
+                  <div style={{ display: "flex", flexDirection: "column", lineHeight: 1.2 }}>
+                    <span style={{ fontSize: 11, color: "var(--ink-2)", maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{doc.name}</span>
+                    <span style={{ fontSize: 10, color: "var(--ink-4)", fontFamily: "var(--font-mono)" }}>
+                      {(doc.size / 1024).toFixed(0)} KB{doc.truncated ? " · truncated" : ""}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => setDocuments(prev => prev.filter(d => d.id !== doc.id))}
+                    style={{ width: 18, height: 18, borderRadius: 999, background: "var(--ink)", color: "white", border: "none", cursor: "pointer", display: "grid", placeItems: "center" }}
+                    title="Remove document"
+                  >
+                    <X style={{ width: 10, height: 10 }} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* Input area */}
           <div
@@ -726,16 +838,34 @@ export default function PlaygroundPage() {
               outline: dragOver ? `2px solid var(--brand)` : "none",
               transition: "outline 0.15s",
             }}
-            onDragOver={e => { e.preventDefault(); if (model.vision) setDragOver(true); }}
+            onDragOver={e => { e.preventDefault(); setDragOver(true); }}
             onDragLeave={() => setDragOver(false)}
-            onDrop={model.vision ? handleDrop : undefined}
+            onDrop={handleDrop}
           >
             {dragOver && (
               <div style={{ position: "absolute", inset: 0, background: "var(--brand-soft)", display: "grid", placeItems: "center", borderRadius: 8, zIndex: 5, pointerEvents: "none", border: "2px dashed var(--brand)" }}>
-                <div style={{ color: "var(--brand)", fontWeight: 600, fontSize: 14 }}>Drop images here</div>
+                <div style={{ color: "var(--brand)", fontWeight: 600, fontSize: 14 }}>
+                  Drop files here
+                </div>
               </div>
             )}
             <div style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
+              <input
+                ref={docInputRef}
+                type="file"
+                accept={SUPPORTED_DOC_EXTENSIONS.join(",")}
+                multiple
+                style={{ display: "none" }}
+                onChange={e => void handleDocumentFiles(e.target.files)}
+              />
+              <button
+                onClick={() => docInputRef.current?.click()}
+                title="Attach document"
+                style={{ width: 34, height: 34, display: "grid", placeItems: "center", borderRadius: 8, border: "1px solid var(--line)", background: "var(--paper)", color: "var(--ink-3)", cursor: "pointer", flexShrink: 0, transition: "all 0.12s" }}
+                className="hover:border-[var(--brand)] hover:text-[var(--brand)] hover:bg-[var(--brand-soft)]"
+              >
+                <Paperclip style={{ width: 15, height: 15 }} />
+              </button>
               {model.vision && (
                 <>
                   <input ref={fileInputRef} type="file" accept="image/*" multiple style={{ display: "none" }} onChange={e => handleImageFiles(e.target.files)} />
@@ -755,7 +885,7 @@ export default function PlaygroundPage() {
                 onChange={handleDraftChange}
                 onKeyDown={handleKeyDown}
                 rows={1}
-                placeholder={model.vision ? "Message (or drop an image)…" : "Message… (⌘↵ to send)"}
+                placeholder={model.vision ? "Message (attach docs/images)…" : "Message (attach docs)…"}
                 style={{
                   flex: 1, border: "1px solid var(--line)", borderRadius: 10,
                   padding: "8px 12px", resize: "none", outline: "none",
@@ -782,6 +912,11 @@ export default function PlaygroundPage() {
                   ? <Loader2 style={{ width: 14, height: 14 }} className="animate-spin" />
                   : <Send style={{ width: 14, height: 14 }} />}
               </button>
+            </div>
+            <div style={{ marginTop: 8, fontSize: 10.5, color: "var(--ink-4)", fontFamily: "var(--font-mono)" }}>
+              {modelHasNativeDocs
+                ? "Model supports native document workflows. Playground currently sends document text inline with your prompt."
+                : "Model does not expose native document APIs here. Uploaded files are sent as extracted text context."}
             </div>
           </div>
         </div>

@@ -1,6 +1,6 @@
 // @ts-nocheck
 import type { Context, Next } from "hono";
-import { checkPolicy, type DataClass } from "../lib/policy-engine.js";
+import { checkPolicy, redactPrompt, type DataClass } from "../lib/policy-engine.js";
 
 export async function policyMiddleware(c: Context, next: Next) {
   const apiKey = c.get("apiKey");
@@ -76,6 +76,22 @@ export async function policyMiddleware(c: Context, next: Next) {
       },
       403
     );
+  }
+
+  // Apply redaction to messages if PII or secrets were detected
+  const needsRedaction = policyResult.guardrailResults.some(
+    (g) =>
+      g.triggered &&
+      (g.type === "pii_detection" || g.type === "secret_scanning")
+  );
+  if (needsRedaction && Array.isArray(body.messages)) {
+    body.messages = body.messages.map((m: any) => {
+      if (typeof m?.content === "string") {
+        return { ...m, content: redactPrompt(m.content, policyResult.guardrailResults) };
+      }
+      return m;
+    });
+    c.set("chatRequestBody", body);
   }
 
   // If fallback routing is required, override the model.

@@ -15,6 +15,7 @@ import { getSession } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import { apiKeys, organizations } from "@opendoor/database";
 import { eq, sql } from "drizzle-orm";
+import { OnboardingSidebar } from "@/components/ui/onboarding-sidebar";
 
 export const dynamic = "force-dynamic";
 
@@ -42,7 +43,13 @@ export default async function OnboardingPage() {
   ].filter(Boolean).length;
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[#06111f] text-white">
+    <div className="flex h-screen overflow-hidden">
+      <OnboardingSidebar
+        orgName={org?.name ?? "Your workspace"}
+        userEmail={session.email}
+        completedSteps={completedSteps}
+      />
+    <main className="ml-[3.05rem] flex-1 overflow-auto relative bg-[#06111f] text-white">
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute left-[-12rem] top-[-10rem] h-[32rem] w-[32rem] rounded-full bg-blue-500/25 blur-3xl" />
         <div className="absolute right-[-10rem] top-24 h-[30rem] w-[30rem] rounded-full bg-cyan-400/15 blur-3xl" />
@@ -182,6 +189,7 @@ export default async function OnboardingPage() {
         ))}
       </section>
     </main>
+    </div>
   );
 }
 

@@ -13,6 +13,7 @@ import modelsRouter from "./routes/models.js";
 import usageRouter from "./routes/usage.js";
 import analyticsRouter from "./routes/analytics.js";
 import { statusHandler } from "./routes/status.js";
+import { cachetSyncHandler } from "./routes/cachet-sync.js";
 
 const app = new Hono();
 
@@ -30,6 +31,9 @@ app.get("/health", (c) => {
 
 /** Public status: Postgres, Redis, and which LLM providers loaded (real env configuration). */
 app.get("/status", (c) => statusHandler(c));
+
+/** Push health data to Cachet status page. */
+app.post("/internal/cachet-sync", (c) => cachetSyncHandler(c));
 
 app.use("/v1/*", authMiddleware);
 app.use("/v1/*", rateLimitMiddleware);

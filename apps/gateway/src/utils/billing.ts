@@ -192,3 +192,69 @@ export async function debitUsage(
     await debitCredits(orgId, costCents, requestId);
   }
 }
+
+// ── Auto-recharge trigger ────────────────────────────────────────────────────
+
+let _stripe: any = null;
+
+function getStripe(): any {
+  if (_stripe) return _stripe;
+  const Stripe = require("stripe");
+  const key = process.env.STRIPE_SECRET_KEY;
+  if (!key) return null;
+  _stripe = new Stripe(key, { apiVersion: "2025-03-31.basil" });
+  return _stripe;
+}
+
+export async function triggerAutoRecharge(orgId: string): Promise<void> {
+  try {
+    const org = await db.query.organizations.findFirst({
+      where: eq(organizations.id, orgId),
+      columns: {
+        creditsUsdCents: true,
+        autoRechargeEnabled: true,
+        autoRechargeThresholdCents: true,
+        autoRechargeAmountCents: true,
+        defaultPaymentMethodId: true,
+        stripeCustomerId: true,
+      },
+    });
+    if (!org) return;
+
+    if (!org.autoRechargeEnabled) return;
+    if (!org.autoRechargeAmountCents || org.autoRechargeAmountCents <= 0) return;
+    if (!org.autoRechargeThresholdCents || org.autoRechargeThresholdCents <= 0) return;
+
+    const balance = Number(org.creditsUsdCents || 0);
+    if (balance >= org.autoRechargeThresholdCents) return;
+
+    const stripe = getStripe();
+    if (!stripe) {
+      console.warn("Auto-recharge skipped: STRIPE_SECRET_KEY not configured");
+      return;
+    }
+    if (!org.stripeCustomerId) {
+      console.warn("Auto-recharge skipped: no Stripe customer for org", orgId);
+      return;
+    }
+
+    // Use default payment method if available; otherwise Stripe will use customer's default
+    const paymentMethod = org.defaultPaymentMethodId || undefined;
+
+    await stripe.paymentIntents.create({
+      amount: org.autoRechargeAmountCents,
+      currency: "usd",
+      customer: org.stripeCustomerId,
+      payment_method: paymentMethod,
+      off_session: true,
+      confirm: true,
+      metadata: {
+        kind: "auto_recharge",
+        organizationId: orgId,
+        amountCents: String(org.autoRechargeAmountCents),
+      },
+    });
+  } catch (err: any) {
+    console.error("Auto-recharge trigger failed:", err.message);
+  }
+}

@@ -2,6 +2,7 @@ import { SignJWT, jwtVerify } from "jose";
 import bcrypt from "bcryptjs";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { cache } from "react";
 
 const secret = new TextEncoder().encode(
   process.env.AUTH_SECRET || "opendoor-default-secret-change-me"
@@ -47,14 +48,14 @@ export async function verifyToken(token: string) {
   }
 }
 
-export async function getSession(): Promise<SessionPayload | null> {
+export const getSession = cache(async (): Promise<SessionPayload | null> => {
   const cookieStore = await cookies();
   const token = cookieStore.get("session")?.value;
   if (!token) return null;
   const payload = await verifyToken(token);
   if (!payload) return null;
   return payload as unknown as SessionPayload;
-}
+});
 
 export async function requireAuth(): Promise<SessionPayload> {
   const session = await getSession();

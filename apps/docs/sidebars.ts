@@ -44,6 +44,29 @@ const sidebars: SidebarsConfig = {
     },
     {
       type: 'category',
+      label: 'Security',
+      items: [
+        'security/pii-redaction',
+        'security/data-residency',
+      ],
+    },
+    {
+      type: 'category',
+      label: 'Billing',
+      items: [
+        'billing/spend-caps',
+        'billing/auto-recharge',
+      ],
+    },
+    {
+      type: 'category',
+      label: 'Operations',
+      items: [
+        'operations/status-page',
+      ],
+    },
+    {
+      type: 'category',
       label: 'Deployment',
       items: [
         'deployment/azure-setup',

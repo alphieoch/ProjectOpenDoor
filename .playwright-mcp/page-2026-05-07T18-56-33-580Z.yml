@@ -1,0 +1,17 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e68] [cursor=pointer]:
+    - button "Open Next.js Dev Tools" [ref=e69]:
+      - img [ref=e70]
+    - generic [ref=e130]:
+      - button "Open issues overlay" [ref=e131]:
+        - generic [ref=e132]:
+          - generic [ref=e133]: "0"
+          - generic [ref=e134]: "1"
+        - generic [ref=e135]: Issue
+      - button "Collapse issues badge" [ref=e136]:
+        - img [ref=e137]
+  - alert [ref=e63]
+  - generic [ref=e139]:
+    - heading "Something went wrong" [level=2] [ref=e140]
+    - paragraph [ref=e141]: column "onboarding_segment" does not exist
+    - button "Try again" [ref=e142] [cursor=pointer]

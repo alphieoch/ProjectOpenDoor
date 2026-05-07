@@ -1,0 +1,15 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e7] [cursor=pointer]:
+    - button "Open issues overlay" [ref=e8]:
+      - img [ref=e10]
+      - generic [ref=e12]:
+        - generic [ref=e13]: "0"
+        - generic [ref=e14]: "1"
+      - generic [ref=e15]: Issue
+    - button "Collapse issues badge" [ref=e16]:
+      - img [ref=e17]
+  - alert [ref=e19]
+  - generic [ref=e20]:
+    - heading "Something went wrong" [level=2] [ref=e21]
+    - paragraph [ref=e22]: No fields selected for table "organizations" ("organizations")
+    - button "Try again" [ref=e23] [cursor=pointer]

@@ -37,6 +37,7 @@
     "openai": "^4.47.0",
     "postgres": "^3.4.4",
     "posthog-node": "^5.33.0",
+    "stripe": "^22.1.0",
     "uuid": "^9.0.1"
   },
   "devDependencies": {

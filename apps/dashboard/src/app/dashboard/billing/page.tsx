@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { CreditCard, Check, Loader2, ExternalLink, Wallet } from "lucide-react";
+import { CreditCard, Check, Loader2, ExternalLink, Wallet, Zap } from "lucide-react";
 
 interface BillingInfo {
   id: string;
@@ -103,16 +103,30 @@ export default function BillingPage() {
   const [topupLoading, setTopupLoading] = useState<number | null>(null);
   const [customTopup, setCustomTopup] = useState("50");
   const [portalLoading, setPortalLoading] = useState(false);
+  const [autoRecharge, setAutoRecharge] = useState({
+    enabled: false,
+    thresholdCents: 0,
+    amountCents: 0,
+    hasPaymentMethod: false,
+    hasStripeCustomer: false,
+  });
+  const [autoRechargeLoading, setAutoRechargeLoading] = useState(false);
+  const [autoRechargeSaving, setAutoRechargeSaving] = useState(false);
 
   async function loadState() {
-    const [infoRes, balanceRes] = await Promise.all([
+    const [infoRes, balanceRes, arRes] = await Promise.all([
       fetch("/api/billing/info"),
       fetch("/api/billing/balance"),
+      fetch("/api/billing/auto-recharge"),
     ]);
     const infoData = await infoRes.json();
     const balanceData = await balanceRes.json();
+    const arData = arRes.ok ? await arRes.json() : null;
     setInfo(infoData.org || null);
     setBalance(balanceData || null);
+    if (arData && !arData.error) {
+      setAutoRecharge(arData);
+    }
   }
 
   useEffect(() => {
@@ -178,6 +192,31 @@ export default function BillingPage() {
       alert("Portal failed");
     } finally {
       setPortalLoading(false);
+    }
+  }
+
+  async function saveAutoRecharge() {
+    setAutoRechargeSaving(true);
+    try {
+      const res = await fetch("/api/billing/auto-recharge", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          enabled: autoRecharge.enabled,
+          thresholdCents: autoRecharge.thresholdCents,
+          amountCents: autoRecharge.amountCents,
+        }),
+      });
+      const data = await res.json();
+      if (data.error) {
+        alert(data.error);
+      } else {
+        setAutoRecharge(data);
+      }
+    } catch {
+      alert("Failed to save auto-recharge settings");
+    } finally {
+      setAutoRechargeSaving(false);
     }
   }
 
@@ -303,6 +342,105 @@ export default function BillingPage() {
                 className="btn-primary"
               >
                 Top up
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Auto-recharge */}
+      <div className="mt-4 card p-6">
+        <div className="flex items-start gap-3">
+          <Zap className="mt-0.5 h-4 w-4 shrink-0 text-zinc-400" />
+          <div className="w-full">
+            <h3 className="section-title">Auto-recharge</h3>
+            <p className="mt-1 text-sm text-zinc-500">
+              Automatically top up credits when your balance drops below a threshold.
+            </p>
+
+            <div className="mt-4 flex items-center gap-3">
+              <label className="flex cursor-pointer items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={autoRecharge.enabled}
+                  onChange={(e) =>
+                    setAutoRecharge((prev) => ({ ...prev, enabled: e.target.checked }))
+                  }
+                  className="h-4 w-4 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-900"
+                />
+                <span className="text-sm text-zinc-700">Enable auto-recharge</span>
+              </label>
+            </div>
+
+            {autoRecharge.enabled && (
+              <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div>
+                  <label className="block text-xs font-medium text-zinc-500">
+                    Threshold (USD)
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    step={1}
+                    value={Math.round(autoRecharge.thresholdCents / 100)}
+                    onChange={(e) =>
+                      setAutoRecharge((prev) => ({
+                        ...prev,
+                        thresholdCents: Math.round(Number(e.target.value || 0) * 100),
+                      }))
+                    }
+                    className="input mt-1 w-full"
+                  />
+                  <p className="mt-1 text-xs text-zinc-400">
+                    Recharge when balance drops below this amount.
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-zinc-500">
+                    Recharge amount (USD)
+                  </label>
+                  <input
+                    type="number"
+                    min={5}
+                    max={5000}
+                    step={1}
+                    value={Math.round(autoRecharge.amountCents / 100)}
+                    onChange={(e) =>
+                      setAutoRecharge((prev) => ({
+                        ...prev,
+                        amountCents: Math.round(Number(e.target.value || 0) * 100),
+                      }))
+                    }
+                    className="input mt-1 w-full"
+                  />
+                  <p className="mt-1 text-xs text-zinc-400">
+                    How much to add each time.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {autoRecharge.enabled && !autoRecharge.hasPaymentMethod && (
+              <p className="mt-3 text-xs text-amber-600">
+                You need a saved payment method for auto-recharge to work.{" "}
+                <button onClick={openPortal} className="underline">
+                  Add one in the billing portal
+                </button>
+                .
+              </p>
+            )}
+
+            <div className="mt-4">
+              <button
+                onClick={saveAutoRecharge}
+                disabled={autoRechargeSaving}
+                className="btn-secondary"
+              >
+                {autoRechargeSaving ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  "Save settings"
+                )}
               </button>
             </div>
           </div>

@@ -1,0 +1,17 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e67] [cursor=pointer]:
+    - button "Open Next.js Dev Tools" [ref=e81]:
+      - img [ref=e82]
+    - generic [ref=e85]:
+      - button "Open issues overlay" [ref=e86]:
+        - generic [ref=e87]:
+          - generic [ref=e88]: "0"
+          - generic [ref=e89]: "1"
+        - generic [ref=e90]: Issue
+      - button "Collapse issues badge" [ref=e91]:
+        - img [ref=e92]
+  - alert [ref=e80]
+  - generic [ref=e94]:
+    - heading "Something went wrong" [level=2] [ref=e95]
+    - paragraph [ref=e96]: No fields selected for table "organizations" ("organizations")
+    - button "Try again" [ref=e97] [cursor=pointer]

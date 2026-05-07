@@ -1,0 +1,191 @@
+- generic [active] [ref=e1]:
+  - main [ref=e2]:
+    - generic [ref=e3]:
+      - text: You are signed in.
+      - link "Open your dashboard" [ref=e4] [cursor=pointer]:
+        - /url: /dashboard
+    - generic [ref=e6]:
+      - link "OpenDoor" [ref=e7] [cursor=pointer]:
+        - /url: /
+        - img [ref=e9]
+        - generic [ref=e12]: OpenDoor
+      - navigation [ref=e13]:
+        - link "Platform" [ref=e14] [cursor=pointer]:
+          - /url: "#platform"
+        - link "How it works" [ref=e15] [cursor=pointer]:
+          - /url: "#workflow"
+        - link "Security" [ref=e16] [cursor=pointer]:
+          - /url: "#security"
+        - link "Status" [ref=e17] [cursor=pointer]:
+          - /url: /status
+      - link "Open dashboard" [ref=e19] [cursor=pointer]:
+        - /url: /dashboard
+        - text: Open dashboard
+        - img [ref=e20]
+    - generic [ref=e22]:
+      - generic [ref=e23]:
+        - generic [ref=e24]:
+          - img [ref=e25]
+          - text: Provider-agnostic LLM control plane
+        - heading "One API for every LLM provider." [level=1] [ref=e27]
+        - paragraph [ref=e28]: Route, govern, and monitor production AI traffic across Azure, OpenAI, Anthropic, Google, and more from a single control plane — without changing your app.
+        - generic [ref=e29]:
+          - link "Open dashboard" [ref=e30] [cursor=pointer]:
+            - /url: /dashboard
+            - text: Open dashboard
+            - img [ref=e31]
+          - link "API keys" [ref=e33] [cursor=pointer]:
+            - /url: /dashboard/api-keys
+            - text: API keys
+            - img [ref=e34]
+        - generic [ref=e37]:
+          - generic [ref=e38]:
+            - generic [ref=e39]: 8+
+            - generic [ref=e40]: Providers
+          - generic [ref=e41]:
+            - generic [ref=e42]: "0"
+            - generic [ref=e43]: Code changes
+          - generic [ref=e44]:
+            - generic [ref=e45]: "1"
+            - generic [ref=e46]: Control plane
+      - generic [ref=e50]:
+        - generic [ref=e56]: gateway.opendoor.ai
+        - generic [ref=e57]:
+          - generic [ref=e58]:
+            - generic [ref=e59]:
+              - generic [ref=e60]:
+                - paragraph [ref=e61]: Live routing
+                - heading "Production traffic" [level=2] [ref=e62]
+              - generic [ref=e63]: Healthy
+            - generic [ref=e64]:
+              - generic [ref=e65]:
+                - generic [ref=e66]: OpenAI
+                - generic [ref=e67]: 42ms
+                - generic [ref=e68]: 48% share
+              - generic [ref=e69]:
+                - generic [ref=e70]: Anthropic
+                - generic [ref=e71]: 58ms
+                - generic [ref=e72]: 31% share
+              - generic [ref=e73]:
+                - generic [ref=e74]: Gemini
+                - generic [ref=e75]: 64ms
+                - generic [ref=e76]: 21% share
+          - generic [ref=e77]:
+            - generic [ref=e78]:
+              - paragraph [ref=e79]: Policy
+              - generic [ref=e80]:
+                - generic [ref=e81]:
+                  - img [ref=e82]
+                  - text: PII redaction
+                - generic [ref=e85]:
+                  - img [ref=e86]
+                  - text: EU residency
+                - generic [ref=e89]:
+                  - img [ref=e90]
+                  - text: Budget cap
+            - generic [ref=e93]:
+              - generic [ref=e94]: curl -X POST /v1/chat/completions
+              - generic [ref=e95]: "model: route:auto"
+              - generic [ref=e96]: "policy: production-safe"
+              - generic [ref=e97]: "fallback: enabled"
+              - generic [ref=e98]: 200 OK - 46ms - $0.0021
+    - generic [ref=e99]:
+      - generic [ref=e100]:
+        - paragraph [ref=e101]: Platform
+        - heading "The control plane your AI stack is missing." [level=2] [ref=e102]
+        - paragraph [ref=e103]: Centralize access, observability, and governance before every team ships their own model integration.
+      - generic [ref=e104]:
+        - generic [ref=e105]:
+          - img [ref=e107]
+          - heading "One API, every provider" [level=3] [ref=e112]
+          - paragraph [ref=e113]: Drop in OpenDoor's OpenAI-compatible endpoint and reach Azure, OpenAI, Anthropic, Google, Mistral, Cohere, and more — no per-provider SDK, no rewriting.
+        - generic [ref=e114]:
+          - img [ref=e116]
+          - heading "Production routing with fallback" [level=3] [ref=e120]
+          - paragraph [ref=e121]: Automatic failover across providers with configurable fallback chains.
+        - generic [ref=e122]:
+          - img [ref=e124]
+          - heading "Central access controls" [level=3] [ref=e127]
+          - paragraph [ref=e128]: Issue scoped keys per team with allowed models, rate limits, and spend caps enforced before every call.
+        - generic [ref=e129]:
+          - img [ref=e131]
+          - heading "Unified observability" [level=3] [ref=e133]
+          - paragraph [ref=e134]: Track requests, tokens, latency, and cost per key, team, or provider from one dashboard.
+        - generic [ref=e135]:
+          - img [ref=e137]
+          - heading "Compliance workflows" [level=3] [ref=e141]
+          - paragraph [ref=e142]: Approve models, enforce policies, review violations, and export immutable audit logs.
+        - generic [ref=e143]:
+          - img [ref=e145]
+          - heading "Drop-in compatible" [level=3] [ref=e149]
+          - paragraph [ref=e150]: OpenDoor speaks OpenAI. Point your existing client at our endpoint and you're running in minutes.
+    - generic [ref=e153]:
+      - generic [ref=e154]:
+        - paragraph [ref=e155]: How it works
+        - heading "Your apps call OpenDoor once." [level=2] [ref=e156]
+        - paragraph [ref=e157]: OpenDoor handles provider routing, access control, budgets, and observability across every LLM vendor — your integration code never changes.
+        - link "Open dashboard" [ref=e158] [cursor=pointer]:
+          - /url: /dashboard/onboarding
+          - text: Open dashboard
+          - img [ref=e159]
+      - generic [ref=e161]:
+        - generic [ref=e162]:
+          - generic [ref=e163]: "1"
+          - generic [ref=e164]:
+            - heading "One endpoint, every model" [level=3] [ref=e165]
+            - paragraph [ref=e166]: Point any OpenAI-compatible client at OpenDoor. No new SDK, no per-provider clients, no rewriting.
+        - generic [ref=e167]:
+          - generic [ref=e168]: "2"
+          - generic [ref=e169]:
+            - heading "Policy enforced before every call" [level=3] [ref=e170]
+            - paragraph [ref=e171]: Access controls, rate limits, and spend budgets are checked automatically before each request is forwarded to a provider.
+        - generic [ref=e172]:
+          - generic [ref=e173]: "3"
+          - generic [ref=e174]:
+            - heading "Route, fallback, and observe" [level=3] [ref=e175]
+            - paragraph [ref=e176]: OpenDoor selects the best provider by latency, cost, and health — with automatic fallback and full logging on every call.
+    - generic [ref=e178]:
+      - generic [ref=e179]:
+        - img [ref=e180]
+        - heading "Built for secure AI operations." [level=2] [ref=e183]
+        - paragraph [ref=e184]: OpenDoor puts governance, auditability, and access control in front of every provider — so teams move fast without bypassing risk controls.
+      - generic [ref=e185]:
+        - generic [ref=e186]:
+          - img [ref=e187]
+          - generic [ref=e190]: SSO and organization access controls
+        - generic [ref=e191]:
+          - img [ref=e192]
+          - generic [ref=e195]: Audit logs for every sensitive action
+        - generic [ref=e196]:
+          - img [ref=e197]
+          - generic [ref=e200]: Model approval and policy workflows
+        - generic [ref=e201]:
+          - img [ref=e202]
+          - generic [ref=e205]: Data residency and provider governance
+        - generic [ref=e206]:
+          - img [ref=e207]
+          - generic [ref=e210]: Rolling budget limits and top-ups
+        - generic [ref=e211]:
+          - img [ref=e212]
+          - generic [ref=e215]: Realtime health and usage visibility
+    - generic [ref=e217]:
+      - heading "Ready to put a gateway in front of your AI traffic?" [level=2] [ref=e218]
+      - paragraph [ref=e219]: Create a workspace, claim your signup credits, and make your first routed model call.
+      - generic [ref=e220]:
+        - link "Open dashboard" [ref=e221] [cursor=pointer]:
+          - /url: /dashboard
+          - text: Open dashboard
+          - img [ref=e222]
+        - link "Check platform status" [ref=e224] [cursor=pointer]:
+          - /url: /status
+    - generic [ref=e226]:
+      - generic [ref=e227]:
+        - img [ref=e228]
+        - generic [ref=e231]: OpenDoor
+        - generic [ref=e232]: Provider-agnostic LLM control plane
+      - generic [ref=e233]:
+        - link "Status" [ref=e234] [cursor=pointer]:
+          - /url: /status
+        - link "Dashboard" [ref=e235] [cursor=pointer]:
+          - /url: /dashboard
+  - alert [ref=e236]

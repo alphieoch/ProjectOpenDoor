@@ -1,0 +1,428 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.42.1.51946",
+      "templateHash": "9693348481242251214"
+    }
+  },
+  "parameters": {
+    "name": {
+      "type": "string",
+      "metadata": {
+        "description": "Front Door profile name"
+      }
+    },
+    "primaryEndpoint": {
+      "type": "string",
+      "metadata": {
+        "description": "Primary gateway endpoint"
+      }
+    },
+    "secondaryEndpoint": {
+      "type": "string",
+      "metadata": {
+        "description": "Secondary gateway endpoint"
+      }
+    },
+    "primaryDashboardEndpoint": {
+      "type": "string",
+      "metadata": {
+        "description": "Primary dashboard endpoint"
+      }
+    },
+    "secondaryDashboardEndpoint": {
+      "type": "string",
+      "metadata": {
+        "description": "Secondary dashboard endpoint"
+      }
+    },
+    "gatewayCustomDomain": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Custom domain for gateway (e.g. api.opendoor.ai)"
+      }
+    },
+    "dashboardCustomDomain": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Custom domain for dashboard (e.g. app.opendoor.ai)"
+      }
+    },
+    "primaryDocsEndpoint": {
+      "type": "string",
+      "metadata": {
+        "description": "Primary docs endpoint"
+      }
+    },
+    "secondaryDocsEndpoint": {
+      "type": "string",
+      "metadata": {
+        "description": "Secondary docs endpoint"
+      }
+    },
+    "docsCustomDomain": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Custom domain for docs (e.g. docs.opendoor.ai)"
+      }
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Cdn/profiles",
+      "apiVersion": "2023-07-01-preview",
+      "name": "[parameters('name')]",
+      "location": "Global",
+      "sku": {
+        "name": "Standard_AzureFrontDoor"
+      }
+    },
+    {
+      "type": "Microsoft.Cdn/profiles/originGroups",
+      "apiVersion": "2023-07-01-preview",
+      "name": "[format('{0}/{1}', parameters('name'), 'gateway-og')]",
+      "properties": {
+        "loadBalancingSettings": {
+          "sampleSize": 4,
+          "successfulSamplesRequired": 3
+        },
+        "healthProbeSettings": {
+          "probePath": "/health",
+          "probeRequestType": "GET",
+          "probeProtocol": "Https",
+          "probeIntervalInSeconds": 100
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Cdn/profiles', parameters('name'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Cdn/profiles/originGroups/origins",
+      "apiVersion": "2023-07-01-preview",
+      "name": "[format('{0}/{1}/{2}', parameters('name'), 'gateway-og', 'primary')]",
+      "properties": {
+        "hostName": "[parameters('primaryEndpoint')]",
+        "httpPort": 80,
+        "httpsPort": 443,
+        "priority": 1,
+        "weight": 1000
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Cdn/profiles/originGroups', parameters('name'), 'gateway-og')]"
+      ]
+    },
+    {
+      "type": "Microsoft.Cdn/profiles/originGroups/origins",
+      "apiVersion": "2023-07-01-preview",
+      "name": "[format('{0}/{1}/{2}', parameters('name'), 'gateway-og', 'secondary')]",
+      "properties": {
+        "hostName": "[parameters('secondaryEndpoint')]",
+        "httpPort": 80,
+        "httpsPort": 443,
+        "priority": 2,
+        "weight": 1000
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Cdn/profiles/originGroups', parameters('name'), 'gateway-og')]"
+      ]
+    },
+    {
+      "type": "Microsoft.Cdn/profiles/afdEndpoints",
+      "apiVersion": "2023-07-01-preview",
+      "name": "[format('{0}/{1}', parameters('name'), 'gateway')]",
+      "location": "Global",
+      "properties": {
+        "enabledState": "Enabled"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Cdn/profiles', parameters('name'))]"
+      ]
+    },
+    {
+      "condition": "[not(empty(parameters('gatewayCustomDomain')))]",
+      "type": "Microsoft.Cdn/profiles/customDomains",
+      "apiVersion": "2023-07-01-preview",
+      "name": "[format('{0}/{1}', parameters('name'), replace(replace(parameters('gatewayCustomDomain'), '.', '-'), '*', 'wildcard'))]",
+      "properties": {
+        "hostName": "[parameters('gatewayCustomDomain')]",
+        "tlsSettings": {
+          "certificateType": "ManagedCertificate",
+          "minimumTlsVersion": "TLS12"
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Cdn/profiles', parameters('name'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Cdn/profiles/afdEndpoints/routes",
+      "apiVersion": "2023-07-01-preview",
+      "name": "[format('{0}/{1}/{2}', parameters('name'), 'gateway', 'default')]",
+      "properties": {
+        "originGroup": {
+          "id": "[resourceId('Microsoft.Cdn/profiles/originGroups', parameters('name'), 'gateway-og')]"
+        },
+        "customDomains": "[if(not(empty(parameters('gatewayCustomDomain'))), createArray(createObject('id', resourceId('Microsoft.Cdn/profiles/customDomains', parameters('name'), replace(replace(parameters('gatewayCustomDomain'), '.', '-'), '*', 'wildcard')))), createArray())]",
+        "supportedProtocols": [
+          "Https"
+        ],
+        "patternsToMatch": [
+          "/*"
+        ],
+        "forwardingProtocol": "HttpsOnly",
+        "linkToDefaultDomain": "Enabled",
+        "httpsRedirect": "Enabled"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Cdn/profiles/customDomains', parameters('name'), replace(replace(parameters('gatewayCustomDomain'), '.', '-'), '*', 'wildcard'))]",
+        "[resourceId('Microsoft.Cdn/profiles/afdEndpoints', parameters('name'), 'gateway')]",
+        "[resourceId('Microsoft.Cdn/profiles/originGroups', parameters('name'), 'gateway-og')]",
+        "[resourceId('Microsoft.Cdn/profiles/originGroups/origins', parameters('name'), 'gateway-og', 'primary')]",
+        "[resourceId('Microsoft.Cdn/profiles/originGroups/origins', parameters('name'), 'gateway-og', 'secondary')]"
+      ]
+    },
+    {
+      "type": "Microsoft.Cdn/profiles/originGroups",
+      "apiVersion": "2023-07-01-preview",
+      "name": "[format('{0}/{1}', parameters('name'), 'dashboard-og')]",
+      "properties": {
+        "loadBalancingSettings": {
+          "sampleSize": 4,
+          "successfulSamplesRequired": 3
+        },
+        "healthProbeSettings": {
+          "probePath": "/",
+          "probeRequestType": "GET",
+          "probeProtocol": "Https",
+          "probeIntervalInSeconds": 100
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Cdn/profiles', parameters('name'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Cdn/profiles/originGroups/origins",
+      "apiVersion": "2023-07-01-preview",
+      "name": "[format('{0}/{1}/{2}', parameters('name'), 'dashboard-og', 'primary')]",
+      "properties": {
+        "hostName": "[parameters('primaryDashboardEndpoint')]",
+        "httpPort": 80,
+        "httpsPort": 443,
+        "priority": 1,
+        "weight": 1000
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Cdn/profiles/originGroups', parameters('name'), 'dashboard-og')]"
+      ]
+    },
+    {
+      "type": "Microsoft.Cdn/profiles/originGroups/origins",
+      "apiVersion": "2023-07-01-preview",
+      "name": "[format('{0}/{1}/{2}', parameters('name'), 'dashboard-og', 'secondary')]",
+      "properties": {
+        "hostName": "[parameters('secondaryDashboardEndpoint')]",
+        "httpPort": 80,
+        "httpsPort": 443,
+        "priority": 2,
+        "weight": 1000
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Cdn/profiles/originGroups', parameters('name'), 'dashboard-og')]"
+      ]
+    },
+    {
+      "type": "Microsoft.Cdn/profiles/afdEndpoints",
+      "apiVersion": "2023-07-01-preview",
+      "name": "[format('{0}/{1}', parameters('name'), 'dashboard')]",
+      "location": "Global",
+      "properties": {
+        "enabledState": "Enabled"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Cdn/profiles', parameters('name'))]"
+      ]
+    },
+    {
+      "condition": "[not(empty(parameters('dashboardCustomDomain')))]",
+      "type": "Microsoft.Cdn/profiles/customDomains",
+      "apiVersion": "2023-07-01-preview",
+      "name": "[format('{0}/{1}', parameters('name'), replace(replace(parameters('dashboardCustomDomain'), '.', '-'), '*', 'wildcard'))]",
+      "properties": {
+        "hostName": "[parameters('dashboardCustomDomain')]",
+        "tlsSettings": {
+          "certificateType": "ManagedCertificate",
+          "minimumTlsVersion": "TLS12"
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Cdn/profiles', parameters('name'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Cdn/profiles/afdEndpoints/routes",
+      "apiVersion": "2023-07-01-preview",
+      "name": "[format('{0}/{1}/{2}', parameters('name'), 'dashboard', 'default')]",
+      "properties": {
+        "originGroup": {
+          "id": "[resourceId('Microsoft.Cdn/profiles/originGroups', parameters('name'), 'dashboard-og')]"
+        },
+        "customDomains": "[if(not(empty(parameters('dashboardCustomDomain'))), createArray(createObject('id', resourceId('Microsoft.Cdn/profiles/customDomains', parameters('name'), replace(replace(parameters('dashboardCustomDomain'), '.', '-'), '*', 'wildcard')))), createArray())]",
+        "supportedProtocols": [
+          "Https"
+        ],
+        "patternsToMatch": [
+          "/*"
+        ],
+        "forwardingProtocol": "HttpsOnly",
+        "linkToDefaultDomain": "Enabled",
+        "httpsRedirect": "Enabled"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Cdn/profiles/customDomains', parameters('name'), replace(replace(parameters('dashboardCustomDomain'), '.', '-'), '*', 'wildcard'))]",
+        "[resourceId('Microsoft.Cdn/profiles/afdEndpoints', parameters('name'), 'dashboard')]",
+        "[resourceId('Microsoft.Cdn/profiles/originGroups', parameters('name'), 'dashboard-og')]",
+        "[resourceId('Microsoft.Cdn/profiles/originGroups/origins', parameters('name'), 'dashboard-og', 'primary')]",
+        "[resourceId('Microsoft.Cdn/profiles/originGroups/origins', parameters('name'), 'dashboard-og', 'secondary')]"
+      ]
+    },
+    {
+      "type": "Microsoft.Cdn/profiles/originGroups",
+      "apiVersion": "2023-07-01-preview",
+      "name": "[format('{0}/{1}', parameters('name'), 'docs-og')]",
+      "properties": {
+        "loadBalancingSettings": {
+          "sampleSize": 4,
+          "successfulSamplesRequired": 3
+        },
+        "healthProbeSettings": {
+          "probePath": "/",
+          "probeRequestType": "GET",
+          "probeProtocol": "Https",
+          "probeIntervalInSeconds": 100
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Cdn/profiles', parameters('name'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Cdn/profiles/originGroups/origins",
+      "apiVersion": "2023-07-01-preview",
+      "name": "[format('{0}/{1}/{2}', parameters('name'), 'docs-og', 'primary')]",
+      "properties": {
+        "hostName": "[parameters('primaryDocsEndpoint')]",
+        "httpPort": 80,
+        "httpsPort": 443,
+        "priority": 1,
+        "weight": 1000
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Cdn/profiles/originGroups', parameters('name'), 'docs-og')]"
+      ]
+    },
+    {
+      "type": "Microsoft.Cdn/profiles/originGroups/origins",
+      "apiVersion": "2023-07-01-preview",
+      "name": "[format('{0}/{1}/{2}', parameters('name'), 'docs-og', 'secondary')]",
+      "properties": {
+        "hostName": "[parameters('secondaryDocsEndpoint')]",
+        "httpPort": 80,
+        "httpsPort": 443,
+        "priority": 2,
+        "weight": 1000
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Cdn/profiles/originGroups', parameters('name'), 'docs-og')]"
+      ]
+    },
+    {
+      "type": "Microsoft.Cdn/profiles/afdEndpoints",
+      "apiVersion": "2023-07-01-preview",
+      "name": "[format('{0}/{1}', parameters('name'), 'docs')]",
+      "location": "Global",
+      "properties": {
+        "enabledState": "Enabled"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Cdn/profiles', parameters('name'))]"
+      ]
+    },
+    {
+      "condition": "[not(empty(parameters('docsCustomDomain')))]",
+      "type": "Microsoft.Cdn/profiles/customDomains",
+      "apiVersion": "2023-07-01-preview",
+      "name": "[format('{0}/{1}', parameters('name'), replace(replace(parameters('docsCustomDomain'), '.', '-'), '*', 'wildcard'))]",
+      "properties": {
+        "hostName": "[parameters('docsCustomDomain')]",
+        "tlsSettings": {
+          "certificateType": "ManagedCertificate",
+          "minimumTlsVersion": "TLS12"
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Cdn/profiles', parameters('name'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Cdn/profiles/afdEndpoints/routes",
+      "apiVersion": "2023-07-01-preview",
+      "name": "[format('{0}/{1}/{2}', parameters('name'), 'docs', 'default')]",
+      "properties": {
+        "originGroup": {
+          "id": "[resourceId('Microsoft.Cdn/profiles/originGroups', parameters('name'), 'docs-og')]"
+        },
+        "customDomains": "[if(not(empty(parameters('docsCustomDomain'))), createArray(createObject('id', resourceId('Microsoft.Cdn/profiles/customDomains', parameters('name'), replace(replace(parameters('docsCustomDomain'), '.', '-'), '*', 'wildcard')))), createArray())]",
+        "supportedProtocols": [
+          "Https"
+        ],
+        "patternsToMatch": [
+          "/*"
+        ],
+        "forwardingProtocol": "HttpsOnly",
+        "linkToDefaultDomain": "Enabled",
+        "httpsRedirect": "Enabled"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Cdn/profiles/customDomains', parameters('name'), replace(replace(parameters('docsCustomDomain'), '.', '-'), '*', 'wildcard'))]",
+        "[resourceId('Microsoft.Cdn/profiles/afdEndpoints', parameters('name'), 'docs')]",
+        "[resourceId('Microsoft.Cdn/profiles/originGroups', parameters('name'), 'docs-og')]",
+        "[resourceId('Microsoft.Cdn/profiles/originGroups/origins', parameters('name'), 'docs-og', 'primary')]",
+        "[resourceId('Microsoft.Cdn/profiles/originGroups/origins', parameters('name'), 'docs-og', 'secondary')]"
+      ]
+    }
+  ],
+  "outputs": {
+    "gatewayHostName": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Cdn/profiles/afdEndpoints', parameters('name'), 'gateway'), '2023-07-01-preview').hostName]"
+    },
+    "dashboardHostName": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Cdn/profiles/afdEndpoints', parameters('name'), 'dashboard'), '2023-07-01-preview').hostName]"
+    },
+    "docsHostName": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Cdn/profiles/afdEndpoints', parameters('name'), 'docs'), '2023-07-01-preview').hostName]"
+    },
+    "gatewayCustomDomainValidation": {
+      "type": "string",
+      "value": "[if(not(empty(parameters('gatewayCustomDomain'))), format('Create CNAME: {0} -> {1}', parameters('gatewayCustomDomain'), reference(resourceId('Microsoft.Cdn/profiles/afdEndpoints', parameters('name'), 'gateway'), '2023-07-01-preview').hostName), 'No custom domain configured')]"
+    },
+    "dashboardCustomDomainValidation": {
+      "type": "string",
+      "value": "[if(not(empty(parameters('dashboardCustomDomain'))), format('Create CNAME: {0} -> {1}', parameters('dashboardCustomDomain'), reference(resourceId('Microsoft.Cdn/profiles/afdEndpoints', parameters('name'), 'dashboard'), '2023-07-01-preview').hostName), 'No custom domain configured')]"
+    },
+    "docsCustomDomainValidation": {
+      "type": "string",
+      "value": "[if(not(empty(parameters('docsCustomDomain'))), format('Create CNAME: {0} -> {1}', parameters('docsCustomDomain'), reference(resourceId('Microsoft.Cdn/profiles/afdEndpoints', parameters('name'), 'docs'), '2023-07-01-preview').hostName), 'No custom domain configured')]"
+    }
+  }
+}

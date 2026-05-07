@@ -1,0 +1,85 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e68] [cursor=pointer]:
+    - button "Open Next.js Dev Tools" [ref=e69]:
+      - img [ref=e70]
+    - generic [ref=e73]:
+      - button "Open issues overlay" [ref=e74]:
+        - generic [ref=e75]:
+          - generic [ref=e76]: "0"
+          - generic [ref=e77]: "1"
+        - generic [ref=e78]: Issue
+      - button "Collapse issues badge" [ref=e79]:
+        - img [ref=e80]
+  - alert [ref=e63]
+  - main [ref=e82]:
+    - generic [ref=e83]:
+      - generic [ref=e85]:
+        - link "OpenDoor" [ref=e86] [cursor=pointer]:
+          - /url: /
+          - img [ref=e87]
+          - paragraph [ref=e90]: OpenDoor
+        - button [ref=e91] [cursor=pointer]:
+          - img [ref=e92]
+      - blockquote [ref=e95]:
+        - paragraph [ref=e96]: “Switch models without changing code. That's the OpenDoor promise.”
+        - generic [ref=e97]: ~ OpenDoor
+      - generic [ref=e98]:
+        - generic:
+          - img "Background Paths"
+        - generic:
+          - img "Background Paths"
+    - generic [ref=e99]:
+      - link "Home" [ref=e104] [cursor=pointer]:
+        - /url: /
+        - img [ref=e105]
+        - text: Home
+      - generic [ref=e107]:
+        - generic [ref=e108]:
+          - generic [ref=e169]: Self-serve setup
+          - heading "Create your account" [level=1] [ref=e170]
+          - paragraph [ref=e110]: Get started with the LLM gateway
+        - generic [ref=e111]:
+          - button "Continue with Google" [ref=e112] [cursor=pointer]:
+            - img [ref=e113]
+            - text: Continue with Google
+          - button "Continue with Apple" [ref=e116] [cursor=pointer]:
+            - img [ref=e117]
+            - text: Continue with Apple
+          - button "Continue with GitHub" [ref=e119] [cursor=pointer]:
+            - img [ref=e120]
+            - text: Continue with GitHub
+        - generic [ref=e124]: OR
+        - generic [ref=e126]:
+          - button "Sign up" [ref=e171] [cursor=pointer]
+          - button "Enterprise SSO" [ref=e128] [cursor=pointer]
+        - generic [ref=e172]:
+          - generic [ref=e173]:
+            - textbox "Full Name" [ref=e174]
+            - generic:
+              - img
+          - generic [ref=e175]:
+            - textbox "Organization (optional)" [ref=e176]
+            - generic:
+              - img
+          - generic [ref=e177]:
+            - textbox "you@company.com" [ref=e178]
+            - generic:
+              - img
+          - generic [ref=e179]:
+            - textbox "Password (min 8 chars)" [ref=e180]
+            - generic:
+              - img
+          - button "Create Account" [ref=e181] [cursor=pointer]:
+            - img [ref=e182]
+            - text: Create Account
+          - paragraph [ref=e185]:
+            - text: Already have an account?
+            - button "Sign in" [ref=e186] [cursor=pointer]
+        - paragraph [ref=e140]:
+          - text: By clicking continue, you agree to our
+          - link "Terms of Service" [ref=e141] [cursor=pointer]:
+            - /url: "#"
+          - text: and
+          - link "Privacy Policy" [ref=e142] [cursor=pointer]:
+            - /url: "#"
+          - text: .

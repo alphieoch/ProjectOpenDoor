@@ -13,6 +13,7 @@ import {
   uniqueIndex,
   pgEnum,
 } from "drizzle-orm/pg-core";
+import { relations } from "drizzle-orm";
 
 export const requestStatusEnum = pgEnum("request_status", [
   "success",
@@ -157,6 +158,8 @@ export const apiKeys = pgTable(
     allowedModels: jsonb("allowed_models"),
     rateLimitRpm: integer("rate_limit_rpm").default(60),
     rateLimitTpm: integer("rate_limit_tpm").default(100000),
+    spendLimitUsdCents: bigint("spend_limit_usd_cents", { mode: "number" }),
+    spendUsedUsdCents: bigint("spend_used_usd_cents", { mode: "number" }).notNull().default(0),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -757,3 +760,278 @@ export const guardrailOutcomes = pgTable(
     triggeredIdx: index("guardrails_triggered_idx").on(table.triggered),
   })
 );
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DRIZZLE RELATIONS
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const organizationsRelations = relations(organizations, ({ many }) => ({
+  users: many(users),
+  apiKeys: many(apiKeys),
+  creditTransactions: many(creditTransactions),
+  requests: many(requests),
+  auditLogs: many(auditLogs),
+  invitations: many(invitations),
+  deployments: many(deployments),
+  usageDaily: many(usageDaily),
+  agentRuns: many(agentRuns),
+  guardrailOutcomes: many(guardrailOutcomes),
+  modelApprovals: many(modelApprovals),
+  modelEvaluations: many(modelEvaluations),
+  modelPolicies: many(modelPolicies),
+  policyViolations: many(policyViolations),
+}));
+
+export const usersRelations = relations(users, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [users.organizationId],
+    references: [organizations.id],
+  }),
+}));
+
+export const apiKeysRelations = relations(apiKeys, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [apiKeys.organizationId],
+    references: [organizations.id],
+  }),
+}));
+
+export const providersRelations = relations(providers, ({ many }) => ({
+  models: many(models),
+  requests: many(requests),
+  usageDaily: many(usageDaily),
+}));
+
+export const modelsRelations = relations(models, ({ one }) => ({
+  provider: one(providers, {
+    fields: [models.providerId],
+    references: [providers.id],
+  }),
+}));
+
+export const creditTransactionsRelations = relations(creditTransactions, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [creditTransactions.organizationId],
+    references: [organizations.id],
+  }),
+}));
+
+export const requestsRelations = relations(requests, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [requests.organizationId],
+    references: [organizations.id],
+  }),
+  apiKey: one(apiKeys, {
+    fields: [requests.apiKeyId],
+    references: [apiKeys.id],
+  }),
+  provider: one(providers, {
+    fields: [requests.providerId],
+    references: [providers.id],
+  }),
+}));
+
+export const auditLogsRelations = relations(auditLogs, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [auditLogs.organizationId],
+    references: [organizations.id],
+  }),
+  user: one(users, {
+    fields: [auditLogs.userId],
+    references: [users.id],
+  }),
+}));
+
+export const invitationsRelations = relations(invitations, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [invitations.organizationId],
+    references: [organizations.id],
+  }),
+  inviter: one(users, {
+    fields: [invitations.invitedBy],
+    references: [users.id],
+  }),
+}));
+
+export const deploymentsRelations = relations(deployments, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [deployments.organizationId],
+    references: [organizations.id],
+  }),
+}));
+
+export const modelGovernanceRelations = relations(modelGovernance, ({ one, many }) => ({
+  provider: one(providers, {
+    fields: [modelGovernance.providerId],
+    references: [providers.id],
+  }),
+  approvals: many(modelApprovals),
+  evaluations: many(modelEvaluations),
+  policies: many(modelPolicies),
+  complianceMappings: many(modelComplianceMappings),
+}));
+
+export const modelApprovalsRelations = relations(modelApprovals, ({ one }) => ({
+  modelGovernance: one(modelGovernance, {
+    fields: [modelApprovals.modelGovernanceId],
+    references: [modelGovernance.id],
+  }),
+  organization: one(organizations, {
+    fields: [modelApprovals.organizationId],
+    references: [organizations.id],
+  }),
+  requestedByUser: one(users, {
+    fields: [modelApprovals.requestedBy],
+    references: [users.id],
+  }),
+  reviewedByUser: one(users, {
+    fields: [modelApprovals.reviewedBy],
+    references: [users.id],
+  }),
+}));
+
+export const modelEvaluationsRelations = relations(modelEvaluations, ({ one }) => ({
+  modelGovernance: one(modelGovernance, {
+    fields: [modelEvaluations.modelGovernanceId],
+    references: [modelGovernance.id],
+  }),
+  organization: one(organizations, {
+    fields: [modelEvaluations.organizationId],
+    references: [organizations.id],
+  }),
+  evaluatedByUser: one(users, {
+    fields: [modelEvaluations.evaluatedBy],
+    references: [users.id],
+  }),
+}));
+
+export const modelPoliciesRelations = relations(modelPolicies, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [modelPolicies.organizationId],
+    references: [organizations.id],
+  }),
+  modelGovernance: one(modelGovernance, {
+    fields: [modelPolicies.modelGovernanceId],
+    references: [modelGovernance.id],
+  }),
+}));
+
+export const policyViolationsRelations = relations(policyViolations, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [policyViolations.organizationId],
+    references: [organizations.id],
+  }),
+  policy: one(modelPolicies, {
+    fields: [policyViolations.policyId],
+    references: [modelPolicies.id],
+  }),
+  apiKey: one(apiKeys, {
+    fields: [policyViolations.apiKeyId],
+    references: [apiKeys.id],
+  }),
+  resolvedByUser: one(users, {
+    fields: [policyViolations.resolvedBy],
+    references: [users.id],
+  }),
+}));
+
+export const complianceControlsRelations = relations(complianceControls, ({ many }) => ({
+  modelMappings: many(modelComplianceMappings),
+}));
+
+export const modelComplianceMappingsRelations = relations(modelComplianceMappings, ({ one }) => ({
+  modelGovernance: one(modelGovernance, {
+    fields: [modelComplianceMappings.modelGovernanceId],
+    references: [modelGovernance.id],
+  }),
+  control: one(complianceControls, {
+    fields: [modelComplianceMappings.controlId],
+    references: [complianceControls.id],
+  }),
+  assessedByUser: one(users, {
+    fields: [modelComplianceMappings.assessedBy],
+    references: [users.id],
+  }),
+}));
+
+export const agentRunsRelations = relations(agentRuns, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [agentRuns.organizationId],
+    references: [organizations.id],
+  }),
+  apiKey: one(apiKeys, {
+    fields: [agentRuns.apiKeyId],
+    references: [apiKeys.id],
+  }),
+  humanApprovedByUser: one(users, {
+    fields: [agentRuns.humanApprovedBy],
+    references: [users.id],
+  }),
+}));
+
+export const guardrailOutcomesRelations = relations(guardrailOutcomes, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [guardrailOutcomes.organizationId],
+    references: [organizations.id],
+  }),
+  agentRun: one(agentRuns, {
+    fields: [guardrailOutcomes.agentRunId],
+    references: [agentRuns.id],
+  }),
+}));
+
+export const usageDailyRelations = relations(usageDaily, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [usageDaily.organizationId],
+    references: [organizations.id],
+  }),
+  provider: one(providers, {
+    fields: [usageDaily.providerId],
+    references: [providers.id],
+  }),
+}));
+
+/* ─────────────────────────────────────────────────────────────────
+   AI Assistants  (white-label AI launchpad)
+───────────────────────────────────────────────────────────────── */
+export const aiAssistants = pgTable("ai_assistants", {
+  id:             uuid("id").primaryKey().defaultRandom(),
+  organizationId: uuid("organization_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+  createdBy:      uuid("created_by").references(() => users.id),
+  // Identity
+  name:           varchar("name", { length: 255 }).notNull(),
+  slug:           varchar("slug", { length: 100 }).notNull().unique(),
+  description:    text("description"),
+  avatarLetter:   varchar("avatar_letter", { length: 1 }),
+  primaryColor:   varchar("primary_color", { length: 7 }).default("#1A73E8"),
+  // Model config
+  modelId:        varchar("model_id", { length: 100 }).default("gpt-4o"),
+  systemPrompt:   text("system_prompt"),
+  welcomeMessage: text("welcome_message"),
+  maxMessages:    integer("max_messages"),
+  // Access
+  visibility:     varchar("visibility", { length: 20 }).default("private"),
+  // Monetization
+  monetization:   varchar("monetization", { length: 20 }).default("free"),
+  priceCents:     integer("price_cents").default(0),
+  stripePriceId:  varchar("stripe_price_id", { length: 255 }),
+  // State
+  enabled:        boolean("enabled").notNull().default(true),
+  publishedAt:    timestamp("published_at", { withTimezone: true }),
+  createdAt:      timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt:      timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+}, (t) => ({
+  orgIdx:  index("ai_assistants_org_idx").on(t.organizationId),
+  slugIdx: index("ai_assistants_slug_idx").on(t.slug),
+}));
+
+export const aiAssistantsRelations = relations(aiAssistants, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [aiAssistants.organizationId],
+    references: [organizations.id],
+  }),
+  creator: one(users, {
+    fields: [aiAssistants.createdBy],
+    references: [users.id],
+  }),
+}));

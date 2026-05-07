@@ -28,7 +28,7 @@ const PROVIDER_ORDER = [
   "custom",
 ] as const;
 
-export async function statusHandler(c: Context) {
+export async function getStatusData() {
   const timestamp = new Date().toISOString();
 
   let database: { status: "up" | "down"; latencyMs: number | null } = {
@@ -106,7 +106,7 @@ export async function statusHandler(c: Context) {
         ? "degraded"
         : "degraded";
 
-  return c.json({
+  return {
     timestamp,
     status: overall,
     service: "opendoor-gateway",
@@ -122,5 +122,10 @@ export async function statusHandler(c: Context) {
       deployments: azureDeployments,
       fetchError: azureFetchError,
     },
-  });
+  };
+}
+
+export async function statusHandler(c: Context) {
+  const data = await getStatusData();
+  return c.json(data);
 }

@@ -1,0 +1,151 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - complementary [ref=e3]:
+      - generic [ref=e4]:
+        - generic [ref=e7]: O
+        - generic [ref=e8]: OpenDoor
+      - generic [ref=e9] [cursor=pointer]:
+        - generic [ref=e10]: A
+        - generic [ref=e11]:
+          - generic [ref=e12]: Acme Robotics
+          - generic [ref=e13]: Pro · 142 seats
+        - img [ref=e14]
+      - generic [ref=e16]:
+        - generic [ref=e17]:
+          - button "Workspace" [ref=e18] [cursor=pointer]:
+            - generic [ref=e19]: Workspace
+            - img [ref=e20]
+          - generic [ref=e22]:
+            - link "Overview" [ref=e23] [cursor=pointer]:
+              - /url: /dashboard
+              - img [ref=e24]
+              - generic [ref=e29]: Overview
+            - link "API Keys" [ref=e30] [cursor=pointer]:
+              - /url: /dashboard/api-keys
+              - img [ref=e31]
+              - generic [ref=e35]: API Keys
+            - link "Usage" [ref=e36] [cursor=pointer]:
+              - /url: /dashboard/usage
+              - img [ref=e37]
+              - generic [ref=e39]: Usage
+            - link "Pricing" [ref=e40] [cursor=pointer]:
+              - /url: /dashboard/pricing
+              - img [ref=e41]
+              - generic [ref=e43]: Pricing
+            - link "Deployments 5" [ref=e44] [cursor=pointer]:
+              - /url: /dashboard/deployments
+              - img [ref=e45]
+              - generic [ref=e48]: Deployments
+              - generic [ref=e49]: "5"
+            - link "Billing" [ref=e50] [cursor=pointer]:
+              - /url: /dashboard/billing
+              - img [ref=e51]
+              - generic [ref=e53]: Billing
+            - link "Playground" [ref=e54] [cursor=pointer]:
+              - /url: /dashboard/playground
+              - img [ref=e55]
+              - generic [ref=e57]: Playground
+            - link "Team" [ref=e58] [cursor=pointer]:
+              - /url: /dashboard/team
+              - img [ref=e59]
+              - generic [ref=e64]: Team
+            - link "Settings" [ref=e65] [cursor=pointer]:
+              - /url: /dashboard/settings
+              - img [ref=e66]
+              - generic [ref=e69]: Settings
+            - link "Audit Logs" [ref=e70] [cursor=pointer]:
+              - /url: /dashboard/audit-logs
+              - img [ref=e71]
+              - generic [ref=e74]: Audit Logs
+        - generic [ref=e75]:
+          - button "Governance" [ref=e76] [cursor=pointer]:
+            - generic [ref=e77]: Governance
+            - img [ref=e78]
+          - generic [ref=e80]:
+            - link "Trust Center" [ref=e81] [cursor=pointer]:
+              - /url: /dashboard/governance
+              - img [ref=e82]
+              - generic [ref=e85]: Trust Center
+            - link "Policies" [ref=e86] [cursor=pointer]:
+              - /url: /dashboard/governance/policies
+              - img [ref=e87]
+              - generic [ref=e93]: Policies
+            - link "Violations 3" [ref=e94] [cursor=pointer]:
+              - /url: /dashboard/governance/violations
+              - img [ref=e95]
+              - generic [ref=e97]: Violations
+              - generic [ref=e98]: "3"
+            - link "Approvals" [ref=e99] [cursor=pointer]:
+              - /url: /dashboard/governance/approvals
+              - img [ref=e100]
+              - generic [ref=e104]: Approvals
+            - link "Compliance" [ref=e105] [cursor=pointer]:
+              - /url: /dashboard/governance/compliance
+              - img [ref=e106]
+              - generic [ref=e109]: Compliance
+            - link "Sector Packs" [ref=e110] [cursor=pointer]:
+              - /url: /dashboard/governance/sector-templates
+              - img [ref=e111]
+              - generic [ref=e115]: Sector Packs
+      - generic [ref=e116]:
+        - heading "Invite your team" [level=4] [ref=e117]
+        - paragraph [ref=e118]: New members get access to API keys, usage, and audit trails.
+        - link "Invite people" [ref=e119] [cursor=pointer]:
+          - /url: /dashboard/team
+          - img [ref=e120]
+          - text: Invite people
+      - generic [ref=e123]:
+        - generic [ref=e124]: U
+        - generic [ref=e125]:
+          - generic [ref=e126]: Your Account
+          - generic [ref=e127]: OpenDoor Pro
+        - button "Sign out" [ref=e128] [cursor=pointer]:
+          - img [ref=e129]
+    - generic [ref=e132]:
+      - generic [ref=e133]:
+        - generic [ref=e134]:
+          - generic [ref=e135]: Workspace
+          - generic [ref=e136]: ›
+          - strong [ref=e137]: Dashboard
+        - generic [ref=e138]:
+          - img [ref=e139]
+          - generic [ref=e142]: Search models, keys, policies…
+          - generic [ref=e143]: ⌘K
+        - generic [ref=e144]:
+          - button [ref=e145] [cursor=pointer]:
+            - img [ref=e146]
+          - button [ref=e149] [cursor=pointer]:
+            - img [ref=e150]
+          - link "Docs" [ref=e154] [cursor=pointer]:
+            - /url: https://docs.opendoor.ai
+            - img [ref=e155]
+            - text: Docs
+      - main [ref=e159]:
+        - generic [ref=e160]:
+          - generic [ref=e161]:
+            - heading "Welcome to OpenDoor" [level=1] [ref=e162]
+            - paragraph [ref=e163]: Complete these steps to finish your setup.
+          - generic [ref=e164]:
+            - generic [ref=e165]:
+              - img [ref=e166]
+              - text: "Segment:"
+              - strong [ref=e168]: Standard
+            - generic [ref=e169]:
+              - generic [ref=e170]:
+                - img [ref=e171]
+                - generic [ref=e173]:
+                  - paragraph [ref=e174]: Create your first API key
+                  - paragraph [ref=e175]: Generate a key and keep it somewhere secure.
+              - link "Open API Keys" [ref=e177] [cursor=pointer]:
+                - /url: /dashboard/api-keys
+            - generic [ref=e178]:
+              - generic [ref=e179]:
+                - img [ref=e180]
+                - generic [ref=e182]:
+                  - paragraph [ref=e183]: Send your first gateway request
+                  - paragraph [ref=e184]: Use the playground to validate your first model call.
+              - link "Open Playground" [ref=e186] [cursor=pointer]:
+                - /url: /dashboard/playground
+  - button "Open Next.js Dev Tools" [ref=e192] [cursor=pointer]:
+    - img [ref=e193]
+  - alert [ref=e196]

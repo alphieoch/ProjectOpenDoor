@@ -1,13 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import {
-  FileCheck,
-  CheckCircle2,
-  XCircle,
-  Clock,
-  MessageSquare,
-} from "lucide-react";
+import { CheckCircle2, XCircle, Loader2 } from "lucide-react";
 
 interface Approval {
   id: string;
@@ -16,24 +10,29 @@ interface Approval {
   reviewNotes: string;
   requestedAt: string;
   reviewedAt: string;
-  model: {
-    id: string;
-    modelId: string;
-    displayName: string;
-    riskLevel: string;
-    approvalStatus: string;
-  };
+  model: { id: string; modelId: string; displayName: string; riskLevel: string; approvalStatus: string };
 }
+
+const statusStyle: Record<string, { bg: string; color: string }> = {
+  approved: { bg: "var(--green-soft)",  color: "var(--green)"  },
+  rejected: { bg: "var(--red-soft)",    color: "var(--red)"    },
+  pending:  { bg: "var(--yellow-soft)", color: "var(--yellow)" },
+};
+
+const riskStyle: Record<string, { bg: string; color: string }> = {
+  low:      { bg: "var(--green-soft)",  color: "var(--green)"  },
+  medium:   { bg: "var(--yellow-soft)", color: "var(--yellow)" },
+  high:     { bg: "#FEE2E2",            color: "#B91C1C"       },
+  critical: { bg: "var(--red-soft)",    color: "var(--red)"    },
+};
 
 export default function ApprovalsPage() {
   const [approvals, setApprovals] = useState<Approval[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [filterStatus, setFilterStatus] = useState("all");
   const [reviewNotes, setReviewNotes] = useState<Record<string, string>>({});
 
-  useEffect(() => {
-    loadApprovals();
-  }, [filterStatus]);
+  useEffect(() => { loadApprovals(); }, [filterStatus]);
 
   async function loadApprovals() {
     const params = new URLSearchParams();
@@ -50,120 +49,116 @@ export default function ApprovalsPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status, reviewNotes: reviewNotes[id] || "" }),
     });
-    setReviewNotes((prev) => ({ ...prev, [id]: "" }));
+    setReviewNotes((p) => ({ ...p, [id]: "" }));
     loadApprovals();
   }
 
-  if (loading) {
-    return (
-      <div className="flex h-64 items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary-600 border-t-transparent" />
-      </div>
-    );
-  }
-
   const stats = {
-    pending: approvals.filter((a) => a.status === "pending").length,
+    pending:  approvals.filter((a) => a.status === "pending").length,
     approved: approvals.filter((a) => a.status === "approved").length,
     rejected: approvals.filter((a) => a.status === "rejected").length,
   };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Approval Workflows</h1>
-        <p className="text-sm text-gray-500">Review and approve models before they can be used in production.</p>
+    <div>
+      <div className="mb-8">
+        <h1 className="page-title">Approvals</h1>
+        <p className="page-desc">Review and approve models before they can be used in production.</p>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <div className="rounded-lg border border-gray-200 bg-white p-4">
-          <div className="text-sm text-gray-500">Pending</div>
-          <div className="text-2xl font-bold text-amber-600">{stats.pending}</div>
+      {loading ? (
+        <div className="flex h-64 items-center justify-center">
+          <Loader2 className="h-5 w-5 animate-spin" style={{ color: "var(--ink-3)" }} />
         </div>
-        <div className="rounded-lg border border-gray-200 bg-white p-4">
-          <div className="text-sm text-gray-500">Approved</div>
-          <div className="text-2xl font-bold text-green-600">{stats.approved}</div>
-        </div>
-        <div className="rounded-lg border border-gray-200 bg-white p-4">
-          <div className="text-sm text-gray-500">Rejected</div>
-          <div className="text-2xl font-bold text-red-600">{stats.rejected}</div>
-        </div>
-      </div>
-
-      <div className="flex gap-3">
-        <select
-          value={filterStatus}
-          onChange={(e) => setFilterStatus(e.target.value)}
-          className="rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-        >
-          <option value="all">All Statuses</option>
-          <option value="pending">Pending</option>
-          <option value="approved">Approved</option>
-          <option value="rejected">Rejected</option>
-        </select>
-      </div>
-
-      <div className="space-y-4">
-        {approvals.map((a) => (
-          <div key={a.id} className="rounded-lg border border-gray-200 bg-white p-6">
-            <div className="flex items-start justify-between">
-              <div>
-                <div className="flex items-center gap-3">
-                  <h3 className="text-lg font-semibold text-gray-900">{a.model.displayName}</h3>
-                  <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                    a.status === "approved" ? "bg-green-100 text-green-800" :
-                    a.status === "rejected" ? "bg-red-100 text-red-800" :
-                    "bg-amber-100 text-amber-800"
-                  }`}>
-                    {a.status.replace("_", " ")}
-                  </span>
-                  <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                    a.model.riskLevel === "low" ? "bg-green-100 text-green-800" :
-                    a.model.riskLevel === "medium" ? "bg-amber-100 text-amber-800" :
-                    a.model.riskLevel === "high" ? "bg-orange-100 text-orange-800" :
-                    "bg-red-100 text-red-800"
-                  }`}>
-                    {a.model.riskLevel} risk
-                  </span>
-                </div>
-                <p className="mt-1 text-sm text-gray-500">Model ID: {a.model.modelId}</p>
-                <p className="text-xs text-gray-400">Requested {new Date(a.requestedAt).toLocaleString()}</p>
-                {a.reviewNotes && (
-                  <div className="mt-2 rounded-md bg-gray-50 p-2 text-sm text-gray-700">
-                    <span className="font-medium">Review notes:</span> {a.reviewNotes}
-                  </div>
-                )}
+      ) : (
+        <div className="space-y-5">
+          {/* Stats */}
+          <div className="grid grid-cols-3 gap-4">
+            {[
+              { label: "Pending",  value: stats.pending,  color: "var(--yellow)" },
+              { label: "Approved", value: stats.approved, color: "var(--green)"  },
+              { label: "Rejected", value: stats.rejected, color: "var(--red)"    },
+            ].map((s) => (
+              <div key={s.label} className="card p-4">
+                <div className="text-xs" style={{ color: "var(--ink-3)" }}>{s.label}</div>
+                <div className="mt-1 text-2xl font-semibold" style={{ color: s.color }}>{s.value}</div>
               </div>
-
-              {a.status === "pending" && (
-                <div className="ml-4 flex flex-col items-end gap-2">
-                  <textarea
-                    placeholder="Add review notes..."
-                    value={reviewNotes[a.id] || ""}
-                    onChange={(e) => setReviewNotes((prev) => ({ ...prev, [a.id]: e.target.value }))}
-                    className="w-64 rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-                    rows={2}
-                  />
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => reviewApproval(a.id, "approved")}
-                      className="inline-flex items-center gap-1 rounded-md bg-green-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-700"
-                    >
-                      <CheckCircle2 className="h-4 w-4" /> Approve
-                    </button>
-                    <button
-                      onClick={() => reviewApproval(a.id, "rejected")}
-                      className="inline-flex items-center gap-1 rounded-md bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-700"
-                    >
-                      <XCircle className="h-4 w-4" /> Reject
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
+            ))}
           </div>
-        ))}
-      </div>
+
+          {/* Filter */}
+          <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="input w-auto">
+            {[["all","All statuses"],["pending","Pending"],["approved","Approved"],["rejected","Rejected"]].map(([v,l]) => (
+              <option key={v} value={v}>{l}</option>
+            ))}
+          </select>
+
+          {/* Cards */}
+          {approvals.length === 0 ? (
+            <div className="card flex h-40 items-center justify-center" style={{ color: "var(--ink-3)" }}>
+              No approvals match the current filter.
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {approvals.map((a) => {
+                const st = statusStyle[a.status] ?? statusStyle.pending;
+                const rk = riskStyle[a.model?.riskLevel] ?? { bg: "var(--paper-3)", color: "var(--ink-2)" };
+                return (
+                  <div key={a.id} className="card p-5">
+                    <div className="flex items-start justify-between gap-6">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h3 className="text-base font-semibold" style={{ color: "var(--ink)" }}>{a.model?.displayName}</h3>
+                          <span className="inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium capitalize"
+                            style={{ background: st.bg, color: st.color }}>{a.status}</span>
+                          <span className="inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium capitalize"
+                            style={{ background: rk.bg, color: rk.color }}>{a.model?.riskLevel} risk</span>
+                        </div>
+                        <p className="mt-1 text-xs" style={{ color: "var(--ink-3)" }}>
+                          Model ID: {a.model?.modelId} · Requested {new Date(a.requestedAt).toLocaleString()}
+                        </p>
+                        {a.reviewNotes && (
+                          <div className="mt-2 rounded-lg px-3 py-2 text-sm" style={{ background: "var(--paper-3)", color: "var(--ink-2)" }}>
+                            <span className="font-medium">Review notes: </span>{a.reviewNotes}
+                          </div>
+                        )}
+                      </div>
+
+                      {a.status === "pending" && (
+                        <div className="flex shrink-0 flex-col items-end gap-2">
+                          <textarea
+                            placeholder="Add review notes…"
+                            value={reviewNotes[a.id] || ""}
+                            onChange={(e) => setReviewNotes((p) => ({ ...p, [a.id]: e.target.value }))}
+                            className="input w-60"
+                            rows={2}
+                          />
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => reviewApproval(a.id, "approved")}
+                              className="btn-sm inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-sm font-medium text-white"
+                              style={{ background: "var(--green)" }}
+                            >
+                              <CheckCircle2 className="h-4 w-4" /> Approve
+                            </button>
+                            <button
+                              onClick={() => reviewApproval(a.id, "rejected")}
+                              className="btn-sm inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-sm font-medium text-white"
+                              style={{ background: "var(--red)" }}
+                            >
+                              <XCircle className="h-4 w-4" /> Reject
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

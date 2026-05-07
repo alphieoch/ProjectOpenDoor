@@ -1,44 +1,92 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { cn } from "@/lib/utils";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   LayoutDashboard, Key, BarChart3, Calculator, Server, CreditCard,
   Play, Users, Settings, ClipboardList, LogOut, ShieldCheck, Gavel,
-  AlertTriangle, FileCheck, BookOpen, Building2, ChevronDown, ChevronRight,
-  Bell, UserPlus, ExternalLink,
+  AlertTriangle, FileCheck, BookOpen, Building2, Bot,
+  ChevronsUpDown, ChevronDown, UserPlus, UserCog, Blocks, Plus, UserCircle,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
-import posthog from "posthog-js";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Separator } from "@/components/ui/separator";
+import posthog from "posthog-js";
 
+/* ── Motion config (from template) ── */
+const sidebarVariants = {
+  open:   { width: "15rem" },
+  closed: { width: "3.05rem" },
+};
+
+const contentVariants = {
+  open:   { display: "block", opacity: 1 },
+  closed: { display: "block", opacity: 1 },
+};
+
+const variants = {
+  open: {
+    x: 0, opacity: 1,
+    transition: { x: { stiffness: 1000, velocity: -100 } },
+  },
+  closed: {
+    x: -20, opacity: 0,
+    transition: { x: { stiffness: 100 } },
+  },
+};
+
+const transitionProps = {
+  type: "tween",
+  ease: "easeOut",
+  duration: 0.2,
+  staggerChildren: 0.1,
+} as const;
+
+const staggerVariants = {
+  open: { transition: { staggerChildren: 0.03, delayChildren: 0.02 } },
+};
+
+/* ── Nav data ── */
 const navItems = [
-  { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
-  { href: "/dashboard/api-keys", label: "API Keys", icon: Key },
-  { href: "/dashboard/usage", label: "Usage", icon: BarChart3 },
-  { href: "/dashboard/pricing", label: "Pricing", icon: Calculator },
-  { href: "/dashboard/deployments", label: "Deployments", icon: Server, badge: "5" },
-  { href: "/dashboard/billing", label: "Billing", icon: CreditCard },
-  { href: "/dashboard/playground", label: "Playground", icon: Play },
-  { href: "/dashboard/team", label: "Team", icon: Users },
-  { href: "/dashboard/settings", label: "Settings", icon: Settings },
-  { href: "/dashboard/audit-logs", label: "Audit Logs", icon: ClipboardList },
+  { href: "/dashboard", label: "Overview",   icon: LayoutDashboard },
+  { href: "/dashboard/api-keys",   label: "API Keys",    icon: Key },
+  { href: "/dashboard/usage",      label: "Usage",       icon: BarChart3 },
+  { href: "/dashboard/pricing",    label: "Pricing",     icon: Calculator },
+  { href: "/dashboard/deployments",label: "Deployments", icon: Server,       badge: "5" },
+  { href: "/dashboard/billing",    label: "Billing",     icon: CreditCard },
+  { href: "/dashboard/playground",    label: "Playground",    icon: Play },
+  { href: "/dashboard/ai-assistants", label: "AI Assistants", icon: Bot },
+  { href: "/dashboard/team",          label: "Team",          icon: Users },
+  { href: "/dashboard/settings",   label: "Settings",    icon: Settings },
+  { href: "/dashboard/audit-logs", label: "Audit Logs",  icon: ClipboardList },
 ];
 
 const governanceItems = [
-  { href: "/dashboard/governance", label: "Trust Center", icon: ShieldCheck },
-  { href: "/dashboard/governance/policies", label: "Policies", icon: Gavel },
-  { href: "/dashboard/governance/violations", label: "Violations", icon: AlertTriangle, badge: "3" },
-  { href: "/dashboard/governance/approvals", label: "Approvals", icon: FileCheck },
-  { href: "/dashboard/governance/compliance", label: "Compliance", icon: BookOpen },
+  { href: "/dashboard/governance",                  label: "Trust Center", icon: ShieldCheck },
+  { href: "/dashboard/governance/policies",         label: "Policies",     icon: Gavel },
+  { href: "/dashboard/governance/violations",       label: "Violations",   icon: AlertTriangle, badge: "3" },
+  { href: "/dashboard/governance/approvals",        label: "Approvals",    icon: FileCheck },
+  { href: "/dashboard/governance/compliance",       label: "Compliance",   icon: BookOpen },
   { href: "/dashboard/governance/sector-templates", label: "Sector Packs", icon: Building2 },
 ];
 
 export function SessionNavBar() {
-  const pathname = usePathname();
+  const [isCollapsed, setIsCollapsed] = useState(true);
   const [openGroups, setOpenGroups] = useState({ workspace: true, governance: true });
   const toggleGroup = (k: "workspace" | "governance") =>
     setOpenGroups((s) => ({ ...s, [k]: !s[k] }));
+  const pathname = usePathname();
 
   async function logout() {
     try { posthog.capture("user_logged_out"); posthog.reset(); } catch {}
@@ -48,162 +96,317 @@ export function SessionNavBar() {
 
   const isActive = (href: string) => {
     if (href === "/dashboard") return pathname === href;
-    return pathname?.startsWith(href);
+    return pathname?.startsWith(href) ?? false;
   };
 
-  const NavItem = ({ item }: { item: typeof navItems[0] }) => {
+  const NavItem = ({ item, layoutId }: { item: typeof navItems[0]; layoutId: string }) => {
     const Icon = item.icon;
     const active = isActive(item.href);
     return (
       <Link
         href={item.href}
-        style={{
-          display: "flex", alignItems: "center", gap: 10,
-          padding: "7px 10px", borderRadius: 7,
-          color: active ? "white" : "var(--ink-2)",
-          background: active ? "var(--ink)" : "transparent",
-          fontWeight: active ? 500 : 400,
-          fontSize: 13.5, textDecoration: "none",
-          transition: "background 0.12s, color 0.12s",
-          position: "relative",
-        }}
-        className={cn(!active && "hover:bg-[var(--paper-3)] hover:text-[var(--ink)]")}
-      >
-        <Icon style={{ width: 15, height: 15, flexShrink: 0, color: active ? "var(--brand-tint)" : "var(--ink-3)" }} />
-        <span style={{ flex: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.label}</span>
-        {item.badge && (
-          <span style={{
-            fontFamily: "var(--font-mono)", fontSize: 10,
-            background: active ? "var(--paper-3)" : "var(--brand)",
-            color: active ? "var(--ink)" : "white",
-            padding: "1px 6px", borderRadius: 999, fontWeight: 500,
-          }}>{item.badge}</span>
+        className={cn(
+          "flex h-8 w-full flex-row items-center rounded-md px-2 py-1.5 transition-colors",
+          "relative",
+          active ? "text-white" : "text-[var(--ink-2)] hover:bg-[var(--paper-3)] hover:text-[var(--ink)]",
         )}
+      >
+        {active && (
+          <motion.div
+            layoutId={layoutId}
+            className="absolute inset-0 rounded-md bg-[var(--ink)]"
+            style={{ zIndex: 0 }}
+            transition={{ type: "spring", stiffness: 400, damping: 32 }}
+          />
+        )}
+        <Icon
+          className="h-4 w-4 shrink-0"
+          style={{
+            color: active ? "var(--brand-tint)" : "var(--ink-3)",
+            position: "relative", zIndex: 1,
+          }}
+        />
+        <motion.li variants={variants} style={{ position: "relative", zIndex: 1 }}>
+          {!isCollapsed && (
+            <div className="ml-2 flex items-center gap-2">
+              <p className="text-sm font-medium" style={{ fontWeight: active ? 500 : 400 }}>
+                {item.label}
+              </p>
+              {item.badge && (
+                <span
+                  className="rounded-full px-1.5 py-0.5 text-[10px] font-semibold"
+                  style={{
+                    fontFamily: "var(--font-mono)",
+                    background: active ? "var(--paper-3)" : "var(--brand)",
+                    color: active ? "var(--ink)" : "white",
+                  }}
+                >
+                  {item.badge}
+                </span>
+              )}
+            </div>
+          )}
+        </motion.li>
       </Link>
     );
   };
 
-  const GroupHeader = ({ id, title }: { id: "workspace" | "governance"; title: string }) => (
-    <button
-      onClick={() => toggleGroup(id)}
-      style={{
-        display: "flex", alignItems: "center", justifyContent: "space-between",
-        width: "100%", padding: "7px 12px 5px", background: "none", border: "none",
-        cursor: "pointer",
-      }}
-    >
-      <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, textTransform: "uppercase", letterSpacing: "0.14em", color: "var(--ink-4)", fontWeight: 500 }}>{title}</span>
-      {openGroups[id]
-        ? <ChevronDown style={{ width: 12, height: 12, color: "var(--ink-4)" }} />
-        : <ChevronRight style={{ width: 12, height: 12, color: "var(--ink-4)" }} />}
-    </button>
-  );
-
   return (
-    <aside
-      style={{
-        width: 248, flexShrink: 0, background: "var(--paper-2)",
-        borderRight: "1px solid var(--line)", display: "flex", flexDirection: "column",
-        height: "100vh", position: "fixed", left: 0, top: 0, zIndex: 40, overflow: "hidden",
-      }}
+    <motion.div
+      className="fixed left-0 z-40 h-full shrink-0"
+      style={{ borderRight: "1px solid var(--line)" }}
+      initial={isCollapsed ? "closed" : "open"}
+      animate={isCollapsed ? "closed" : "open"}
+      variants={sidebarVariants}
+      transition={transitionProps}
+      onMouseEnter={() => setIsCollapsed(false)}
+      onMouseLeave={() => setIsCollapsed(true)}
     >
-      {/* Brand */}
-      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "18px 20px 16px", borderBottom: "1px solid var(--line)", height: 64 }}>
-        <div style={{
-          width: 28, height: 28, borderRadius: 8, background: "var(--ink)",
-          display: "grid", placeItems: "center", flexShrink: 0,
-          position: "relative", overflow: "hidden",
-        }}>
-          <div style={{
-            position: "absolute", inset: 0, background: "var(--brand)",
-            clipPath: "polygon(100% 0, 100% 100%, 60% 100%, 60% 0)",
-          }} />
-          <span style={{ fontFamily: "var(--font-serif)", fontSize: 16, color: "white", position: "relative", zIndex: 1 }}>O</span>
-        </div>
-        <span style={{ fontFamily: "var(--font-serif)", fontSize: 19, letterSpacing: "-0.01em", color: "var(--ink)" }}>OpenDoor</span>
-      </div>
-
-      {/* Org chip */}
-      <div style={{
-        display: "flex", alignItems: "center", gap: 8,
-        padding: "8px 14px", margin: "12px 12px 4px",
-        border: "1px solid var(--line)", borderRadius: 8,
-        background: "var(--paper-2)", cursor: "pointer",
-        transition: "background 0.15s",
-      }}
-        className="hover:bg-[var(--paper-3)]"
+      <motion.div
+        className="relative z-40 flex h-full shrink-0 flex-col transition-all"
+        style={{ background: "var(--paper-2)", color: "var(--ink-2)" }}
+        variants={contentVariants}
       >
-        <div style={{ width: 24, height: 24, background: "var(--brand)", borderRadius: 6, display: "grid", placeItems: "center", color: "white", fontSize: 11, fontWeight: 600, flexShrink: 0 }}>A</div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 13, fontWeight: 500, color: "var(--ink)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>Acme Robotics</div>
-          <div style={{ fontSize: 11, color: "var(--ink-3)", fontFamily: "var(--font-mono)" }}>Pro · 142 seats</div>
-        </div>
-        <ChevronDown style={{ width: 14, height: 14, color: "var(--ink-4)" }} />
-      </div>
+        <motion.ul variants={staggerVariants} className="flex h-full flex-col">
+          <div className="flex grow flex-col items-center">
 
-      {/* Nav */}
-      <div style={{ flex: 1, overflowY: "auto", padding: "8px 8px 16px" }}>
-        {/* Workspace group */}
-        <div style={{ padding: "8px 0" }}>
-          <GroupHeader id="workspace" title="Workspace" />
-          {openGroups.workspace && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 1, padding: "2px 4px" }}>
-              {navItems.map((item) => <NavItem key={item.href} item={item} />)}
+            {/* ── Brand + org ── */}
+            <div
+              className="flex h-[54px] w-full shrink-0 items-center p-2"
+              style={{ borderBottom: "1px solid var(--line)" }}
+            >
+              <DropdownMenu modal={false}>
+                <DropdownMenuTrigger className="w-full" asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="flex w-fit items-center gap-2 px-2 hover:bg-[var(--paper-3)] hover:text-[var(--ink)]"
+                  >
+                    {/* Mini OpenDoor logo */}
+                    <div
+                      className="relative shrink-0 overflow-hidden rounded"
+                      style={{ width: 18, height: 18, background: "var(--ink)", display: "grid", placeItems: "center" }}
+                    >
+                      <div
+                        style={{
+                          position: "absolute", inset: 0, background: "var(--brand)",
+                          clipPath: "polygon(100% 0, 100% 100%, 55% 100%, 55% 0)",
+                        }}
+                      />
+                      <span style={{ fontFamily: "var(--font-serif)", fontSize: 11, color: "white", position: "relative", zIndex: 1 }}>O</span>
+                    </div>
+                    <motion.li variants={variants} className="flex w-fit items-center gap-2">
+                      {!isCollapsed && (
+                        <>
+                          <span className="text-sm font-medium" style={{ color: "var(--ink)", fontFamily: "var(--font-serif)" }}>
+                            OpenDoor
+                          </span>
+                          <ChevronsUpDown className="h-4 w-4" style={{ color: "var(--ink-4)" }} />
+                        </>
+                      )}
+                    </motion.li>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start">
+                  <DropdownMenuItem asChild className="flex items-center gap-2">
+                    <Link href="/dashboard/team">
+                      <UserCog className="h-4 w-4" /> Manage team
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild className="flex items-center gap-2">
+                    <Link href="/dashboard/settings">
+                      <Blocks className="h-4 w-4" /> Settings
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild className="flex items-center gap-2">
+                    <Link href="/get-started" className="flex items-center gap-2">
+                      <Plus className="h-4 w-4" /> New workspace
+                    </Link>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
-          )}
-        </div>
 
-        {/* Governance group */}
-        <div style={{ padding: "8px 0" }}>
-          <GroupHeader id="governance" title="Governance" />
-          {openGroups.governance && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 1, padding: "2px 4px" }}>
-              {governanceItems.map((item) => <NavItem key={item.href} item={item as typeof navItems[0]} />)}
+            {/* ── Nav ── */}
+            <div className="flex h-full w-full flex-col">
+              <div className="flex grow flex-col">
+                <ScrollArea className="h-16 grow p-2">
+                  <div className="flex w-full flex-col gap-1">
+
+                    {/* ── Workspace section ── */}
+                    <motion.li variants={variants}>
+                      {!isCollapsed && (
+                        <button
+                          type="button"
+                          onClick={() => toggleGroup("workspace")}
+                          className="flex w-full items-center justify-between px-2 pb-1 pt-2 transition-colors hover:text-[var(--ink)]"
+                        >
+                          <span
+                            className="text-[10px] font-semibold uppercase tracking-[0.14em]"
+                            style={{ color: "var(--ink-4)", fontFamily: "var(--font-mono)" }}
+                          >
+                            Workspace
+                          </span>
+                          <motion.div
+                            animate={{ rotate: openGroups.workspace ? 0 : -90 }}
+                            transition={{ duration: 0.18, ease: "easeOut" }}
+                          >
+                            <ChevronDown className="h-3 w-3" style={{ color: "var(--ink-4)" }} />
+                          </motion.div>
+                        </button>
+                      )}
+                    </motion.li>
+
+                    <AnimatePresence initial={false}>
+                      {(isCollapsed || openGroups.workspace) && (
+                        <motion.div
+                          key="workspace-items"
+                          initial={isCollapsed ? false : { height: 0, opacity: 0 }}
+                          animate={{ height: "auto", opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.2, ease: "easeOut" }}
+                          style={{ overflow: "hidden" }}
+                        >
+                          <div className="flex flex-col gap-1">
+                            {navItems.map((item) => (
+                              <NavItem key={item.href} item={item} layoutId="sidebar-active-workspace" />
+                            ))}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+
+                    <Separator className="my-1 bg-[var(--line)]" />
+
+                    {/* ── Governance section ── */}
+                    <motion.li variants={variants}>
+                      {!isCollapsed && (
+                        <button
+                          type="button"
+                          onClick={() => toggleGroup("governance")}
+                          className="flex w-full items-center justify-between px-2 pb-1 pt-1 transition-colors hover:text-[var(--ink)]"
+                        >
+                          <span
+                            className="text-[10px] font-semibold uppercase tracking-[0.14em]"
+                            style={{ color: "var(--ink-4)", fontFamily: "var(--font-mono)" }}
+                          >
+                            Governance
+                          </span>
+                          <motion.div
+                            animate={{ rotate: openGroups.governance ? 0 : -90 }}
+                            transition={{ duration: 0.18, ease: "easeOut" }}
+                          >
+                            <ChevronDown className="h-3 w-3" style={{ color: "var(--ink-4)" }} />
+                          </motion.div>
+                        </button>
+                      )}
+                    </motion.li>
+
+                    <AnimatePresence initial={false}>
+                      {(isCollapsed || openGroups.governance) && (
+                        <motion.div
+                          key="governance-items"
+                          initial={isCollapsed ? false : { height: 0, opacity: 0 }}
+                          animate={{ height: "auto", opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.2, ease: "easeOut" }}
+                          style={{ overflow: "hidden" }}
+                        >
+                          <div className="flex flex-col gap-1">
+                            {governanceItems.map((item) => (
+                              <NavItem key={item.href} item={item as typeof navItems[0]} layoutId="sidebar-active-governance" />
+                            ))}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+
+                  </div>
+                </ScrollArea>
+              </div>
+
+              {/* ── Bottom: invite card (expanded only) + settings + user ── */}
+              <div className="flex flex-col p-2">
+
+                {/* Invite card — only when expanded */}
+                <motion.li variants={variants}>
+                  {!isCollapsed && (
+                    <div className="od-invite-card mb-2">
+                      <h4 style={{ margin: 0, fontSize: 12, fontWeight: 600, color: "var(--ink)", position: "relative" }}>
+                        Invite your team
+                      </h4>
+                      <p style={{ margin: "4px 0 8px", fontSize: 11, color: "var(--ink-2)", lineHeight: 1.5, position: "relative" }}>
+                        New members get access to API keys, usage, and audit trails.
+                      </p>
+                      <Link
+                        href="/dashboard/team"
+                        style={{
+                          position: "relative", display: "inline-flex", alignItems: "center", gap: 5,
+                          padding: "5px 12px", borderRadius: 999, background: "var(--ink)", color: "white",
+                          fontSize: 11, fontWeight: 500, textDecoration: "none",
+                        }}
+                        className="hover:opacity-90"
+                      >
+                        <UserPlus style={{ width: 11, height: 11 }} /> Invite people
+                      </Link>
+                    </div>
+                  )}
+                </motion.li>
+
+                <Link
+                  href="/dashboard/settings"
+                  className="flex h-8 w-full flex-row items-center rounded-md px-2 py-1.5 transition-colors hover:bg-[var(--paper-3)] hover:text-[var(--ink)]"
+                  style={{ color: "var(--ink-2)" }}
+                >
+                  <Settings className="h-4 w-4 shrink-0" style={{ color: "var(--ink-3)" }} />
+                  <motion.li variants={variants}>
+                    {!isCollapsed && <p className="ml-2 text-sm font-medium">Settings</p>}
+                  </motion.li>
+                </Link>
+
+                <DropdownMenu modal={false}>
+                  <DropdownMenuTrigger className="w-full">
+                    <div
+                      className="flex h-8 w-full flex-row items-center gap-2 rounded-md px-2 py-1.5 transition-colors hover:bg-[var(--paper-3)] hover:text-[var(--ink)]"
+                      style={{ color: "var(--ink-2)" }}
+                    >
+                      <Avatar className="size-4 shrink-0">
+                        <AvatarFallback className="text-[10px]" style={{ background: "var(--brand)", color: "white" }}>
+                          U
+                        </AvatarFallback>
+                      </Avatar>
+                      <motion.li variants={variants} className="flex w-full items-center gap-2">
+                        {!isCollapsed && (
+                          <>
+                            <p className="text-sm font-medium" style={{ color: "var(--ink)" }}>Your Account</p>
+                            <ChevronsUpDown className="ml-auto h-4 w-4 shrink-0" style={{ color: "var(--ink-4)" }} />
+                          </>
+                        )}
+                      </motion.li>
+                    </div>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent sideOffset={5}>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild className="flex items-center gap-2">
+                      <Link href="/dashboard/settings">
+                        <UserCircle className="h-4 w-4" /> Profile
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="flex items-center gap-2 text-red-600 focus:text-red-600"
+                      onClick={logout}
+                    >
+                      <LogOut className="h-4 w-4" /> Sign out
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
+              </div>
             </div>
-          )}
-        </div>
-      </div>
 
-      {/* Invite card */}
-      <div className="od-invite-card">
-        <h4 style={{ margin: 0, fontSize: 13, fontWeight: 600, color: "var(--ink)", position: "relative" }}>Invite your team</h4>
-        <p style={{ margin: "5px 0 10px", fontSize: 11.5, color: "var(--ink-2)", lineHeight: 1.5, position: "relative" }}>
-          New members get access to API keys, usage, and audit trails.
-        </p>
-        <Link
-          href="/dashboard/team"
-          style={{
-            position: "relative", display: "inline-flex", alignItems: "center", gap: 6,
-            padding: "6px 14px", borderRadius: 999, background: "var(--ink)", color: "white",
-            fontSize: 11.5, fontWeight: 500, textDecoration: "none", transition: "transform 0.15s",
-            whiteSpace: "nowrap",
-          }}
-          className="hover:opacity-90"
-        >
-          <UserPlus style={{ width: 12, height: 12 }} /> Invite people
-        </Link>
-      </div>
-
-      {/* Footer */}
-      <div style={{ borderTop: "1px solid var(--line)", padding: "10px 12px", display: "flex", alignItems: "center", gap: 10 }}>
-        <div style={{
-          width: 28, height: 28, borderRadius: 999, background: "var(--brand)",
-          color: "white", fontWeight: 600, fontSize: 11,
-          display: "grid", placeItems: "center", flexShrink: 0,
-        }}>U</div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 12.5, fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", color: "var(--ink)" }}>Your Account</div>
-          <div style={{ fontSize: 11, color: "var(--ink-3)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>OpenDoor Pro</div>
-        </div>
-        <button
-          onClick={logout}
-          title="Sign out"
-          style={{ width: 30, height: 30, display: "grid", placeItems: "center", borderRadius: 6, border: "1px solid transparent", background: "transparent", color: "var(--ink-3)", cursor: "pointer", transition: "all 0.15s" }}
-          className="hover:bg-[var(--paper-3)] hover:text-[var(--ink)]"
-        >
-          <LogOut style={{ width: 13, height: 13 }} />
-        </button>
-      </div>
-    </aside>
+          </div>
+        </motion.ul>
+      </motion.div>
+    </motion.div>
   );
 }

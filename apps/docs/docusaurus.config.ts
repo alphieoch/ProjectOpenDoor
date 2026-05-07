@@ -73,7 +73,7 @@ const config: Config = {
         },
         {to: '/blog', label: 'Blog', position: 'left'},
         {
-          href: 'http://localhost:3000',
+          href: 'https://app.opendoor.ai',
           label: 'Dashboard',
           position: 'right',
         },
@@ -126,7 +126,7 @@ const config: Config = {
             },
             {
               label: 'Dashboard',
-              href: 'http://localhost:3000',
+              href: 'https://app.opendoor.ai',
             },
           ],
         },

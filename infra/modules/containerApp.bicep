@@ -81,6 +81,10 @@ param storageAccountName string = ''
 @secure()
 param storageAccountKey string = ''
 
+@description('Cachet Laravel APP_KEY')
+@secure()
+param cachetAppKey string = ''
+
 resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2022-10-01' = {
   name: '${name}-logs'
   location: location
@@ -352,6 +356,10 @@ resource dashboardApp 'Microsoft.App/containerApps@2023-05-01' = {
               name: 'AZURE_STORAGE_CONTAINER_NAME'
               value: 'analytics'
             }
+            {
+              name: 'CACHET_URL'
+              value: 'https://${name}-cachet.${containerAppEnv.properties.defaultDomain}'
+            }
           ]
           resources: {
             cpu: json('0.5')
@@ -362,6 +370,223 @@ resource dashboardApp 'Microsoft.App/containerApps@2023-05-01' = {
       scale: {
         minReplicas: 1
         maxReplicas: 5
+        rules: [
+          {
+            name: 'http-rule'
+            http: {
+              metadata: {
+                concurrentRequests: '50'
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}
+
+resource cachetApp 'Microsoft.App/containerApps@2023-05-01' = {
+  name: '${name}-cachet'
+  location: location
+  properties: {
+    managedEnvironmentId: containerAppEnv.id
+    configuration: {
+      ingress: {
+        external: true
+        targetPort: 8000
+        transport: 'auto'
+      }
+      secrets: [
+        {
+          name: 'postgres-password'
+          value: postgresPassword
+        }
+        {
+          name: 'cachet-app-key'
+          value: cachetAppKey
+        }
+      ]
+    }
+    template: {
+      containers: [
+        {
+          name: 'cachet'
+          image: 'cachethq/docker:latest'
+          env: [
+            {
+              name: 'DB_DRIVER'
+              value: 'pgsql'
+            }
+            {
+              name: 'DB_HOST'
+              value: postgresHost
+            }
+            {
+              name: 'DB_PORT'
+              value: '5432'
+            }
+            {
+              name: 'DB_DATABASE'
+              value: 'cachet'
+            }
+            {
+              name: 'DB_USERNAME'
+              value: 'opendooradmin'
+            }
+            {
+              name: 'DB_PASSWORD'
+              secretRef: 'postgres-password'
+            }
+            {
+              name: 'DB_PREFIX'
+              value: 'chq_'
+            }
+            {
+              name: 'APP_KEY'
+              secretRef: 'cachet-app-key'
+            }
+            {
+              name: 'APP_ENV'
+              value: 'production'
+            }
+            {
+              name: 'APP_LOG'
+              value: 'errorlog'
+            }
+            {
+              name: 'APP_DEBUG'
+              value: 'false'
+            }
+            {
+              name: 'DEBUG'
+              value: 'false'
+            }
+            {
+              name: 'CACHE_DRIVER'
+              value: 'database'
+            }
+            {
+              name: 'SESSION_DRIVER'
+              value: 'database'
+            }
+            {
+              name: 'QUEUE_DRIVER'
+              value: 'database'
+            }
+          ]
+          resources: {
+            cpu: json('0.25')
+            memory: '0.5Gi'
+          }
+          probes: [
+            {
+              type: 'startup'
+              httpGet: {
+                path: '/'
+                port: 8000
+              }
+              initialDelaySeconds: 30
+              periodSeconds: 10
+              failureThreshold: 18
+            }
+            {
+              type: 'liveness'
+              httpGet: {
+                path: '/'
+                port: 8000
+              }
+              periodSeconds: 30
+              failureThreshold: 3
+            }
+            {
+              type: 'readiness'
+              httpGet: {
+                path: '/'
+                port: 8000
+              }
+              periodSeconds: 10
+              failureThreshold: 3
+            }
+          ]
+        }
+      ]
+      scale: {
+        minReplicas: 1
+        maxReplicas: 2
+        rules: [
+          {
+            name: 'http-rule'
+            http: {
+              metadata: {
+                concurrentRequests: '50'
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}
+
+resource docsApp 'Microsoft.App/containerApps@2023-05-01' = {
+  name: '${name}-docs'
+  location: location
+  properties: {
+    managedEnvironmentId: containerAppEnv.id
+    configuration: {
+      ingress: {
+        external: true
+        targetPort: 3000
+        transport: 'auto'
+      }
+      registries: [
+        {
+          server: registryLoginServer
+          username: registryUsername
+          passwordSecretRef: 'registry-password'
+        }
+      ]
+      secrets: [
+        {
+          name: 'registry-password'
+          value: registryPassword
+        }
+      ]
+    }
+    template: {
+      containers: [
+        {
+          name: 'docs'
+          image: '${registryLoginServer}/opendoor-docs:latest'
+          resources: {
+            cpu: json('0.25')
+            memory: '0.5Gi'
+          }
+          probes: [
+            {
+              type: 'liveness'
+              httpGet: {
+                path: '/'
+                port: 3000
+              }
+              periodSeconds: 30
+              failureThreshold: 3
+            }
+            {
+              type: 'readiness'
+              httpGet: {
+                path: '/'
+                port: 3000
+              }
+              periodSeconds: 10
+              failureThreshold: 3
+            }
+          ]
+        }
+      ]
+      scale: {
+        minReplicas: 1
+        maxReplicas: 3
         rules: [
           {
             name: 'http-rule'
@@ -393,4 +618,6 @@ resource userWorkloadEnv 'Microsoft.App/managedEnvironments@2023-05-01' = {
 
 output gatewayFqdn string = gatewayApp.properties.configuration.ingress.fqdn
 output dashboardFqdn string = dashboardApp.properties.configuration.ingress.fqdn
+output cachetFqdn string = cachetApp.properties.configuration.ingress.fqdn
+output docsFqdn string = docsApp.properties.configuration.ingress.fqdn
 output userWorkloadEnvId string = userWorkloadEnv.id

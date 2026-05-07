@@ -15,7 +15,11 @@
       "mcp__Claude_in_Chrome__navigate",
       "mcp__Claude_in_Chrome__read_console_messages",
       "Bash(curl -s http://localhost:3000)",
-      "Bash(pkill -f \"next dev\")"
+      "Bash(pkill -f \"next dev\")",
+      "Bash(xargs -I {} bash -c 'echo \"=== {} ===\"; wc -l {}')",
+      "Bash(bun add *)",
+      "Bash(xargs basename *)",
+      "Bash(awk '{print $NF}')"
     ]
   }
 }

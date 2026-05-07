@@ -131,7 +131,7 @@ export default function OnboardingPage() {
       </div>
 
       <div className="card p-6 space-y-5">
-        <div className="flex items-center gap-2 text-sm text-zinc-600">
+        <div className="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400">
           {state.segment === "education" ? (
             <School className="h-4 w-4" />
           ) : state.segment === "enterprise_intent" ? (
@@ -150,7 +150,7 @@ export default function OnboardingPage() {
         </div>
 
         {steps.map((step) => (
-          <div key={step.id} className="rounded-lg border border-zinc-200 p-4">
+          <div key={step.id} className="rounded-lg border border-zinc-200 dark:border-zinc-700 p-4">
             <div className="mb-2 flex items-start gap-2">
               {step.done ? (
                 <CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-600" />
@@ -158,8 +158,8 @@ export default function OnboardingPage() {
                 <Circle className="mt-0.5 h-4 w-4 text-zinc-400" />
               )}
               <div>
-                <p className="font-medium text-zinc-900">{step.title}</p>
-                <p className="text-sm text-zinc-600">{step.description}</p>
+                <p className="font-medium text-zinc-900 dark:text-zinc-100">{step.title}</p>
+                <p className="text-sm text-zinc-600 dark:text-zinc-400">{step.description}</p>
               </div>
             </div>
             <div className="mt-3 flex gap-2">

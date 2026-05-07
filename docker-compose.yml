@@ -1,0 +1,28 @@
+version: "3.8"
+
+services:
+  # Cachet status page for local development
+  cachet:
+    image: cachethq/docker:latest
+    ports:
+      - "8000:8000"
+    environment:
+      DB_DRIVER: pgsql
+      DB_HOST: host.docker.internal
+      DB_PORT: 5432
+      DB_DATABASE: cachet
+      DB_USERNAME: opendooradmin
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-opendoor}
+      DB_PREFIX: chq_
+      APP_KEY: ${CACHET_APP_KEY:-base64:your-cachet-app-key-here}
+      APP_ENV: production
+      APP_LOG: errorlog
+      APP_DEBUG: false
+      DEBUG: false
+      CACHE_DRIVER: database
+      SESSION_DRIVER: database
+      QUEUE_DRIVER: database
+    depends_on: []
+    restart: on-failure
+    # Cachet requires a PostgreSQL database. Ensure your local Postgres has a
+    # 'cachet' database created, or run: CREATE DATABASE cachet;
