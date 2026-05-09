@@ -28,6 +28,28 @@ const config: Config = {
         ],
       },
       colors: {
+        /* shadcn/originui token aliases — wired to CSS vars in globals.css */
+        background: "var(--background)",
+        foreground: "var(--foreground)",
+        border: "var(--border)",
+        input: "var(--input)",
+        ring: "var(--ring)",
+        muted: {
+          DEFAULT: "var(--muted)",
+          foreground: "var(--muted-foreground)",
+        },
+        popover: {
+          DEFAULT: "var(--popover)",
+          foreground: "var(--popover-foreground)",
+        },
+        card: {
+          DEFAULT: "var(--card)",
+          foreground: "var(--card-foreground)",
+        },
+        destructive: {
+          DEFAULT: "var(--destructive)",
+          foreground: "var(--destructive-foreground)",
+        },
         /* MD3 color tokens as Tailwind utilities */
         primary: {
           DEFAULT: "#1A73E8",

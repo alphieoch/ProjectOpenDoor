@@ -1,0 +1,121 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - list [ref=e5]:
+      - generic [ref=e6]:
+        - button "O" [ref=e8] [cursor=pointer]:
+          - generic [ref=e11]: O
+          - listitem
+        - generic [ref=e12]:
+          - generic [ref=e17]:
+            - listitem
+            - generic [ref=e19]:
+              - link [ref=e20] [cursor=pointer]:
+                - /url: /dashboard
+                - img [ref=e21]
+                - listitem
+              - link [ref=e26] [cursor=pointer]:
+                - /url: /dashboard/api-keys
+                - img [ref=e27]
+                - listitem
+              - link [ref=e31] [cursor=pointer]:
+                - /url: /dashboard/usage
+                - img [ref=e32]
+                - listitem
+              - link [ref=e34] [cursor=pointer]:
+                - /url: /dashboard/pricing
+                - img [ref=e35]
+                - listitem
+              - link [ref=e37] [cursor=pointer]:
+                - /url: /dashboard/deployments
+                - img [ref=e38]
+                - listitem
+              - link [ref=e41] [cursor=pointer]:
+                - /url: /dashboard/billing
+                - img [ref=e42]
+                - listitem
+              - link [ref=e44] [cursor=pointer]:
+                - /url: /dashboard/playground
+                - img [ref=e45]
+                - listitem
+              - link [ref=e47] [cursor=pointer]:
+                - /url: /dashboard/ai-assistants
+                - img [ref=e49]
+                - listitem
+              - link [ref=e52] [cursor=pointer]:
+                - /url: /dashboard/team
+                - img [ref=e53]
+                - listitem
+              - link [ref=e58] [cursor=pointer]:
+                - /url: /dashboard/settings
+                - img [ref=e59]
+                - listitem
+              - link [ref=e62] [cursor=pointer]:
+                - /url: /dashboard/audit-logs
+                - img [ref=e63]
+                - listitem
+            - listitem
+            - generic [ref=e67]:
+              - link [ref=e68] [cursor=pointer]:
+                - /url: /dashboard/governance
+                - img [ref=e69]
+                - listitem
+              - link [ref=e72] [cursor=pointer]:
+                - /url: /dashboard/governance/policies
+                - img [ref=e73]
+                - listitem
+              - link [ref=e79] [cursor=pointer]:
+                - /url: /dashboard/governance/violations
+                - img [ref=e80]
+                - listitem
+              - link [ref=e82] [cursor=pointer]:
+                - /url: /dashboard/governance/approvals
+                - img [ref=e83]
+                - listitem
+              - link [ref=e87] [cursor=pointer]:
+                - /url: /dashboard/governance/compliance
+                - img [ref=e88]
+                - listitem
+              - link [ref=e91] [cursor=pointer]:
+                - /url: /dashboard/governance/sector-templates
+                - img [ref=e92]
+                - listitem
+          - generic [ref=e96]:
+            - listitem
+            - link [ref=e97] [cursor=pointer]:
+              - /url: /dashboard/settings
+              - img [ref=e98]
+              - listitem
+            - button "U" [ref=e101] [cursor=pointer]:
+              - generic [ref=e102]:
+                - generic [ref=e104]: U
+                - listitem
+    - generic [ref=e105]:
+      - generic [ref=e106]:
+        - generic [ref=e107]:
+          - generic [ref=e108]: Workspace
+          - generic [ref=e109]: ›
+          - strong [ref=e110]: Dashboard
+        - generic [ref=e111]:
+          - img [ref=e112]
+          - generic [ref=e115]: Search models, keys, policies…
+          - generic [ref=e116]: ⌘K
+        - generic [ref=e117]:
+          - button [ref=e118] [cursor=pointer]:
+            - img [ref=e119]
+          - button [ref=e122] [cursor=pointer]:
+            - img [ref=e123]
+          - link "Docs" [ref=e127] [cursor=pointer]:
+            - /url: https://docs.opendoor.ai
+            - img [ref=e128]
+            - text: Docs
+      - main [ref=e132]:
+        - generic [ref=e134]:
+          - generic [ref=e135]:
+            - generic [ref=e136]:
+              - heading "AI Assistants" [level=1] [ref=e137]
+              - paragraph [ref=e138]: Create, brand, and publish AI assistants powered by OpenDoor's gateway.
+            - button "Create assistant" [ref=e139] [cursor=pointer]:
+              - img [ref=e140]
+              - text: Create assistant
+          - img [ref=e142]
+  - alert [ref=e144]

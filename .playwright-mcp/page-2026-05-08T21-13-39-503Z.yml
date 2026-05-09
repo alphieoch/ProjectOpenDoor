@@ -1,0 +1,297 @@
+- generic:
+  - generic:
+    - generic:
+      - generic:
+        - list:
+          - generic:
+            - generic:
+              - button:
+                - generic:
+                  - generic: O
+            - generic:
+              - generic:
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic:
+                          - generic:
+                            - link:
+                              - /url: /dashboard
+                              - img
+                            - link:
+                              - /url: /dashboard/api-keys
+                              - img
+                            - link:
+                              - /url: /dashboard/usage
+                              - img
+                            - link:
+                              - /url: /dashboard/pricing
+                              - img
+                            - link:
+                              - /url: /dashboard/deployments
+                              - img
+                            - link:
+                              - /url: /dashboard/billing
+                              - img
+                            - link:
+                              - /url: /dashboard/playground
+                              - img
+                            - link:
+                              - /url: /dashboard/ai-assistants
+                              - img
+                            - link:
+                              - /url: /dashboard/team
+                              - img
+                            - link:
+                              - /url: /dashboard/settings
+                              - img
+                            - link:
+                              - /url: /dashboard/audit-logs
+                              - img
+                        - generic:
+                          - generic:
+                            - link:
+                              - /url: /dashboard/governance
+                              - img
+                            - link:
+                              - /url: /dashboard/governance/policies
+                              - img
+                            - link:
+                              - /url: /dashboard/governance/violations
+                              - img
+                            - link:
+                              - /url: /dashboard/governance/approvals
+                              - img
+                            - link:
+                              - /url: /dashboard/governance/compliance
+                              - img
+                            - link:
+                              - /url: /dashboard/governance/sector-templates
+                              - img
+              - generic:
+                - link:
+                  - /url: /dashboard/settings
+                  - img
+                - button:
+                  - generic:
+                    - generic:
+                      - generic: U
+    - generic:
+      - generic:
+        - generic:
+          - generic: Workspace
+          - generic: ›
+          - strong: Dashboard
+        - generic:
+          - img
+          - generic: Search models, keys, policies…
+          - generic: ⌘K
+        - generic:
+          - button:
+            - img
+          - button:
+            - img
+          - link:
+            - /url: https://docs.opendoor.ai
+            - img
+            - text: Docs
+      - main:
+        - generic:
+          - generic:
+            - generic:
+              - generic:
+                - heading [level=1]: AI Assistants
+                - paragraph: Create, brand, and publish AI assistants powered by OpenDoor's gateway.
+              - button:
+                - img
+                - text: Create assistant
+            - generic:
+              - img
+  - button [ref=e149] [cursor=pointer]:
+    - img [ref=e150]
+  - alert
+  - dialog "Create AI assistant" [ref=e154]:
+    - generic [ref=e157]:
+      - generic [ref=e158]: A
+      - heading "Create AI assistant" [level=2] [ref=e159]
+    - generic [ref=e160]:
+      - generic [ref=e161]:
+        - paragraph [ref=e162]:
+          - generic [ref=e164]:
+            - text: Basics
+            - generic "Identity and branding shown to anyone who chats with this assistant." [active] [ref=e165]:
+              - img [ref=e166]
+              - tooltip "Identity and branding shown to anyone who chats with this assistant."
+        - generic [ref=e169]:
+          - generic [ref=e170]:
+            - generic [ref=e171]:
+              - generic [ref=e172]: Logo
+              - generic "Square image used as the assistant's avatar in the chat UI. Falls back to the first letter of the name when empty." [ref=e173]:
+                - img [ref=e174]
+                - tooltip "Square image used as the assistant's avatar in the chat UI. Falls back to the first letter of the name when empty."
+              - generic [ref=e176]: optional — PNG, JPG, WebP, SVG · max 2 MB
+            - generic [ref=e177]:
+              - generic [ref=e179]: A
+              - button "Upload logo" [ref=e181] [cursor=pointer]:
+                - img [ref=e182]
+                - text: Upload logo
+              - button "Choose File" [ref=e185]
+          - generic [ref=e186]:
+            - generic [ref=e187]:
+              - generic [ref=e188]:
+                - generic [ref=e189]: Name *
+                - generic "Display name shown in the dashboard list and to anyone chatting with the assistant." [ref=e190]:
+                  - img [ref=e191]
+                  - tooltip "Display name shown in the dashboard list and to anyone chatting with the assistant."
+              - textbox "My Support AI" [ref=e193]
+            - generic [ref=e194]:
+              - generic [ref=e195]:
+                - generic [ref=e196]: Slug *
+                - generic "URL-safe identifier. Your assistant will be reachable at /ai/<slug>. Lowercase letters, numbers and dashes only." [ref=e197]:
+                  - img [ref=e198]
+                  - tooltip "URL-safe identifier. Your assistant will be reachable at /ai/<slug>. Lowercase letters, numbers and dashes only."
+              - textbox "my-support-ai" [ref=e200]
+          - generic [ref=e201]:
+            - generic [ref=e202]:
+              - generic [ref=e203]: Description
+              - generic "Short summary shown on the assistant card and in the chat header. Visible to end users." [ref=e204]:
+                - img [ref=e205]
+                - tooltip "Short summary shown on the assistant card and in the chat header. Visible to end users."
+            - textbox "What does this assistant do?" [ref=e207]
+          - generic [ref=e208]:
+            - generic [ref=e209]:
+              - generic [ref=e210]: Brand colour
+              - generic "Accent colour applied to the avatar background and chat highlights. Pick a preset or enter a custom hex." [ref=e211]:
+                - img [ref=e212]
+                - tooltip "Accent colour applied to the avatar background and chat highlights. Pick a preset or enter a custom hex."
+            - generic [ref=e214]:
+              - button [ref=e215] [cursor=pointer]
+              - button [ref=e216] [cursor=pointer]
+              - button [ref=e217] [cursor=pointer]
+              - button [ref=e218] [cursor=pointer]
+              - button [ref=e219] [cursor=pointer]
+              - button [ref=e220] [cursor=pointer]
+              - button [ref=e221] [cursor=pointer]
+              - generic "Custom colour" [ref=e222] [cursor=pointer]:
+                - textbox [ref=e224]: "#1a73e8"
+      - generic [ref=e225]:
+        - paragraph [ref=e226]:
+          - generic [ref=e228]:
+            - text: Model & Prompt
+            - generic "Pick the underlying LLM and shape how it responds." [ref=e229]:
+              - img [ref=e230]
+              - tooltip "Pick the underlying LLM and shape how it responds."
+        - generic [ref=e233]:
+          - generic [ref=e234]:
+            - generic [ref=e235]:
+              - generic [ref=e236]: Model
+              - generic "LLM that powers responses. You can switch later — the system prompt and chat history stay the same." [ref=e237]:
+                - img [ref=e238]
+                - tooltip "LLM that powers responses. You can switch later — the system prompt and chat history stay the same."
+            - combobox [ref=e240] [cursor=pointer]:
+              - generic:
+                - text: GPT-4o
+                - generic: (OpenAI)
+              - img [ref=e241]
+          - generic [ref=e243]:
+            - generic [ref=e244]:
+              - generic [ref=e245]: System prompt
+              - generic "Hidden instructions that define the assistant's role, tone and rules. End users never see this text." [ref=e246]:
+                - img [ref=e247]
+                - tooltip "Hidden instructions that define the assistant's role, tone and rules. End users never see this text."
+            - textbox "You are a helpful assistant for..." [ref=e249]
+          - generic [ref=e250]:
+            - generic [ref=e251]:
+              - generic [ref=e252]:
+                - generic [ref=e253]: Welcome message
+                - generic "First message the assistant sends when a new conversation starts." [ref=e254]:
+                  - img [ref=e255]
+                  - tooltip "First message the assistant sends when a new conversation starts."
+              - textbox "Hello! How can I help you today?" [ref=e257]
+            - generic [ref=e258]:
+              - generic [ref=e259]:
+                - generic [ref=e260]: Max messages / session
+                - generic "Maximum messages a user can send per session. A hard stop that protects your profit margin. Claude Pro baseline ≈ 100–200." [ref=e261]:
+                  - img [ref=e262]
+                  - tooltip "Maximum messages a user can send per session. A hard stop that protects your profit margin. Claude Pro baseline ≈ 100–200."
+                - generic [ref=e264]: leave blank for unlimited
+              - spinbutton [ref=e265]: "100"
+      - generic [ref=e266]:
+        - paragraph [ref=e267]:
+          - generic [ref=e269]:
+            - text: Access & Pricing
+            - generic "Choose who can use this assistant and whether you charge for access." [ref=e270]:
+              - img [ref=e271]
+              - tooltip "Choose who can use this assistant and whether you charge for access."
+        - generic [ref=e274]:
+          - generic [ref=e275]:
+            - generic [ref=e276]:
+              - generic [ref=e277]: Visibility
+              - generic "Who can open this assistant. Private = only you, Team = everyone in your org, Public = anyone with the link." [ref=e278]:
+                - img [ref=e279]
+                - tooltip "Who can open this assistant. Private = only you, Team = everyone in your org, Public = anyone with the link."
+            - generic [ref=e281]:
+              - button "Private Only you" [ref=e282] [cursor=pointer]:
+                - img [ref=e283]
+                - generic [ref=e286]: Private
+                - generic [ref=e287]: Only you
+              - button "Team Your org members" [ref=e288] [cursor=pointer]:
+                - img [ref=e289]
+                - generic [ref=e294]: Team
+                - generic [ref=e295]: Your org members
+              - button "Public Anyone with the link" [ref=e296] [cursor=pointer]:
+                - img [ref=e297]
+                - generic [ref=e300]: Public
+                - generic [ref=e301]: Anyone with the link
+          - generic [ref=e303]:
+            - generic [ref=e304]:
+              - img [ref=e305]
+              - generic [ref=e307]:
+                - paragraph [ref=e308]: Password protection
+                - paragraph [ref=e309]: Require a password before users can chat
+            - button [ref=e310] [cursor=pointer]
+      - generic [ref=e312]:
+        - paragraph [ref=e313]:
+          - generic [ref=e315]:
+            - text: Knowledge & Connections
+            - generic "Give the assistant private documents to reference and external tools it can call." [ref=e316]:
+              - img [ref=e317]
+              - tooltip "Give the assistant private documents to reference and external tools it can call."
+        - generic [ref=e320]:
+          - generic [ref=e321]:
+            - generic [ref=e322]:
+              - generic [ref=e323]: Files
+              - generic "Knowledge documents the assistant can reference when answering. Indexed for retrieval — content stays private to your org." [ref=e324]:
+                - img [ref=e325]
+                - tooltip "Knowledge documents the assistant can reference when answering. Indexed for retrieval — content stays private to your org."
+              - generic [ref=e327]: PDF, DOCX, TXT, Markdown · max 10 MB each
+            - paragraph [ref=e328]: Save the assistant first to add knowledge files.
+          - generic [ref=e329]:
+            - generic [ref=e330]:
+              - generic [ref=e331]:
+                - generic [ref=e332]: Integrations 1036+ toolkits
+                - generic "Connect external tools (GitHub, Notion, Slack…) via Composio so the assistant can read or write data on your behalf during a conversation." [ref=e333]:
+                  - img [ref=e334]
+                  - tooltip "Connect external tools (GitHub, Notion, Slack…) via Composio so the assistant can read or write data on your behalf during a conversation."
+              - generic [ref=e336]: Save assistant first
+            - generic [ref=e337]:
+              - img [ref=e338]
+              - textbox "Search toolkits… (GitHub, Notion, Jira, Slack…)" [ref=e341]
+            - paragraph [ref=e342]: Start typing to search toolkits.
+          - generic [ref=e343]:
+            - generic [ref=e345]:
+              - generic [ref=e346]: MCP Servers Beta
+              - generic "Connect Model Context Protocol (MCP) servers to give your assistant access to local tools, databases, and APIs." [ref=e347]:
+                - img [ref=e348]
+                - tooltip "Connect Model Context Protocol (MCP) servers to give your assistant access to local tools, databases, and APIs."
+            - paragraph [ref=e350]: MCP servers let your assistant call external tools during conversations.
+            - button "Add MCP server" [ref=e351] [cursor=pointer]:
+              - img [ref=e352]
+              - text: Add MCP server
+    - generic [ref=e353]:
+      - button "Cancel" [ref=e354] [cursor=pointer]
+      - button "Create assistant" [disabled] [ref=e355]
+    - button "Close" [ref=e356] [cursor=pointer]:
+      - img [ref=e357]
+      - generic [ref=e359]: Close

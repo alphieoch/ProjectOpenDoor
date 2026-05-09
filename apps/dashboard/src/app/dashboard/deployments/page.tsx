@@ -76,13 +76,15 @@ export default function DeploymentsPage() {
 
       {loading ? (
         <div className="flex h-64 items-center justify-center">
-          <Loader2 className="h-6 w-6 animate-spin text-zinc-400" />
+          <Loader2 className="h-6 w-6 animate-spin" style={{ color: "var(--ink-4)" }} />
         </div>
       ) : deployments.length === 0 ? (
         <div className="card p-16 text-center">
-          <Server className="mx-auto h-10 w-10 text-zinc-300" />
-          <h3 className="mt-4 font-medium text-zinc-900">No deployments yet</h3>
-          <p className="mt-1 text-sm text-zinc-500">Deploy your own models or bring a custom container image.</p>
+          <Server className="mx-auto h-10 w-10" style={{ color: "var(--ink-4)" }} />
+          <h3 className="mt-4 font-medium" style={{ color: "var(--ink)" }}>No deployments yet</h3>
+          <p className="mt-1 text-sm" style={{ color: "var(--ink-3)" }}>
+            Deploy your own models or bring a custom container image.
+          </p>
           <Link href="/dashboard/deployments/new" className="btn-primary mt-5 inline-flex">
             <Plus className="h-4 w-4" />
             Create your first deployment
@@ -95,13 +97,13 @@ export default function DeploymentsPage() {
               <div className="flex items-start justify-between">
                 <div>
                   <div className="flex items-center gap-3">
-                    <h3 className="font-semibold text-zinc-900">{d.name}</h3>
+                    <h3 className="font-semibold" style={{ color: "var(--ink)" }}>{d.name}</h3>
                     <span className={statusBadge(d.status)}>{d.status}</span>
                   </div>
-                  <p className="mt-1 text-sm text-zinc-500">
+                  <p className="mt-1 text-sm" style={{ color: "var(--ink-3)" }}>
                     {d.sourceType === "image" ? `Image: ${d.sourceValue}` : `Catalog: ${d.sourceValue}`}
                   </p>
-                  <div className="mt-2 flex gap-4 text-sm text-zinc-500">
+                  <div className="mt-2 flex gap-4 text-sm" style={{ color: "var(--ink-3)" }}>
                     <span>{d.cpu} CPU</span>
                     <span>{d.memoryGb} GB RAM</span>
                     <span>{d.replicas} replica{d.replicas !== 1 ? "s" : ""}</span>
@@ -139,9 +141,11 @@ export default function DeploymentsPage() {
               </div>
 
               {d.status === "running" && (
-                <div className="mt-4 rounded-lg border border-zinc-100 bg-zinc-50 p-3 text-sm">
-                  <p className="font-medium text-zinc-700">API Usage</p>
-                  <code className="mt-1 block text-xs text-zinc-500">model: &quot;custom:{d.id}&quot;</code>
+                <div className="mt-4 rounded-lg border p-3 text-sm" style={{ borderColor: "var(--line)", background: "var(--paper)" }}>
+                  <p className="font-medium" style={{ color: "var(--ink-2)" }}>API Usage</p>
+                  <code className="mt-1 block text-xs" style={{ color: "var(--ink-3)" }}>
+                    model: &quot;custom:{d.id}&quot;
+                  </code>
                 </div>
               )}
             </div>

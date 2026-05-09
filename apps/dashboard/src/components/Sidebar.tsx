@@ -6,7 +6,7 @@ import {
   LayoutDashboard, Key, BarChart3, CreditCard, Play, Settings,
   ClipboardList, Users, LogOut, Zap, Server, Calculator,
   ShieldCheck, Gavel, AlertTriangle, FileCheck, BookOpen,
-  Building2, UserCog, Coins, ShieldAlert,
+  Building2, UserCog, Coins, ShieldAlert, GitBranch, List,
 } from "lucide-react";
 import posthog from "posthog-js";
 
@@ -18,6 +18,8 @@ const navItems = [
   { href: "/dashboard/deployments", label: "Deployments", icon: Server },
   { href: "/dashboard/billing", label: "Billing", icon: CreditCard },
   { href: "/dashboard/playground", label: "Playground", icon: Play },
+  { href: "/dashboard/workflow", label: "Workflow", icon: GitBranch },
+  { href: "/dashboard/models", label: "Models", icon: List },
   { href: "/dashboard/team", label: "Team", icon: Users },
   { href: "/dashboard/settings", label: "Settings", icon: Settings },
   { href: "/dashboard/audit-logs", label: "Audit Logs", icon: ClipboardList },

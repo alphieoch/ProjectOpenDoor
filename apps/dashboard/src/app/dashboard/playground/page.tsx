@@ -91,6 +91,36 @@ const NATIVE_DOC_MODEL_IDS = new Set([
   "gemini-1.5-pro", "gemini-1.5-flash",
 ]);
 
+/** Optional one-line blurbs for hover; unknown ids use `modelHoverBlurb`. */
+const MODEL_SUMMARIES: Partial<Record<(typeof MODELS)[number]["id"], string>> = {
+  "gpt-4o": "OpenAI flagship multimodal model—strong general reasoning, vision, and tool-style tasks.",
+  "gpt-4o-mini": "Fast, lower-cost GPT-4 class model with vision and a large context window.",
+  "gpt-4-turbo": "Capable GPT-4 variant tuned for quality on complex prompts and longer chats.",
+  "claude-3-5-sonnet-20241022": "Anthropic’s balanced frontier model—long context, strong analysis and coding.",
+  "claude-3-opus-20240229": "Highest-quality Claude 3 tier for difficult reasoning and nuanced writing.",
+  "claude-3-haiku-20240307": "Fast, cost-efficient Claude 3 for high-volume chat and classification.",
+  "gemini-1.5-pro": "Google’s large-context multimodal model—strong on long documents and mixed media.",
+  "gemini-1.5-flash": "Lower-latency Gemini tuned for speed while keeping multimodal support.",
+  "mistral-large-latest": "Mistral’s top-tier text model for reasoning, agents, and European hosting options.",
+  "deepseek-chat": "DeepSeek general chat model—good for reasoning and open-domain dialogue.",
+  "deepseek-coder": "DeepSeek model focused on code completion, debugging, and technical Q&A.",
+};
+
+function modelHoverBlurb(m: (typeof MODELS)[number]): string {
+  return (
+    MODEL_SUMMARIES[m.id] ??
+    `${m.name} (${m.provider}). ${m.vision ? "Accepts image inputs with text." : "Text-first."} ${m.code ? "Strong for code and technical writing." : "General-purpose chat and analysis."}`
+  );
+}
+
+function modelCapabilityLine(m: (typeof MODELS)[number]): string {
+  const bits: string[] = [`${m.context} context`];
+  bits.push(m.vision ? "Vision" : "No vision");
+  bits.push(m.code ? "Code-leaning" : "General");
+  if (NATIVE_DOC_MODEL_IDS.has(m.id)) bits.push("Native file upload (playground)");
+  return bits.join(" · ");
+}
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function uid() { return Math.random().toString(36).slice(2); }
@@ -150,14 +180,21 @@ function RenderContent({ text, mode }: { text: string; mode: CanvasMode }) {
 function ModelPicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
+  const [hoverId, setHoverId] = useState<string | null>(null);
   const ref = useRef<HTMLDivElement>(null);
   const model = MODELS.find(m => m.id === value) || MODELS[0];
+  const previewModel = MODELS.find((m) => m.id === (hoverId ?? value)) ?? model;
 
   useEffect(() => {
     const handler = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
+
+  useEffect(() => {
+    if (!open) setHoverId(null);
+    else setHoverId(value);
+  }, [open, value]);
 
   const filtered = MODELS.filter(m =>
     m.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -193,7 +230,7 @@ function ModelPicker({ value, onChange }: { value: string; onChange: (v: string)
           position: "absolute", top: "calc(100% + 8px)", left: 0,
           width: 320, background: "var(--paper-2)", border: "1px solid var(--line)",
           borderRadius: 12, boxShadow: "0 16px 48px rgba(26,26,46,0.14)", zIndex: 100,
-          overflow: "hidden",
+          overflow: "hidden", display: "flex", flexDirection: "column",
         }}>
           <div style={{ padding: "10px 12px", borderBottom: "1px solid var(--line-soft)" }}>
             <input
@@ -204,7 +241,7 @@ function ModelPicker({ value, onChange }: { value: string; onChange: (v: string)
               style={{ width: "100%", border: "none", outline: "none", fontSize: 13, color: "var(--ink)", background: "transparent", fontFamily: "inherit" }}
             />
           </div>
-          <div style={{ maxHeight: 360, overflowY: "auto" }}>
+          <div style={{ maxHeight: 280, overflowY: "auto", flex: 1, minHeight: 0 }}>
             {Object.entries(grouped).map(([provider, models]) => (
               <div key={provider}>
                 <div style={{ padding: "8px 14px 4px", fontSize: 10, fontFamily: "var(--font-mono)", textTransform: "uppercase", letterSpacing: "0.12em", color: "var(--ink-4)", display: "flex", alignItems: "center", gap: 6 }}>
@@ -214,7 +251,10 @@ function ModelPicker({ value, onChange }: { value: string; onChange: (v: string)
                 {models.map(m => (
                   <button
                     key={m.id}
+                    type="button"
+                    onMouseEnter={() => setHoverId(m.id)}
                     onClick={() => { onChange(m.id); setOpen(false); setSearch(""); }}
+                    title={`${modelHoverBlurb(m)} — ${modelCapabilityLine(m)}`}
                     style={{
                       display: "flex", alignItems: "center", gap: 8, width: "100%",
                       padding: "8px 14px", background: m.id === value ? "var(--brand-soft)" : "transparent",
@@ -231,6 +271,24 @@ function ModelPicker({ value, onChange }: { value: string; onChange: (v: string)
                 ))}
               </div>
             ))}
+          </div>
+          <div
+            role="note"
+            style={{
+              flexShrink: 0,
+              borderTop: "1px solid var(--line-soft)",
+              padding: "10px 14px",
+              background: "var(--paper)",
+              fontSize: 12,
+              lineHeight: 1.45,
+              color: "var(--ink-3)",
+            }}
+          >
+            <div style={{ fontWeight: 600, color: "var(--ink)", marginBottom: 4 }}>{previewModel.name}</div>
+            <div style={{ marginBottom: 6 }}>{modelHoverBlurb(previewModel)}</div>
+            <div style={{ fontSize: 11, fontFamily: "var(--font-mono)", color: "var(--ink-4)" }}>
+              {modelCapabilityLine(previewModel)}
+            </div>
           </div>
         </div>
       )}

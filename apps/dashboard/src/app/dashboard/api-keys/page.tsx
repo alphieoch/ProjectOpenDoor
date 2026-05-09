@@ -108,13 +108,21 @@ export default function ApiKeysPage() {
       {newKeyValue && (
         <div className="mb-6 alert-success flex items-start justify-between gap-4">
           <div>
-            <p className="font-medium text-emerald-900">New API key created</p>
-            <p className="mt-1 font-mono text-sm text-emerald-800">{newKeyValue}</p>
-            <p className="mt-1.5 text-xs text-emerald-700">
+            <p className="font-medium">New API key created</p>
+            <p className="mt-1 font-mono text-sm">{newKeyValue}</p>
+            <p className="mt-1.5 text-xs" style={{ opacity: 0.9 }}>
               Copy this key now — you won&apos;t be able to see it again.
             </p>
           </div>
-          <button onClick={copyKey} className="btn btn-sm bg-emerald-100 text-emerald-800 hover:bg-emerald-200 shrink-0">
+          <button
+            onClick={copyKey}
+            className="btn btn-sm shrink-0"
+            style={{
+              background: "color-mix(in srgb, var(--md-tertiary-container) 85%, white)",
+              color: "var(--md-on-tertiary-container)",
+              border: "1px solid color-mix(in srgb, var(--md-tertiary) 25%, transparent)",
+            }}
+          >
             {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
             {copied ? "Copied" : "Copy"}
           </button>
@@ -125,7 +133,9 @@ export default function ApiKeysPage() {
         <h2 className="section-title mb-4">Create new key</h2>
         <form onSubmit={createKey} className="space-y-4">
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-zinc-700">Key Name</label>
+            <label className="mb-1.5 block text-sm font-medium" style={{ color: "var(--ink-2)" }}>
+              Key Name
+            </label>
             <input
               type="text"
               value={newKeyName}
@@ -137,17 +147,19 @@ export default function ApiKeysPage() {
           </div>
 
           <div>
-            <label className="mb-2 block text-sm font-medium text-zinc-700">Model Access</label>
+            <label className="mb-2 block text-sm font-medium" style={{ color: "var(--ink-2)" }}>
+              Model Access
+            </label>
             <div className="flex items-center gap-5">
               <label className="flex cursor-pointer items-center gap-2">
                 <input
                   type="radio"
                   checked={fullAccess}
                   onChange={() => setFullAccess(true)}
-                  className="h-4 w-4 accent-indigo-600"
+                  className="h-4 w-4 accent-[var(--brand)]"
                 />
-                <span className="flex items-center gap-1.5 text-sm text-zinc-700">
-                  <ShieldCheck className="h-4 w-4 text-emerald-500" />
+                <span className="flex items-center gap-1.5 text-sm" style={{ color: "var(--ink-2)" }}>
+                  <ShieldCheck className="h-4 w-4" style={{ color: "var(--green)" }} />
                   Full Access
                 </span>
               </label>
@@ -156,29 +168,38 @@ export default function ApiKeysPage() {
                   type="radio"
                   checked={!fullAccess}
                   onChange={() => setFullAccess(false)}
-                  className="h-4 w-4 accent-indigo-600"
+                  className="h-4 w-4 accent-[var(--brand)]"
                 />
-                <span className="flex items-center gap-1.5 text-sm text-zinc-700">
-                  <Shield className="h-4 w-4 text-amber-500" />
+                <span className="flex items-center gap-1.5 text-sm" style={{ color: "var(--ink-2)" }}>
+                  <Shield className="h-4 w-4" style={{ color: "var(--yellow)" }} />
                   Restricted
                 </span>
               </label>
             </div>
 
             {!fullAccess && (
-              <div className="mt-3 rounded-lg border border-zinc-200 bg-zinc-50 p-4">
-                <p className="mb-3 text-xs text-zinc-500">Select which models this key can access:</p>
+              <div className="mt-3 rounded-lg border p-4" style={{ borderColor: "var(--line)", background: "var(--paper)" }}>
+                <p className="mb-3 text-xs" style={{ color: "var(--ink-3)" }}>
+                  Select which models this key can access:
+                </p>
                 <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
                   {ALL_MODELS.map((m) => (
-                    <label key={m.id} className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 hover:bg-zinc-100">
+                    <label
+                      key={m.id}
+                      className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 hover:bg-[var(--paper-3)]"
+                    >
                       <input
                         type="checkbox"
                         checked={selectedModels.includes(m.id)}
                         onChange={() => toggleModel(m.id)}
-                        className="h-4 w-4 rounded accent-indigo-600"
+                        className="h-4 w-4 rounded accent-[var(--brand)]"
                       />
-                      <span className="text-sm text-zinc-700">{m.name}</span>
-                      <span className="ml-auto text-xs text-zinc-400">{m.provider}</span>
+                      <span className="text-sm" style={{ color: "var(--ink-2)" }}>
+                        {m.name}
+                      </span>
+                      <span className="ml-auto text-xs" style={{ color: "var(--ink-4)" }}>
+                        {m.provider}
+                      </span>
                     </label>
                   ))}
                 </div>
@@ -200,7 +221,7 @@ export default function ApiKeysPage() {
       <div className="mt-6 card overflow-hidden">
         <table className="min-w-full">
           <thead>
-            <tr className="border-b border-zinc-100">
+            <tr className="border-b border-[var(--line)]">
               <th className="table-header-cell">Name</th>
               <th className="table-header-cell">Key</th>
               <th className="table-header-cell">Access</th>
@@ -212,8 +233,12 @@ export default function ApiKeysPage() {
           <tbody>
             {keys.map((key) => (
               <tr key={key.id} className="table-row">
-                <td className="table-cell font-medium text-zinc-900">{key.name}</td>
-                <td className="table-cell font-mono text-zinc-500">{key.keyPrefix}••••••••</td>
+                <td className="table-cell font-medium" style={{ color: "var(--ink)" }}>
+                  {key.name}
+                </td>
+                <td className="table-cell font-mono" style={{ color: "var(--ink-3)" }}>
+                  {key.keyPrefix}••••••••
+                </td>
                 <td className="table-cell">
                   {key.allowedModels && key.allowedModels.length > 0 ? (
                     <span className="badge-warning">
@@ -227,12 +252,20 @@ export default function ApiKeysPage() {
                     </span>
                   )}
                 </td>
-                <td className="table-cell text-zinc-500">{new Date(key.createdAt).toLocaleDateString()}</td>
-                <td className="table-cell text-zinc-500">
+                <td className="table-cell" style={{ color: "var(--ink-3)" }}>
+                  {new Date(key.createdAt).toLocaleDateString()}
+                </td>
+                <td className="table-cell" style={{ color: "var(--ink-3)" }}>
                   {key.lastUsedAt ? new Date(key.lastUsedAt).toLocaleDateString() : "Never"}
                 </td>
                 <td className="table-cell text-right">
-                  <button onClick={() => revokeKey(key.id)} className="btn-danger btn-sm">
+                  <button
+                    type="button"
+                    onClick={() => revokeKey(key.id)}
+                    className="btn-danger btn-sm"
+                    aria-label={`Revoke API key ${key.name}`}
+                    title={`Revoke API key ${key.name}`}
+                  >
                     <Trash2 className="h-4 w-4" />
                   </button>
                 </td>
@@ -240,7 +273,7 @@ export default function ApiKeysPage() {
             ))}
             {keys.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-4 py-10 text-center text-sm text-zinc-400">
+                <td colSpan={6} className="px-4 py-10 text-center text-sm" style={{ color: "var(--ink-4)" }}>
                   No API keys yet. Create one above.
                 </td>
               </tr>

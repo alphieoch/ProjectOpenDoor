@@ -2,7 +2,7 @@
 import { Hono } from "hono";
 import { db, requests, providers, models, apiKeys } from "@opendoor/database";
 import type { ChatCompletionRequest } from "@opendoor/shared";
-import { resolveProvider, getProvider, getFallbackChain } from "../providers/index.js";
+import { resolveProvider, getProvider } from "../providers/index.js";
 import { calculateCost } from "../utils/pricing.js";
 import { encodeSSE, encodeSSEDone } from "../utils/streaming.js";
 import { recordTokens } from "../middleware/rate-limit.js";
@@ -15,6 +15,8 @@ import {
   captureGatewayEvent,
   sanitizeMessagesForAi,
 } from "../lib/posthog.js";
+import { recordSuccess, recordError } from "../lib/health-tracker.js";
+import { getRankedProviders } from "../lib/smart-router.js";
 
 const chatRouter = new Hono();
 
@@ -193,14 +195,28 @@ chatRouter.post("/completions", async (c) => {
     // If cost estimate is unavailable, do not block the request.
   }
 
-  // Build fallback chain
-  const chainSlugs = [resolved.provider.slug];
-  const fallbacks = getFallbackChain(body.model);
-  for (const slug of fallbacks) {
-    if (slug !== resolved.provider.slug && !chainSlugs.includes(slug)) {
-      chainSlugs.push(slug);
-    }
-  }
+  // Compute token estimates for routing
+  const promptTokensEstimate = body.messages.reduce((sum, m) => {
+    const content = typeof m?.content === "string" ? m.content : JSON.stringify(m?.content ?? "");
+    return sum + estimateTokens(content);
+  }, 0);
+  const completionEstimate =
+    typeof body.max_tokens === "number" && body.max_tokens > 0 ? body.max_tokens : 1024;
+  const requestFamily = normalizeFamily(
+    billingContext?.family as "closed" | "open_weight" | undefined,
+    resolved.provider.slug
+  );
+
+  // Build dynamically ranked provider chain (health, latency, cost)
+  const ranked = await getRankedProviders(body.model, {
+    promptTokens: promptTokensEstimate,
+    completionTokens: completionEstimate,
+    plan: (billingContext?.plan || organization.plan || "free") as "free" | "pro" | "enterprise",
+    family: requestFamily,
+    region,
+  });
+
+  let chainSlugs = ranked.map((r) => r.slug);
 
   // Enforce data residency: filter providers by org dataResidency and model governance allowedRegions
   const allowedRegions = new Set<string>();
@@ -235,13 +251,12 @@ chatRouter.post("/completions", async (c) => {
         403
       );
     }
-    chainSlugs.length = 0;
-    chainSlugs.push(...filteredChain);
+    chainSlugs = filteredChain;
   }
 
   let providerId: string | null = null;
   let lastError: Error | null = null;
-  let usedProviderSlug = resolved.provider.slug;
+  let usedProviderSlug = chainSlugs[0] || resolved.provider.slug;
   let fallbackFrom: string | null = null;
 
   // Try each provider in the chain
@@ -262,17 +277,22 @@ chatRouter.post("/completions", async (c) => {
       providerId = slug;
     }
 
+    usedProviderSlug = slug;
     if (chainIndex > 0) {
       fallbackFrom = chainSlugs[0];
-      usedProviderSlug = slug;
     }
 
+    const providerStartTime = Date.now();
     const result = await tryProvider(provider, resolved.model, body, !!body.stream);
 
     if (result.error) {
+      await recordError(slug, result.error);
       lastError = result.error;
       continue;
     }
+
+    // Provider responded successfully (time-to-first-response)
+    await recordSuccess(slug, Date.now() - providerStartTime);
 
     // Success — handle streaming or non-streaming
     try {
@@ -424,6 +444,8 @@ chatRouter.post("/completions", async (c) => {
               );
               controller.enqueue(new TextEncoder().encode(encodeSSEDone()));
 
+              await recordError(slug, error);
+
               await db.insert(requests).values({
                 apiKeyId: apiKey.id,
                 organizationId: organization.id,
@@ -573,6 +595,7 @@ chatRouter.post("/completions", async (c) => {
         return c.json(response);
       }
     } catch (error: any) {
+      await recordError(slug, error);
       lastError = error;
       continue;
     }

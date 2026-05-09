@@ -44,6 +44,9 @@ export async function GET(req: NextRequest) {
       completionTokens: sql<number>`SUM(${requests.completionTokens})`,
       totalTokens: sql<number>`SUM(${requests.totalTokens})`,
       costUsd: sql<number>`SUM(${requests.costUsd})`,
+      successCount: sql<number>`SUM(CASE WHEN ${requests.status} = 'success' THEN 1 ELSE 0 END)`,
+      errorCount: sql<number>`SUM(CASE WHEN ${requests.status} = 'error' THEN 1 ELSE 0 END)`,
+      cachedCount: sql<number>`SUM(CASE WHEN ${requests.status} = 'cached' THEN 1 ELSE 0 END)`,
     })
     .from(requests)
     .where(

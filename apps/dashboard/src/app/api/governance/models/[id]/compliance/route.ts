@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { modelComplianceMappings, complianceControls } from "@opendoor/database";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { requireAuth } from "@/lib/auth";
 import { logAuditEvent } from "@/lib/audit";
 
@@ -40,17 +40,46 @@ export async function POST(
   const body = await req.json();
 
   const db = getDb();
-  const [item] = await db
-    .insert(modelComplianceMappings)
-    .values({
-      modelGovernanceId: params.id,
-      controlId: body.controlId,
-      status: body.status || "not_assessed",
-      evidence: body.evidence,
-      assessedBy: session.sub as string,
-      assessedAt: new Date(),
-    })
-    .returning();
+
+  // Upsert: check for existing mapping first
+  const existing = await db
+    .select({ id: modelComplianceMappings.id })
+    .from(modelComplianceMappings)
+    .where(
+      and(
+        eq(modelComplianceMappings.modelGovernanceId, params.id),
+        eq(modelComplianceMappings.controlId, body.controlId)
+      )
+    )
+    .limit(1);
+
+  let item;
+  if (existing.length > 0) {
+    const [updated] = await db
+      .update(modelComplianceMappings)
+      .set({
+        status: body.status || "not_assessed",
+        evidence: body.evidence,
+        assessedBy: session.sub as string,
+        assessedAt: new Date(),
+      })
+      .where(eq(modelComplianceMappings.id, existing[0].id))
+      .returning();
+    item = updated;
+  } else {
+    const [inserted] = await db
+      .insert(modelComplianceMappings)
+      .values({
+        modelGovernanceId: params.id,
+        controlId: body.controlId,
+        status: body.status || "not_assessed",
+        evidence: body.evidence,
+        assessedBy: session.sub as string,
+        assessedAt: new Date(),
+      })
+      .returning();
+    item = inserted;
+  }
 
   await logAuditEvent({
     organizationId: orgId,

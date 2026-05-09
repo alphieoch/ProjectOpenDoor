@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import { Search, Bell, BookOpen, ExternalLink } from "lucide-react";
 import Link from "next/link";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 const CRUMBS: Record<string, [string, string]> = {
   "/dashboard": ["Workspace", "Overview"],
@@ -12,6 +13,8 @@ const CRUMBS: Record<string, [string, string]> = {
   "/dashboard/deployments": ["Workspace", "Deployments"],
   "/dashboard/billing": ["Workspace", "Billing"],
   "/dashboard/playground": ["Workspace", "Playground"],
+  "/dashboard/workflow": ["Workspace", "Workflow"],
+  "/dashboard/models": ["Workspace", "Models"],
   "/dashboard/team": ["Workspace", "Team"],
   "/dashboard/settings": ["Workspace", "Settings"],
   "/dashboard/audit-logs": ["Workspace", "Audit Logs"],
@@ -58,11 +61,20 @@ export default function DashboardTopBar() {
 
       {/* Actions */}
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        <button style={{ width: 34, height: 34, display: "grid", placeItems: "center", borderRadius: 8, border: "1px solid transparent", background: "transparent", color: "var(--ink-3)", cursor: "pointer", transition: "all 0.15s" }}
+        <ThemeToggle />
+        <button
+          type="button"
+          aria-label="Notifications"
+          title="Notifications"
+          style={{ width: 34, height: 34, display: "grid", placeItems: "center", borderRadius: 8, border: "1px solid transparent", background: "transparent", color: "var(--ink-3)", cursor: "pointer", transition: "all 0.15s" }}
           className="hover:bg-[var(--paper-3)] hover:text-[var(--ink)]">
           <Bell style={{ width: 16, height: 16 }} />
         </button>
-        <button style={{ width: 34, height: 34, display: "grid", placeItems: "center", borderRadius: 8, border: "1px solid transparent", background: "transparent", color: "var(--ink-3)", cursor: "pointer", transition: "all 0.15s" }}
+        <button
+          type="button"
+          aria-label="Help"
+          title="Help"
+          style={{ width: 34, height: 34, display: "grid", placeItems: "center", borderRadius: 8, border: "1px solid transparent", background: "transparent", color: "var(--ink-3)", cursor: "pointer", transition: "all 0.15s" }}
           className="hover:bg-[var(--paper-3)] hover:text-[var(--ink)]">
           <BookOpen style={{ width: 16, height: 16 }} />
         </button>

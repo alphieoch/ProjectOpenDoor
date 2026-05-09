@@ -1,0 +1,182 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - list [ref=e5]:
+      - generic [ref=e6]:
+        - button "O" [ref=e8] [cursor=pointer]:
+          - generic [ref=e11]: O
+          - listitem
+        - generic [ref=e12]:
+          - generic [ref=e17]:
+            - listitem
+            - generic [ref=e19]:
+              - link [ref=e20] [cursor=pointer]:
+                - /url: /dashboard
+                - img [ref=e21]
+                - listitem
+              - link [ref=e26] [cursor=pointer]:
+                - /url: /dashboard/api-keys
+                - img [ref=e27]
+                - listitem
+              - link [ref=e31] [cursor=pointer]:
+                - /url: /dashboard/usage
+                - img [ref=e32]
+                - listitem
+              - link [ref=e34] [cursor=pointer]:
+                - /url: /dashboard/pricing
+                - img [ref=e35]
+                - listitem
+              - link [ref=e37] [cursor=pointer]:
+                - /url: /dashboard/deployments
+                - img [ref=e38]
+                - listitem
+              - link [ref=e41] [cursor=pointer]:
+                - /url: /dashboard/billing
+                - img [ref=e42]
+                - listitem
+              - link [ref=e44] [cursor=pointer]:
+                - /url: /dashboard/playground
+                - img [ref=e45]
+                - listitem
+              - link [ref=e47] [cursor=pointer]:
+                - /url: /dashboard/ai-assistants
+                - img [ref=e48]
+                - listitem
+              - link [ref=e51] [cursor=pointer]:
+                - /url: /dashboard/team
+                - img [ref=e52]
+                - listitem
+              - link [ref=e57] [cursor=pointer]:
+                - /url: /dashboard/settings
+                - img [ref=e58]
+                - listitem
+              - link [ref=e61] [cursor=pointer]:
+                - /url: /dashboard/audit-logs
+                - img [ref=e62]
+                - listitem
+            - listitem
+            - generic [ref=e66]:
+              - link [ref=e67] [cursor=pointer]:
+                - /url: /dashboard/governance
+                - img [ref=e69]
+                - listitem
+              - link [ref=e72] [cursor=pointer]:
+                - /url: /dashboard/governance/policies
+                - img [ref=e73]
+                - listitem
+              - link [ref=e79] [cursor=pointer]:
+                - /url: /dashboard/governance/violations
+                - img [ref=e80]
+                - listitem
+              - link [ref=e82] [cursor=pointer]:
+                - /url: /dashboard/governance/approvals
+                - img [ref=e83]
+                - listitem
+              - link [ref=e87] [cursor=pointer]:
+                - /url: /dashboard/governance/compliance
+                - img [ref=e89]
+                - listitem
+              - link [ref=e92] [cursor=pointer]:
+                - /url: /dashboard/governance/sector-templates
+                - img [ref=e93]
+                - listitem
+          - generic [ref=e97]:
+            - listitem
+            - link [ref=e98] [cursor=pointer]:
+              - /url: /dashboard/settings
+              - img [ref=e99]
+              - listitem
+            - button "U" [ref=e102] [cursor=pointer]:
+              - generic [ref=e103]:
+                - generic [ref=e105]: U
+                - listitem
+    - generic [ref=e106]:
+      - generic [ref=e107]:
+        - generic [ref=e108]:
+          - generic [ref=e109]: Governance
+          - generic [ref=e110]: ›
+          - strong [ref=e111]: Compliance
+        - generic [ref=e112]:
+          - img [ref=e113]
+          - generic [ref=e116]: Search models, keys, policies…
+          - generic [ref=e117]: ⌘K
+        - generic [ref=e118]:
+          - button "Toggle theme" [ref=e119] [cursor=pointer]:
+            - img [ref=e120]
+            - img
+            - generic [ref=e126]: Toggle theme
+          - button "Notifications" [ref=e127] [cursor=pointer]:
+            - img [ref=e128]
+          - button "Help" [ref=e131] [cursor=pointer]:
+            - img [ref=e132]
+          - link "Docs" [ref=e136] [cursor=pointer]:
+            - /url: https://docs.opendoor.ai
+            - img [ref=e137]
+            - text: Docs
+      - main [ref=e141]:
+        - generic [ref=e143]:
+          - generic [ref=e144]:
+            - heading "Compliance" [level=1] [ref=e145]
+            - paragraph [ref=e146]: Track model compliance against GDPR, EU AI Act, ICO UK, and NIST AI RMF.
+          - generic [ref=e147]:
+            - button "Manual Tracking" [ref=e148] [cursor=pointer]:
+              - img [ref=e149]
+              - text: Manual Tracking
+            - button "Automated Compliance" [ref=e152] [cursor=pointer]:
+              - img [ref=e153]
+              - text: Automated Compliance
+          - generic [ref=e609]:
+            - generic [ref=e611]:
+              - generic [ref=e612]:
+                - generic [ref=e613]: Model
+                - combobox [ref=e614]:
+                  - option "GPT-4o"
+                  - option "Claude 3.5 Sonnet"
+                  - option "DeepSeek-V3" [selected]
+                  - option "Mistral Large"
+                  - option "Gemini 1.5 Pro"
+              - generic [ref=e615]:
+                - button "Rules" [ref=e616] [cursor=pointer]
+                - button "Reports (2)" [ref=e1004] [cursor=pointer]
+                - button "Run Check" [ref=e618] [cursor=pointer]:
+                  - img [ref=e1005]
+                  - text: Run Check
+            - generic [ref=e1137]:
+              - generic [ref=e1139]:
+                - generic [ref=e1140]:
+                  - generic [ref=e1141]:
+                    - 'heading "Compliance Report: DeepSeek-V3" [level=3] [ref=e1142]'
+                    - generic [ref=e1143]:
+                      - img [ref=e1144]
+                      - text: Issues Found
+                  - paragraph [ref=e1146]: Automated compliance assessment for DeepSeek-V3 against 10 rules.
+                  - generic [ref=e1147]:
+                    - generic [ref=e1148]:
+                      - text: "Score:"
+                      - strong [ref=e1149]: 40%
+                    - generic [ref=e1150]: 10 checks
+                    - generic [ref=e1151]: 6 recommendations
+                    - generic [ref=e1152]: 09/05/2026
+                - button "View Report" [ref=e1153] [cursor=pointer]:
+                  - text: View Report
+                  - img [ref=e1154]
+              - generic [ref=e1157]:
+                - generic [ref=e1158]:
+                  - generic [ref=e1159]:
+                    - 'heading "Compliance Report: GPT-4o" [level=3] [ref=e1160]'
+                    - generic [ref=e1161]:
+                      - img [ref=e1162]
+                      - text: Passed
+                  - paragraph [ref=e1165]: Automated compliance assessment for GPT-4o against 10 rules.
+                  - generic [ref=e1166]:
+                    - generic [ref=e1167]:
+                      - text: "Score:"
+                      - strong [ref=e1168]: 100%
+                    - generic [ref=e1169]: 10 checks
+                    - generic [ref=e1170]: 0 recommendations
+                    - generic [ref=e1171]: 09/05/2026
+                - button "View Report" [ref=e1172] [cursor=pointer]:
+                  - text: View Report
+                  - img [ref=e1173]
+  - button "Open Next.js Dev Tools" [ref=e605] [cursor=pointer]:
+    - img [ref=e606]
+  - alert [ref=e158]

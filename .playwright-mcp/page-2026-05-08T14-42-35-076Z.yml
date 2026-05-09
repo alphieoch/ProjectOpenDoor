@@ -1,0 +1,107 @@
+- generic:
+  - generic [ref=e1]:
+    - generic [ref=e2]:
+      - generic [ref=e3]:
+        - link "Chat" [ref=e4] [cursor=pointer]:
+          - /url: /
+          - img [ref=e5]
+          - generic [ref=e7]: Chat
+        - button "Collapse sidebar" [ref=e8]
+      - navigation [ref=e11]:
+        - list [ref=e12]:
+          - listitem [ref=e13]:
+            - link "New chat ⌘ o" [ref=e41] [cursor=pointer]:
+              - /url: /
+              - generic [ref=e16]: New chat
+              - generic [ref=e18]:
+                - generic [ref=e19]: ⌘
+                - generic [ref=e20]: o
+      - link "OpenDoor Dashboard" [ref=e22] [cursor=pointer]:
+        - /url: http://localhost:3000/dashboard/ai-assistants
+        - generic [ref=e24]: OpenDoor Dashboard
+    - separator
+    - generic [ref=e26]:
+      - generic:
+        - generic [ref=e28]: Preview Demo
+        - button "Switch to dark mode" [ref=e30]
+      - generic [ref=e35]:
+        - textbox "Type your message here…" [ref=e37]: Hello
+        - button "Send prompt" [ref=e39]
+  - img [ref=e42]
+  - generic:
+    - img
+  - generic:
+    - generic [active]:
+      - generic:
+        - generic [ref=e43]:
+          - button "Toggle Nuxt DevTools" [ref=e44] [cursor=pointer]:
+            - img [ref=e45]
+          - generic "Page load time" [ref=e48]:
+            - generic [ref=e49]: "771"
+            - generic [ref=e50]: ms
+          - button "Toggle Component Inspector" [ref=e52] [cursor=pointer]:
+            - img [ref=e53]
+        - iframe [ref=e64]:
+          - generic [ref=f3e3]:
+            - generic [ref=f3e33]:
+              - button [ref=f3e36] [cursor=pointer]
+              - generic [ref=f3e38]:
+                - link [ref=f3e40] [cursor=pointer]:
+                  - /url: /__nuxt_devtools__/client/modules/overview
+                - link [ref=f3e44] [cursor=pointer]:
+                  - /url: /__nuxt_devtools__/client/modules/pages
+                - link [ref=f3e48] [cursor=pointer]:
+                  - /url: /__nuxt_devtools__/client/modules/components
+                - link [ref=f3e52] [cursor=pointer]:
+                  - /url: /__nuxt_devtools__/client/modules/imports
+                - link [ref=f3e56] [cursor=pointer]:
+                  - /url: /__nuxt_devtools__/client/modules/modules
+                - link [ref=f3e60] [cursor=pointer]:
+                  - /url: /__nuxt_devtools__/client/modules/assets
+                - link [ref=f3e65] [cursor=pointer]:
+                  - /url: /__nuxt_devtools__/client/modules/render-tree
+                - link [ref=f3e70] [cursor=pointer]:
+                  - /url: /__nuxt_devtools__/client/modules/runtime-configs
+                - link [active] [ref=f3e74] [cursor=pointer]:
+                  - /url: /__nuxt_devtools__/client/modules/payload
+                - link [ref=f3e78] [cursor=pointer]:
+                  - /url: /__nuxt_devtools__/client/modules/open-graph
+                - link [ref=f3e82] [cursor=pointer]:
+                  - /url: /__nuxt_devtools__/client/modules/plugins
+                - link [ref=f3e86] [cursor=pointer]:
+                  - /url: /__nuxt_devtools__/client/modules/timeline
+                - link [ref=f3e91] [cursor=pointer]:
+                  - /url: /__nuxt_devtools__/client/modules/server-routes
+                - link [ref=f3e95] [cursor=pointer]:
+                  - /url: /__nuxt_devtools__/client/modules/storage
+              - generic [ref=f3e98]:
+                - button "9" [ref=f3e100] [cursor=pointer]:
+                  - generic [ref=f3e103]: "9"
+                - link [ref=f3e105] [cursor=pointer]:
+                  - /url: /__nuxt_devtools__/client/settings
+            - generic [ref=f3e111]:
+              - generic [ref=f3e112]:
+                - group [ref=f3e113]:
+                  - 'generic "State Keyed state from `useState`" [ref=f3e114] [cursor=pointer]':
+                    - generic [ref=f3e117]:
+                      - generic [ref=f3e118]: State
+                      - generic [ref=f3e119]: "Keyed state from `useState`"
+                  - generic [ref=f3e124]:
+                    - button "color-mode" [ref=f3e127] [cursor=pointer]:
+                      - code [ref=f3e129]: color-mode
+                    - button "__nuxt_devtools__" [ref=f3e132] [cursor=pointer]:
+                      - code [ref=f3e134]: __nuxt_devtools__
+                    - button "toasts" [ref=f3e137] [cursor=pointer]:
+                      - code [ref=f3e139]: toasts
+                - group [ref=f3e141]:
+                  - 'generic "Data Keyed state from `useAsyncData` Re-fetch all data" [ref=f3e142] [cursor=pointer]':
+                    - generic [ref=f3e143]:
+                      - generic [ref=f3e145]:
+                        - generic [ref=f3e146]: Data
+                        - generic [ref=f3e147]: "Keyed state from `useAsyncData`"
+                      - button "Re-fetch all data" [ref=f3e148]: Re-fetch all data
+                  - button "assistant-preview-demo" [ref=f3e157] [cursor=pointer]:
+                    - code [ref=f3e159]: assistant-preview-demo
+              - button "Help" [ref=f3e161] [cursor=pointer]
+  - region "Notifications (F8)":
+    - list

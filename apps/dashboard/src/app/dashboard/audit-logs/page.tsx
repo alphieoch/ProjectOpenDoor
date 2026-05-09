@@ -70,7 +70,7 @@ export default function AuditLogsPage() {
       <div className="card overflow-hidden">
         <table className="min-w-full">
           <thead>
-            <tr className="border-b border-zinc-100">
+            <tr className="border-b border-[var(--line)]">
               <th className="table-header-cell">Action</th>
               <th className="table-header-cell">User</th>
               <th className="table-header-cell">Details</th>
@@ -82,14 +82,16 @@ export default function AuditLogsPage() {
             {loading ? (
               <tr>
                 <td colSpan={5} className="px-4 py-10 text-center">
-                  <Loader2 className="mx-auto h-5 w-5 animate-spin text-zinc-400" />
+                  <Loader2 className="mx-auto h-5 w-5 animate-spin" style={{ color: "var(--ink-4)" }} />
                 </td>
               </tr>
             ) : logs.length === 0 ? (
               <tr>
                 <td colSpan={5} className="px-4 py-12 text-center">
-                  <ClipboardList className="mx-auto mb-3 h-8 w-8 text-zinc-300" />
-                  <p className="text-sm text-zinc-400">No audit logs yet. Actions will appear here as they happen.</p>
+                  <ClipboardList className="mx-auto mb-3 h-8 w-8" style={{ color: "var(--ink-4)" }} />
+                  <p className="text-sm" style={{ color: "var(--ink-4)" }}>
+                    No audit logs yet. Actions will appear here as they happen.
+                  </p>
                 </td>
               </tr>
             ) : (
@@ -100,23 +102,25 @@ export default function AuditLogsPage() {
                       {formatAction(log.action)}
                     </span>
                   </td>
-                  <td className="table-cell text-zinc-700 whitespace-nowrap">
+                  <td className="table-cell whitespace-nowrap" style={{ color: "var(--ink-2)" }}>
                     {log.userName || log.userEmail || "System"}
                   </td>
-                  <td className="table-cell text-zinc-500">
+                  <td className="table-cell" style={{ color: "var(--ink-3)" }}>
                     {log.entityType && (
-                      <span className="text-xs text-zinc-400">
+                      <span className="text-xs" style={{ color: "var(--ink-4)" }}>
                         {log.entityType}:{log.entityId?.slice(0, 8)}
                       </span>
                     )}
                     {log.metadata && (
-                      <pre className="mt-1 max-w-xs overflow-hidden text-xs text-zinc-400">
+                      <pre className="mt-1 max-w-xs overflow-hidden text-xs" style={{ color: "var(--ink-4)" }}>
                         {JSON.stringify(log.metadata, null, 2).slice(0, 100)}
                       </pre>
                     )}
                   </td>
-                  <td className="table-cell text-xs text-zinc-400 whitespace-nowrap">{log.ipAddress || "—"}</td>
-                  <td className="table-cell text-xs text-zinc-500 whitespace-nowrap">
+                  <td className="table-cell text-xs whitespace-nowrap" style={{ color: "var(--ink-4)" }}>
+                    {log.ipAddress || "—"}
+                  </td>
+                  <td className="table-cell text-xs whitespace-nowrap" style={{ color: "var(--ink-3)" }}>
                     {new Date(log.createdAt).toLocaleString()}
                   </td>
                 </tr>

@@ -19,7 +19,21 @@
       "Bash(xargs -I {} bash -c 'echo \"=== {} ===\"; wc -l {}')",
       "Bash(bun add *)",
       "Bash(xargs basename *)",
-      "Bash(awk '{print $NF}')"
+      "Bash(awk '{print $NF}')",
+      "Bash(gh pr *)",
+      "Bash(git fetch *)",
+      "Bash(bun tsc *)",
+      "Bash(grep -v '^$')",
+      "Bash(bun --env-file=../../.env run db:migrate)",
+      "Bash(bun --env-file=.env scripts/seed-enterprise-governance.ts)",
+      "Bash(DATABASE_URL=postgresql://postgres:postgres@localhost:5432/opendoor bun run db:migrate)",
+      "Bash(DATABASE_URL=postgresql://postgres:postgres@localhost:5432/opendoor bun --tsconfig-override '{\"compilerOptions\":{\"paths\":{\"@opendoor/database\":[\"./packages/database/src/index.ts\"],\"@opendoor/analytics\":[\"./packages/analytics/src/index.ts\"]}}}' scripts/seed-enterprise-governance.ts)",
+      "Bash(DATABASE_URL=postgresql://postgres:postgres@localhost:5432/opendoor bun --cwd /Users/alphie/ProjectOpenDoor/apps/dashboard scripts/seed-enterprise-governance.ts)",
+      "Bash(DATABASE_URL=postgresql://postgres:postgres@localhost:5432/opendoor bun ../../scripts/seed-enterprise-governance.ts)",
+      "Bash(DATABASE_URL=postgresql://postgres:postgres@localhost:5432/opendoor NODE_PATH=./apps/dashboard/node_modules bun scripts/seed-enterprise-governance.ts)",
+      "Bash(psql postgresql://postgres:postgres@localhost:5432/opendoor -c \"SELECT enum_range\\(NULL::sector\\);\")",
+      "Bash(psql *)",
+      "Bash(xargs ls -la)"
     ]
   }
 }

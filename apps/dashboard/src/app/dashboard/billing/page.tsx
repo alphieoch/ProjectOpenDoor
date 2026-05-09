@@ -223,7 +223,7 @@ export default function BillingPage() {
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center">
-        <Loader2 className="h-5 w-5 animate-spin text-zinc-400" />
+        <Loader2 className="h-5 w-5 animate-spin" style={{ color: "var(--ink-4)" }} />
       </div>
     );
   }
@@ -245,26 +245,30 @@ export default function BillingPage() {
       {/* Balance cards */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <div className="card p-6">
-          <div className="flex items-center gap-2 text-zinc-500">
+          <div className="flex items-center gap-2" style={{ color: "var(--ink-3)" }}>
             <Wallet className="h-4 w-4" />
             <p className="text-sm font-medium">Prepaid Balance</p>
           </div>
-          <p className="mt-3 text-3xl font-semibold text-zinc-900">
+          <p className="mt-3 text-3xl font-semibold" style={{ color: "var(--ink)" }}>
             {centsToUsd(balance?.creditsUsdCents || 0)}
           </p>
-          <p className="mt-1 text-xs text-zinc-400">$20 signup credit on first organization creation.</p>
+          <p className="mt-1 text-xs" style={{ color: "var(--ink-4)" }}>
+            $20 signup credit on first organization creation.
+          </p>
         </div>
 
         <div className="card p-6">
-          <p className="text-sm font-medium text-zinc-500">4h Plan Allowance</p>
-          <p className="mt-2 text-lg font-semibold text-zinc-900 capitalize">{info?.plan || "free"}</p>
-          <div className="mt-4 h-1.5 w-full rounded-full bg-zinc-100">
+          <p className="text-sm font-medium" style={{ color: "var(--ink-3)" }}>4h Plan Allowance</p>
+          <p className="mt-2 text-lg font-semibold capitalize" style={{ color: "var(--ink)" }}>
+            {info?.plan || "free"}
+          </p>
+          <div className="mt-4 h-1.5 w-full rounded-full" style={{ background: "var(--paper-3)" }}>
             <div
-              className="h-1.5 rounded-full bg-zinc-900 transition-all"
-              style={{ width: `${progressPercent}%` }}
+              className="h-1.5 rounded-full transition-all"
+              style={{ background: "var(--ink)", width: `${progressPercent}%` }}
             />
           </div>
-          <p className="mt-2 text-xs text-zinc-500">
+          <p className="mt-2 text-xs" style={{ color: "var(--ink-3)" }}>
             {centsToUsd(balance?.planBudget.usedCents || 0)} used of{" "}
             {centsToUsd(balance?.planBudget.totalCents || 0)}. Resets at{" "}
             {balance?.planBudget.resetsAt
@@ -279,8 +283,10 @@ export default function BillingPage() {
         <div className="mt-4 card p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-zinc-500">Subscription</p>
-              <p className="mt-1 text-2xl font-semibold text-zinc-900 capitalize">{info.plan}</p>
+              <p className="text-sm" style={{ color: "var(--ink-3)" }}>Subscription</p>
+              <p className="mt-1 text-2xl font-semibold capitalize" style={{ color: "var(--ink)" }}>
+                {info.plan}
+              </p>
               {info.subscriptionStatus && (
                 <span className={`mt-2 inline-block ${isSubscribed ? "badge-success" : "badge-warning"}`}>
                   {info.subscriptionStatus}
@@ -304,10 +310,10 @@ export default function BillingPage() {
       {/* Top up */}
       <div className="mt-4 card p-6">
         <div className="flex items-start gap-3">
-          <CreditCard className="mt-0.5 h-4 w-4 shrink-0 text-zinc-400" />
+          <CreditCard className="mt-0.5 h-4 w-4 shrink-0" style={{ color: "var(--ink-4)" }} />
           <div className="w-full">
             <h3 className="section-title">Top up API credits</h3>
-            <p className="mt-1 text-sm text-zinc-500">
+            <p className="mt-1 text-sm" style={{ color: "var(--ink-3)" }}>
               Buy prepaid credit — we deduct usage costs automatically per request.
             </p>
 
@@ -351,10 +357,10 @@ export default function BillingPage() {
       {/* Auto-recharge */}
       <div className="mt-4 card p-6">
         <div className="flex items-start gap-3">
-          <Zap className="mt-0.5 h-4 w-4 shrink-0 text-zinc-400" />
+          <Zap className="mt-0.5 h-4 w-4 shrink-0" style={{ color: "var(--ink-4)" }} />
           <div className="w-full">
             <h3 className="section-title">Auto-recharge</h3>
-            <p className="mt-1 text-sm text-zinc-500">
+            <p className="mt-1 text-sm" style={{ color: "var(--ink-3)" }}>
               Automatically top up credits when your balance drops below a threshold.
             </p>
 
@@ -366,16 +372,16 @@ export default function BillingPage() {
                   onChange={(e) =>
                     setAutoRecharge((prev) => ({ ...prev, enabled: e.target.checked }))
                   }
-                  className="h-4 w-4 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-900"
+                  className="h-4 w-4 rounded accent-[var(--brand)]"
                 />
-                <span className="text-sm text-zinc-700">Enable auto-recharge</span>
+                <span className="text-sm" style={{ color: "var(--ink-2)" }}>Enable auto-recharge</span>
               </label>
             </div>
 
             {autoRecharge.enabled && (
               <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>
-                  <label className="block text-xs font-medium text-zinc-500">
+                  <label className="block text-xs font-medium" style={{ color: "var(--ink-3)" }}>
                     Threshold (USD)
                   </label>
                   <input
@@ -390,13 +396,14 @@ export default function BillingPage() {
                       }))
                     }
                     className="input mt-1 w-full"
+                    aria-label="Auto-recharge threshold (USD)"
                   />
-                  <p className="mt-1 text-xs text-zinc-400">
+                  <p className="mt-1 text-xs" style={{ color: "var(--ink-4)" }}>
                     Recharge when balance drops below this amount.
                   </p>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-zinc-500">
+                  <label className="block text-xs font-medium" style={{ color: "var(--ink-3)" }}>
                     Recharge amount (USD)
                   </label>
                   <input
@@ -412,8 +419,9 @@ export default function BillingPage() {
                       }))
                     }
                     className="input mt-1 w-full"
+                    aria-label="Auto-recharge amount (USD)"
                   />
-                  <p className="mt-1 text-xs text-zinc-400">
+                  <p className="mt-1 text-xs" style={{ color: "var(--ink-4)" }}>
                     How much to add each time.
                   </p>
                 </div>
@@ -454,20 +462,20 @@ export default function BillingPage() {
           return (
             <div
               key={plan.id}
-              className={`card p-6 ${isCurrent ? "ring-2 ring-zinc-900" : ""}`}
+              className={`card p-6 ${isCurrent ? "ring-2 ring-[var(--ink)]" : ""}`}
             >
               <div className="flex items-center justify-between">
-                <h3 className="font-semibold text-zinc-900">{plan.name}</h3>
+                <h3 className="font-semibold" style={{ color: "var(--ink)" }}>{plan.name}</h3>
                 {isCurrent && <span className="badge-neutral">Current</span>}
               </div>
-              <p className="mt-1 text-xs text-zinc-500">{plan.description}</p>
-              <p className="mt-4 text-2xl font-semibold text-zinc-900">{plan.price}</p>
+              <p className="mt-1 text-xs" style={{ color: "var(--ink-3)" }}>{plan.description}</p>
+              <p className="mt-4 text-2xl font-semibold" style={{ color: "var(--ink)" }}>{plan.price}</p>
 
               <ul className="mt-5 space-y-2.5">
                 {plan.features.map((feature) => (
                   <li key={feature} className="flex items-start gap-2 text-sm">
-                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
-                    <span className="text-zinc-600">{feature}</span>
+                    <Check className="mt-0.5 h-4 w-4 shrink-0" style={{ color: "var(--green)" }} />
+                    <span style={{ color: "var(--ink-2)" }}>{feature}</span>
                   </li>
                 ))}
               </ul>
@@ -492,7 +500,7 @@ export default function BillingPage() {
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm">
             <thead>
-              <tr className="border-b border-zinc-100">
+              <tr className="border-b border-[var(--line)]">
                 <th className="table-header-cell">Family</th>
                 <th className="table-header-cell">Free</th>
                 <th className="table-header-cell">Pro</th>
@@ -501,16 +509,16 @@ export default function BillingPage() {
             </thead>
             <tbody>
               <tr className="table-row">
-                <td className="table-cell text-zinc-700">Closed (OpenAI/Claude/Grok/Gemini)</td>
-                <td className="table-cell text-zinc-600">5%</td>
-                <td className="table-cell text-zinc-600">3%</td>
-                <td className="table-cell text-zinc-600">2%</td>
+                <td className="table-cell" style={{ color: "var(--ink-2)" }}>Closed (OpenAI/Claude/Grok/Gemini)</td>
+                <td className="table-cell" style={{ color: "var(--ink-3)" }}>5%</td>
+                <td className="table-cell" style={{ color: "var(--ink-3)" }}>3%</td>
+                <td className="table-cell" style={{ color: "var(--ink-3)" }}>2%</td>
               </tr>
               <tr className="table-row">
-                <td className="table-cell text-zinc-700">Open-weight (Mistral/DeepSeek/Qwen/custom)</td>
-                <td className="table-cell text-zinc-600">35%</td>
-                <td className="table-cell text-zinc-600">30%</td>
-                <td className="table-cell text-zinc-600">25%</td>
+                <td className="table-cell" style={{ color: "var(--ink-2)" }}>Open-weight (Mistral/DeepSeek/Qwen/custom)</td>
+                <td className="table-cell" style={{ color: "var(--ink-3)" }}>35%</td>
+                <td className="table-cell" style={{ color: "var(--ink-3)" }}>30%</td>
+                <td className="table-cell" style={{ color: "var(--ink-3)" }}>25%</td>
               </tr>
             </tbody>
           </table>
@@ -524,16 +532,19 @@ export default function BillingPage() {
           {(balance?.recentTransactions || []).slice(0, 8).map((txn) => (
             <div
               key={txn.id}
-              className="flex items-center justify-between rounded-lg border border-zinc-100 px-3 py-2.5 text-sm"
+              className="flex items-center justify-between rounded-lg border px-3 py-2.5 text-sm"
+              style={{ borderColor: "var(--line)", background: "var(--paper-2)" }}
             >
-              <span className="capitalize text-zinc-700">{txn.kind.replace("_", " ")}</span>
+              <span className="capitalize" style={{ color: "var(--ink-2)" }}>{txn.kind.replace("_", " ")}</span>
               <span className={txn.amountCents >= 0 ? "font-medium text-emerald-600" : "font-medium text-red-600"}>
                 {txn.amountCents >= 0 ? "+" : "−"}{centsToUsd(Math.abs(txn.amountCents))}
               </span>
             </div>
           ))}
           {(!balance?.recentTransactions || balance.recentTransactions.length === 0) && (
-            <p className="py-4 text-center text-sm text-zinc-400">No credit transactions yet.</p>
+            <p className="py-4 text-center text-sm" style={{ color: "var(--ink-4)" }}>
+              No credit transactions yet.
+            </p>
           )}
         </div>
       </div>

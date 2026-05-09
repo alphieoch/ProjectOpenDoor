@@ -1,0 +1,318 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - list [ref=e5]:
+      - generic [ref=e6]:
+        - button "O" [ref=e8] [cursor=pointer]:
+          - generic [ref=e11]: O
+          - listitem
+        - generic [ref=e12]:
+          - generic [ref=e17]:
+            - listitem
+            - generic [ref=e19]:
+              - link [ref=e20] [cursor=pointer]:
+                - /url: /dashboard
+                - img [ref=e21]
+                - listitem
+              - link [ref=e26] [cursor=pointer]:
+                - /url: /dashboard/api-keys
+                - img [ref=e27]
+                - listitem
+              - link [ref=e31] [cursor=pointer]:
+                - /url: /dashboard/usage
+                - img [ref=e32]
+                - listitem
+              - link [ref=e34] [cursor=pointer]:
+                - /url: /dashboard/pricing
+                - img [ref=e35]
+                - listitem
+              - link [ref=e37] [cursor=pointer]:
+                - /url: /dashboard/deployments
+                - img [ref=e38]
+                - listitem
+              - link [ref=e41] [cursor=pointer]:
+                - /url: /dashboard/billing
+                - img [ref=e42]
+                - listitem
+              - link [ref=e44] [cursor=pointer]:
+                - /url: /dashboard/playground
+                - img [ref=e45]
+                - listitem
+              - link [ref=e47] [cursor=pointer]:
+                - /url: /dashboard/ai-assistants
+                - img [ref=e48]
+                - listitem
+              - link [ref=e51] [cursor=pointer]:
+                - /url: /dashboard/team
+                - img [ref=e52]
+                - listitem
+              - link [ref=e57] [cursor=pointer]:
+                - /url: /dashboard/settings
+                - img [ref=e58]
+                - listitem
+              - link [ref=e61] [cursor=pointer]:
+                - /url: /dashboard/audit-logs
+                - img [ref=e62]
+                - listitem
+            - listitem
+            - generic [ref=e66]:
+              - link [ref=e67] [cursor=pointer]:
+                - /url: /dashboard/governance
+                - img [ref=e69]
+                - listitem
+              - link [ref=e72] [cursor=pointer]:
+                - /url: /dashboard/governance/policies
+                - img [ref=e73]
+                - listitem
+              - link [ref=e79] [cursor=pointer]:
+                - /url: /dashboard/governance/violations
+                - img [ref=e80]
+                - listitem
+              - link [ref=e82] [cursor=pointer]:
+                - /url: /dashboard/governance/approvals
+                - img [ref=e83]
+                - listitem
+              - link [ref=e87] [cursor=pointer]:
+                - /url: /dashboard/governance/compliance
+                - img [ref=e89]
+                - listitem
+              - link [ref=e92] [cursor=pointer]:
+                - /url: /dashboard/governance/sector-templates
+                - img [ref=e93]
+                - listitem
+          - generic [ref=e97]:
+            - listitem
+            - link [ref=e98] [cursor=pointer]:
+              - /url: /dashboard/settings
+              - img [ref=e99]
+              - listitem
+            - button "U" [ref=e102] [cursor=pointer]:
+              - generic [ref=e103]:
+                - generic [ref=e105]: U
+                - listitem
+    - generic [ref=e106]:
+      - generic [ref=e107]:
+        - generic [ref=e108]:
+          - generic [ref=e109]: Governance
+          - generic [ref=e110]: ›
+          - strong [ref=e111]: Compliance
+        - generic [ref=e112]:
+          - img [ref=e113]
+          - generic [ref=e116]: Search models, keys, policies…
+          - generic [ref=e117]: ⌘K
+        - generic [ref=e118]:
+          - button "Toggle theme" [ref=e119] [cursor=pointer]:
+            - img [ref=e120]
+            - img
+            - generic [ref=e126]: Toggle theme
+          - button "Notifications" [ref=e127] [cursor=pointer]:
+            - img [ref=e128]
+          - button "Help" [ref=e131] [cursor=pointer]:
+            - img [ref=e132]
+          - link "Docs" [ref=e136] [cursor=pointer]:
+            - /url: https://docs.opendoor.ai
+            - img [ref=e137]
+            - text: Docs
+      - main [ref=e141]:
+        - generic [ref=e143]:
+          - generic [ref=e144]:
+            - heading "Compliance" [level=1] [ref=e145]
+            - paragraph [ref=e146]: Track model compliance against GDPR, EU AI Act, ICO UK, and NIST AI RMF.
+          - generic [ref=e147]:
+            - button "Manual Tracking" [ref=e148] [cursor=pointer]:
+              - img [ref=e149]
+              - text: Manual Tracking
+            - button "Automated Compliance" [active] [ref=e152] [cursor=pointer]:
+              - img [ref=e153]
+              - text: Automated Compliance
+          - generic [ref=e609]:
+            - generic [ref=e611]:
+              - generic [ref=e612]:
+                - generic [ref=e613]: Model
+                - combobox [ref=e614]:
+                  - option "GPT-4o" [selected]
+                  - option "Claude 3.5 Sonnet"
+                  - option "DeepSeek-V3"
+                  - option "Mistral Large"
+                  - option "Gemini 1.5 Pro"
+              - generic [ref=e615]:
+                - button "Rules" [ref=e616] [cursor=pointer]
+                - button "Reports (0)" [ref=e617] [cursor=pointer]
+                - button "Run Check" [ref=e618] [cursor=pointer]:
+                  - img [ref=e619]
+                  - text: Run Check
+            - generic [ref=e621]:
+              - generic [ref=e622]:
+                - heading "Automated Compliance Rules" [level=3] [ref=e623]
+                - paragraph [ref=e624]: These rules are automatically evaluated when you run a compliance check.
+              - table [ref=e626]:
+                - rowgroup [ref=e627]:
+                  - row "Rule Framework Severity Type Reference" [ref=e628]:
+                    - columnheader "Rule" [ref=e629]
+                    - columnheader "Framework" [ref=e630]
+                    - columnheader "Severity" [ref=e631]
+                    - columnheader "Type" [ref=e632]
+                    - columnheader "Reference" [ref=e633]
+                - rowgroup [ref=e634]:
+                  - row "DPIA for High-Risk Processing Data Protection Impact Assessment required for high-risk AI processing. Complete a Data Protection Impact Assessment (DPIA) before production deployment. Include risk mitigations and data subject rights impact. gdpr critical model attribute GDPR Article 35 - DPIA" [ref=e635]:
+                    - cell "DPIA for High-Risk Processing Data Protection Impact Assessment required for high-risk AI processing. Complete a Data Protection Impact Assessment (DPIA) before production deployment. Include risk mitigations and data subject rights impact." [ref=e636]:
+                      - generic [ref=e637]: DPIA for High-Risk Processing
+                      - generic [ref=e638]: Data Protection Impact Assessment required for high-risk AI processing.
+                      - generic [ref=e639]:
+                        - img [ref=e640]
+                        - text: Complete a Data Protection Impact Assessment (DPIA) before production deployment. Include risk mitigations and data subject rights impact.
+                    - cell "gdpr" [ref=e642]
+                    - cell "critical" [ref=e643]:
+                      - generic [ref=e644]: critical
+                    - cell "model attribute" [ref=e645]
+                    - cell "GDPR Article 35 - DPIA" [ref=e646]:
+                      - link "GDPR Article 35 - DPIA" [ref=e647] [cursor=pointer]:
+                        - /url: https://gdpr-info.eu/art-35-gdpr/
+                        - img [ref=e648]
+                        - text: GDPR Article 35 - DPIA
+                  - row "GDPR Lawful Basis AI processing must have a documented lawful basis under GDPR. Document the lawful basis for processing under GDPR Article 6. Complete a Data Protection Impact Assessment (DPIA) if processing is high-risk. gdpr critical model attribute GDPR Article 6 - Lawfulness of Processing" [ref=e652]:
+                    - cell "GDPR Lawful Basis AI processing must have a documented lawful basis under GDPR. Document the lawful basis for processing under GDPR Article 6. Complete a Data Protection Impact Assessment (DPIA) if processing is high-risk." [ref=e653]:
+                      - generic [ref=e654]: GDPR Lawful Basis
+                      - generic [ref=e655]: AI processing must have a documented lawful basis under GDPR.
+                      - generic [ref=e656]:
+                        - img [ref=e657]
+                        - text: Document the lawful basis for processing under GDPR Article 6. Complete a Data Protection Impact Assessment (DPIA) if processing is high-risk.
+                    - cell "gdpr" [ref=e659]
+                    - cell "critical" [ref=e660]:
+                      - generic [ref=e661]: critical
+                    - cell "model attribute" [ref=e662]
+                    - cell "GDPR Article 6 - Lawfulness of Processing" [ref=e663]:
+                      - link "GDPR Article 6 - Lawfulness of Processing" [ref=e664] [cursor=pointer]:
+                        - /url: https://gdpr-info.eu/art-6-gdpr/
+                        - img [ref=e665]
+                        - text: GDPR Article 6 - Lawfulness of Processing
+                  - row "High Risk Model Oversight High-risk models require additional governance controls and human oversight. High-risk models require human-in-the-loop oversight. Implement approval workflows and restrict usage to non-production environments until fully reviewed. eu ai act high model attribute EU AI Act - Human Oversight" [ref=e669]:
+                    - cell "High Risk Model Oversight High-risk models require additional governance controls and human oversight. High-risk models require human-in-the-loop oversight. Implement approval workflows and restrict usage to non-production environments until fully reviewed." [ref=e670]:
+                      - generic [ref=e671]: High Risk Model Oversight
+                      - generic [ref=e672]: High-risk models require additional governance controls and human oversight.
+                      - generic [ref=e673]:
+                        - img [ref=e674]
+                        - text: High-risk models require human-in-the-loop oversight. Implement approval workflows and restrict usage to non-production environments until fully reviewed.
+                    - cell "eu ai act" [ref=e676]
+                    - cell "high" [ref=e677]:
+                      - generic [ref=e678]: high
+                    - cell "model attribute" [ref=e679]
+                    - cell "EU AI Act - Human Oversight" [ref=e680]:
+                      - link "EU AI Act - Human Oversight" [ref=e681] [cursor=pointer]:
+                        - /url: https://artificialintelligenceact.eu/the-act/
+                        - img [ref=e682]
+                        - text: EU AI Act - Human Oversight
+                  - row "Model Approval Required Models must have approval status \"approved\" before production deployment. Submit the model for governance review and approval before deploying to production. Navigate to Governance > Approvals to start the approval process. eu ai act critical model attribute EU AI Act - Risk Classification" [ref=e686]:
+                    - cell "Model Approval Required Models must have approval status \"approved\" before production deployment. Submit the model for governance review and approval before deploying to production. Navigate to Governance > Approvals to start the approval process." [ref=e687]:
+                      - generic [ref=e688]: Model Approval Required
+                      - generic [ref=e689]: Models must have approval status "approved" before production deployment.
+                      - generic [ref=e690]:
+                        - img [ref=e691]
+                        - text: Submit the model for governance review and approval before deploying to production. Navigate to Governance > Approvals to start the approval process.
+                    - cell "eu ai act" [ref=e693]
+                    - cell "critical" [ref=e694]:
+                      - generic [ref=e695]: critical
+                    - cell "model attribute" [ref=e696]
+                    - cell "EU AI Act - Risk Classification" [ref=e697]:
+                      - link "EU AI Act - Risk Classification" [ref=e698] [cursor=pointer]:
+                        - /url: https://artificialintelligenceact.eu/the-act/
+                        - img [ref=e699]
+                        - text: EU AI Act - Risk Classification
+                  - row "Record Keeping Maintain logs of AI system operation for traceability. Enable comprehensive audit logging for all model interactions. Retain logs for a minimum of 6 years per EU AI Act requirements. eu ai act medium model attribute EU AI Act - Record-Keeping" [ref=e703]:
+                    - cell "Record Keeping Maintain logs of AI system operation for traceability. Enable comprehensive audit logging for all model interactions. Retain logs for a minimum of 6 years per EU AI Act requirements." [ref=e704]:
+                      - generic [ref=e705]: Record Keeping
+                      - generic [ref=e706]: Maintain logs of AI system operation for traceability.
+                      - generic [ref=e707]:
+                        - img [ref=e708]
+                        - text: Enable comprehensive audit logging for all model interactions. Retain logs for a minimum of 6 years per EU AI Act requirements.
+                    - cell "eu ai act" [ref=e710]
+                    - cell "medium" [ref=e711]:
+                      - generic [ref=e712]: medium
+                    - cell "model attribute" [ref=e713]
+                    - cell "EU AI Act - Record-Keeping" [ref=e714]:
+                      - link "EU AI Act - Record-Keeping" [ref=e715] [cursor=pointer]:
+                        - /url: https://artificialintelligenceact.eu/the-act/
+                        - img [ref=e716]
+                        - text: EU AI Act - Record-Keeping
+                  - row "Safety Evaluation Pass Models must pass safety red-team evaluations before deployment. Run comprehensive safety red-team evaluations. Address any vulnerabilities found and re-test before deployment. eu ai act critical evaluation score EU AI Act - Accuracy & Robustness" [ref=e720]:
+                    - cell "Safety Evaluation Pass Models must pass safety red-team evaluations before deployment. Run comprehensive safety red-team evaluations. Address any vulnerabilities found and re-test before deployment." [ref=e721]:
+                      - generic [ref=e722]: Safety Evaluation Pass
+                      - generic [ref=e723]: Models must pass safety red-team evaluations before deployment.
+                      - generic [ref=e724]:
+                        - img [ref=e725]
+                        - text: Run comprehensive safety red-team evaluations. Address any vulnerabilities found and re-test before deployment.
+                    - cell "eu ai act" [ref=e727]
+                    - cell "critical" [ref=e728]:
+                      - generic [ref=e729]: critical
+                    - cell "evaluation score" [ref=e730]
+                    - cell "EU AI Act - Accuracy & Robustness" [ref=e731]:
+                      - link "EU AI Act - Accuracy & Robustness" [ref=e732] [cursor=pointer]:
+                        - /url: https://artificialintelligenceact.eu/the-act/
+                        - img [ref=e733]
+                        - text: EU AI Act - Accuracy & Robustness
+                  - row "Transparency Obligations Users must be notified when interacting with AI systems. Add AI disclosure notices in UI and API responses. Document transparency measures in the model card. eu ai act medium model attribute EU AI Act - Transparency" [ref=e737]:
+                    - cell "Transparency Obligations Users must be notified when interacting with AI systems. Add AI disclosure notices in UI and API responses. Document transparency measures in the model card." [ref=e738]:
+                      - generic [ref=e739]: Transparency Obligations
+                      - generic [ref=e740]: Users must be notified when interacting with AI systems.
+                      - generic [ref=e741]:
+                        - img [ref=e742]
+                        - text: Add AI disclosure notices in UI and API responses. Document transparency measures in the model card.
+                    - cell "eu ai act" [ref=e744]
+                    - cell "medium" [ref=e745]:
+                      - generic [ref=e746]: medium
+                    - cell "model attribute" [ref=e747]
+                    - cell "EU AI Act - Transparency" [ref=e748]:
+                      - link "EU AI Act - Transparency" [ref=e749] [cursor=pointer]:
+                        - /url: https://artificialintelligenceact.eu/the-act/
+                        - img [ref=e750]
+                        - text: EU AI Act - Transparency
+                  - row "Provenance Verification Model provenance must be verified and documented. Document model source, training data lineage, and supply chain. Verify authenticity with the model provider. nist ai rmf medium model attribute NIST AI RMF - Govern" [ref=e754]:
+                    - cell "Provenance Verification Model provenance must be verified and documented. Document model source, training data lineage, and supply chain. Verify authenticity with the model provider." [ref=e755]:
+                      - generic [ref=e756]: Provenance Verification
+                      - generic [ref=e757]: Model provenance must be verified and documented.
+                      - generic [ref=e758]:
+                        - img [ref=e759]
+                        - text: Document model source, training data lineage, and supply chain. Verify authenticity with the model provider.
+                    - cell "nist ai rmf" [ref=e761]
+                    - cell "medium" [ref=e762]:
+                      - generic [ref=e763]: medium
+                    - cell "model attribute" [ref=e764]
+                    - cell "NIST AI RMF - Govern" [ref=e765]:
+                      - link "NIST AI RMF - Govern" [ref=e766] [cursor=pointer]:
+                        - /url: https://www.nist.gov/itl/ai-risk-management-framework
+                        - img [ref=e767]
+                        - text: NIST AI RMF - Govern
+                  - row "Bias Audit Required Models must pass bias audits to ensure fair outcomes. Conduct bias audits across different demographic groups. Document mitigation strategies and re-test after improvements. ico uk high evaluation score ICO UK - AI and Data Protection" [ref=e771]:
+                    - cell "Bias Audit Required Models must pass bias audits to ensure fair outcomes. Conduct bias audits across different demographic groups. Document mitigation strategies and re-test after improvements." [ref=e772]:
+                      - generic [ref=e773]: Bias Audit Required
+                      - generic [ref=e774]: Models must pass bias audits to ensure fair outcomes.
+                      - generic [ref=e775]:
+                        - img [ref=e776]
+                        - text: Conduct bias audits across different demographic groups. Document mitigation strategies and re-test after improvements.
+                    - cell "ico uk" [ref=e778]
+                    - cell "high" [ref=e779]:
+                      - generic [ref=e780]: high
+                    - cell "evaluation score" [ref=e781]
+                    - cell "ICO UK - AI and Data Protection" [ref=e782]:
+                      - link "ICO UK - AI and Data Protection" [ref=e783] [cursor=pointer]:
+                        - /url: https://ico.org.uk/for-organisations/guide-to-data-protection/key-dp-themes/guidance-on-ai-and-data-protection/
+                        - img [ref=e784]
+                        - text: ICO UK - AI and Data Protection
+                  - row "Data Residency Compliance UK/EU personal data must be processed within UK/EU regions. Ensure model inference and data processing occurs in UK/EU datacenters. Review provider data processing agreements. ico uk high model attribute ICO UK - Data Residency" [ref=e788]:
+                    - cell "Data Residency Compliance UK/EU personal data must be processed within UK/EU regions. Ensure model inference and data processing occurs in UK/EU datacenters. Review provider data processing agreements." [ref=e789]:
+                      - generic [ref=e790]: Data Residency Compliance
+                      - generic [ref=e791]: UK/EU personal data must be processed within UK/EU regions.
+                      - generic [ref=e792]:
+                        - img [ref=e793]
+                        - text: Ensure model inference and data processing occurs in UK/EU datacenters. Review provider data processing agreements.
+                    - cell "ico uk" [ref=e795]
+                    - cell "high" [ref=e796]:
+                      - generic [ref=e797]: high
+                    - cell "model attribute" [ref=e798]
+                    - cell "ICO UK - Data Residency" [ref=e799]:
+                      - link "ICO UK - Data Residency" [ref=e800] [cursor=pointer]:
+                        - /url: https://ico.org.uk/for-organisations/guide-to-data-protection/key-dp-themes/guidance-on-ai-and-data-protection/
+                        - img [ref=e801]
+                        - text: ICO UK - Data Residency
+  - button "Open Next.js Dev Tools" [ref=e605] [cursor=pointer]:
+    - img [ref=e606]
+  - alert [ref=e158]

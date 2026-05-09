@@ -1,0 +1,546 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - list [ref=e5]:
+      - generic [ref=e6]:
+        - button "O" [ref=e8] [cursor=pointer]:
+          - generic [ref=e11]: O
+          - listitem
+        - generic [ref=e12]:
+          - generic [ref=e17]:
+            - listitem
+            - generic [ref=e19]:
+              - link [ref=e20] [cursor=pointer]:
+                - /url: /dashboard
+                - img [ref=e21]
+                - listitem
+              - link [ref=e26] [cursor=pointer]:
+                - /url: /dashboard/api-keys
+                - img [ref=e27]
+                - listitem
+              - link [ref=e31] [cursor=pointer]:
+                - /url: /dashboard/usage
+                - img [ref=e32]
+                - listitem
+              - link [ref=e34] [cursor=pointer]:
+                - /url: /dashboard/pricing
+                - img [ref=e35]
+                - listitem
+              - link [ref=e37] [cursor=pointer]:
+                - /url: /dashboard/deployments
+                - img [ref=e38]
+                - listitem
+              - link [ref=e41] [cursor=pointer]:
+                - /url: /dashboard/billing
+                - img [ref=e42]
+                - listitem
+              - link [ref=e44] [cursor=pointer]:
+                - /url: /dashboard/playground
+                - img [ref=e45]
+                - listitem
+              - link [ref=e47] [cursor=pointer]:
+                - /url: /dashboard/ai-assistants
+                - img [ref=e48]
+                - listitem
+              - link [ref=e51] [cursor=pointer]:
+                - /url: /dashboard/team
+                - img [ref=e52]
+                - listitem
+              - link [ref=e57] [cursor=pointer]:
+                - /url: /dashboard/settings
+                - img [ref=e58]
+                - listitem
+              - link [ref=e61] [cursor=pointer]:
+                - /url: /dashboard/audit-logs
+                - img [ref=e62]
+                - listitem
+            - listitem
+            - generic [ref=e66]:
+              - link [ref=e67] [cursor=pointer]:
+                - /url: /dashboard/governance
+                - img [ref=e69]
+                - listitem
+              - link [ref=e72] [cursor=pointer]:
+                - /url: /dashboard/governance/policies
+                - img [ref=e73]
+                - listitem
+              - link [ref=e79] [cursor=pointer]:
+                - /url: /dashboard/governance/violations
+                - img [ref=e80]
+                - listitem
+              - link [ref=e82] [cursor=pointer]:
+                - /url: /dashboard/governance/approvals
+                - img [ref=e83]
+                - listitem
+              - link [ref=e87] [cursor=pointer]:
+                - /url: /dashboard/governance/compliance
+                - img [ref=e89]
+                - listitem
+              - link [ref=e92] [cursor=pointer]:
+                - /url: /dashboard/governance/sector-templates
+                - img [ref=e93]
+                - listitem
+          - generic [ref=e97]:
+            - listitem
+            - link [ref=e98] [cursor=pointer]:
+              - /url: /dashboard/settings
+              - img [ref=e99]
+              - listitem
+            - button "U" [ref=e102] [cursor=pointer]:
+              - generic [ref=e103]:
+                - generic [ref=e105]: U
+                - listitem
+    - generic [ref=e106]:
+      - generic [ref=e107]:
+        - generic [ref=e108]:
+          - generic [ref=e109]: Governance
+          - generic [ref=e110]: ›
+          - strong [ref=e111]: Compliance
+        - generic [ref=e112]:
+          - img [ref=e113]
+          - generic [ref=e116]: Search models, keys, policies…
+          - generic [ref=e117]: ⌘K
+        - generic [ref=e118]:
+          - button "Toggle theme" [ref=e119] [cursor=pointer]:
+            - img [ref=e120]
+            - img
+            - generic [ref=e126]: Toggle theme
+          - button "Notifications" [ref=e127] [cursor=pointer]:
+            - img [ref=e128]
+          - button "Help" [ref=e131] [cursor=pointer]:
+            - img [ref=e132]
+          - link "Docs" [ref=e136] [cursor=pointer]:
+            - /url: https://docs.opendoor.ai
+            - img [ref=e137]
+            - text: Docs
+      - main [ref=e141]:
+        - generic [ref=e143]:
+          - generic [ref=e144]:
+            - heading "Compliance" [level=1] [ref=e145]
+            - paragraph [ref=e146]: Track model compliance against GDPR, EU AI Act, ICO UK, and NIST AI RMF.
+          - generic [ref=e147]:
+            - generic [ref=e151]:
+              - generic [ref=e152]:
+                - generic [ref=e153]: gdpr
+                - generic [ref=e154]: 4/5
+                - generic [ref=e607]: 1 partial
+              - generic [ref=e155]:
+                - generic [ref=e156]: eu ai act
+                - generic [ref=e157]: 5/5
+              - generic [ref=e158]:
+                - generic [ref=e159]: ico uk
+                - generic [ref=e160]: 2/3
+              - generic [ref=e161]:
+                - generic [ref=e162]: nist ai rmf
+                - generic [ref=e163]: 4/4
+            - generic [ref=e164]:
+              - generic [ref=e165]: Model
+              - combobox [ref=e166]:
+                - option "GPT-4o" [selected]
+                - option "Claude 3.5 Sonnet"
+                - option "DeepSeek-V3"
+                - option "Mistral Large"
+                - option "Gemini 1.5 Pro"
+            - generic [ref=e167]:
+              - heading "gdpr" [level=3] [ref=e169]
+              - table [ref=e171]:
+                - rowgroup [ref=e172]:
+                  - row "Control Level Status Evidence" [ref=e173]:
+                    - columnheader "Control" [ref=e174]
+                    - columnheader "Level" [ref=e175]
+                    - columnheader "Status" [ref=e176]
+                    - columnheader "Evidence" [ref=e177]
+                    - columnheader [ref=e178]
+                - rowgroup [ref=e179]:
+                  - row "GDPR-1 Lawful Basis for Processing Ensure AI processing has a lawful basis under GDPR Article 6. required Partial Test evidence Save" [ref=e604]:
+                    - cell "GDPR-1 Lawful Basis for Processing Ensure AI processing has a lawful basis under GDPR Article 6." [ref=e181]:
+                      - generic [ref=e182]: GDPR-1
+                      - generic [ref=e183]: Lawful Basis for Processing
+                      - generic [ref=e184]: Ensure AI processing has a lawful basis under GDPR Article 6.
+                    - cell "required" [ref=e185]:
+                      - generic [ref=e186]: required
+                    - cell "Partial" [ref=e601]:
+                      - generic [ref=e188]:
+                        - combobox [ref=e189]:
+                          - option "Compliant"
+                          - option "Partial" [selected]
+                          - option "Non-compliant"
+                          - option "Not assessed"
+                        - img [ref=e602]
+                    - cell "Test evidence" [ref=e605]:
+                      - textbox "Add evidence..." [ref=e195]: Test evidence
+                    - cell "Save" [ref=e196]:
+                      - button "Save" [disabled] [ref=e197]:
+                        - img [ref=e608]
+                        - text: Save
+                  - row "GDPR-2 Data Minimisation Only process personal data necessary for the specific purpose. required Compliant Verified via third-party audit and internal review. Save" [ref=e202]:
+                    - cell "GDPR-2 Data Minimisation Only process personal data necessary for the specific purpose." [ref=e203]:
+                      - generic [ref=e204]: GDPR-2
+                      - generic [ref=e205]: Data Minimisation
+                      - generic [ref=e206]: Only process personal data necessary for the specific purpose.
+                    - cell "required" [ref=e207]:
+                      - generic [ref=e208]: required
+                    - cell "Compliant" [ref=e209]:
+                      - generic [ref=e210]:
+                        - combobox [ref=e211]:
+                          - option "Compliant" [selected]
+                          - option "Partial"
+                          - option "Non-compliant"
+                          - option "Not assessed"
+                        - img [ref=e213]
+                    - cell "Verified via third-party audit and internal review." [ref=e216]:
+                      - textbox "Add evidence..." [ref=e217]: Verified via third-party audit and internal review.
+                    - cell "Save" [ref=e218]:
+                      - button "Save" [disabled] [ref=e219]:
+                        - img [ref=e220]
+                        - text: Save
+                  - row "GDPR-3 Right to Explanation Users can obtain meaningful information about logic involved. required Compliant Verified via third-party audit and internal review. Save" [ref=e224]:
+                    - cell "GDPR-3 Right to Explanation Users can obtain meaningful information about logic involved." [ref=e225]:
+                      - generic [ref=e226]: GDPR-3
+                      - generic [ref=e227]: Right to Explanation
+                      - generic [ref=e228]: Users can obtain meaningful information about logic involved.
+                    - cell "required" [ref=e229]:
+                      - generic [ref=e230]: required
+                    - cell "Compliant" [ref=e231]:
+                      - generic [ref=e232]:
+                        - combobox [ref=e233]:
+                          - option "Compliant" [selected]
+                          - option "Partial"
+                          - option "Non-compliant"
+                          - option "Not assessed"
+                        - img [ref=e235]
+                    - cell "Verified via third-party audit and internal review." [ref=e238]:
+                      - textbox "Add evidence..." [ref=e239]: Verified via third-party audit and internal review.
+                    - cell "Save" [ref=e240]:
+                      - button "Save" [disabled] [ref=e241]:
+                        - img [ref=e242]
+                        - text: Save
+                  - row "GDPR-4 Data Subject Rights Support access, rectification, erasure, and portability. required Compliant Verified via third-party audit and internal review. Save" [ref=e246]:
+                    - cell "GDPR-4 Data Subject Rights Support access, rectification, erasure, and portability." [ref=e247]:
+                      - generic [ref=e248]: GDPR-4
+                      - generic [ref=e249]: Data Subject Rights
+                      - generic [ref=e250]: Support access, rectification, erasure, and portability.
+                    - cell "required" [ref=e251]:
+                      - generic [ref=e252]: required
+                    - cell "Compliant" [ref=e253]:
+                      - generic [ref=e254]:
+                        - combobox [ref=e255]:
+                          - option "Compliant" [selected]
+                          - option "Partial"
+                          - option "Non-compliant"
+                          - option "Not assessed"
+                        - img [ref=e257]
+                    - cell "Verified via third-party audit and internal review." [ref=e260]:
+                      - textbox "Add evidence..." [ref=e261]: Verified via third-party audit and internal review.
+                    - cell "Save" [ref=e262]:
+                      - button "Save" [disabled] [ref=e263]:
+                        - img [ref=e264]
+                        - text: Save
+                  - row "GDPR-5 Data Protection Impact Assessment DPIA required for high-risk AI processing. required Compliant Verified via third-party audit and internal review. Save" [ref=e268]:
+                    - cell "GDPR-5 Data Protection Impact Assessment DPIA required for high-risk AI processing." [ref=e269]:
+                      - generic [ref=e270]: GDPR-5
+                      - generic [ref=e271]: Data Protection Impact Assessment
+                      - generic [ref=e272]: DPIA required for high-risk AI processing.
+                    - cell "required" [ref=e273]:
+                      - generic [ref=e274]: required
+                    - cell "Compliant" [ref=e275]:
+                      - generic [ref=e276]:
+                        - combobox [ref=e277]:
+                          - option "Compliant" [selected]
+                          - option "Partial"
+                          - option "Non-compliant"
+                          - option "Not assessed"
+                        - img [ref=e279]
+                    - cell "Verified via third-party audit and internal review." [ref=e282]:
+                      - textbox "Add evidence..." [ref=e283]: Verified via third-party audit and internal review.
+                    - cell "Save" [ref=e284]:
+                      - button "Save" [disabled] [ref=e285]:
+                        - img [ref=e286]
+                        - text: Save
+            - generic [ref=e290]:
+              - heading "eu ai act" [level=3] [ref=e292]
+              - table [ref=e294]:
+                - rowgroup [ref=e295]:
+                  - row "Control Level Status Evidence" [ref=e296]:
+                    - columnheader "Control" [ref=e297]
+                    - columnheader "Level" [ref=e298]
+                    - columnheader "Status" [ref=e299]
+                    - columnheader "Evidence" [ref=e300]
+                    - columnheader [ref=e301]
+                - rowgroup [ref=e302]:
+                  - row "AIACT-1 Risk Classification Classify AI system risk level per EU AI Act. required Compliant Verified via third-party audit and internal review. Save" [ref=e303]:
+                    - cell "AIACT-1 Risk Classification Classify AI system risk level per EU AI Act." [ref=e304]:
+                      - generic [ref=e305]: AIACT-1
+                      - generic [ref=e306]: Risk Classification
+                      - generic [ref=e307]: Classify AI system risk level per EU AI Act.
+                    - cell "required" [ref=e308]:
+                      - generic [ref=e309]: required
+                    - cell "Compliant" [ref=e310]:
+                      - generic [ref=e311]:
+                        - combobox [ref=e312]:
+                          - option "Compliant" [selected]
+                          - option "Partial"
+                          - option "Non-compliant"
+                          - option "Not assessed"
+                        - img [ref=e314]
+                    - cell "Verified via third-party audit and internal review." [ref=e317]:
+                      - textbox "Add evidence..." [ref=e318]: Verified via third-party audit and internal review.
+                    - cell "Save" [ref=e319]:
+                      - button "Save" [disabled] [ref=e320]:
+                        - img [ref=e321]
+                        - text: Save
+                  - row "AIACT-2 Transparency Obligations Notify users they are interacting with AI. required Compliant Verified via third-party audit and internal review. Save" [ref=e325]:
+                    - cell "AIACT-2 Transparency Obligations Notify users they are interacting with AI." [ref=e326]:
+                      - generic [ref=e327]: AIACT-2
+                      - generic [ref=e328]: Transparency Obligations
+                      - generic [ref=e329]: Notify users they are interacting with AI.
+                    - cell "required" [ref=e330]:
+                      - generic [ref=e331]: required
+                    - cell "Compliant" [ref=e332]:
+                      - generic [ref=e333]:
+                        - combobox [ref=e334]:
+                          - option "Compliant" [selected]
+                          - option "Partial"
+                          - option "Non-compliant"
+                          - option "Not assessed"
+                        - img [ref=e336]
+                    - cell "Verified via third-party audit and internal review." [ref=e339]:
+                      - textbox "Add evidence..." [ref=e340]: Verified via third-party audit and internal review.
+                    - cell "Save" [ref=e341]:
+                      - button "Save" [disabled] [ref=e342]:
+                        - img [ref=e343]
+                        - text: Save
+                  - row "AIACT-3 Human Oversight Enable effective oversight by natural persons. required Compliant Verified via third-party audit and internal review. Save" [ref=e347]:
+                    - cell "AIACT-3 Human Oversight Enable effective oversight by natural persons." [ref=e348]:
+                      - generic [ref=e349]: AIACT-3
+                      - generic [ref=e350]: Human Oversight
+                      - generic [ref=e351]: Enable effective oversight by natural persons.
+                    - cell "required" [ref=e352]:
+                      - generic [ref=e353]: required
+                    - cell "Compliant" [ref=e354]:
+                      - generic [ref=e355]:
+                        - combobox [ref=e356]:
+                          - option "Compliant" [selected]
+                          - option "Partial"
+                          - option "Non-compliant"
+                          - option "Not assessed"
+                        - img [ref=e358]
+                    - cell "Verified via third-party audit and internal review." [ref=e361]:
+                      - textbox "Add evidence..." [ref=e362]: Verified via third-party audit and internal review.
+                    - cell "Save" [ref=e363]:
+                      - button "Save" [disabled] [ref=e364]:
+                        - img [ref=e365]
+                        - text: Save
+                  - row "AIACT-4 Accuracy, Robustness, Cybersecurity Ensure appropriate levels for intended purpose. required Compliant Verified via third-party audit and internal review. Save" [ref=e369]:
+                    - cell "AIACT-4 Accuracy, Robustness, Cybersecurity Ensure appropriate levels for intended purpose." [ref=e370]:
+                      - generic [ref=e371]: AIACT-4
+                      - generic [ref=e372]: Accuracy, Robustness, Cybersecurity
+                      - generic [ref=e373]: Ensure appropriate levels for intended purpose.
+                    - cell "required" [ref=e374]:
+                      - generic [ref=e375]: required
+                    - cell "Compliant" [ref=e376]:
+                      - generic [ref=e377]:
+                        - combobox [ref=e378]:
+                          - option "Compliant" [selected]
+                          - option "Partial"
+                          - option "Non-compliant"
+                          - option "Not assessed"
+                        - img [ref=e380]
+                    - cell "Verified via third-party audit and internal review." [ref=e383]:
+                      - textbox "Add evidence..." [ref=e384]: Verified via third-party audit and internal review.
+                    - cell "Save" [ref=e385]:
+                      - button "Save" [disabled] [ref=e386]:
+                        - img [ref=e387]
+                        - text: Save
+                  - row "AIACT-5 Record-Keeping Maintain logs of operation for traceability. required Compliant Verified via third-party audit and internal review. Save" [ref=e391]:
+                    - cell "AIACT-5 Record-Keeping Maintain logs of operation for traceability." [ref=e392]:
+                      - generic [ref=e393]: AIACT-5
+                      - generic [ref=e394]: Record-Keeping
+                      - generic [ref=e395]: Maintain logs of operation for traceability.
+                    - cell "required" [ref=e396]:
+                      - generic [ref=e397]: required
+                    - cell "Compliant" [ref=e398]:
+                      - generic [ref=e399]:
+                        - combobox [ref=e400]:
+                          - option "Compliant" [selected]
+                          - option "Partial"
+                          - option "Non-compliant"
+                          - option "Not assessed"
+                        - img [ref=e402]
+                    - cell "Verified via third-party audit and internal review." [ref=e405]:
+                      - textbox "Add evidence..." [ref=e406]: Verified via third-party audit and internal review.
+                    - cell "Save" [ref=e407]:
+                      - button "Save" [disabled] [ref=e408]:
+                        - img [ref=e409]
+                        - text: Save
+            - generic [ref=e413]:
+              - heading "ico uk" [level=3] [ref=e415]
+              - table [ref=e417]:
+                - rowgroup [ref=e418]:
+                  - row "Control Level Status Evidence" [ref=e419]:
+                    - columnheader "Control" [ref=e420]
+                    - columnheader "Level" [ref=e421]
+                    - columnheader "Status" [ref=e422]
+                    - columnheader "Evidence" [ref=e423]
+                    - columnheader [ref=e424]
+                - rowgroup [ref=e425]:
+                  - row "ICO-1 AI Auditing Framework Follow ICO guidance on auditing AI systems. recommended Not assessed Save" [ref=e426]:
+                    - cell "ICO-1 AI Auditing Framework Follow ICO guidance on auditing AI systems." [ref=e427]:
+                      - generic [ref=e428]: ICO-1
+                      - generic [ref=e429]: AI Auditing Framework
+                      - generic [ref=e430]: Follow ICO guidance on auditing AI systems.
+                    - cell "recommended" [ref=e431]:
+                      - generic [ref=e432]: recommended
+                    - cell "Not assessed" [ref=e433]:
+                      - generic [ref=e434]:
+                        - combobox [ref=e435]:
+                          - option "Compliant"
+                          - option "Partial"
+                          - option "Non-compliant"
+                          - option "Not assessed" [selected]
+                        - img [ref=e437]
+                    - cell [ref=e438]:
+                      - textbox "Add evidence..." [ref=e439]
+                    - cell "Save" [ref=e440]:
+                      - button "Save" [disabled] [ref=e441]:
+                        - img [ref=e442]
+                        - text: Save
+                  - row "ICO-2 Fairness by Design Assess and mitigate bias in AI decisions. required Compliant Verified via third-party audit and internal review. Save" [ref=e446]:
+                    - cell "ICO-2 Fairness by Design Assess and mitigate bias in AI decisions." [ref=e447]:
+                      - generic [ref=e448]: ICO-2
+                      - generic [ref=e449]: Fairness by Design
+                      - generic [ref=e450]: Assess and mitigate bias in AI decisions.
+                    - cell "required" [ref=e451]:
+                      - generic [ref=e452]: required
+                    - cell "Compliant" [ref=e453]:
+                      - generic [ref=e454]:
+                        - combobox [ref=e455]:
+                          - option "Compliant" [selected]
+                          - option "Partial"
+                          - option "Non-compliant"
+                          - option "Not assessed"
+                        - img [ref=e457]
+                    - cell "Verified via third-party audit and internal review." [ref=e460]:
+                      - textbox "Add evidence..." [ref=e461]: Verified via third-party audit and internal review.
+                    - cell "Save" [ref=e462]:
+                      - button "Save" [disabled] [ref=e463]:
+                        - img [ref=e464]
+                        - text: Save
+                  - row "ICO-3 Data Residency UK personal data should remain in UK/EU. required Compliant Verified via third-party audit and internal review. Save" [ref=e468]:
+                    - cell "ICO-3 Data Residency UK personal data should remain in UK/EU." [ref=e469]:
+                      - generic [ref=e470]: ICO-3
+                      - generic [ref=e471]: Data Residency
+                      - generic [ref=e472]: UK personal data should remain in UK/EU.
+                    - cell "required" [ref=e473]:
+                      - generic [ref=e474]: required
+                    - cell "Compliant" [ref=e475]:
+                      - generic [ref=e476]:
+                        - combobox [ref=e477]:
+                          - option "Compliant" [selected]
+                          - option "Partial"
+                          - option "Non-compliant"
+                          - option "Not assessed"
+                        - img [ref=e479]
+                    - cell "Verified via third-party audit and internal review." [ref=e482]:
+                      - textbox "Add evidence..." [ref=e483]: Verified via third-party audit and internal review.
+                    - cell "Save" [ref=e484]:
+                      - button "Save" [disabled] [ref=e485]:
+                        - img [ref=e486]
+                        - text: Save
+            - generic [ref=e490]:
+              - heading "nist ai rmf" [level=3] [ref=e492]
+              - table [ref=e494]:
+                - rowgroup [ref=e495]:
+                  - row "Control Level Status Evidence" [ref=e496]:
+                    - columnheader "Control" [ref=e497]
+                    - columnheader "Level" [ref=e498]
+                    - columnheader "Status" [ref=e499]
+                    - columnheader "Evidence" [ref=e500]
+                    - columnheader [ref=e501]
+                - rowgroup [ref=e502]:
+                  - row "NIST-1 Govern Establish AI risk management policies. required Compliant Verified via third-party audit and internal review. Save" [ref=e503]:
+                    - cell "NIST-1 Govern Establish AI risk management policies." [ref=e504]:
+                      - generic [ref=e505]: NIST-1
+                      - generic [ref=e506]: Govern
+                      - generic [ref=e507]: Establish AI risk management policies.
+                    - cell "required" [ref=e508]:
+                      - generic [ref=e509]: required
+                    - cell "Compliant" [ref=e510]:
+                      - generic [ref=e511]:
+                        - combobox [ref=e512]:
+                          - option "Compliant" [selected]
+                          - option "Partial"
+                          - option "Non-compliant"
+                          - option "Not assessed"
+                        - img [ref=e514]
+                    - cell "Verified via third-party audit and internal review." [ref=e517]:
+                      - textbox "Add evidence..." [ref=e518]: Verified via third-party audit and internal review.
+                    - cell "Save" [ref=e519]:
+                      - button "Save" [disabled] [ref=e520]:
+                        - img [ref=e521]
+                        - text: Save
+                  - row "NIST-2 Map Identify context and risks for AI systems. required Compliant Verified via third-party audit and internal review. Save" [ref=e525]:
+                    - cell "NIST-2 Map Identify context and risks for AI systems." [ref=e526]:
+                      - generic [ref=e527]: NIST-2
+                      - generic [ref=e528]: Map
+                      - generic [ref=e529]: Identify context and risks for AI systems.
+                    - cell "required" [ref=e530]:
+                      - generic [ref=e531]: required
+                    - cell "Compliant" [ref=e532]:
+                      - generic [ref=e533]:
+                        - combobox [ref=e534]:
+                          - option "Compliant" [selected]
+                          - option "Partial"
+                          - option "Non-compliant"
+                          - option "Not assessed"
+                        - img [ref=e536]
+                    - cell "Verified via third-party audit and internal review." [ref=e539]:
+                      - textbox "Add evidence..." [ref=e540]: Verified via third-party audit and internal review.
+                    - cell "Save" [ref=e541]:
+                      - button "Save" [disabled] [ref=e542]:
+                        - img [ref=e543]
+                        - text: Save
+                  - row "NIST-3 Measure Quantify and evaluate AI risks. required Compliant Verified via third-party audit and internal review. Save" [ref=e547]:
+                    - cell "NIST-3 Measure Quantify and evaluate AI risks." [ref=e548]:
+                      - generic [ref=e549]: NIST-3
+                      - generic [ref=e550]: Measure
+                      - generic [ref=e551]: Quantify and evaluate AI risks.
+                    - cell "required" [ref=e552]:
+                      - generic [ref=e553]: required
+                    - cell "Compliant" [ref=e554]:
+                      - generic [ref=e555]:
+                        - combobox [ref=e556]:
+                          - option "Compliant" [selected]
+                          - option "Partial"
+                          - option "Non-compliant"
+                          - option "Not assessed"
+                        - img [ref=e558]
+                    - cell "Verified via third-party audit and internal review." [ref=e561]:
+                      - textbox "Add evidence..." [ref=e562]: Verified via third-party audit and internal review.
+                    - cell "Save" [ref=e563]:
+                      - button "Save" [disabled] [ref=e564]:
+                        - img [ref=e565]
+                        - text: Save
+                  - row "NIST-4 Manage Prioritize and act on identified risks. required Compliant Verified via third-party audit and internal review. Save" [ref=e569]:
+                    - cell "NIST-4 Manage Prioritize and act on identified risks." [ref=e570]:
+                      - generic [ref=e571]: NIST-4
+                      - generic [ref=e572]: Manage
+                      - generic [ref=e573]: Prioritize and act on identified risks.
+                    - cell "required" [ref=e574]:
+                      - generic [ref=e575]: required
+                    - cell "Compliant" [ref=e576]:
+                      - generic [ref=e577]:
+                        - combobox [ref=e578]:
+                          - option "Compliant" [selected]
+                          - option "Partial"
+                          - option "Non-compliant"
+                          - option "Not assessed"
+                        - img [ref=e580]
+                    - cell "Verified via third-party audit and internal review." [ref=e583]:
+                      - textbox "Add evidence..." [ref=e584]: Verified via third-party audit and internal review.
+                    - cell "Save" [ref=e585]:
+                      - button "Save" [disabled] [ref=e586]:
+                        - img [ref=e587]
+                        - text: Save
+  - button "Open Next.js Dev Tools" [ref=e596] [cursor=pointer]:
+    - img [ref=e597]
+  - alert [ref=e150]

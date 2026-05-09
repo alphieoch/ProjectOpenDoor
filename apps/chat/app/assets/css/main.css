@@ -1,0 +1,59 @@
+@import "tailwindcss" theme(static);
+@import "@nuxt/ui";
+
+@theme static {
+  --font-sans: 'Public Sans', sans-serif;
+}
+
+@layer base {
+  body {
+    @apply bg-neutral-50 dark:bg-neutral-950;
+  }
+}
+
+:root {
+  --ui-container: var(--container-3xl);
+}
+
+html.dark .shiki span {
+  color: var(--shiki-dark) !important;
+  background-color: var(--shiki-dark-bg) !important;
+  font-style: var(--shiki-dark-font-style) !important;
+  font-weight: var(--shiki-dark-font-weight) !important;
+  text-decoration: var(--shiki-dark-text-decoration) !important;
+}
+
+/* Slide-animated dashboard sidebar collapse / expand.
+   The Nuxt UI sidebar drives its width from an inline `--width` variable
+   (theme uses `w-(--width)`). Toggling collapse normally snaps that value,
+   so we transition `width` on the sidebar root for a smooth slide. The
+   `data-dragging="true"` selector disables the transition while the user
+   is dragging the resize handle, so manual resize stays pixel-perfect. */
+[id^="dashboard-sidebar-"] {
+  transition: width 240ms cubic-bezier(0.32, 0.72, 0, 1);
+  overflow: hidden;
+  will-change: width;
+}
+
+[id^="dashboard-sidebar-"][data-dragging="true"] {
+  transition: none;
+}
+
+[id^="dashboard-sidebar-"] [data-slot="header"],
+[id^="dashboard-sidebar-"] [data-slot="body"],
+[id^="dashboard-sidebar-"] [data-slot="footer"] {
+  transition: opacity 180ms ease-out;
+}
+
+[id^="dashboard-sidebar-"][data-collapsed="true"] [data-slot="body"] {
+  opacity: 0.85;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [id^="dashboard-sidebar-"],
+  [id^="dashboard-sidebar-"] [data-slot="header"],
+  [id^="dashboard-sidebar-"] [data-slot="body"],
+  [id^="dashboard-sidebar-"] [data-slot="footer"] {
+    transition: none;
+  }
+}

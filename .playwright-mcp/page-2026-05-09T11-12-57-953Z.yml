@@ -1,0 +1,181 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - list [ref=e5]:
+      - generic [ref=e6]:
+        - button "O" [ref=e8] [cursor=pointer]:
+          - generic [ref=e11]: O
+          - listitem
+        - generic [ref=e12]:
+          - generic [ref=e17]:
+            - listitem
+            - generic [ref=e19]:
+              - link [ref=e20] [cursor=pointer]:
+                - /url: /dashboard
+                - img [ref=e21]
+                - listitem
+              - link [ref=e26] [cursor=pointer]:
+                - /url: /dashboard/api-keys
+                - img [ref=e27]
+                - listitem
+              - link [ref=e31] [cursor=pointer]:
+                - /url: /dashboard/usage
+                - img [ref=e32]
+                - listitem
+              - link [ref=e34] [cursor=pointer]:
+                - /url: /dashboard/pricing
+                - img [ref=e35]
+                - listitem
+              - link [ref=e37] [cursor=pointer]:
+                - /url: /dashboard/deployments
+                - img [ref=e38]
+                - listitem
+              - link [ref=e41] [cursor=pointer]:
+                - /url: /dashboard/billing
+                - img [ref=e42]
+                - listitem
+              - link [ref=e44] [cursor=pointer]:
+                - /url: /dashboard/playground
+                - img [ref=e45]
+                - listitem
+              - link [ref=e47] [cursor=pointer]:
+                - /url: /dashboard/ai-assistants
+                - img [ref=e48]
+                - listitem
+              - link [ref=e51] [cursor=pointer]:
+                - /url: /dashboard/team
+                - img [ref=e52]
+                - listitem
+              - link [ref=e57] [cursor=pointer]:
+                - /url: /dashboard/settings
+                - img [ref=e59]
+                - listitem
+              - link [ref=e62] [cursor=pointer]:
+                - /url: /dashboard/audit-logs
+                - img [ref=e63]
+                - listitem
+            - listitem
+            - generic [ref=e67]:
+              - link [ref=e68] [cursor=pointer]:
+                - /url: /dashboard/governance
+                - img [ref=e69]
+                - listitem
+              - link [ref=e72] [cursor=pointer]:
+                - /url: /dashboard/governance/policies
+                - img [ref=e73]
+                - listitem
+              - link [ref=e79] [cursor=pointer]:
+                - /url: /dashboard/governance/violations
+                - img [ref=e80]
+                - listitem
+              - link [ref=e82] [cursor=pointer]:
+                - /url: /dashboard/governance/approvals
+                - img [ref=e83]
+                - listitem
+              - link [ref=e87] [cursor=pointer]:
+                - /url: /dashboard/governance/compliance
+                - img [ref=e88]
+                - listitem
+              - link [ref=e91] [cursor=pointer]:
+                - /url: /dashboard/governance/sector-templates
+                - img [ref=e92]
+                - listitem
+          - generic [ref=e96]:
+            - listitem
+            - link [ref=e97] [cursor=pointer]:
+              - /url: /dashboard/settings
+              - img [ref=e98]
+              - listitem
+            - button "U" [ref=e101] [cursor=pointer]:
+              - generic [ref=e102]:
+                - generic [ref=e104]: U
+                - listitem
+    - generic [ref=e105]:
+      - generic [ref=e106]:
+        - generic [ref=e107]:
+          - generic [ref=e108]: Workspace
+          - generic [ref=e109]: ›
+          - strong [ref=e110]: Settings
+        - generic [ref=e111]:
+          - img [ref=e112]
+          - generic [ref=e115]: Search models, keys, policies…
+          - generic [ref=e116]: ⌘K
+        - generic [ref=e117]:
+          - button "Toggle theme" [ref=e118] [cursor=pointer]:
+            - img [ref=e119]
+            - img
+            - generic [ref=e125]: Toggle theme
+          - button "Notifications" [ref=e126] [cursor=pointer]:
+            - img [ref=e127]
+          - button "Help" [ref=e130] [cursor=pointer]:
+            - img [ref=e131]
+          - link "Docs" [ref=e135] [cursor=pointer]:
+            - /url: https://docs.opendoor.ai
+            - img [ref=e136]
+            - text: Docs
+      - main [ref=e140]:
+        - generic [ref=e142]:
+          - generic [ref=e143]:
+            - heading "Settings" [level=1] [ref=e144]
+            - paragraph [ref=e145]: Manage your organisation's configuration and integrations.
+          - generic [ref=e146]:
+            - navigation [ref=e147]:
+              - list [ref=e148]:
+                - listitem [ref=e149]:
+                  - button "Authentication" [ref=e150] [cursor=pointer]:
+                    - img [ref=e151]
+                    - text: Authentication
+                - listitem [ref=e155]:
+                  - button "Custom Domain" [ref=e156] [cursor=pointer]:
+                    - img [ref=e157]
+                    - text: Custom Domain
+                - listitem [ref=e160]:
+                  - button "Notifications" [active] [ref=e161] [cursor=pointer]:
+                    - img [ref=e162]
+                    - text: Notifications
+                    - img [ref=e170]
+            - generic [ref=e172]:
+              - generic [ref=e173]:
+                - generic [ref=e174]:
+                  - generic [ref=e175]:
+                    - img [ref=e176]
+                    - heading "Email Notifications" [level=2] [ref=e179]
+                  - paragraph [ref=e180]: Control which emails your organisation receives.
+                - generic [ref=e181]:
+                  - generic [ref=e182]:
+                    - generic [ref=e183]:
+                      - paragraph [ref=e184]: Master switch
+                      - paragraph [ref=e185]: Toggle all email notifications on or off.
+                    - generic [ref=e187] [cursor=pointer]:
+                      - checkbox "Email notifications disabled" [ref=e188]
+                      - generic [ref=e189]: Email notifications disabled
+                  - generic [ref=e190]:
+                    - generic [ref=e191]:
+                      - paragraph [ref=e192]: Team invites
+                      - paragraph [ref=e193]: Receive an email when someone is invited to your organisation.
+                    - generic [ref=e195] [cursor=pointer]:
+                      - checkbox "Off" [disabled] [ref=e196]
+                      - generic [ref=e197]: "Off"
+                  - generic [ref=e198]:
+                    - generic [ref=e199]:
+                      - paragraph [ref=e200]: Billing alerts
+                      - paragraph [ref=e201]: Receive an email when your balance is low or a charge fails.
+                    - generic [ref=e203] [cursor=pointer]:
+                      - checkbox "Off" [disabled] [ref=e204]
+                      - generic [ref=e205]: "Off"
+                  - generic [ref=e206]:
+                    - generic [ref=e207]:
+                      - paragraph [ref=e208]: Required variables
+                      - paragraph [ref=e209]: Add these to your deployment environment to enable real email delivery.
+                    - generic [ref=e211]:
+                      - generic [ref=e212]:
+                        - paragraph [ref=e213]: AZURE_COMMUNICATION_CONNECTION_STRING
+                        - paragraph [ref=e214]: Your Azure Communication Services connection string
+                      - generic [ref=e215]:
+                        - paragraph [ref=e216]: EMAIL_SENDER_ADDRESS
+                        - paragraph [ref=e217]: Verified sender email, e.g. noreply@opendoor.ai
+              - button "Save changes" [ref=e219] [cursor=pointer]:
+                - img [ref=e220]
+                - text: Save changes
+  - button "Open Next.js Dev Tools" [ref=e229] [cursor=pointer]:
+    - img [ref=e230]
+  - alert [ref=e169]

@@ -1,0 +1,175 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - list [ref=e5]:
+      - generic [ref=e6]:
+        - button "O" [ref=e8] [cursor=pointer]:
+          - generic [ref=e11]: O
+          - listitem
+        - generic [ref=e12]:
+          - generic [ref=e17]:
+            - listitem
+            - generic [ref=e19]:
+              - link [ref=e20] [cursor=pointer]:
+                - /url: /dashboard
+                - img [ref=e21]
+                - listitem
+              - link [ref=e26] [cursor=pointer]:
+                - /url: /dashboard/api-keys
+                - img [ref=e27]
+                - listitem
+              - link [ref=e31] [cursor=pointer]:
+                - /url: /dashboard/usage
+                - img [ref=e32]
+                - listitem
+              - link [ref=e34] [cursor=pointer]:
+                - /url: /dashboard/pricing
+                - img [ref=e35]
+                - listitem
+              - link [ref=e37] [cursor=pointer]:
+                - /url: /dashboard/deployments
+                - img [ref=e38]
+                - listitem
+              - link [ref=e41] [cursor=pointer]:
+                - /url: /dashboard/billing
+                - img [ref=e42]
+                - listitem
+              - link [ref=e44] [cursor=pointer]:
+                - /url: /dashboard/playground
+                - img [ref=e45]
+                - listitem
+              - link [ref=e47] [cursor=pointer]:
+                - /url: /dashboard/ai-assistants
+                - img [ref=e48]
+                - listitem
+              - link [ref=e51] [cursor=pointer]:
+                - /url: /dashboard/team
+                - img [ref=e52]
+                - listitem
+              - link [ref=e57] [cursor=pointer]:
+                - /url: /dashboard/settings
+                - img [ref=e59]
+                - listitem
+              - link [ref=e62] [cursor=pointer]:
+                - /url: /dashboard/audit-logs
+                - img [ref=e63]
+                - listitem
+            - listitem
+            - generic [ref=e67]:
+              - link [ref=e68] [cursor=pointer]:
+                - /url: /dashboard/governance
+                - img [ref=e69]
+                - listitem
+              - link [ref=e72] [cursor=pointer]:
+                - /url: /dashboard/governance/policies
+                - img [ref=e73]
+                - listitem
+              - link [ref=e79] [cursor=pointer]:
+                - /url: /dashboard/governance/violations
+                - img [ref=e80]
+                - listitem
+              - link [ref=e82] [cursor=pointer]:
+                - /url: /dashboard/governance/approvals
+                - img [ref=e83]
+                - listitem
+              - link [ref=e87] [cursor=pointer]:
+                - /url: /dashboard/governance/compliance
+                - img [ref=e88]
+                - listitem
+              - link [ref=e91] [cursor=pointer]:
+                - /url: /dashboard/governance/sector-templates
+                - img [ref=e92]
+                - listitem
+          - generic [ref=e96]:
+            - listitem
+            - link [ref=e97] [cursor=pointer]:
+              - /url: /dashboard/settings
+              - img [ref=e98]
+              - listitem
+            - button "U" [ref=e101] [cursor=pointer]:
+              - generic [ref=e102]:
+                - generic [ref=e104]: U
+                - listitem
+    - generic [ref=e105]:
+      - generic [ref=e106]:
+        - generic [ref=e107]:
+          - generic [ref=e108]: Workspace
+          - generic [ref=e109]: ›
+          - strong [ref=e110]: Settings
+        - generic [ref=e111]:
+          - img [ref=e112]
+          - generic [ref=e115]: Search models, keys, policies…
+          - generic [ref=e116]: ⌘K
+        - generic [ref=e117]:
+          - button "Toggle theme" [ref=e118] [cursor=pointer]:
+            - img [ref=e119]
+            - img
+            - generic [ref=e125]: Toggle theme
+          - button "Notifications" [ref=e126] [cursor=pointer]:
+            - img [ref=e127]
+          - button "Help" [ref=e130] [cursor=pointer]:
+            - img [ref=e131]
+          - link "Docs" [ref=e135] [cursor=pointer]:
+            - /url: https://docs.opendoor.ai
+            - img [ref=e136]
+            - text: Docs
+      - main [ref=e140]:
+        - generic [ref=e142]:
+          - generic [ref=e143]:
+            - heading "Settings" [level=1] [ref=e144]
+            - paragraph [ref=e145]: Manage your organisation's configuration and integrations.
+          - generic [ref=e146]:
+            - navigation [ref=e147]:
+              - list [ref=e148]:
+                - listitem [ref=e149]:
+                  - button "Authentication" [ref=e150] [cursor=pointer]:
+                    - img [ref=e151]
+                    - text: Authentication
+                    - img [ref=e153]
+                - listitem [ref=e155]:
+                  - button "Custom Domain" [ref=e156] [cursor=pointer]:
+                    - img [ref=e157]
+                    - text: Custom Domain
+                - listitem [ref=e160]:
+                  - button "Notifications" [ref=e161] [cursor=pointer]:
+                    - img [ref=e162]
+                    - text: Notifications
+            - generic [ref=e180]:
+              - generic [ref=e181]:
+                - generic [ref=e182]:
+                  - img [ref=e183]
+                  - heading "Single Sign-On" [level=2] [ref=e185]
+                - paragraph [ref=e186]: Allow your team to authenticate via Okta, Azure AD, Google Workspace, and more through WorkOS.
+              - generic [ref=e187]:
+                - generic [ref=e188]:
+                  - generic [ref=e189]:
+                    - paragraph [ref=e190]: Enable SSO
+                    - paragraph [ref=e191]: Team members will be redirected to your identity provider.
+                  - generic [ref=e193] [cursor=pointer]:
+                    - checkbox "SSO is disabled" [ref=e194]
+                    - generic [ref=e195]: SSO is disabled
+                - generic [ref=e196]:
+                  - generic [ref=e197]:
+                    - paragraph [ref=e198]: WorkOS Organisation ID
+                    - paragraph [ref=e199]: Found in your WorkOS Dashboard under Organisations.
+                  - generic [ref=e200]:
+                    - textbox "org_xxxxxxxxxxxx" [ref=e201]
+                    - link "Open WorkOS Dashboard ↗" [ref=e202] [cursor=pointer]:
+                      - /url: https://dashboard.workos.com/organizations
+                - generic [ref=e203]:
+                  - generic [ref=e204]:
+                    - paragraph [ref=e205]: WorkOS Connection ID
+                    - paragraph [ref=e206]: Optional. Locks authentication to a specific connection.
+                  - textbox "conn_xxxxxxxxxxxx" [ref=e208]
+                - generic [ref=e209]:
+                  - generic [ref=e210]:
+                    - paragraph [ref=e211]: Default role
+                    - paragraph [ref=e212]: Role assigned to new users who sign in via SSO.
+                  - combobox [ref=e214]:
+                    - option "Member" [selected]
+                    - option "Admin"
+              - button "Save changes" [ref=e216] [cursor=pointer]:
+                - img [ref=e217]
+                - text: Save changes
+  - button "Open Next.js Dev Tools" [ref=e174] [cursor=pointer]:
+    - img [ref=e175]
+  - alert [ref=e178]

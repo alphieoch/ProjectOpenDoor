@@ -1,203 +1,557 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Plus, Trash2, CheckCircle2, XCircle, Loader2 } from "lucide-react";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useEffect, useState, useMemo } from "react";
+import {
+  Plus, Trash2, CheckCircle2, XCircle, Loader2,
+  Search, Pencil, ShieldAlert, ShieldCheck, Shield,
+  ChevronDown, Layers, X,
+} from "lucide-react";
 
 interface Policy {
   id: string;
   name: string;
-  description: string;
+  description: string | null;
   dataClass: string;
-  modelIdPattern: string;
-  userRolePattern: string;
+  modelIdPattern: string | null;
+  userRolePattern: string | null;
+  fallbackModelId: string | null;
   action: string;
-  fallbackModelId: string;
   requireHumanApproval: boolean;
   enabled: boolean;
   priority: number;
+  scope: string;
+  metadata: Record<string, unknown> | null;
+  createdAt: string;
 }
 
-const actionStyle: Record<string, { bg: string; color: string }> = {
-  allow:            { bg: "var(--green-soft)",  color: "var(--green)"  },
-  deny:             { bg: "var(--red-soft)",    color: "var(--red)"    },
-  require_approval: { bg: "var(--yellow-soft)", color: "var(--yellow)" },
-  route_fallback:   { bg: "#DBEAFE",            color: "#1D4ED8"       },
+// ── Style maps ──────────────────────────────────────────────────────────────
+
+const ACTION_STYLE: Record<string, { bg: string; color: string; label: string }> = {
+  allow:            { bg: "var(--green-soft)",  color: "var(--green)",  label: "Allow" },
+  deny:             { bg: "var(--red-soft)",    color: "var(--red)",    label: "Deny" },
+  require_approval: { bg: "var(--yellow-soft)", color: "var(--yellow)", label: "Require Approval" },
+  route_fallback:   { bg: "#DBEAFE",            color: "#1565C0",       label: "Route Fallback" },
 };
 
-const defaultForm: Partial<Policy> = {
-  action: "allow", dataClass: "internal", enabled: true, priority: 100, requireHumanApproval: false,
+const DATA_CLASS_STYLE: Record<string, { bg: string; color: string }> = {
+  public:       { bg: "#E9EBF2", color: "#43474E" },
+  internal:     { bg: "#D3E4FD", color: "#1A73E8" },
+  confidential: { bg: "#FFEFC2", color: "#7A5700" },
+  restricted:   { bg: "#F9DEDC", color: "#B3261E" },
 };
+
+const SECTOR_STYLE: Record<string, { bg: string; color: string; label: string }> = {
+  legal:      { bg: "#D3E4FD", color: "#1A73E8", label: "Legal" },
+  finance:    { bg: "#C8EDD9", color: "#1E6E4F", label: "Finance" },
+  property:   { bg: "#FFEFC2", color: "#7A5700", label: "Property" },
+  healthcare: { bg: "#F9DEDC", color: "#B3261E", label: "Healthcare" },
+  government: { bg: "#E3E7FF", color: "#4B5FBF", label: "Government" },
+  insurance:  { bg: "#BBDEFB", color: "#1565C0", label: "Insurance" },
+  education:  { bg: "#EFEBE9", color: "#5B4037", label: "Education" },
+  energy:     { bg: "#FFE0B2", color: "#E65100", label: "Energy" },
+  retail:     { bg: "#FCE4EC", color: "#880E4F", label: "Retail" },
+  media:      { bg: "#EDE7F6", color: "#4A148C", label: "Media" },
+  transport:  { bg: "#E0F7FA", color: "#006064", label: "Transport" },
+  general:    { bg: "#E9EBF2", color: "#43474E", label: "General" },
+};
+
+// ── Helpers ─────────────────────────────────────────────────────────────────
+
+function ActionBadge({ action }: { action: string }) {
+  const s = ACTION_STYLE[action] ?? { bg: "var(--paper-3)", color: "var(--ink-2)", label: action };
+  return (
+    <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium"
+      style={{ background: s.bg, color: s.color }}>
+      {s.label}
+    </span>
+  );
+}
+
+function DataClassBadge({ cls }: { cls: string }) {
+  const s = DATA_CLASS_STYLE[cls] ?? { bg: "var(--paper-3)", color: "var(--ink-2)" };
+  return (
+    <span className="inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium capitalize"
+      style={{ background: s.bg, color: s.color }}>
+      {cls}
+    </span>
+  );
+}
+
+function SourceBadge({ metadata }: { metadata: Record<string, unknown> | null }) {
+  if (!metadata) return null;
+  const sector = metadata.sector as string | undefined;
+  const source = metadata.source as string | undefined;
+  if (source === "baseline_defaults") {
+    return (
+      <span className="inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium"
+        style={{ background: "var(--paper-3)", color: "var(--ink-4)" }}>
+        Baseline
+      </span>
+    );
+  }
+  if (sector && SECTOR_STYLE[sector]) {
+    const s = SECTOR_STYLE[sector];
+    return (
+      <span className="inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium"
+        style={{ background: s.bg, color: s.color }}>
+        {s.label}
+      </span>
+    );
+  }
+  return null;
+}
+
+// ── Form blank ───────────────────────────────────────────────────────────────
+
+const BLANK: Partial<Policy> = {
+  action: "allow", dataClass: "internal", enabled: true, priority: 100,
+  requireHumanApproval: false, modelIdPattern: "%", scope: "organization",
+};
+
+// ── Create / Edit modal ──────────────────────────────────────────────────────
+
+function PolicyModal({
+  initial,
+  onClose,
+  onSaved,
+}: {
+  initial: Partial<Policy>;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [form, setForm] = useState<Partial<Policy>>(initial);
+  const [saving, setSaving] = useState(false);
+  const isEdit = !!initial.id;
+
+  function set(key: keyof Policy, value: unknown) {
+    setForm((f) => ({ ...f, [key]: value }));
+  }
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setSaving(true);
+    const url = isEdit ? `/api/governance/policies/${initial.id}` : "/api/governance/policies";
+    const res = await fetch(url, {
+      method: isEdit ? "PATCH" : "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(form),
+    });
+    setSaving(false);
+    if (res.ok) { onSaved(); onClose(); }
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: "rgba(0,0,0,0.45)", backdropFilter: "blur(4px)" }}
+      onClick={onClose}
+    >
+      <form
+        onSubmit={submit}
+        className="card w-full max-w-lg overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Modal header */}
+        <div className="flex items-center justify-between border-b px-6 py-4"
+          style={{ borderColor: "var(--line-soft)" }}>
+          <h2 className="section-title">{isEdit ? "Edit policy" : "New policy"}</h2>
+          <button type="button" onClick={onClose} className="md-icon-btn">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="max-h-[70vh] overflow-y-auto p-6 space-y-4">
+          {/* Name */}
+          <div>
+            <label className="mb-1.5 block text-sm font-medium" style={{ color: "var(--ink)" }}>
+              Name <span style={{ color: "var(--red)" }}>*</span>
+            </label>
+            <input required value={form.name ?? ""} onChange={(e) => set("name", e.target.value)}
+              className="input w-full" placeholder="e.g. Block Restricted Data" />
+          </div>
+
+          {/* Description */}
+          <div>
+            <label className="mb-1.5 block text-sm font-medium" style={{ color: "var(--ink)" }}>Description</label>
+            <textarea value={form.description ?? ""} onChange={(e) => set("description", e.target.value)}
+              className="input w-full" rows={2} placeholder="Optional — explain when this policy applies" />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            {/* Action */}
+            <div>
+              <label className="mb-1.5 block text-sm font-medium" style={{ color: "var(--ink)" }}>Action</label>
+              <select value={form.action} onChange={(e) => set("action", e.target.value)} className="input w-full">
+                <option value="allow">Allow</option>
+                <option value="deny">Deny</option>
+                <option value="require_approval">Require Approval</option>
+                <option value="route_fallback">Route Fallback</option>
+              </select>
+            </div>
+
+            {/* Data class */}
+            <div>
+              <label className="mb-1.5 block text-sm font-medium" style={{ color: "var(--ink)" }}>Data class</label>
+              <select value={form.dataClass} onChange={(e) => set("dataClass", e.target.value)} className="input w-full">
+                {["public", "internal", "confidential", "restricted"].map((v) => (
+                  <option key={v} value={v} className="capitalize">{v}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Model pattern */}
+            <div>
+              <label className="mb-1.5 block text-sm font-medium" style={{ color: "var(--ink)" }}>Model pattern</label>
+              <input value={form.modelIdPattern ?? ""} onChange={(e) => set("modelIdPattern", e.target.value)}
+                className="input w-full font-mono text-sm" placeholder="gpt-* or % for all" />
+              <p className="mt-1 text-[11px]" style={{ color: "var(--ink-4)" }}>% = any model, gpt-* = all GPT models</p>
+            </div>
+
+            {/* Priority */}
+            <div>
+              <label className="mb-1.5 block text-sm font-medium" style={{ color: "var(--ink)" }}>Priority</label>
+              <input type="number" value={form.priority ?? 100} onChange={(e) => set("priority", parseInt(e.target.value))}
+                className="input w-full" min={1} max={999} />
+              <p className="mt-1 text-[11px]" style={{ color: "var(--ink-4)" }}>Lower number = evaluated first</p>
+            </div>
+
+            {/* User role pattern */}
+            <div>
+              <label className="mb-1.5 block text-sm font-medium" style={{ color: "var(--ink)" }}>User role pattern</label>
+              <input value={form.userRolePattern ?? ""} onChange={(e) => set("userRolePattern", e.target.value)}
+                className="input w-full font-mono text-sm" placeholder="admin|compliance (optional)" />
+            </div>
+
+            {/* Fallback model */}
+            {form.action === "route_fallback" && (
+              <div>
+                <label className="mb-1.5 block text-sm font-medium" style={{ color: "var(--ink)" }}>Fallback model ID</label>
+                <input value={form.fallbackModelId ?? ""} onChange={(e) => set("fallbackModelId", e.target.value)}
+                  className="input w-full font-mono text-sm" placeholder="gpt-4o-mini" />
+              </div>
+            )}
+          </div>
+
+          {/* Toggles */}
+          <div className="flex flex-wrap items-center gap-6 rounded-xl px-4 py-3"
+            style={{ background: "var(--paper-3)" }}>
+            <label className="flex cursor-pointer items-center gap-2 text-sm">
+              <input type="checkbox" checked={form.requireHumanApproval ?? false}
+                onChange={(e) => set("requireHumanApproval", e.target.checked)}
+                className="h-4 w-4 rounded accent-indigo-600" />
+              <span style={{ color: "var(--ink-2)" }}>Require human approval</span>
+            </label>
+            <label className="flex cursor-pointer items-center gap-2 text-sm">
+              <input type="checkbox" checked={form.enabled ?? true}
+                onChange={(e) => set("enabled", e.target.checked)}
+                className="h-4 w-4 rounded accent-indigo-600" />
+              <span style={{ color: "var(--ink-2)" }}>Enabled</span>
+            </label>
+          </div>
+        </div>
+
+        <div className="flex justify-end gap-2 border-t px-6 py-4"
+          style={{ borderColor: "var(--line-soft)" }}>
+          <button type="button" onClick={onClose} className="md-btn-outlined text-sm px-4 py-2">Cancel</button>
+          <button type="submit" disabled={saving} className="md-btn-filled text-sm px-4 py-2 flex items-center gap-2">
+            {saving && <Loader2 className="h-4 w-4 animate-spin" />}
+            {isEdit ? "Save changes" : "Create policy"}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+// ── Main page ────────────────────────────────────────────────────────────────
 
 export default function PoliciesPage() {
   const [policies, setPolicies] = useState<Policy[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState<Partial<Policy>>(defaultForm);
+  const [seeding, setSeeding] = useState(false);
+  const [modalTarget, setModalTarget] = useState<Partial<Policy> | null>(null);
+  const [search, setSearch] = useState("");
+  const [filterAction, setFilterAction] = useState("all");
+  const [filterClass, setFilterClass] = useState("all");
+  const [filterEnabled, setFilterEnabled] = useState("all");
 
-  useEffect(() => { loadPolicies(); }, []);
-
-  async function loadPolicies() {
+  async function load() {
     const res = await fetch("/api/governance/policies");
     const data = await res.json();
-    setPolicies(data.policies || []);
+    setPolicies(data.policies ?? []);
     setLoading(false);
   }
 
-  async function createPolicy(e: React.FormEvent) {
-    e.preventDefault();
-    const res = await fetch("/api/governance/policies", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
-    });
-    if (res.ok) { setShowForm(false); setForm(defaultForm); loadPolicies(); }
+  useEffect(() => { load(); }, []);
+
+  async function seedDefaults() {
+    setSeeding(true);
+    await fetch("/api/governance/policies/seed-defaults", { method: "POST" });
+    await load();
+    setSeeding(false);
   }
 
   async function deletePolicy(id: string) {
-    if (!confirm("Delete this policy?")) return;
+    if (!confirm("Delete this policy? This cannot be undone.")) return;
     await fetch(`/api/governance/policies/${id}`, { method: "DELETE" });
-    loadPolicies();
+    load();
   }
 
-  async function togglePolicy(id: string, enabled: boolean) {
-    await fetch(`/api/governance/policies/${id}`, {
+  async function toggleEnabled(p: Policy) {
+    await fetch(`/api/governance/policies/${p.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ enabled: !enabled }),
+      body: JSON.stringify({ enabled: !p.enabled }),
     });
-    loadPolicies();
+    load();
+  }
+
+  // ── Stats ──────────────────────────────────────────────────────────────────
+  const stats = useMemo(() => ({
+    total: policies.length,
+    active: policies.filter((p) => p.enabled).length,
+    allow: policies.filter((p) => p.action === "allow").length,
+    deny: policies.filter((p) => p.action === "deny").length,
+    approval: policies.filter((p) => p.action === "require_approval").length,
+  }), [policies]);
+
+  // ── Filtered list ──────────────────────────────────────────────────────────
+  const filtered = useMemo(() => {
+    const q = search.toLowerCase();
+    return policies.filter((p) => {
+      if (q && !p.name.toLowerCase().includes(q) && !(p.description ?? "").toLowerCase().includes(q) && !(p.modelIdPattern ?? "").toLowerCase().includes(q)) return false;
+      if (filterAction !== "all" && p.action !== filterAction) return false;
+      if (filterClass !== "all" && p.dataClass !== filterClass) return false;
+      if (filterEnabled === "enabled" && !p.enabled) return false;
+      if (filterEnabled === "disabled" && p.enabled) return false;
+      return true;
+    });
+  }, [policies, search, filterAction, filterClass, filterEnabled]);
+
+  const hasActiveFilters = search || filterAction !== "all" || filterClass !== "all" || filterEnabled !== "all";
+
+  if (loading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <Loader2 className="h-5 w-5 animate-spin" style={{ color: "var(--ink-3)" }} />
+      </div>
+    );
   }
 
   return (
     <div>
-      <div className="mb-8 flex items-start justify-between gap-4">
+      {/* Header */}
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="page-title">Policies</h1>
-          <p className="page-desc">Define who can use which models, on what data, with what safeguards.</p>
+          <p className="page-desc">Define which models can access which data classes, and with what safeguards.</p>
         </div>
-        <button onClick={() => setShowForm(!showForm)} className="btn-primary shrink-0">
+        <button onClick={() => setModalTarget(BLANK)} className="md-btn-filled shrink-0 flex items-center gap-2 px-4 py-2">
           <Plus className="h-4 w-4" /> New policy
         </button>
       </div>
 
-      {loading ? (
-        <div className="flex h-64 items-center justify-center">
-          <Loader2 className="h-5 w-5 animate-spin" style={{ color: "var(--ink-3)" }} />
+      {/* Stats */}
+      {policies.length > 0 && (
+        <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-5">
+          {[
+            { label: "Total",    value: stats.total,    color: "var(--ink)" },
+            { label: "Active",   value: stats.active,   color: "var(--ink)" },
+            { label: "Allow",    value: stats.allow,    color: "var(--green)" },
+            { label: "Deny",     value: stats.deny,     color: "var(--red)" },
+            { label: "Approval", value: stats.approval, color: "var(--yellow)" },
+          ].map(({ label, value, color }) => (
+            <div key={label} className="card p-4 text-center">
+              <p className="text-2xl font-semibold tabular-nums" style={{ color }}>{value}</p>
+              <p className="mt-0.5 text-xs" style={{ color: "var(--ink-4)" }}>{label}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Empty state */}
+      {policies.length === 0 ? (
+        <div className="card flex flex-col items-center justify-center gap-5 py-16 text-center">
+          <div className="grid h-14 w-14 place-items-center rounded-2xl"
+            style={{ background: "var(--paper-3)" }}>
+            <Shield className="h-7 w-7" style={{ color: "var(--ink-3)" }} />
+          </div>
+          <div>
+            <p className="text-base font-semibold" style={{ color: "var(--ink)" }}>No policies yet</p>
+            <p className="mt-1 max-w-sm text-sm" style={{ color: "var(--ink-3)" }}>
+              Policies control which models can process which data classes. Start with baseline defaults or create your own.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-3 justify-center">
+            <button
+              onClick={seedDefaults}
+              disabled={seeding}
+              className="md-btn-tonal flex items-center gap-2 px-5 py-2 text-sm"
+            >
+              {seeding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Layers className="h-4 w-4" />}
+              Load baseline defaults
+            </button>
+            <button onClick={() => setModalTarget(BLANK)} className="md-btn-filled flex items-center gap-2 px-5 py-2 text-sm">
+              <Plus className="h-4 w-4" /> Create policy
+            </button>
+          </div>
+          <p className="text-xs" style={{ color: "var(--ink-4)" }}>
+            Policies are also created automatically when you apply a Sector Pack.
+          </p>
         </div>
       ) : (
-        <div className="space-y-5">
-          {showForm && (
-            <form onSubmit={createPolicy} className="card p-6 space-y-4">
-              <h2 className="section-title">New policy</h2>
-              <div className="grid gap-4 sm:grid-cols-2">
-                {[
-                  { label: "Name", key: "name", required: true, type: "text", placeholder: "" },
-                  { label: "Model pattern", key: "modelIdPattern", type: "text", placeholder: "gpt-* or leave blank" },
-                  { label: "User role pattern", key: "userRolePattern", type: "text", placeholder: "admin|compliance" },
-                  { label: "Fallback model", key: "fallbackModelId", type: "text", placeholder: "" },
-                  { label: "Priority (lower = first)", key: "priority", type: "number", placeholder: "" },
-                ].map(({ label, key, required, type, placeholder }) => (
-                  <div key={key}>
-                    <label className="mb-1.5 block text-sm font-medium" style={{ color: "var(--ink)" }}>{label}</label>
-                    <input
-                      required={required}
-                      type={type}
-                      value={(form as Record<string, unknown>)[key] as string ?? ""}
-                      placeholder={placeholder}
-                      onChange={(e) => setForm({ ...form, [key]: type === "number" ? parseInt(e.target.value) : e.target.value })}
-                      className="input w-full"
-                    />
-                  </div>
-                ))}
-                <div>
-                  <label className="mb-1.5 block text-sm font-medium" style={{ color: "var(--ink)" }}>Action</label>
-                  <select value={form.action} onChange={(e) => setForm({ ...form, action: e.target.value })} className="input w-full">
-                    {[["allow","Allow"],["deny","Deny"],["require_approval","Require approval"],["route_fallback","Route fallback"]].map(([v,l]) => <option key={v} value={v}>{l}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="mb-1.5 block text-sm font-medium" style={{ color: "var(--ink)" }}>Data class</label>
-                  <select value={form.dataClass} onChange={(e) => setForm({ ...form, dataClass: e.target.value })} className="input w-full">
-                    {["public","internal","confidential","restricted"].map((v) => <option key={v} value={v} className="capitalize">{v}</option>)}
-                  </select>
-                </div>
-                <div className="flex items-center gap-6 pt-5 sm:col-span-2">
-                  <label className="flex cursor-pointer items-center gap-2 text-sm">
-                    <input type="checkbox" checked={form.requireHumanApproval || false} onChange={(e) => setForm({ ...form, requireHumanApproval: e.target.checked })} className="h-4 w-4 rounded accent-indigo-600" />
-                    <span style={{ color: "var(--ink-2)" }}>Require human approval</span>
-                  </label>
-                  <label className="flex cursor-pointer items-center gap-2 text-sm">
-                    <input type="checkbox" checked={form.enabled || false} onChange={(e) => setForm({ ...form, enabled: e.target.checked })} className="h-4 w-4 rounded accent-indigo-600" />
-                    <span style={{ color: "var(--ink-2)" }}>Enabled</span>
-                  </label>
-                </div>
-              </div>
-              <div>
-                <label className="mb-1.5 block text-sm font-medium" style={{ color: "var(--ink)" }}>Description</label>
-                <textarea value={form.description || ""} onChange={(e) => setForm({ ...form, description: e.target.value })} className="input w-full" rows={2} />
-              </div>
-              <div className="flex justify-end gap-3">
-                <button type="button" onClick={() => setShowForm(false)} className="btn-ghost btn-sm">Cancel</button>
-                <button type="submit" className="btn-primary">Create policy</button>
-              </div>
-            </form>
-          )}
-
-          <div className="card overflow-hidden">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Policy</TableHead>
-                  <TableHead>Data class</TableHead>
-                  <TableHead>Action</TableHead>
-                  <TableHead>Priority</TableHead>
-                  <TableHead>Enabled</TableHead>
-                  <TableHead className="text-right">Delete</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {policies.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={6} className="py-12 text-center" style={{ color: "var(--ink-3)" }}>
-                      No policies yet. Create one to start governing model access.
-                    </TableCell>
-                  </TableRow>
-                ) : policies.map((p) => {
-                  const act = actionStyle[p.action] ?? { bg: "var(--paper-3)", color: "var(--ink-2)" };
-                  return (
-                    <TableRow key={p.id}>
-                      <TableCell>
-                        <div className="font-medium" style={{ color: "var(--ink)" }}>{p.name}</div>
-                        {p.description && <div className="text-xs mt-0.5" style={{ color: "var(--ink-3)" }}>{p.description}</div>}
-                      </TableCell>
-                      <TableCell className="capitalize" style={{ color: "var(--ink-2)" }}>{p.dataClass}</TableCell>
-                      <TableCell>
-                        <span className="inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium capitalize"
-                          style={{ background: act.bg, color: act.color }}>
-                          {p.action.replace("_", " ")}
-                        </span>
-                      </TableCell>
-                      <TableCell style={{ color: "var(--ink-2)" }}>{p.priority}</TableCell>
-                      <TableCell>
-                        <button onClick={() => togglePolicy(p.id, p.enabled)} title={p.enabled ? "Disable" : "Enable"}>
-                          {p.enabled
-                            ? <CheckCircle2 className="h-5 w-5" style={{ color: "var(--green)" }} />
-                            : <XCircle className="h-5 w-5" style={{ color: "var(--ink-4)" }} />}
-                        </button>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <button onClick={() => deletePolicy(p.id)} className="btn-ghost btn-sm" style={{ color: "var(--red)" }}>
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
+        <>
+          {/* Filter bar */}
+          <div className="mb-4 flex flex-wrap items-center gap-2">
+            <div className="relative flex-1 min-w-48">
+              <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2" style={{ color: "var(--ink-4)" }} />
+              <input value={search} onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search policies…" className="input w-full pl-8 text-sm" />
+            </div>
+            <select value={filterAction} onChange={(e) => setFilterAction(e.target.value)} className="input w-auto text-sm">
+              <option value="all">All actions</option>
+              <option value="allow">Allow</option>
+              <option value="deny">Deny</option>
+              <option value="require_approval">Require Approval</option>
+              <option value="route_fallback">Route Fallback</option>
+            </select>
+            <select value={filterClass} onChange={(e) => setFilterClass(e.target.value)} className="input w-auto text-sm">
+              <option value="all">All data classes</option>
+              <option value="public">Public</option>
+              <option value="internal">Internal</option>
+              <option value="confidential">Confidential</option>
+              <option value="restricted">Restricted</option>
+            </select>
+            <select value={filterEnabled} onChange={(e) => setFilterEnabled(e.target.value)} className="input w-auto text-sm">
+              <option value="all">All statuses</option>
+              <option value="enabled">Enabled only</option>
+              <option value="disabled">Disabled only</option>
+            </select>
+            {hasActiveFilters && (
+              <button onClick={() => { setSearch(""); setFilterAction("all"); setFilterClass("all"); setFilterEnabled("all"); }}
+                className="flex items-center gap-1 text-xs md-btn-text px-2 py-1" style={{ color: "var(--ink-3)" }}>
+                <X className="h-3.5 w-3.5" /> Clear
+              </button>
+            )}
+            <span className="ml-auto text-xs" style={{ color: "var(--ink-4)" }}>
+              {filtered.length} of {policies.length}
+            </span>
           </div>
-        </div>
+
+          {/* Table */}
+          <div className="card overflow-hidden">
+            <table className="w-full">
+              <thead>
+                <tr style={{ borderBottom: "1px solid var(--line-soft)" }}>
+                  <th className="table-header-cell text-left" style={{ width: "35%" }}>Policy</th>
+                  <th className="table-header-cell text-left">Data class</th>
+                  <th className="table-header-cell text-left">Action</th>
+                  <th className="table-header-cell text-left">Model pattern</th>
+                  <th className="table-header-cell text-right" style={{ width: "60px" }}>Priority</th>
+                  <th className="table-header-cell text-center" style={{ width: "80px" }}>Status</th>
+                  <th className="table-header-cell text-right" style={{ width: "80px" }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="py-12 text-center text-sm" style={{ color: "var(--ink-4)" }}>
+                      No policies match the current filters.
+                    </td>
+                  </tr>
+                ) : (
+                  filtered.map((p) => (
+                    <tr key={p.id} className="transition-colors"
+                      style={{ borderBottom: "1px solid var(--line-soft)", opacity: p.enabled ? 1 : 0.55 }}>
+                      <td className="table-cell">
+                        <div className="flex flex-col gap-0.5">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium" style={{ color: "var(--ink)" }}>{p.name}</span>
+                            <SourceBadge metadata={p.metadata} />
+                          </div>
+                          {p.description && (
+                            <span className="text-xs leading-snug" style={{ color: "var(--ink-4)" }}>
+                              {p.description.length > 80 ? p.description.slice(0, 80) + "…" : p.description}
+                            </span>
+                          )}
+                          {p.requireHumanApproval && (
+                            <span className="inline-flex w-fit items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium"
+                              style={{ background: "var(--yellow-soft)", color: "var(--yellow)" }}>
+                              <ShieldAlert className="h-2.5 w-2.5" /> Human review
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="table-cell">
+                        <DataClassBadge cls={p.dataClass} />
+                      </td>
+                      <td className="table-cell">
+                        <ActionBadge action={p.action} />
+                      </td>
+                      <td className="table-cell">
+                        {p.modelIdPattern ? (
+                          <code className="rounded px-1.5 py-0.5 text-xs"
+                            style={{ background: "var(--paper-3)", color: "var(--ink-2)", fontFamily: "monospace" }}>
+                            {p.modelIdPattern}
+                          </code>
+                        ) : (
+                          <span className="text-xs" style={{ color: "var(--ink-4)" }}>any</span>
+                        )}
+                      </td>
+                      <td className="table-cell text-right tabular-nums text-sm"
+                        style={{ color: "var(--ink-3)" }}>
+                        {p.priority}
+                      </td>
+                      <td className="table-cell text-center">
+                        <button onClick={() => toggleEnabled(p)} title={p.enabled ? "Disable" : "Enable"}>
+                          {p.enabled
+                            ? <CheckCircle2 className="mx-auto h-5 w-5" style={{ color: "var(--green)" }} />
+                            : <XCircle className="mx-auto h-5 w-5" style={{ color: "var(--ink-4)" }} />}
+                        </button>
+                      </td>
+                      <td className="table-cell text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <button onClick={() => setModalTarget(p)} className="md-icon-btn h-8 w-8"
+                            title="Edit" aria-label="Edit policy">
+                            <Pencil className="h-3.5 w-3.5" />
+                          </button>
+                          <button onClick={() => deletePolicy(p.id)} className="md-icon-btn h-8 w-8"
+                            title="Delete" aria-label="Delete policy"
+                            style={{ color: "var(--red)" }}>
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Data class legend */}
+          <div className="mt-4 flex flex-wrap items-center gap-4">
+            <span className="text-xs font-medium" style={{ color: "var(--ink-4)" }}>Data classes:</span>
+            {Object.entries(DATA_CLASS_STYLE).map(([cls, s]) => (
+              <span key={cls} className="flex items-center gap-1.5 text-xs capitalize" style={{ color: "var(--ink-3)" }}>
+                <span className="inline-block h-2 w-2 rounded-full" style={{ background: s.color }} />
+                {cls}
+              </span>
+            ))}
+            <span className="ml-auto text-xs" style={{ color: "var(--ink-4)" }}>
+              Lower priority number = evaluated first
+            </span>
+          </div>
+        </>
+      )}
+
+      {/* Create / Edit modal */}
+      {modalTarget && (
+        <PolicyModal
+          initial={modalTarget}
+          onClose={() => setModalTarget(null)}
+          onSaved={load}
+        />
       )}
     </div>
   );

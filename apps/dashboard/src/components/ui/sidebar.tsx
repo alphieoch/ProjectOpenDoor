@@ -8,6 +8,7 @@ import {
   Play, Users, Settings, ClipboardList, LogOut, ShieldCheck, Gavel,
   AlertTriangle, FileCheck, BookOpen, Building2, Bot,
   ChevronsUpDown, ChevronDown, UserPlus, UserCog, Blocks, Plus, UserCircle,
+  GitBranch, List,
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import Link from "next/link";
@@ -66,6 +67,8 @@ const navItems = [
   { href: "/dashboard/deployments",label: "Deployments", icon: Server,       badge: "5" },
   { href: "/dashboard/billing",    label: "Billing",     icon: CreditCard },
   { href: "/dashboard/playground",    label: "Playground",    icon: Play },
+  { href: "/dashboard/workflow",      label: "Workflow",      icon: GitBranch },
+  { href: "/dashboard/models",        label: "Models",        icon: List },
   { href: "/dashboard/ai-assistants", label: "AI Assistants", icon: Bot },
   { href: "/dashboard/team",          label: "Team",          icon: Users },
   { href: "/dashboard/settings",   label: "Settings",    icon: Settings },
@@ -80,6 +83,68 @@ const governanceItems = [
   { href: "/dashboard/governance/compliance",       label: "Compliance",   icon: BookOpen },
   { href: "/dashboard/governance/sector-templates", label: "Sector Packs", icon: Building2 },
 ];
+
+/* ── Stable NavItem (must be outside SessionNavBar so React never remounts it) ── */
+function NavItem({
+  item,
+  layoutId,
+  isCollapsed,
+  active,
+}: {
+  item: typeof navItems[0];
+  layoutId: string;
+  isCollapsed: boolean;
+  active: boolean;
+}) {
+  const Icon = item.icon;
+  return (
+    <Link
+      href={item.href}
+      className={cn(
+        "flex h-8 w-full flex-row items-center rounded-md px-2 py-1.5 transition-colors",
+        "relative",
+        active ? "text-white" : "text-[var(--ink-2)] hover:bg-[var(--paper-3)] hover:text-[var(--ink)]",
+      )}
+    >
+      {active && (
+        <motion.div
+          layoutId={layoutId}
+          className="absolute inset-0 rounded-md bg-[var(--ink)]"
+          style={{ zIndex: 0 }}
+          transition={{ type: "spring", stiffness: 400, damping: 32 }}
+        />
+      )}
+      <Icon
+        className="h-4 w-4 shrink-0"
+        style={{
+          color: active ? "var(--brand-tint)" : "var(--ink-3)",
+          position: "relative", zIndex: 1,
+        }}
+      />
+      <motion.li variants={variants} style={{ position: "relative", zIndex: 1 }}>
+        {!isCollapsed && (
+          <div className="ml-2 flex items-center gap-2">
+            <p className="text-sm font-medium" style={{ fontWeight: active ? 500 : 400 }}>
+              {item.label}
+            </p>
+            {item.badge && (
+              <span
+                className="rounded-full px-1.5 py-0.5 text-[10px] font-semibold"
+                style={{
+                  fontFamily: "var(--font-mono)",
+                  background: active ? "var(--paper-3)" : "var(--brand)",
+                  color: active ? "var(--ink)" : "white",
+                }}
+              >
+                {item.badge}
+              </span>
+            )}
+          </div>
+        )}
+      </motion.li>
+    </Link>
+  );
+}
 
 export function SessionNavBar() {
   const [isCollapsed, setIsCollapsed] = useState(true);
@@ -97,58 +162,6 @@ export function SessionNavBar() {
   const isActive = (href: string) => {
     if (href === "/dashboard") return pathname === href;
     return pathname?.startsWith(href) ?? false;
-  };
-
-  const NavItem = ({ item, layoutId }: { item: typeof navItems[0]; layoutId: string }) => {
-    const Icon = item.icon;
-    const active = isActive(item.href);
-    return (
-      <Link
-        href={item.href}
-        className={cn(
-          "flex h-8 w-full flex-row items-center rounded-md px-2 py-1.5 transition-colors",
-          "relative",
-          active ? "text-white" : "text-[var(--ink-2)] hover:bg-[var(--paper-3)] hover:text-[var(--ink)]",
-        )}
-      >
-        {active && (
-          <motion.div
-            layoutId={layoutId}
-            className="absolute inset-0 rounded-md bg-[var(--ink)]"
-            style={{ zIndex: 0 }}
-            transition={{ type: "spring", stiffness: 400, damping: 32 }}
-          />
-        )}
-        <Icon
-          className="h-4 w-4 shrink-0"
-          style={{
-            color: active ? "var(--brand-tint)" : "var(--ink-3)",
-            position: "relative", zIndex: 1,
-          }}
-        />
-        <motion.li variants={variants} style={{ position: "relative", zIndex: 1 }}>
-          {!isCollapsed && (
-            <div className="ml-2 flex items-center gap-2">
-              <p className="text-sm font-medium" style={{ fontWeight: active ? 500 : 400 }}>
-                {item.label}
-              </p>
-              {item.badge && (
-                <span
-                  className="rounded-full px-1.5 py-0.5 text-[10px] font-semibold"
-                  style={{
-                    fontFamily: "var(--font-mono)",
-                    background: active ? "var(--paper-3)" : "var(--brand)",
-                    color: active ? "var(--ink)" : "white",
-                  }}
-                >
-                  {item.badge}
-                </span>
-              )}
-            </div>
-          )}
-        </motion.li>
-      </Link>
-    );
   };
 
   return (
@@ -269,7 +282,7 @@ export function SessionNavBar() {
                         >
                           <div className="flex flex-col gap-1">
                             {navItems.map((item) => (
-                              <NavItem key={item.href} item={item} layoutId="sidebar-active-workspace" />
+                              <NavItem key={item.href} item={item} layoutId="sidebar-active-workspace" isCollapsed={isCollapsed} active={isActive(item.href)} />
                             ))}
                           </div>
                         </motion.div>
@@ -314,7 +327,7 @@ export function SessionNavBar() {
                         >
                           <div className="flex flex-col gap-1">
                             {governanceItems.map((item) => (
-                              <NavItem key={item.href} item={item as typeof navItems[0]} layoutId="sidebar-active-governance" />
+                              <NavItem key={item.href} item={item} layoutId="sidebar-active-governance" isCollapsed={isCollapsed} active={isActive(item.href)} />
                             ))}
                           </div>
                         </motion.div>

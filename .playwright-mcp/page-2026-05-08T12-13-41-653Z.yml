@@ -1,0 +1,33 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - generic [ref=e4]: P
+      - generic [ref=e6]: Preview Demo
+      - generic [ref=e8]: Preview
+      - generic [ref=e9]:
+        - img [ref=e10]
+        - generic [ref=e13]: OpenDoor AI
+    - generic [ref=e16]:
+      - generic [ref=e18]:
+        - generic [ref=e19]: P
+        - generic [ref=e20]:
+          - heading "Good afternoon" [level=1] [ref=e21]
+          - paragraph [ref=e22]: How can Preview Demo help you today?
+        - generic [ref=e23]:
+          - button "What can you help me with?" [ref=e24] [cursor=pointer]:
+            - img [ref=e25]
+            - generic [ref=e28]: What can you help me with?
+          - button "Tell me about yourself" [ref=e29] [cursor=pointer]:
+            - img [ref=e30]
+            - generic [ref=e32]: Tell me about yourself
+          - button "Give me an example" [ref=e33] [cursor=pointer]:
+            - img [ref=e34]
+            - generic [ref=e36]: Give me an example
+          - button "Help me get started" [ref=e37] [cursor=pointer]:
+            - img [ref=e38]
+            - generic [ref=e40]: Help me get started
+      - generic [ref=e43]:
+        - textbox "Message…" [ref=e44]
+        - button [disabled] [ref=e45]:
+          - img [ref=e46]
+  - alert [ref=e49]

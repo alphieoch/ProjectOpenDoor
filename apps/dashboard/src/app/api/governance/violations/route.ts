@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
-import { policyViolations } from "@opendoor/database";
-import { eq, desc, and } from "drizzle-orm";
+import { policyViolations, modelPolicies, apiKeys } from "@opendoor/database";
+import { eq, desc, and, isNull, isNotNull } from "drizzle-orm";
 import { requireAuth } from "@/lib/auth";
 
 export async function GET(req: NextRequest) {
@@ -13,26 +13,31 @@ export async function GET(req: NextRequest) {
   const resolved = searchParams.get("resolved");
 
   const db = getDb();
-  let query = db
-    .select()
+
+  const conditions = [eq(policyViolations.organizationId, orgId)];
+  if (severity) conditions.push(eq(policyViolations.severity, severity as "low" | "medium" | "high" | "critical"));
+  if (resolved === "false") conditions.push(isNull(policyViolations.resolvedAt));
+  if (resolved === "true") conditions.push(isNotNull(policyViolations.resolvedAt));
+
+  const rows = await db
+    .select({
+      violation: policyViolations,
+      policyName: modelPolicies.name,
+      policyAction: modelPolicies.action,
+      apiKeyName: apiKeys.name,
+    })
     .from(policyViolations)
-    .where(eq(policyViolations.organizationId, orgId))
+    .leftJoin(modelPolicies, eq(policyViolations.policyId, modelPolicies.id))
+    .leftJoin(apiKeys, eq(policyViolations.apiKeyId, apiKeys.id))
+    .where(and(...conditions))
     .orderBy(desc(policyViolations.createdAt));
 
-  // Note: Drizzle query builder pattern for dynamic filters is limited;
-  // we run the base query and filter in memory for simplicity.
-  const items = await query;
+  const violations = rows.map((r) => ({
+    ...r.violation,
+    policyName: r.policyName ?? null,
+    policyAction: r.policyAction ?? null,
+    apiKeyName: r.apiKeyName ?? null,
+  }));
 
-  let filtered = items;
-  if (severity) {
-    filtered = filtered.filter((i) => i.severity === severity);
-  }
-  if (resolved === "false") {
-    filtered = filtered.filter((i) => !i.resolvedAt);
-  }
-  if (resolved === "true") {
-    filtered = filtered.filter((i) => i.resolvedAt);
-  }
-
-  return NextResponse.json({ violations: filtered });
+  return NextResponse.json({ violations });
 }

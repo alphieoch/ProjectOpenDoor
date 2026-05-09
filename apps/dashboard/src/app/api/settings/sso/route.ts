@@ -21,6 +21,11 @@ export async function GET() {
         ssoDefaultRole: true,
         workosOrganizationId: true,
         workosConnectionId: true,
+        customDomain: true,
+        customDomainVerified: true,
+        emailNotificationsEnabled: true,
+        notifyOnInvites: true,
+        notifyOnBillingAlerts: true,
       },
     });
 
@@ -53,6 +58,11 @@ export async function POST(req: NextRequest) {
       ssoDefaultRole,
       workosOrganizationId,
       workosConnectionId,
+      customDomain,
+      customDomainVerified,
+      emailNotificationsEnabled,
+      notifyOnInvites,
+      notifyOnBillingAlerts,
     } = await req.json();
 
     const db = getDb();
@@ -63,6 +73,11 @@ export async function POST(req: NextRequest) {
         ssoDefaultRole: ssoDefaultRole || "member",
         workosOrganizationId: workosOrganizationId || null,
         workosConnectionId: workosConnectionId || null,
+        customDomain: customDomain || null,
+        customDomainVerified: customDomainVerified ?? false,
+        emailNotificationsEnabled: emailNotificationsEnabled ?? true,
+        notifyOnInvites: notifyOnInvites ?? true,
+        notifyOnBillingAlerts: notifyOnBillingAlerts ?? true,
       })
       .where(eq(organizations.id, orgId));
 

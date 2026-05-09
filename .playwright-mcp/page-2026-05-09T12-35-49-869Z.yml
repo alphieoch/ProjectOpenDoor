@@ -1,0 +1,327 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - list [ref=e5]:
+      - generic [ref=e6]:
+        - button "O" [ref=e8] [cursor=pointer]:
+          - generic [ref=e11]: O
+          - listitem
+        - generic [ref=e12]:
+          - generic [ref=e17]:
+            - listitem
+            - generic [ref=e19]:
+              - link [ref=e20] [cursor=pointer]:
+                - /url: /dashboard
+                - img [ref=e21]
+                - listitem
+              - link [ref=e26] [cursor=pointer]:
+                - /url: /dashboard/api-keys
+                - img [ref=e27]
+                - listitem
+              - link [ref=e31] [cursor=pointer]:
+                - /url: /dashboard/usage
+                - img [ref=e32]
+                - listitem
+              - link [ref=e34] [cursor=pointer]:
+                - /url: /dashboard/pricing
+                - img [ref=e35]
+                - listitem
+              - link [ref=e37] [cursor=pointer]:
+                - /url: /dashboard/deployments
+                - img [ref=e38]
+                - listitem
+              - link [ref=e41] [cursor=pointer]:
+                - /url: /dashboard/billing
+                - img [ref=e42]
+                - listitem
+              - link [ref=e44] [cursor=pointer]:
+                - /url: /dashboard/playground
+                - img [ref=e45]
+                - listitem
+              - link [ref=e47] [cursor=pointer]:
+                - /url: /dashboard/ai-assistants
+                - img [ref=e48]
+                - listitem
+              - link [ref=e51] [cursor=pointer]:
+                - /url: /dashboard/team
+                - img [ref=e52]
+                - listitem
+              - link [ref=e57] [cursor=pointer]:
+                - /url: /dashboard/settings
+                - img [ref=e58]
+                - listitem
+              - link [ref=e61] [cursor=pointer]:
+                - /url: /dashboard/audit-logs
+                - img [ref=e62]
+                - listitem
+            - listitem
+            - generic [ref=e66]:
+              - link [ref=e67] [cursor=pointer]:
+                - /url: /dashboard/governance
+                - img [ref=e69]
+                - listitem
+              - link [ref=e72] [cursor=pointer]:
+                - /url: /dashboard/governance/policies
+                - img [ref=e73]
+                - listitem
+              - link [ref=e79] [cursor=pointer]:
+                - /url: /dashboard/governance/violations
+                - img [ref=e80]
+                - listitem
+              - link [ref=e82] [cursor=pointer]:
+                - /url: /dashboard/governance/approvals
+                - img [ref=e83]
+                - listitem
+              - link [ref=e87] [cursor=pointer]:
+                - /url: /dashboard/governance/compliance
+                - img [ref=e89]
+                - listitem
+              - link [ref=e92] [cursor=pointer]:
+                - /url: /dashboard/governance/sector-templates
+                - img [ref=e93]
+                - listitem
+          - generic [ref=e97]:
+            - listitem
+            - link [ref=e98] [cursor=pointer]:
+              - /url: /dashboard/settings
+              - img [ref=e99]
+              - listitem
+            - button "U" [ref=e102] [cursor=pointer]:
+              - generic [ref=e103]:
+                - generic [ref=e105]: U
+                - listitem
+    - generic [ref=e106]:
+      - generic [ref=e107]:
+        - generic [ref=e108]:
+          - generic [ref=e109]: Governance
+          - generic [ref=e110]: ›
+          - strong [ref=e111]: Compliance
+        - generic [ref=e112]:
+          - img [ref=e113]
+          - generic [ref=e116]: Search models, keys, policies…
+          - generic [ref=e117]: ⌘K
+        - generic [ref=e118]:
+          - button "Toggle theme" [ref=e119] [cursor=pointer]:
+            - img [ref=e120]
+            - img
+            - generic [ref=e126]: Toggle theme
+          - button "Notifications" [ref=e127] [cursor=pointer]:
+            - img [ref=e128]
+          - button "Help" [ref=e131] [cursor=pointer]:
+            - img [ref=e132]
+          - link "Docs" [ref=e136] [cursor=pointer]:
+            - /url: https://docs.opendoor.ai
+            - img [ref=e137]
+            - text: Docs
+      - main [ref=e141]:
+        - generic [ref=e143]:
+          - generic [ref=e144]:
+            - heading "Compliance" [level=1] [ref=e145]
+            - paragraph [ref=e146]: Track model compliance against GDPR, EU AI Act, ICO UK, and NIST AI RMF.
+          - generic [ref=e147]:
+            - button "Manual Tracking" [ref=e148] [cursor=pointer]:
+              - img [ref=e149]
+              - text: Manual Tracking
+            - button "Automated Compliance" [ref=e152] [cursor=pointer]:
+              - img [ref=e153]
+              - text: Automated Compliance
+          - generic [ref=e609]:
+            - generic [ref=e611]:
+              - generic [ref=e612]:
+                - generic [ref=e613]: Model
+                - combobox [ref=e614]:
+                  - option "GPT-4o" [selected]
+                  - option "Claude 3.5 Sonnet"
+                  - option "DeepSeek-V3"
+                  - option "Mistral Large"
+                  - option "Gemini 1.5 Pro"
+              - generic [ref=e615]:
+                - button "Rules" [ref=e616] [cursor=pointer]
+                - button "Reports (1)" [ref=e805] [cursor=pointer]
+                - button "Run Check" [ref=e618] [cursor=pointer]:
+                  - img [ref=e806]
+                  - text: Run Check
+            - generic [ref=e808]:
+              - generic [ref=e809]:
+                - button "Back to Reports" [ref=e810] [cursor=pointer]:
+                  - img [ref=e811]
+                  - text: Back to Reports
+                - button "Print / Save PDF" [ref=e813] [cursor=pointer]:
+                  - img [ref=e814]
+                  - text: Print / Save PDF
+              - generic [ref=e818]:
+                - generic [ref=e819]:
+                  - generic [ref=e820]:
+                    - generic [ref=e821]:
+                      - 'heading "Compliance Report: GPT-4o" [level=2] [ref=e822]'
+                      - paragraph [ref=e823]: Automated compliance assessment for GPT-4o against 10 rules.
+                      - paragraph [ref=e824]: Generated on 09/05/2026, 13:35:38
+                    - generic [ref=e825]:
+                      - generic [ref=e826]: 100%
+                      - generic [ref=e827]: COMPLIANT
+                  - generic [ref=e828]:
+                    - generic [ref=e829]:
+                      - generic [ref=e830]: "10"
+                      - generic [ref=e831]: Passed
+                    - generic [ref=e832]:
+                      - generic [ref=e833]: "0"
+                      - generic [ref=e834]: Failed
+                    - generic [ref=e835]:
+                      - generic [ref=e836]: "0"
+                      - generic [ref=e837]: Warnings
+                    - generic [ref=e838]:
+                      - generic [ref=e839]: "10"
+                      - generic [ref=e840]: Total Checks
+                - generic [ref=e841]:
+                  - heading "Findings" [level=3] [ref=e843]
+                  - table [ref=e845]:
+                    - rowgroup [ref=e846]:
+                      - row "Check Framework Severity Status Details" [ref=e847]:
+                        - columnheader "Check" [ref=e848]
+                        - columnheader "Framework" [ref=e849]
+                        - columnheader "Severity" [ref=e850]
+                        - columnheader "Status" [ref=e851]
+                        - columnheader "Details" [ref=e852]
+                    - rowgroup [ref=e853]:
+                      - row "Model Approval Required eu ai act critical passed" [ref=e854]:
+                        - cell "Model Approval Required" [ref=e855]:
+                          - generic [ref=e856]: Model Approval Required
+                        - cell "eu ai act" [ref=e857]
+                        - cell "critical" [ref=e858]:
+                          - generic [ref=e859]: critical
+                        - cell "passed" [ref=e860]:
+                          - generic [ref=e861]:
+                            - img [ref=e862]
+                            - text: passed
+                        - cell [ref=e865]
+                      - row "High Risk Model Oversight eu ai act high passed" [ref=e866]:
+                        - cell "High Risk Model Oversight" [ref=e867]:
+                          - generic [ref=e868]: High Risk Model Oversight
+                        - cell "eu ai act" [ref=e869]
+                        - cell "high" [ref=e870]:
+                          - generic [ref=e871]: high
+                        - cell "passed" [ref=e872]:
+                          - generic [ref=e873]:
+                            - img [ref=e874]
+                            - text: passed
+                        - cell [ref=e877]
+                      - row "Safety Evaluation Pass eu ai act critical passed red_team score 92% meets threshold 90%." [ref=e878]:
+                        - cell "Safety Evaluation Pass" [ref=e879]:
+                          - generic [ref=e880]: Safety Evaluation Pass
+                        - cell "eu ai act" [ref=e881]
+                        - cell "critical" [ref=e882]:
+                          - generic [ref=e883]: critical
+                        - cell "passed" [ref=e884]:
+                          - generic [ref=e885]:
+                            - img [ref=e886]
+                            - text: passed
+                        - cell "red_team score 92% meets threshold 90%." [ref=e889]
+                      - row "Bias Audit Required ico uk high passed safety score 78.5% meets threshold 75%." [ref=e890]:
+                        - cell "Bias Audit Required" [ref=e891]:
+                          - generic [ref=e892]: Bias Audit Required
+                        - cell "ico uk" [ref=e893]
+                        - cell "high" [ref=e894]:
+                          - generic [ref=e895]: high
+                        - cell "passed" [ref=e896]:
+                          - generic [ref=e897]:
+                            - img [ref=e898]
+                            - text: passed
+                        - cell "safety score 78.5% meets threshold 75%." [ref=e901]
+                      - row "Provenance Verification nist ai rmf medium passed" [ref=e902]:
+                        - cell "Provenance Verification" [ref=e903]:
+                          - generic [ref=e904]: Provenance Verification
+                        - cell "nist ai rmf" [ref=e905]
+                        - cell "medium" [ref=e906]:
+                          - generic [ref=e907]: medium
+                        - cell "passed" [ref=e908]:
+                          - generic [ref=e909]:
+                            - img [ref=e910]
+                            - text: passed
+                        - cell [ref=e913]
+                      - row "Data Residency Compliance ico uk high passed" [ref=e914]:
+                        - cell "Data Residency Compliance" [ref=e915]:
+                          - generic [ref=e916]: Data Residency Compliance
+                        - cell "ico uk" [ref=e917]
+                        - cell "high" [ref=e918]:
+                          - generic [ref=e919]: high
+                        - cell "passed" [ref=e920]:
+                          - generic [ref=e921]:
+                            - img [ref=e922]
+                            - text: passed
+                        - cell [ref=e925]
+                      - row "GDPR Lawful Basis gdpr critical passed" [ref=e926]:
+                        - cell "GDPR Lawful Basis" [ref=e927]:
+                          - generic [ref=e928]: GDPR Lawful Basis
+                        - cell "gdpr" [ref=e929]
+                        - cell "critical" [ref=e930]:
+                          - generic [ref=e931]: critical
+                        - cell "passed" [ref=e932]:
+                          - generic [ref=e933]:
+                            - img [ref=e934]
+                            - text: passed
+                        - cell [ref=e937]
+                      - row "DPIA for High-Risk Processing gdpr critical passed" [ref=e938]:
+                        - cell "DPIA for High-Risk Processing" [ref=e939]:
+                          - generic [ref=e940]: DPIA for High-Risk Processing
+                        - cell "gdpr" [ref=e941]
+                        - cell "critical" [ref=e942]:
+                          - generic [ref=e943]: critical
+                        - cell "passed" [ref=e944]:
+                          - generic [ref=e945]:
+                            - img [ref=e946]
+                            - text: passed
+                        - cell [ref=e949]
+                      - row "Transparency Obligations eu ai act medium passed" [ref=e950]:
+                        - cell "Transparency Obligations" [ref=e951]:
+                          - generic [ref=e952]: Transparency Obligations
+                        - cell "eu ai act" [ref=e953]
+                        - cell "medium" [ref=e954]:
+                          - generic [ref=e955]: medium
+                        - cell "passed" [ref=e956]:
+                          - generic [ref=e957]:
+                            - img [ref=e958]
+                            - text: passed
+                        - cell [ref=e961]
+                      - row "Record Keeping eu ai act medium passed" [ref=e962]:
+                        - cell "Record Keeping" [ref=e963]:
+                          - generic [ref=e964]: Record Keeping
+                        - cell "eu ai act" [ref=e965]
+                        - cell "medium" [ref=e966]:
+                          - generic [ref=e967]: medium
+                        - cell "passed" [ref=e968]:
+                          - generic [ref=e969]:
+                            - img [ref=e970]
+                            - text: passed
+                        - cell [ref=e973]
+                - generic [ref=e974]:
+                  - heading "Framework Breakdown" [level=3] [ref=e975]
+                  - generic [ref=e976]:
+                    - generic [ref=e977]:
+                      - generic [ref=e978]: eu ai act
+                      - generic [ref=e979]:
+                        - generic [ref=e980]: 5 passed
+                        - generic [ref=e981]: 0 failed
+                        - generic [ref=e982]: 0 warnings
+                    - generic [ref=e983]:
+                      - generic [ref=e984]: ico uk
+                      - generic [ref=e985]:
+                        - generic [ref=e986]: 2 passed
+                        - generic [ref=e987]: 0 failed
+                        - generic [ref=e988]: 0 warnings
+                    - generic [ref=e989]:
+                      - generic [ref=e990]: nist ai rmf
+                      - generic [ref=e991]:
+                        - generic [ref=e992]: 1 passed
+                        - generic [ref=e993]: 0 failed
+                        - generic [ref=e994]: 0 warnings
+                    - generic [ref=e995]:
+                      - generic [ref=e996]: gdpr
+                      - generic [ref=e997]:
+                        - generic [ref=e998]: 2 passed
+                        - generic [ref=e999]: 0 failed
+                        - generic [ref=e1000]: 0 warnings
+                - generic [ref=e1001]:
+                  - paragraph [ref=e1002]: This report was generated automatically by OpenDoor Governance.
+                  - paragraph [ref=e1003]: For questions about compliance requirements, consult your legal and risk teams.
+  - button "Open Next.js Dev Tools" [ref=e605] [cursor=pointer]:
+    - img [ref=e606]
+  - alert [ref=e158]

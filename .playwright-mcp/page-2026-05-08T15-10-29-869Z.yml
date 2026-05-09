@@ -1,0 +1,42 @@
+- generic [active]:
+  - generic [ref=e1]:
+    - generic [ref=e2]:
+      - generic [ref=e3]:
+        - link "Chat" [ref=e4] [cursor=pointer]:
+          - /url: /
+          - img [ref=e5]
+          - generic [ref=e7]: Chat
+        - button "Collapse sidebar" [ref=e8]
+      - navigation [ref=e11]:
+        - list [ref=e12]:
+          - listitem [ref=e13]:
+            - link "New chat ⌘ o" [ref=e14] [cursor=pointer]:
+              - /url: /
+              - generic [ref=e16]: New chat
+              - generic [ref=e18]:
+                - generic [ref=e19]: ⌘
+                - generic [ref=e20]: o
+      - link "OpenDoor Dashboard" [ref=e22] [cursor=pointer]:
+        - /url: http://localhost:3000/dashboard/ai-assistants
+        - generic [ref=e24]: OpenDoor Dashboard
+    - separator
+    - generic [ref=e26]:
+      - generic:
+        - generic [ref=e28]: Preview Demo
+        - button "Switch to dark mode" [ref=e30]
+      - generic [ref=e35]:
+        - textbox "Type your message here…" [ref=e37]
+        - button "Send prompt" [ref=e39]
+  - img [ref=e41]
+  - generic:
+    - img
+  - generic [ref=e42]:
+    - button "Toggle Nuxt DevTools" [ref=e43] [cursor=pointer]:
+      - img [ref=e44]
+    - generic "Page load time" [ref=e47]:
+      - generic [ref=e48]: "119"
+      - generic [ref=e49]: ms
+    - button "Toggle Component Inspector" [ref=e51] [cursor=pointer]:
+      - img [ref=e52]
+  - region "Notifications (F8)":
+    - list

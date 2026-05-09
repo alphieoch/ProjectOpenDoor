@@ -3,6 +3,7 @@ import Redis from "ioredis";
 import { db } from "@opendoor/database";
 import { AzureFoundryProvider } from "../providers/azure-foundry.js";
 import { getProvider, listProviders } from "../providers/index.js";
+import { getAllHealthMetrics, type HealthMetrics } from "../lib/health-tracker.js";
 
 const PROVIDER_LABELS: Record<string, string> = {
   "azure-foundry": "Azure AI Foundry",
@@ -65,11 +66,27 @@ export async function getStatusData() {
   }
 
   const registered = new Map(listProviders().map((p) => [p.slug, p.name]));
-  const providers = PROVIDER_ORDER.map((slug) => ({
-    slug,
-    name: registered.get(slug) ?? PROVIDER_LABELS[slug] ?? slug,
-    configured: registered.has(slug),
-  }));
+  const configuredSlugs = PROVIDER_ORDER.filter((slug) => registered.has(slug));
+  const healthMap = await getAllHealthMetrics(configuredSlugs);
+
+  const providers = PROVIDER_ORDER.map((slug) => {
+    const health = healthMap.get(slug);
+    return {
+      slug,
+      name: registered.get(slug) ?? PROVIDER_LABELS[slug] ?? slug,
+      configured: registered.has(slug),
+      health: health
+        ? {
+            successRate: Math.round(health.successRate * 100) / 100,
+            avgLatencyMs: health.avgLatencyMs,
+            successCount: health.successCount,
+            errorCount: health.errorCount,
+            totalCalls: health.totalCalls,
+            lastSeenAt: health.lastSeenAt,
+          }
+        : null,
+    };
+  });
 
   const azureConfigured = registered.has("azure-foundry");
   let azureHost: string | null = null;

@@ -11,6 +11,7 @@ import {
   jsonb,
   index,
   uniqueIndex,
+  unique,
   pgEnum,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
@@ -80,6 +81,12 @@ export const sectorEnum = pgEnum("sector", [
   "property",
   "healthcare",
   "government",
+  "insurance",
+  "education",
+  "energy",
+  "retail",
+  "media",
+  "transport",
 ]);
 
 export const organizationSegmentEnum = pgEnum("organization_segment", [
@@ -100,6 +107,10 @@ export const organizations = pgTable("organizations", {
     precision: 10,
     scale: 2,
   }).default("0"),
+  dailyTokenBudget:    bigint("daily_token_budget", { mode: "number" }),
+  weeklyTokenBudget:   bigint("weekly_token_budget", { mode: "number" }),
+  monthlyTokenBudget:  bigint("monthly_token_budget", { mode: "number" }),
+  budgetAlertThresholdPercent: integer("budget_alert_threshold_percent").default(80),
   creditsUsdCents: bigint("credits_usd_cents", { mode: "number" }).notNull().default(0),
   signupCreditGranted: boolean("signup_credit_granted").notNull().default(false),
   autoRechargeEnabled: boolean("auto_recharge_enabled").default(false),
@@ -116,6 +127,11 @@ export const organizations = pgTable("organizations", {
   workosConnectionId: varchar("workos_connection_id", { length: 255 }),
   ssoEnabled: boolean("sso_enabled").default(false),
   ssoDefaultRole: varchar("sso_default_role", { length: 50 }).default("member"),
+  customDomain: varchar("custom_domain", { length: 255 }),
+  customDomainVerified: boolean("custom_domain_verified").default(false),
+  emailNotificationsEnabled: boolean("email_notifications_enabled").default(true),
+  notifyOnInvites: boolean("notify_on_invites").default(true),
+  notifyOnBillingAlerts: boolean("notify_on_billing_alerts").default(true),
   metadata: jsonb("metadata"),
   sector: sectorEnum("sector").notNull().default("general"),
   dataResidency: varchar("data_residency", { length: 50 }).default("uk"),
@@ -939,6 +955,40 @@ export const complianceControlsRelations = relations(complianceControls, ({ many
   modelMappings: many(modelComplianceMappings),
 }));
 
+export const complianceRules = pgTable("compliance_rules", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  organizationId: uuid("organization_id").references(() => organizations.id),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  framework: complianceFrameworkEnum("framework"),
+  controlCode: varchar("control_code", { length: 50 }),
+  ruleType: varchar("rule_type", { length: 50 }).notNull().default("model_attribute"),
+  ruleConfig: jsonb("rule_config"),
+  severity: varchar("severity", { length: 50 }).notNull().default("medium"),
+  recommendation: text("recommendation"),
+  referenceUrl: text("reference_url"),
+  referenceName: text("reference_name"),
+  enabled: boolean("enabled").notNull().default(true),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const complianceReports = pgTable("compliance_reports", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  organizationId: uuid("organization_id").references(() => organizations.id),
+  modelGovernanceId: uuid("model_governance_id").references(() => modelGovernance.id),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  framework: complianceFrameworkEnum("framework"),
+  statusSummary: jsonb("status_summary"),
+  findings: jsonb("findings"),
+  recommendations: jsonb("recommendations"),
+  score: integer("score"),
+  passed: boolean("passed").default(false),
+  generatedAt: timestamp("generated_at", { withTimezone: true }).notNull().defaultNow(),
+  generatedBy: uuid("generated_by").references(() => users.id),
+});
+
 export const modelComplianceMappingsRelations = relations(modelComplianceMappings, ({ one }) => ({
   modelGovernance: one(modelGovernance, {
     fields: [modelComplianceMappings.modelGovernanceId],
@@ -1003,6 +1053,7 @@ export const aiAssistants = pgTable("ai_assistants", {
   slug:           varchar("slug", { length: 100 }).notNull().unique(),
   description:    text("description"),
   avatarLetter:   varchar("avatar_letter", { length: 1 }),
+  logoUrl:        varchar("logo_url", { length: 500 }),
   primaryColor:   varchar("primary_color", { length: 7 }).default("#1A73E8"),
   // Model config
   modelId:        varchar("model_id", { length: 100 }).default("gpt-4o"),
@@ -1012,26 +1063,248 @@ export const aiAssistants = pgTable("ai_assistants", {
   // Access
   visibility:     varchar("visibility", { length: 20 }).default("private"),
   // Monetization
-  monetization:   varchar("monetization", { length: 20 }).default("free"),
-  priceCents:     integer("price_cents").default(0),
-  stripePriceId:  varchar("stripe_price_id", { length: 255 }),
+  monetization:        varchar("monetization", { length: 20 }).default("free"),
+  priceCents:          integer("price_cents").default(0),
+  sellerEarningsCents: integer("seller_earnings_cents").default(0),
+  platformFeePercent:  integer("platform_fee_percent").default(1500),
+  usageMode:           varchar("usage_mode", { length: 20 }).default("included"),
+  cooldownMinutes:     integer("cooldown_minutes"),
+  // Limits
+  periodWindow:        varchar("period_window", { length: 20 }),
+  periodMessageLimit:  integer("period_message_limit"),
+  weeklyMessageLimit:  integer("weekly_message_limit"),
+  // Token limits
+  maxTokensPerSession: integer("max_tokens_per_session"),
+  maxTokensPerPeriod:  integer("max_tokens_per_period"),
+  maxTokensPerMessage: integer("max_tokens_per_message"),
+  costCapCents:        integer("cost_cap_cents"),
+  // Metered pricing
+  meteredPricePerMessageCents: integer("metered_price_per_message_cents"),
+  meteredPricePer1kTokensCents: integer("metered_price_per_1k_tokens_cents"),
+  stripePriceId:       varchar("stripe_price_id", { length: 255 }),
   // State
-  enabled:        boolean("enabled").notNull().default(true),
-  publishedAt:    timestamp("published_at", { withTimezone: true }),
-  createdAt:      timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  updatedAt:      timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  enabled:           boolean("enabled").notNull().default(true),
+  publishedAt:       timestamp("published_at", { withTimezone: true }),
+  // Password protection
+  passwordProtected: boolean("password_protected").notNull().default(false),
+  passwordHash:      text("password_hash"),
+  // MCP servers (Model Context Protocol)
+  mcpServers:        jsonb("mcp_servers").$type<{
+    id: string;
+    name: string;
+    command: string;
+    args?: string[];
+    env?: Record<string, string>;
+    enabled: boolean;
+  }[]>().default([]),
+  // Feature toggles
+  deepThinkingEnabled:   boolean("deep_thinking_enabled").notNull().default(false),
+  webSearchEnabled:      boolean("web_search_enabled").notNull().default(false),
+  researchAgentEnabled:  boolean("research_agent_enabled").notNull().default(false),
+  codeExecutionEnabled:  boolean("code_execution_enabled").notNull().default(false),
+  imageGenerationEnabled: boolean("image_generation_enabled").notNull().default(false),
+  // API connections (dynamic REST API tools)
+  apiConnections:    jsonb("api_connections").$type<{
+    id: string;
+    name: string;
+    baseUrl: string;
+    authType: "bearer" | "api_key" | "header";
+    secretId: string; // reference to assistant_api_secrets
+    apiKeyHeader: string;
+    docsUrl: string;
+    enabled: boolean;
+    endpoints?: {
+      name: string;
+      method: "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
+      path: string;
+      description: string;
+      enabled: boolean;
+      parameters?: { name: string; type: string; required: boolean; location: "query" | "path" | "body" }[];
+    }[];
+  }[]>().default([]),
+  createdAt:         timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt:         timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 }, (t) => ({
   orgIdx:  index("ai_assistants_org_idx").on(t.organizationId),
   slugIdx: index("ai_assistants_slug_idx").on(t.slug),
 }));
 
-export const aiAssistantsRelations = relations(aiAssistants, ({ one }) => ({
+export const aiAssistantsRelations = relations(aiAssistants, ({ one, many }) => ({
   organization: one(organizations, {
     fields: [aiAssistants.organizationId],
     references: [organizations.id],
   }),
   creator: one(users, {
     fields: [aiAssistants.createdBy],
+    references: [users.id],
+  }),
+  documents:    many(assistantDocuments),
+  connections:  many(assistantConnections),
+}));
+
+export const assistantDocuments = pgTable("assistant_documents", {
+  id:             uuid("id").primaryKey().defaultRandom(),
+  assistantId:    uuid("assistant_id").notNull().references(() => aiAssistants.id, { onDelete: "cascade" }),
+  organizationId: uuid("organization_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+  name:           varchar("name", { length: 255 }).notNull(),
+  fileType:       varchar("file_type", { length: 50 }),
+  fileSizeBytes:  integer("file_size_bytes"),
+  blobUrl:        text("blob_url").notNull(),
+  status:         varchar("status", { length: 20 }).notNull().default("uploaded"),
+  createdAt:      timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+}, (t) => ({
+  assistantIdx: index("assistant_documents_assistant_idx").on(t.assistantId),
+}));
+
+export const assistantDocumentsRelations = relations(assistantDocuments, ({ one }) => ({
+  assistant: one(aiAssistants, {
+    fields: [assistantDocuments.assistantId],
+    references: [aiAssistants.id],
+  }),
+}));
+
+export const assistantConnections = pgTable("assistant_connections", {
+  id:                 uuid("id").primaryKey().defaultRandom(),
+  assistantId:        uuid("assistant_id").notNull().references(() => aiAssistants.id, { onDelete: "cascade" }),
+  organizationId:     uuid("organization_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+  appSlug:            varchar("app_slug", { length: 100 }).notNull(),
+  appName:            varchar("app_name", { length: 255 }),
+  appLogo:            text("app_logo"),
+  connectedAccountId: varchar("connected_account_id", { length: 255 }),
+  status:             varchar("status", { length: 20 }).notNull().default("pending"),
+  createdAt:          timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+}, (t) => ({
+  assistantIdx:         index("assistant_connections_assistant_idx").on(t.assistantId),
+  uniqueAppPerAssistant: unique("assistant_connections_unique_app").on(t.assistantId, t.appSlug),
+}));
+
+export const assistantConnectionsRelations = relations(assistantConnections, ({ one, many }) => ({
+  assistant: one(aiAssistants, {
+    fields: [assistantConnections.assistantId],
+    references: [aiAssistants.id],
+  }),
+  tools: many(assistantConnectionTools),
+}));
+
+export const assistantConnectionTools = pgTable("assistant_connection_tools", {
+  id:           uuid("id").primaryKey().defaultRandom(),
+  connectionId: uuid("connection_id").notNull().references(() => assistantConnections.id, { onDelete: "cascade" }),
+  toolSlug:     varchar("tool_slug", { length: 255 }).notNull(),
+  toolName:     varchar("tool_name", { length: 255 }),
+  createdAt:    timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+}, (t) => ({
+  connectionIdx: index("assistant_connection_tools_conn_idx").on(t.connectionId),
+  uniqueToolPerConnection: unique("assistant_connection_tools_unique").on(t.connectionId, t.toolSlug),
+}));
+
+export const assistantConnectionToolsRelations = relations(assistantConnectionTools, ({ one }) => ({
+  connection: one(assistantConnections, {
+    fields: [assistantConnectionTools.connectionId],
+    references: [assistantConnections.id],
+  }),
+}));
+
+export const assistantPurchases = pgTable("assistant_purchases", {
+  id:                   uuid("id").primaryKey().defaultRandom(),
+  assistantId:          uuid("assistant_id").notNull().references(() => aiAssistants.id, { onDelete: "cascade" }),
+  userId:               uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  type:                 varchar("type", { length: 20 }).notNull(),
+  stripeCustomerId:     varchar("stripe_customer_id", { length: 255 }),
+  stripePaymentIntentId: varchar("stripe_payment_intent_id", { length: 255 }),
+  stripeSubscriptionId: varchar("stripe_subscription_id", { length: 255 }),
+  status:               varchar("status", { length: 20 }).notNull().default("active"),
+  amountCents:          integer("amount_cents").notNull(),
+  sellerEarningsCents:  integer("seller_earnings_cents").default(0),
+  messagesUsed:         integer("messages_used").default(0),
+  lastMessageAt:        timestamp("last_message_at", { withTimezone: true }),
+  periodMessagesUsed:   integer("period_messages_used").default(0),
+  periodWindowStartedAt: timestamp("period_window_started_at", { withTimezone: true }),
+  weeklyMessagesUsed:   integer("weekly_messages_used").default(0),
+  weekStartedAt:        timestamp("week_started_at", { withTimezone: true }),
+  // Token / cost tracking
+  tokensUsed:           integer("tokens_used").default(0),
+  costUsedCents:        integer("cost_used_cents").default(0),
+  periodTokensUsed:     integer("period_tokens_used").default(0),
+  weeklyTokensUsed:     integer("weekly_tokens_used").default(0),
+  expiresAt:            timestamp("expires_at", { withTimezone: true }),
+  createdAt:            timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt:            timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+}, (t) => ({
+  assistantIdx:      index("assistant_purchases_assistant_idx").on(t.assistantId),
+  userIdx:           index("assistant_purchases_user_idx").on(t.userId),
+  subscriptionIdx:   index("assistant_purchases_subscription_idx").on(t.stripeSubscriptionId),
+  uniquePurchase:    unique("assistant_purchases_unique").on(t.assistantId, t.userId, t.type),
+}));
+
+export const assistantApiSecrets = pgTable("assistant_api_secrets", {
+  id:             uuid("id").primaryKey().defaultRandom(),
+  assistantId:    uuid("assistant_id").notNull().references(() => aiAssistants.id, { onDelete: "cascade" }),
+  organizationId: uuid("organization_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+  secretCiphertext: text("secret_ciphertext").notNull(), // AES-256-GCM encrypted
+  secretIv:       text("secret_iv").notNull(),           // nonce
+  secretTag:      text("secret_tag").notNull(),          // auth tag
+  createdAt:      timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+}, (t) => ({
+  assistantIdx: index("assistant_api_secrets_assistant_idx").on(t.assistantId),
+}));
+
+export const assistantApiSecretsRelations = relations(assistantApiSecrets, ({ one }) => ({
+  assistant: one(aiAssistants, {
+    fields: [assistantApiSecrets.assistantId],
+    references: [aiAssistants.id],
+  }),
+}));
+
+export const orgBudgetUsage = pgTable("org_budget_usage", {
+  id:            uuid("id").primaryKey().defaultRandom(),
+  organizationId: uuid("organization_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+  windowType:    varchar("window_type", { length: 20 }).notNull(), // "daily", "weekly", "monthly"
+  windowStartedAt: timestamp("window_started_at", { withTimezone: true }).notNull(),
+  tokensUsed:    bigint("tokens_used", { mode: "number" }).notNull().default(0),
+  costCentsUsed: bigint("cost_cents_used", { mode: "number" }).notNull().default(0),
+  createdAt:     timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt:     timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+}, (t) => ({
+  orgWindowIdx: index("org_budget_usage_org_window_idx").on(t.organizationId, t.windowType, t.windowStartedAt),
+}));
+
+export const orgBudgetUsageRelations = relations(orgBudgetUsage, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [orgBudgetUsage.organizationId],
+    references: [organizations.id],
+  }),
+}));
+
+// ── Workflows ─────────────────────────────────────────────────────────────
+export const workflows = pgTable("workflows", {
+  id:             uuid("id").primaryKey().defaultRandom(),
+  organizationId: uuid("organization_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+  name:           varchar("name", { length: 255 }).notNull(),
+  description:    text("description"),
+  category:       varchar("category", { length: 100 }).notNull().default("general"),
+  status:         varchar("status", { length: 50 }).notNull().default("draft"),
+  graph:          jsonb("graph").default({ nodes: [], edges: [] }),
+  tags:           jsonb("tags").$type<string[]>().default([]),
+  createdBy:      uuid("created_by").references(() => users.id),
+  createdAt:      timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt:      timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => ({
+  orgIdx:    index("workflows_org_idx").on(t.organizationId),
+  statusIdx: index("workflows_status_idx").on(t.status),
+}));
+
+export const workflowsRelations = relations(workflows, ({ one }) => ({
+  organization: one(organizations, { fields: [workflows.organizationId], references: [organizations.id] }),
+  createdByUser: one(users, { fields: [workflows.createdBy], references: [users.id] }),
+}));
+
+export const assistantPurchasesRelations = relations(assistantPurchases, ({ one }) => ({
+  assistant: one(aiAssistants, {
+    fields: [assistantPurchases.assistantId],
+    references: [aiAssistants.id],
+  }),
+  user: one(users, {
+    fields: [assistantPurchases.userId],
     references: [users.id],
   }),
 }));

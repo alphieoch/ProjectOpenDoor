@@ -1,0 +1,18 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - button "Expand sidebar" [ref=e4]
+    - navigation [ref=e7]:
+      - list [ref=e8]:
+        - listitem [ref=e9]:
+          - link [ref=e10] [cursor=pointer]:
+            - /url: /
+    - link [ref=e13] [cursor=pointer]:
+      - /url: http://localhost:3000/dashboard/ai-assistants
+  - separator
+  - generic [ref=e16]:
+    - generic:
+      - generic [ref=e18]: Preview Demo
+      - button "Switch to dark mode" [ref=e20]
+    - generic [ref=e25]:
+      - textbox "Type your message here…" [ref=e27]
+      - button "Send prompt" [ref=e29]
