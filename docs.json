@@ -8,15 +8,17 @@
   },
   "logo": {},
   "social": {
-    "github": "alphieoch/ProjectOpenDoor",
-    "website": "https://github.com/alphieoch/ProjectOpenDoor"
+    "website": "https://opendoor-f39a4.web.app"
   },
   "header": {
     "showName": true,
     "showThemeToggle": true,
-    "showGitHubCard": true,
+    "showGitHubCard": false,
     "links": [
-      { "title": "GitHub", "href": "https://github.com/alphieoch/ProjectOpenDoor" }
+      { "title": "Get started", "href": "/getting-started/installation" },
+      { "title": "API", "href": "/api-reference/chat-completions" },
+      { "title": "Status", "href": "https://opendoor-f39a4.web.app/status" },
+      { "title": "Dashboard", "href": "https://opendoor-f39a4.web.app/get-started", "cta": true }
     ]
   },
   "mcp": {
