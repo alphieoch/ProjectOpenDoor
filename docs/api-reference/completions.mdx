@@ -1,0 +1,25 @@
+---
+title: "Completions"
+description: "Legacy prompt API. OpenDoor wraps it as a single user chat turn so every provider works."
+---
+
+# Completions
+
+Legacy prompt API. OpenDoor wraps it as a single user chat turn so every provider works.
+
+```
+POST /v1/completions
+```
+
+```bash
+curl http://localhost:3001/v1/completions \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "llama-3.1-8b-instruct",
+    "prompt": "The capital of Kenya is",
+    "max_tokens": 16
+  }'
+```
+
+`stream: true` returns SSE chunks with `object: "text_completion"`. Prefer `/v1/chat/completions` for new work.

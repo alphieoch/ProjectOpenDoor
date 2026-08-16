@@ -1,0 +1,22 @@
+---
+title: "Billing"
+description: "Plans, credits, and auto-recharge are Stripe + the credits ledger, not placeholder prices."
+showPageTitle: true
+---
+
+**Dashboard → Billing** loads `/api/billing/info`, `/api/billing/balance`, and `/api/billing/auto-recharge`.
+
+## What you pay for
+
+- **Pay-as-you-go** on the Free plan — token cost from `pricing_rules` (USD per 1K in the DB, shown per 1M in the UI)
+- **Pro / Enterprise** — Stripe Checkout using `STRIPE_PRO_PRICE_ID` / `STRIPE_ENTERPRISE_PRICE_ID`. If those env vars are missing, the button tells you so; it does not pretend checkout worked
+- **Credit top-ups** — Stripe payment, then `credit_transactions`
+- **Auto-recharge** — when the credit balance crosses your threshold
+
+The marketing **Pricing** page (`/pricing` on the dashboard app) reads the same `pricing_rules` + `gpu_skus` tables (no login).
+
+## Spend controls
+
+Org monthly budget, per-key spend caps, and plan allowances are enforced on the **gateway** before a provider call. See [Spend caps](/billing/spend-caps) and [Auto-recharge](/billing/auto-recharge).
+
+Assistant monetization (public assistants) uses catalog prices for the AI-cost estimate. If a model has no `pricing_rules` row, the preview says so instead of inventing GPT-4o rates.

@@ -1,0 +1,43 @@
+---
+title: "Model Catalog Overview"
+description: "OpenDoor lists open-weight models first: Qwen, DeepSeek, Llama, Mistral, Gemma from Hugging Face and Ollama, plus optional closed providers."
+---
+
+# Model Catalog Overview
+
+OpenDoor lists **open-weight models first** — Qwen, DeepSeek, Llama, Mistral, Gemma — from Hugging Face and Ollama, plus optional closed providers.
+
+You do not wait for Azure AI Foundry to publish a model. Run:
+
+```bash
+bun run ingest:open-models
+```
+
+New HF repos for tracked orgs (`Qwen`, `deepseek-ai`, `meta-llama`, `mistralai`, `moonshotai`, …) appear as **warming** the same day. Models we can already serve (vendor API or known Ollama tag) are **live** or **dedicated**.
+
+## Statuses
+
+| Status | Meaning |
+|--------|---------|
+| **Live** | Call `POST /v1/chat/completions` now |
+| **Warming** | In catalog; serving path coming shortly |
+| **Needs GPU (dedicated)** | Deploy from Dashboard → Deployments (this Mac or GCP) |
+| **On request** | Closed marketplace models only |
+
+## Browse Models
+
+```bash
+curl http://localhost:3001/v1/models \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+In the dashboard: **Models** — filter Open weight, Live, or New this week. Prices are shown as **USD per 1M tokens**.
+
+## Pricing posture
+
+Open-weight models use a **low markup** (about 5–15%). Closed Western models use a higher markup (~20%). We do not surcharge Chinese open models.
+
+## Next Steps
+
+- [View Live Models](/model-catalog/live-models)
+- [Available on Request](/model-catalog/available-on-request) (closed models)

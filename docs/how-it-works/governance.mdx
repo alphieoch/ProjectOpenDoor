@@ -1,0 +1,33 @@
+---
+title: "Governance"
+description: "Policies, approvals, and violations are org rows the inbox and sidebar badges count."
+showPageTitle: true
+---
+
+Governance is for teams that need a control plane in front of every model call — not a brochure.
+
+## Trust Center
+
+**Dashboard → Governance** is the Trust Center: models under review, open violations, pending approvals. Search filters those lists.
+
+## Policies
+
+**Policies** are stored rules (model glob, roles, action). They run on the gateway. Seed defaults from the page when your org has none.
+
+## Approvals
+
+A model can sit in `pending` until someone approves it. The sidebar badge and inbox both read pending `model_approvals`.
+
+## Violations
+
+Failed policy checks write `policy_violations`. Unresolved rows show in the inbox. Resolve them from **Violations**.
+
+## Compliance & sector packs
+
+Compliance controls and sector templates (finance, health, public sector) apply packs of policies you can attach to the org. Evidence notes are stored on the control rows.
+
+## Audit
+
+**Audit logs** (workspace and site-admin) record key, billing, and impersonation actions. The inbox also surfaces the latest org audit lines.
+
+None of these pages ship with “5 open items” hardcoded. If the badge is empty, you have zero open rows.

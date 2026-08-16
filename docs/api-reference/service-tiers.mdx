@@ -1,0 +1,46 @@
+---
+title: "Service tiers & rate unlocks"
+description: "OpenDoor mirrors Fireworks-style capacity controls on `POST /v1/chat/completions`."
+---
+
+# Service tiers & rate unlocks
+
+OpenDoor mirrors Fireworks-style capacity controls on `POST /v1/chat/completions`.
+
+## `service_tier`
+
+| Value | Behavior |
+|-------|----------|
+| `standard` (default) | Normal RPM/TPM. May return **503** when `GATEWAY_SHED_STANDARD=1` and in-flight load is high. |
+| `priority` | 2× RPM/TPM vs spend unlock; never load-shed. |
+
+```bash
+curl https://YOUR_HOST/v1/chat/completions \
+  -H "Authorization: Bearer $OPENDOOR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "llama-3.1-8b-instruct",
+    "service_tier": "priority",
+    "messages": [{"role":"user","content":"hello"}]
+  }'
+```
+
+Or header: `x-opendoor-service-tier: priority`.
+
+## Spend-tier TPM unlock
+
+Lifetime spend on the API key (`spend_used_usd_cents`) unlocks higher TPM/RPM floors:
+
+| Lifetime spend | TPM floor | RPM floor |
+|----------------|-----------|-----------|
+| $0 | 100k | 60 |
+| $10 | 300k | 120 |
+| $100 | 1M | 300 |
+| $1,000 | 5M | 600 |
+| $10,000 | 20M | 1200 |
+
+Plan multipliers: **pro ×3**, **enterprise ×10**. Key-level `rate_limit_tpm` / `rate_limit_rpm` still apply as a minimum.
+
+## Prompt cache billing
+
+When the upstream reports cached prompt tokens (`usage.cached_tokens` or `prompt_tokens_details.cached_tokens`), those tokens bill at `cached_input_cost_per_1k` (~50% of input). OpenDoor also sets `prompt_cache_key` and Redis session affinity so repeat prefixes prefer the same provider.

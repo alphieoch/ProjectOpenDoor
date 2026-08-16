@@ -1,0 +1,62 @@
+---
+title: "Azure AI Foundry"
+description: "Azure AI Foundry is the primary provider for OpenDoor, hosting the majority of deployed models."
+---
+
+# Azure AI Foundry
+
+Azure AI Foundry is the **primary provider** for OpenDoor, hosting the majority of deployed models.
+
+## Overview
+
+OpenDoor connects to Azure AI Foundry via:
+- **Azure OpenAI** endpoint for OpenAI models (GPT-4o, o3-mini, etc.)
+- **Azure AI Inference API** for third-party models (DeepSeek, Kimi, Mistral, etc.)
+
+## Configuration
+
+```bash
+# Required
+AZURE_AI_FOUNDRY_ENDPOINT=https://your-account.openai.azure.com/
+AZURE_AI_FOUNDRY_KEY=your-key
+
+# Optional - for AI Inference API
+AZURE_INFERENCE_ENDPOINT=https://your-ai-services.cognitiveservices.azure.com/
+AZURE_INFERENCE_KEY=your-inference-key
+
+# Azure Resource Info
+AZURE_SUBSCRIPTION_ID=your-sub-id
+AZURE_RESOURCE_GROUP=your-rg
+AZURE_OPENAI_ACCOUNT=your-account-name
+AZURE_REGION=uksouth
+```
+
+## Dynamic Discovery
+
+On startup, the gateway fetches live deployments from the Azure Management API and merges them with the hardcoded catalog.
+
+## Supported Models
+
+All models deployed in your Azure OpenAI account are automatically available. The gateway supports both:
+- **OpenAI-format** models (GPT series)
+- **Publisher-format** models (DeepSeek, MoonshotAI, Mistral AI, Cohere, Microsoft)
+
+## Fallback Chain
+
+Azure AI Foundry is the **first choice** for most models. If it fails, the gateway falls back to:
+1. OpenAI Direct
+2. Anthropic
+3. Other configured providers
+
+## Deploying New Models
+
+```bash
+az cognitiveservices account deployment create \
+  --name your-account \
+  --resource-group your-rg \
+  --deployment-name ModelName \
+  --model-name ModelName \
+  --model-version "1" \
+  --model-format PublisherFormat \
+  --sku-capacity 1 --sku-name GlobalStandard
+```

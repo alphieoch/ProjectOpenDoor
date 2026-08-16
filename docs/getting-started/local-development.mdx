@@ -1,0 +1,71 @@
+---
+title: "Run locally"
+description: "Start the gateway and dashboard, preview docs.page, and make a real chat call."
+---
+
+# Run locally
+
+## Services
+
+```bash
+# Terminal 1 — API gateway
+bun --filter @opendoor/gateway dev
+
+# Terminal 2 — dashboard
+bun --filter @opendoor/dashboard dev
+
+# Terminal 3 — these docs (optional)
+bun run docs:dev
+```
+
+`docs:dev` runs [`@docs.page/cli preview`](https://use.docs.page/features/local-preview). It opens a preview URL on docs.page that streams this repo’s `docs/` over a local WebSocket. After you push to the public GitHub repo, anyone can read [docs.page/alphieoch/ProjectOpenDoor](https://docs.page/alphieoch/ProjectOpenDoor) without running a docs container.
+
+## Access points
+
+| Service | URL | What it is |
+|---------|-----|------------|
+| Dashboard | http://localhost:3010 | Console (session cookie) |
+| Gateway | http://localhost:3001 | OpenAI-compatible API |
+| Gateway health | http://localhost:3001/health | Probe |
+| Gateway status | http://localhost:3001/status | Postgres, Redis, providers |
+| Site status | http://localhost:3010/status | Same checks in the UI |
+| Docs (published) | https://docs.page/alphieoch/ProjectOpenDoor | This site |
+
+## First call
+
+1. Seed and ingest so the catalog is not empty: `bun --env-file=.env run scripts/seed.ts` then `bun run ingest:open-models`
+2. Sign in on the dashboard, create an API key, copy a **live** model id from Models
+3. Call the **gateway**:
+
+```bash
+curl http://localhost:3001/v1/chat/completions \
+  -H "Authorization: Bearer YOUR_OPENDOOR_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "YOUR_MODEL_ID",
+    "messages": [{"role": "user", "content": "Hello!"}],
+    "max_tokens": 50
+  }'
+```
+
+Or open **Playground** — it creates a Playground key and uses the live catalog.
+
+```bash
+curl http://localhost:3001/v1/models \
+  -H "Authorization: Bearer YOUR_OPENDOOR_KEY"
+```
+
+## Database
+
+```bash
+bun run db:studio
+```
+
+## Ports in use
+
+Dashboard is **3010**, gateway **3001**. Docs no longer bind 3002.
+
+```bash
+lsof -ti:3010 | xargs kill -9
+lsof -ti:3001 | xargs kill -9
+```

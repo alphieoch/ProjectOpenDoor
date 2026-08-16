@@ -1,0 +1,108 @@
+---
+title: "Spend Caps"
+description: "Spend caps let you set hard or soft limits on API key and organization-level LLM spend. When a cap is reached, requests are either blocked (hard cap) or flagged with warnings (soft cap) to prevent unexpected bills."
+---
+
+# Spend Caps
+
+Spend caps let you set hard or soft limits on API key and organization-level LLM spend. When a cap is reached, requests are either blocked (hard cap) or flagged with warnings (soft cap) to prevent unexpected bills.
+
+---
+
+## How Spend Caps Work
+
+Every API key in OpenDoor tracks two monetary values:
+
+| Field | Description |
+|---|---|
+| `spendLimitUsdCents` | The maximum allowed spend in USD cents |
+| `spendUsedUsdCents` | The cumulative spend accrued since the cap was set |
+
+When `spendUsedUsdCents` ≥ `spendLimitUsdCents`:
+
+- **Hard cap**: All subsequent requests return `429 Too Many Requests` with a clear error message.
+- **Soft cap**: Requests continue, but a warning is logged and (if configured) an alert is sent.
+
+Caps are evaluated in real time at the gateway layer, before the request reaches the LLM provider, so you are never charged for blocked traffic.
+
+---
+
+## Setting Caps
+
+### Per API Key
+
+1. Open the dashboard and navigate to **API Keys**.
+2. Select the key you want to cap.
+3. Click **Set Spend Cap**.
+4. Enter a limit in USD (e.g. `500.00`).
+5. Choose **Hard** or **Soft** enforcement.
+6. Save.
+
+### Organization-Level
+
+Organization admins can set a global cap that applies across all keys:
+
+1. Go to **Settings → Billing → Spend Caps**.
+2. Set the organization limit.
+3. Choose whether individual keys can override it (default: no).
+
+When organization-level caps are in place, a key cannot exceed the lesser of its own cap and the organization cap.
+
+### API
+
+```bash
+curl -X PATCH https://api.opendoor.ai/v1/keys/sk-xxxxxxxx \
+  -H "Authorization: Bearer YOUR_ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "spendLimitUsdCents": 50000,
+    "spendCapMode": "hard"
+  }'
+```
+
+---
+
+## Reset & Notifications
+
+### Auto-Reset
+
+Caps can be configured to reset on a schedule:
+
+- **Monthly** — resets on the 1st of each month
+- **Daily** — resets at 00:00 UTC
+- **Never** — cumulative until manually reset
+
+### Alerts
+
+When a cap reaches 80% or 100%, OpenDoor can notify via:
+
+- Email (configured in **Settings → Notifications**)
+- Webhook (Enterprise only — configure a POST URL to receive JSON alerts)
+- Slack (via webhook URL)
+
+Alert configuration is per-organization. API keys inherit the org defaults.
+
+---
+
+## Spend Calculation
+
+Spend is computed from the actual cost of each request, not the raw token count. The gateway uses the provider-specific pricing table (visible in **Model Catalog**) to calculate:
+
+```
+spend = (input_tokens × input_price_per_1k / 1000) + (output_tokens × output_price_per_1k / 1000)
+```
+
+All prices are stored in USD. If your billing currency is different, the cap is still evaluated in USD and converted at the current Stripe exchange rate for display purposes only.
+
+---
+
+## Troubleshooting
+
+**Q: I hit a cap but I’m sure I haven’t spent that much.**  
+A: Check **Analytics → Usage** for the key. Caching is free, but uncached requests and retries both count toward the cap.
+
+**Q: Can I set a cap in a different currency?**  
+A: Not yet. All caps are USD-denominated. We plan to add EUR and GBP in Q3.
+
+**Q: What happens to in-flight streaming requests when a cap is hit?**  
+A: Streaming chunks already in transit complete. New requests on the same key are blocked.

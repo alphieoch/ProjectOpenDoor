@@ -1,0 +1,45 @@
+---
+title: "Structured outputs"
+description: "Force the model to return JSON. Same contract as OpenAI / Fireworks `response_format`."
+---
+
+# Structured outputs
+
+Force the model to return JSON. Same contract as OpenAI / Fireworks `response_format`.
+
+## JSON object
+
+```bash
+curl http://localhost:3001/v1/chat/completions \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "llama-3.1-8b-instruct",
+    "messages": [{"role": "user", "content": "Return a city and country as JSON"}],
+    "response_format": { "type": "json_object" }
+  }'
+```
+
+## JSON schema
+
+```json
+{
+  "response_format": {
+    "type": "json_schema",
+    "json_schema": {
+      "name": "city",
+      "strict": true,
+      "schema": {
+        "type": "object",
+        "properties": {
+          "city": { "type": "string" },
+          "country": { "type": "string" }
+        },
+        "required": ["city", "country"]
+      }
+    }
+  }
+}
+```
+
+The gateway forwards `response_format` to OpenAI-compatible providers (Together, OpenAI, Azure, DeepSeek, Qwen, Ollama, custom deployments). Custom grammars are not in this wave.

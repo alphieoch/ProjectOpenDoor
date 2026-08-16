@@ -1,0 +1,26 @@
+---
+title: "Vision"
+description: "`messages[].content` can be a string or an array of parts. Use `image_url` for images (https or `data:` base64)."
+---
+
+# Vision
+
+`messages[].content` can be a string **or** an array of parts. Use `image_url` for images (https or `data:` base64).
+
+```bash
+curl http://localhost:3001/v1/chat/completions \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "gpt-4o",
+    "messages": [{
+      "role": "user",
+      "content": [
+        { "type": "text", "text": "What is in this image?" },
+        { "type": "image_url", "image_url": { "url": "https://example.com/photo.jpg" } }
+      ]
+    }]
+  }'
+```
+
+OpenAI-compatible providers receive the parts unchanged. Anthropic and Gemini convert them to their native image blocks. Video and audio parts are not in this wave.

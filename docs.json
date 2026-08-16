@@ -1,0 +1,149 @@
+{
+  "$schema": "https://docs.page/schema.json",
+  "name": "OpenDoor",
+  "description": "Open-weight LLM API gateway: one OpenAI-compatible endpoint, live catalog, and a dashboard that talks to real data.",
+  "theme": {
+    "primary": "#1A73E8",
+    "defaultTheme": "light"
+  },
+  "logo": {},
+  "social": {
+    "github": "alphieoch/ProjectOpenDoor",
+    "website": "https://github.com/alphieoch/ProjectOpenDoor"
+  },
+  "header": {
+    "showName": true,
+    "showThemeToggle": true,
+    "showGitHubCard": true,
+    "links": [
+      { "title": "GitHub", "href": "https://github.com/alphieoch/ProjectOpenDoor" }
+    ]
+  },
+  "mcp": {
+    "enabled": true
+  },
+  "seo": {
+    "noindex": false
+  },
+  "content": {
+    "showPageTitle": false,
+    "showPageImage": false,
+    "automaticallyInferNextPrevious": true
+  },
+  "redirects": {
+    "/docs": "/",
+    "/docs/intro": "/",
+    "/docs/getting-started/installation": "/getting-started/installation",
+    "/docs/getting-started/configuration": "/getting-started/configuration",
+    "/docs/getting-started/local-development": "/getting-started/local-development",
+    "/docs/api-reference/chat-completions": "/api-reference/chat-completions",
+    "/docs/model-catalog/overview": "/model-catalog/overview"
+  },
+  "tabs": [
+    { "id": "guides", "title": "Guides", "href": "/" },
+    { "id": "api", "title": "API", "href": "/api-reference/chat-completions" },
+    { "id": "catalog", "title": "Catalog", "href": "/model-catalog/overview" },
+    { "id": "ops", "title": "Ops", "href": "/billing/spend-caps" }
+  ],
+  "sidebar": [
+    {
+      "group": "Start here",
+      "icon": "rocket",
+      "tab": "guides",
+      "pages": [
+        { "title": "What OpenDoor is", "href": "/" },
+        { "title": "Install", "href": "/getting-started/installation" },
+        { "title": "Configure", "href": "/getting-started/configuration" },
+        { "title": "Run locally", "href": "/getting-started/local-development" }
+      ]
+    },
+    {
+      "group": "How it works",
+      "icon": "diagram-project",
+      "tab": "guides",
+      "pages": [
+        { "title": "A request, end to end", "href": "/how-it-works/request-path" },
+        { "title": "Dashboard", "href": "/how-it-works/dashboard" },
+        { "title": "API keys", "href": "/how-it-works/api-keys" },
+        { "title": "Playground", "href": "/how-it-works/playground" },
+        { "title": "Deployments", "href": "/how-it-works/deployments" },
+        { "title": "Billing", "href": "/how-it-works/billing" },
+        { "title": "Governance", "href": "/how-it-works/governance" }
+      ]
+    },
+    {
+      "group": "Chat & more",
+      "icon": "code",
+      "tab": "api",
+      "pages": [
+        { "title": "Chat completions", "href": "/api-reference/chat-completions" },
+        { "title": "Structured outputs", "href": "/api-reference/structured-outputs" },
+        { "title": "Vision", "href": "/api-reference/vision" },
+        { "title": "Streaming", "href": "/api-reference/streaming" },
+        { "title": "Completions", "href": "/api-reference/completions" },
+        { "title": "Embeddings", "href": "/api-reference/embeddings" },
+        { "title": "Rerank", "href": "/api-reference/rerank" },
+        { "title": "Batches", "href": "/api-reference/batches" }
+      ]
+    },
+    {
+      "group": "Capacity",
+      "tab": "api",
+      "pages": [
+        { "title": "Models list", "href": "/api-reference/models" },
+        { "title": "Service tiers", "href": "/api-reference/service-tiers" },
+        { "title": "Dedicated deployments", "href": "/api-reference/dedicated-deployments" }
+      ]
+    },
+    {
+      "group": "Catalog",
+      "icon": "layer-group",
+      "tab": "catalog",
+      "pages": [
+        { "title": "Overview", "href": "/model-catalog/overview" },
+        { "title": "Live models", "href": "/model-catalog/live-models" },
+        { "title": "On request", "href": "/model-catalog/available-on-request" }
+      ]
+    },
+    {
+      "group": "Providers",
+      "tab": "catalog",
+      "pages": [
+        { "title": "Azure AI Foundry", "href": "/providers/azure-foundry" },
+        { "title": "OpenAI", "href": "/providers/openai" },
+        { "title": "Anthropic", "href": "/providers/anthropic" },
+        { "title": "Cohere", "href": "/providers/cohere" },
+        { "title": "Mistral", "href": "/providers/mistral" }
+      ]
+    },
+    {
+      "group": "Billing",
+      "icon": "credit-card",
+      "tab": "ops",
+      "pages": [
+        { "title": "Spend caps", "href": "/billing/spend-caps" },
+        { "title": "Auto-recharge", "href": "/billing/auto-recharge" }
+      ]
+    },
+    {
+      "group": "Security",
+      "icon": "shield-halved",
+      "tab": "ops",
+      "pages": [
+        { "title": "PII redaction", "href": "/security/pii-redaction" },
+        { "title": "Data residency", "href": "/security/data-residency" }
+      ]
+    },
+    {
+      "group": "Operations",
+      "icon": "server",
+      "tab": "ops",
+      "pages": [
+        { "title": "Status page", "href": "/operations/status-page" },
+        { "title": "Azure setup", "href": "/deployment/azure-setup" },
+        { "title": "Docker", "href": "/deployment/docker" },
+        { "title": "Production handoff", "href": "/deployment/production-readiness-handoff" }
+      ]
+    }
+  ]
+}

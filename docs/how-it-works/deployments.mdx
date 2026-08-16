@@ -1,0 +1,39 @@
+---
+title: "Deployments"
+description: "Request a GPU here or on GCP, then call it as custom:<id> through the same OpenAI-compatible API."
+showPageTitle: true
+---
+
+Dedicated deployments are **not** serverless. **Dashboard → Deployments → Request GPU** writes a row and starts a local Ollama/Metal runtime or a GCP Cloud Run GPU job, depending on the target you pick.
+
+## Targets
+
+| Target | What happens |
+|--------|----------------|
+| **Local** | Detects GPU/Metal on this machine (`/api/gpu/status`) and runs the selected open model via the local runner |
+| **GCP** | Uses the deployer in the dashboard to stand up the revision you configured |
+
+Statuses you will see (`pending`, `building`, `running`, `stopped`, `failed`) come from that row — Pause / Play / Delete call `PATCH` / `DELETE /api/deployments/:id`.
+
+## Calling it
+
+Once `running`, the catalog exposes:
+
+- `custom:<deployment-uuid>`
+- the runtime tag (for example an Ollama name) when set
+
+```bash
+curl "$GATEWAY/v1/chat/completions" \
+  -H "Authorization: Bearer $OPENDOOR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "custom:YOUR_DEPLOYMENT_ID",
+    "messages": [{"role":"user","content":"hello"}]
+  }'
+```
+
+LoRA attach and routers are documented under [Dedicated deployments](/api-reference/dedicated-deployments).
+
+## vs serverless
+
+Serverless / vendor ids in the catalog do not need a deployment. **warming** and **dedicated** rows do. Ingest with `bun run ingest:open-models`, then request a GPU only for models that say they need one.

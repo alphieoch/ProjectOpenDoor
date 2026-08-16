@@ -1,0 +1,27 @@
+---
+title: "Status page"
+description: "Live gateway, database, Redis, and provider checks on /status, not a static marketing page."
+---
+
+# Status page
+
+The site **Status** link (`/status` on the dashboard app) loads `/api/status`, which probes the gateway (`GET /status` or `/health`) and shows:
+
+- Overall status (`operational` / `degraded`)
+- Gateway latency
+- Database and Redis as reported by the gateway
+- Each provider row (`up` vs `not_configured`)
+
+If `CACHET_URL` is an `https://` URL, the page also links to that historical status board. It no longer redirects `/status` to `/`.
+
+## Local
+
+| Check | URL |
+|-------|-----|
+| UI | http://localhost:3010/status |
+| JSON | http://localhost:3010/api/status |
+| Gateway | http://localhost:3001/status |
+
+## What “up” means
+
+A provider marked **up** has credentials configured on the gateway. It is not a synthetic 42ms demo. **not_configured** means that adapter is compiled in but has no key in this environment.

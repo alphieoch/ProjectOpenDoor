@@ -1,0 +1,34 @@
+---
+title: "Playground"
+description: "The playground is a thin client on the live catalog and the real gateway, not a canned demo."
+showPageTitle: true
+---
+
+**Dashboard → Playground** is a chat UI that talks to the same API your production apps use.
+
+## Boot sequence
+
+1. Read `?model=` from the URL (Models **Try** sets this).
+2. `GET /api/models/available` — enabled catalog, running deployments, Ollama tags on this machine.
+3. If `localStorage.od_playground_api_key` is empty, `POST /api/keys` `{ "name": "Playground" }` and store the returned secret.
+4. **Run** is disabled until there is a key, a model id, and a message.
+
+An empty catalog shows a banner and a link to Models. We do not fall back to a hardcoded GPT list.
+
+## What Run sends
+
+`POST ${NEXT_PUBLIC_GATEWAY_URL}/v1/chat/completions` with:
+
+- `Authorization: Bearer <your key>`
+- `model`, `messages`, `stream: true`
+- `temperature`, `max_tokens`, `top_p` from the Params rail
+- optional `image_url` parts when the catalog row has vision
+- uploaded `.txt` / `.md` / code files inlined as text (native file APIs are noted when the model id is known to support them)
+
+**View code** prints the equivalent curl / SDK call against your gateway URL.
+
+## Related
+
+- [API keys](/how-it-works/api-keys)
+- [Chat completions](/api-reference/chat-completions)
+- [Vision](/api-reference/vision)

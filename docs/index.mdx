@@ -1,0 +1,79 @@
+---
+title: "What OpenDoor is"
+description: "One OpenAI-compatible gateway for open-weight and optional closed models, with a dashboard that reads your live catalog, keys, and usage."
+showPageTitle: true
+---
+
+OpenDoor sits between your app and the models you actually run: local Ollama, vendor APIs (DeepSeek, Qwen, Mistral, and optional GPT/Claude/Gemini), or a GPU you request on this machine or GCP.
+
+You do not get a mock catalog or a fake playground. The dashboard lists models from Postgres (plus running deployments), keys you create, and usage you have already billed.
+
+## What you get
+
+- **One API** — `POST /v1/chat/completions` and the rest of the OpenAI-shaped surface
+- **Open-weight first** — ingest Hugging Face / Ollama; statuses are `live`, `warming`, `dedicated`, or `available_on_request`
+- **A real console** — keys, playground, usage, billing, governance, deployments
+- **These docs** — markdown in this repo, served by [docs.page](https://docs.page/alphieoch/ProjectOpenDoor) (search, `llms.txt`, MCP)
+
+## Quick start
+
+```bash
+git clone https://github.com/alphieoch/ProjectOpenDoor.git
+cd ProjectOpenDoor
+bun install
+
+# Postgres + Redis up, then:
+bun --env-file=.env run scripts/seed.ts
+bun run ingest:open-models
+
+bun --filter @opendoor/gateway dev    # :3001
+bun --filter @opendoor/dashboard dev  # :3010
+```
+
+Preview these docs locally (opens the docs.page preview shell):
+
+```bash
+bun run docs:dev
+```
+
+After you push to the public GitHub repo, the live site is [docs.page/alphieoch/ProjectOpenDoor](https://docs.page/alphieoch/ProjectOpenDoor).
+
+## How a call looks
+
+```bash
+curl http://localhost:3001/v1/chat/completions \
+  -H "Authorization: Bearer YOUR_OPENDOOR_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "YOUR_MODEL_ID",
+    "messages": [{"role":"user","content":"Hello"}]
+  }'
+```
+
+Create the key in **Dashboard → API keys**. Copy a model id from **Models** (or the playground picker). Both lists come from `/api/models/available`.
+
+## Model statuses
+
+| Status | Meaning |
+|--------|---------|
+| **live** | Callable now (vendor API, local Ollama, or a running deployment) |
+| **warming** | Listed from Hugging Face; serving path not ready yet |
+| **dedicated** | Needs a GPU request (Dashboard → Deployments) |
+| **available_on_request** | Closed / marketplace models only |
+
+## Read next
+
+<CardGroup>
+  <Card title="A request, end to end" href="/how-it-works/request-path" icon="diagram-project">
+    Auth, policy, routing, usage — what the gateway does on every call.
+  </Card>
+  <Card title="Dashboard" href="/how-it-works/dashboard" icon="table-columns">
+    Which page reads which API. Nothing on the console is decorative.
+  </Card>
+  <Card title="Chat completions" href="/api-reference/chat-completions" icon="code">
+    Headers, body, streaming, tools, and vision parts.
+  </Card>
+  <Card title="Model catalog" href="/model-catalog/overview" icon="layer-group">
+    How models get listed, priced, and marked live.
+  </Card>
+</CardGroup>

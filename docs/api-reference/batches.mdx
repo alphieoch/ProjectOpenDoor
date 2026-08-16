@@ -1,0 +1,37 @@
+---
+title: "Batches"
+description: "Async chat jobs, billed at 50% of the live token rate (same idea as Fireworks batch)."
+---
+
+# Batches
+
+Async chat jobs, billed at **50%** of the live token rate (same idea as Fireworks batch).
+
+```
+POST /v1/batches
+GET  /v1/batches
+GET  /v1/batches/:id
+```
+
+v1 cap: **100** requests per job. Processing starts immediately after create (HTTP 202).
+
+```bash
+curl http://localhost:3001/v1/batches \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "requests": [
+      {
+        "custom_id": "row-1",
+        "body": {
+          "model": "llama-3.1-8b-instruct",
+          "messages": [{"role": "user", "content": "Say hi"}]
+        }
+      }
+    ]
+  }'
+```
+
+Poll `GET /v1/batches/:id` until `status` is `completed` or `failed`. `output[]` has `{ custom_id, response }` or `{ custom_id, error }`.
+
+Apply `packages/database/migrations/0025_fireworks_api_surface.sql` before using this route.

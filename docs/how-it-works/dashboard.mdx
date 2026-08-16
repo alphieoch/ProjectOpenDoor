@@ -1,0 +1,51 @@
+---
+title: "Dashboard"
+description: "Every console page reads your org database or the gateway. Search, inbox, and badges are live."
+showPageTitle: true
+---
+
+The dashboard is the Next.js app on port **3010** (`bun --filter @opendoor/dashboard dev`). Sign-in is a real session cookie. There is no demo tenant with fake charts.
+
+## Chrome
+
+| Control | What it does |
+|---------|----------------|
+| **⌘K** | Command palette: real pages, `/api/models/available`, `/api/keys` |
+| **Inbox** | Unresolved policy violations, pending model approvals, recent audit rows |
+| **Help / Docs** | This docs.page site (`NEXT_PUBLIC_DOCS_URL` or `https://docs.page/alphieoch/ProjectOpenDoor`) |
+| **Sidebar badges** | Counts from `/api/nav/counts` (deployments, open violations, pending approvals) |
+| **Account** | Your user name/email from `users`, not “Your Account” |
+
+## Pages and their source
+
+| Page | Source of truth |
+|------|-----------------|
+| Overview | `requests` (30 days), key count, first enabled catalog model in the snippet |
+| Models | `/api/models/available` — enabled catalog + running deployments + local Ollama tags |
+| Playground | Same catalog; sends to the gateway with a real key |
+| API keys | `/api/keys` create/list/revoke; model checklist is the live catalog |
+| Usage | `/api/usage` aggregates |
+| Pricing (in-app) | `pricing_rules` + GPU SKUs |
+| Public `/pricing` | Same tables, no login |
+| Deployments | `/api/deployments` — local GPU or GCP |
+| Billing | Stripe customer, credits ledger, checkout |
+| AI assistants | `/api/ai-assistants` + catalog `modelId` (required) |
+| Team | Members + invitations |
+| Settings | Org SSO / domain / notification flags |
+| Governance | Policies, violations, approvals, compliance, sector packs |
+| Audit logs | `audit_logs` |
+
+**Try** on a model opens `/dashboard/playground?model=<id>`. Creating a key can store it for the playground and link there.
+
+## Empty is empty
+
+If you have not seeded or ingested models, the catalog APIs return `{ models: [] }`. The playground will not send. Assistants will not save without a `modelId`. That is intentional — we do not invent GPT-4o rows.
+
+Seed and ingest:
+
+```bash
+bun --env-file=.env run scripts/seed.ts
+bun run ingest:open-models
+```
+
+Then refresh Models.

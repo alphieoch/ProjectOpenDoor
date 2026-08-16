@@ -1,0 +1,67 @@
+---
+title: "Dedicated deployments (Wave 3)"
+description: "Separate from serverless. Provision a GPU, optionally attach LoRAs, and split traffic with routers."
+---
+
+# Dedicated deployments (Wave 3)
+
+Separate from serverless. Provision a GPU, optionally attach LoRAs, and split traffic with routers.
+
+## Call a deployment
+
+```bash
+curl "$GATEWAY/v1/chat/completions" \
+  -H "Authorization: Bearer $OPENDOOR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "custom:<deployment-uuid>",
+    "messages": [{"role":"user","content":"hello"}]
+  }'
+```
+
+## Custom weights & precision
+
+On create (`POST /api/deployments`) or Request GPU form:
+
+| Field | Meaning |
+|-------|---------|
+| `weightsUri` | Hugging Face repo (overrides catalog) |
+| `precision` | `fp16` / `bf16` / `fp8` / `int4` → vLLM `--dtype` |
+| `minReplicas` / `maxReplicas` | Cloud Run autoscaling |
+| `scaleToZero` | Min instances 0 when idle |
+| `reserved` | Keep warm (`minReplicas ≥ 1`, no scale-to-zero) |
+
+## Multi-LoRA
+
+```bash
+# Dashboard: Deployments → open deployment → Load LoRA
+# Or API:
+POST /api/deployments/:id/loras
+{ "name": "support-v1", "adapterUri": "org/adapter-repo" }
+
+# Then:
+model: "custom:<deployment-uuid>/support-v1"
+```
+
+Requires a **vLLM** endpoint (GCP). Local Ollama returns `unsupported`.
+
+Unload: `DELETE /api/deployments/:id/loras/:loraId`
+
+## A/B routers
+
+```bash
+POST /api/deployment-routers
+{
+  "name": "Pricing experiment",
+  "slug": "pricing-ab",
+  "targets": [
+    { "deploymentId": "...", "weight": 80 },
+    { "deploymentId": "...", "weight": 20 }
+  ]
+}
+
+# Gateway:
+model: "router:pricing-ab"
+```
+
+UI: **Deployments → Routers**.

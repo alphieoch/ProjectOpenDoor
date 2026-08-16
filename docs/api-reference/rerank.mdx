@@ -1,0 +1,51 @@
+---
+title: "Rerank"
+description: "Score documents against a query. Fireworks-style `/v1/rerank`."
+---
+
+# Rerank
+
+Score documents against a query. Fireworks-style `/v1/rerank`.
+
+```
+POST /v1/rerank
+```
+
+## Request
+
+| Field | Type | Required |
+|-------|------|----------|
+| `model` | string | Yes — e.g. `rerank-v3.5` (Cohere) or `BAAI/bge-reranker-v2-m3` (Together) |
+| `query` | string | Yes |
+| `documents` | string[] or `{ text }[]` | Yes |
+| `top_n` | integer | No |
+
+```bash
+curl http://localhost:3001/v1/rerank \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "rerank-v3.5",
+    "query": "How do I reset my password?",
+    "documents": [
+      "Click Settings then Security to change your password.",
+      "Our office is open 9 to 5."
+    ],
+    "top_n": 2
+  }'
+```
+
+## Response
+
+```json
+{
+  "object": "list",
+  "model": "rerank-v3.5",
+  "results": [
+    { "index": 0, "relevance_score": 0.91 },
+    { "index": 1, "relevance_score": 0.12 }
+  ]
+}
+```
+
+Requires `COHERE_API_KEY` or `TOGETHER_API_KEY`.
