@@ -75,15 +75,33 @@ Do not create a Together secret — Vertex replaces it.
 
 ## Deploy
 
-**CI/CD:** a push to `main` on [alphieoch/ProjectOpenDoor](https://github.com/alphieoch/ProjectOpenDoor) runs Cloud Build trigger `opendoor-main` (`cloudbuild.yaml` — dashboard + gateway). Same substitutions as `./scripts/deploy-gcp.sh` (`_TAG=$SHORT_SHA`, `_SITE_ID=opendoor-gcp`, `_REGION=us-central1`, `_REPO=opendoor`, `_SQL_INSTANCE=opendoor-pg`, `_VPC_CONNECTOR=opendoor-connector`). Trigger definition: `infra/gcp/cloudbuild.trigger.yaml`.
+**CI/CD:** a push to `main` on [alphieoch/ProjectOpenDoor](https://github.com/alphieoch/ProjectOpenDoor) runs Cloud Build trigger `opendoor-main` (`cloudbuild.yaml` — dashboard + gateway). Same substitutions as `./scripts/deploy-gcp.sh` (`_TAG=$SHORT_SHA`, `_SITE_ID=opendoor-gcp`, `_REGION=us-central1`, `_REPO=opendoor`, `_SQL_INSTANCE=opendoor-pg`, `_VPC_CONNECTOR=opendoor-connector`). Trigger definition: `infra/gcp/cloudbuild.trigger.yaml`. Connection: `github` in `us-central1`.
 
-One-time GitHub link (if the trigger cannot see the repo): Cloud Console → Cloud Build → Triggers → Connect repository → GitHub (Cloud Build GitHub App) → authorize and select `alphieoch/ProjectOpenDoor`. Then:
+One-time GitHub authorization (Cloud Build GitHub App — required before the trigger can fire):
+
+1. Open this link while signed into the Google account that owns the GCP project (`alphonce@ochiengandco.com`):  
+   [Authorize Cloud Build GitHub OAuth](https://accounts.google.com/AccountChooser?continue=https%3A%2F%2Fconsole.cloud.google.com%2Fm%2Fgcb%2Fgithub%2Flocations%2Fus-central1%2Foauth_v2%3Fconnection_name%3Dprojects%252F930761303874%252Flocations%252Fus-central1%252Fconnections%252Fgithub)
+2. On GitHub, install the **Cloud Build** GitHub App and grant `alphieoch/ProjectOpenDoor`.
+3. Then link the repo and create the trigger:
 
 ```bash
+gcloud builds repositories create ProjectOpenDoor \
+  --remote-uri=https://github.com/alphieoch/ProjectOpenDoor.git \
+  --connection=github --region=us-central1 \
+  --project=project-800192c2-3ecc-4889-8f7
+
 gcloud builds triggers create github \
-  --trigger-config=infra/gcp/cloudbuild.trigger.yaml \
+  --name=opendoor-main \
+  --repository=projects/project-800192c2-3ecc-4889-8f7/locations/us-central1/connections/github/repositories/ProjectOpenDoor \
+  --branch-pattern='^main$' \
+  --build-config=cloudbuild.yaml \
+  --region=us-central1 \
+  --include-logs-with-status \
+  --substitutions='_TAG=$SHORT_SHA,_SITE_ID=opendoor-gcp,_REGION=us-central1,_REPO=opendoor,_SQL_INSTANCE=opendoor-pg,_VPC_CONNECTOR=opendoor-connector' \
   --project=project-800192c2-3ecc-4889-8f7
 ```
+
+Or import `infra/gcp/cloudbuild.trigger.yaml` after the repo is linked. Confirm with `gcloud builds triggers list --project=project-800192c2-3ecc-4889-8f7`.
 
 Local `./scripts/deploy-gcp.sh` is still available for a manual Cloud Build (does not replace the trigger):
 
