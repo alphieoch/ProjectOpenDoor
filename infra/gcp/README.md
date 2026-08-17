@@ -75,7 +75,17 @@ Do not create a Together secret — Vertex replaces it.
 
 ## Deploy
 
-Default path uses Cloud Build (avoids local Docker disk issues):
+**CI/CD:** a push to `main` on [alphieoch/ProjectOpenDoor](https://github.com/alphieoch/ProjectOpenDoor) runs Cloud Build trigger `opendoor-main` (`cloudbuild.yaml` — dashboard + gateway). Same substitutions as `./scripts/deploy-gcp.sh` (`_TAG=$SHORT_SHA`, `_SITE_ID=opendoor-gcp`, `_REGION=us-central1`, `_REPO=opendoor`, `_SQL_INSTANCE=opendoor-pg`, `_VPC_CONNECTOR=opendoor-connector`). Trigger definition: `infra/gcp/cloudbuild.trigger.yaml`.
+
+One-time GitHub link (if the trigger cannot see the repo): Cloud Console → Cloud Build → Triggers → Connect repository → GitHub (Cloud Build GitHub App) → authorize and select `alphieoch/ProjectOpenDoor`. Then:
+
+```bash
+gcloud builds triggers create github \
+  --trigger-config=infra/gcp/cloudbuild.trigger.yaml \
+  --project=project-800192c2-3ecc-4889-8f7
+```
+
+Local `./scripts/deploy-gcp.sh` is still available for a manual Cloud Build (does not replace the trigger):
 
 ```bash
 ./scripts/deploy-gcp.sh

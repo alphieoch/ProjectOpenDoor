@@ -1,0 +1,22 @@
+# Cloud Build trigger: push to main → cloudbuild.yaml (dashboard + gateway).
+# Create after the Cloud Build GitHub App is connected to alphieoch/ProjectOpenDoor:
+#   gcloud builds triggers create github \
+#     --trigger-config=infra/gcp/cloudbuild.trigger.yaml \
+#     --project=project-800192c2-3ecc-4889-8f7
+# 1st-gen GitHub triggers live in the global Cloud Build region.
+name: opendoor-main
+description: Deploy dashboard + gateway to Cloud Run on push to main
+filename: cloudbuild.yaml
+github:
+  owner: alphieoch
+  name: ProjectOpenDoor
+  push:
+    branch: ^main$
+includeBuildLogs: INCLUDE_BUILD_LOGS_WITH_STATUS
+substitutions:
+  _TAG: $SHORT_SHA
+  _SITE_ID: opendoor-gcp
+  _REGION: us-central1
+  _REPO: opendoor
+  _SQL_INSTANCE: opendoor-pg
+  _VPC_CONNECTOR: opendoor-connector

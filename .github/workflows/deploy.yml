@@ -1,8 +1,8 @@
+# Production deploys are Cloud Build on GCP (push to main → trigger opendoor-main).
+# Keep this workflow manual-only so Azure is not redeployed on every push.
 name: Deploy OpenDoor to Azure
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 env:
