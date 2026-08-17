@@ -56,7 +56,9 @@
         { "title": "What OpenDoor is", "href": "/" },
         { "title": "Install", "href": "/getting-started/installation" },
         { "title": "Configure", "href": "/getting-started/configuration" },
-        { "title": "Run locally", "href": "/getting-started/local-development" }
+        { "title": "Run locally", "href": "/getting-started/local-development" },
+        { "title": "TypeScript SDK", "href": "/getting-started/sdk" },
+        { "title": "CLI", "href": "/getting-started/cli" }
       ]
     },
     {
@@ -67,7 +69,9 @@
         { "title": "A request, end to end", "href": "/how-it-works/request-path" },
         { "title": "Dashboard", "href": "/how-it-works/dashboard" },
         { "title": "API keys", "href": "/how-it-works/api-keys" },
+        { "title": "Bring your own keys", "href": "/how-it-works/byok" },
         { "title": "Playground", "href": "/how-it-works/playground" },
+        { "title": "Premium (private GPU)", "href": "/how-it-works/premium" },
         { "title": "Agents", "href": "/how-it-works/agents" },
         { "title": "Deployments", "href": "/how-it-works/deployments" },
         { "title": "Billing", "href": "/how-it-works/billing" },
@@ -79,6 +83,10 @@
       "icon": "code",
       "tab": "api",
       "pages": [
+        { "title": "Platform API", "href": "/api-reference/platform" },
+        { "title": "Usage", "href": "/api-reference/usage" },
+        { "title": "Assistants", "href": "/api-reference/assistants" },
+        { "title": "Workflows", "href": "/api-reference/workflows" },
         { "title": "Chat completions", "href": "/api-reference/chat-completions" },
         { "title": "Structured outputs", "href": "/api-reference/structured-outputs" },
         { "title": "Vision", "href": "/api-reference/vision" },
@@ -86,7 +94,15 @@
         { "title": "Completions", "href": "/api-reference/completions" },
         { "title": "Embeddings", "href": "/api-reference/embeddings" },
         { "title": "Rerank", "href": "/api-reference/rerank" },
-        { "title": "Batches", "href": "/api-reference/batches" }
+        { "title": "Batches", "href": "/api-reference/batches" },
+        { "title": "Images", "href": "/api-reference/images" },
+        { "title": "Videos", "href": "/api-reference/videos" },
+        { "title": "Audio", "href": "/api-reference/audio" },
+        { "title": "Generation", "href": "/api-reference/generation" },
+        { "title": "Responses", "href": "/api-reference/responses" },
+        { "title": "Files", "href": "/api-reference/files" },
+        { "title": "Web search", "href": "/api-reference/web-search" },
+        { "title": "BYOK", "href": "/api-reference/byok" }
       ]
     },
     {
@@ -94,8 +110,10 @@
       "tab": "api",
       "pages": [
         { "title": "Models list", "href": "/api-reference/models" },
+        { "title": "Routing", "href": "/api-reference/routing" },
         { "title": "Service tiers", "href": "/api-reference/service-tiers" },
-        { "title": "Dedicated deployments", "href": "/api-reference/dedicated-deployments" }
+        { "title": "Dedicated deployments", "href": "/api-reference/dedicated-deployments" },
+        { "title": "Premium rentals", "href": "/api-reference/premium" }
       ]
     },
     {
@@ -134,7 +152,8 @@
       "tab": "ops",
       "pages": [
         { "title": "PII redaction", "href": "/security/pii-redaction" },
-        { "title": "Data residency", "href": "/security/data-residency" }
+        { "title": "Data residency", "href": "/security/data-residency" },
+        { "title": "Code execution jail", "href": "/security/code-execution" }
       ]
     },
     {
@@ -143,6 +162,7 @@
       "tab": "ops",
       "pages": [
         { "title": "Status page", "href": "/operations/status-page" },
+        { "title": "Support inbox", "href": "/operations/support" },
         { "title": "Azure setup", "href": "/deployment/azure-setup" },
         { "title": "Docker", "href": "/deployment/docker" },
         { "title": "Production handoff", "href": "/deployment/production-readiness-handoff" }

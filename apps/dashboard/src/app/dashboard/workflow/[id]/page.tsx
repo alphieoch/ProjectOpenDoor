@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   ReactFlow,
   Background,
@@ -23,7 +24,7 @@ import "@xyflow/react/dist/style.css";
 import {
   ArrowRight, Bot, Wrench, GitBranch, Shuffle,
   CheckSquare, UserCheck, ChevronLeft, Loader2,
-  Trash2, Plus, Save, Check,
+  Trash2, Plus, Save, Check, Play,
 } from "lucide-react";
 
 // ── Node type config ──────────────────────────────────────────────────────────
@@ -86,6 +87,10 @@ function WorkflowNodeComponent({ id, data, selected }: { id: string; data: any; 
         {data.toolType && (
           <div style={{ fontSize: 11, color: "#73777F" }}>
             {TOOLS.find((t) => t.value === data.toolType)?.label ?? data.toolType}
+            {data.toolType === "web_search" && data.query ? ` · ${data.query}` : ""}
+            {data.toolType === "image_generation" && data.prompt ? ` · ${data.prompt}` : ""}
+            {data.toolType === "document_analysis" && data.fileId ? ` · ${data.fileId}` : ""}
+            {data.toolType === "code_execution" ? ` · ${data.language === "python" ? "python" : "js"}` : ""}
           </div>
         )}
         {data.systemPrompt && (
@@ -109,10 +114,19 @@ function WorkflowNodeComponent({ id, data, selected }: { id: string; data: any; 
         <Handle type="target" position={Position.Left}
           style={{ width: 10, height: 10, background: meta.bg, border: "2px solid #fff" }} />
       )}
-      {hasSource && (
+      {data.nodeType === "condition" ? (
+        <>
+          <Handle type="source" id="true" position={Position.Right}
+            style={{ width: 10, height: 10, top: "38%", background: meta.bg, border: "2px solid #fff" }}
+            title="True" />
+          <Handle type="source" id="false" position={Position.Right}
+            style={{ width: 10, height: 10, top: "68%", background: meta.bg, border: "2px solid #fff" }}
+            title="False" />
+        </>
+      ) : hasSource ? (
         <Handle type="source" position={Position.Right}
           style={{ width: 10, height: 10, background: meta.bg, border: "2px solid #fff" }} />
-      )}
+      ) : null}
     </div>
   );
 }
@@ -202,16 +216,145 @@ function ConfigPanel({
 
         {/* Tool fields */}
         {data.nodeType === "tool" && (
-          <div>
-            <label className="mb-1 block text-xs font-medium" style={{ color: "var(--ink-3)" }}>Tool Type</label>
-            <select value={data.toolType ?? ""} onChange={(e) => set("toolType", e.target.value)}
-              className="input w-full text-sm">
-              <option value="">— select tool —</option>
-              {TOOLS.map((t) => (
-                <option key={t.value} value={t.value}>{t.label}</option>
-              ))}
-            </select>
-          </div>
+          <>
+            <div>
+              <label className="mb-1 block text-xs font-medium" style={{ color: "var(--ink-3)" }}>Tool Type</label>
+              <select value={data.toolType ?? ""} onChange={(e) => set("toolType", e.target.value)}
+                className="input w-full text-sm">
+                <option value="">— select tool —</option>
+                {TOOLS.map((t) => (
+                  <option key={t.value} value={t.value}>{t.label}</option>
+                ))}
+              </select>
+            </div>
+            {data.toolType === "web_search" && (
+              <>
+                <div>
+                  <label className="mb-1 block text-xs font-medium" style={{ color: "var(--ink-3)" }}>Query</label>
+                  <textarea
+                    value={data.query ?? ""}
+                    onChange={(e) => set("query", e.target.value)}
+                    className="input w-full text-sm"
+                    rows={3}
+                    placeholder="Search query, or leave blank to use the Run prompt"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium" style={{ color: "var(--ink-3)" }}>Max results</label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={10}
+                    value={data.maxResults ?? 5}
+                    onChange={(e) => set("maxResults", parseInt(e.target.value, 10))}
+                    className="input w-full text-sm"
+                  />
+                </div>
+                <p className="text-[11px] leading-relaxed" style={{ color: "var(--ink-4)" }}>
+                  Requires the Web Search add-on (or Enterprise). Production uses Vertex AI
+                  Google Search grounding on OpenDoor’s GCP project.{" "}
+                  <Link href="/dashboard/billing" className="underline" style={{ color: "var(--ink)" }}>
+                    Billing
+                  </Link>
+                </p>
+              </>
+            )}
+            {data.toolType === "image_generation" && (
+              <>
+                <div>
+                  <label className="mb-1 block text-xs font-medium" style={{ color: "var(--ink-3)" }}>Prompt</label>
+                  <textarea
+                    value={data.prompt ?? ""}
+                    onChange={(e) => set("prompt", e.target.value)}
+                    className="input w-full text-sm"
+                    rows={3}
+                    placeholder="Image prompt, or leave blank to use the Run input"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium" style={{ color: "var(--ink-3)" }}>Model</label>
+                  <input
+                    value={data.model ?? data.modelId ?? "dall-e-3"}
+                    onChange={(e) => set("model", e.target.value)}
+                    className="input w-full text-sm"
+                    placeholder="dall-e-3"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium" style={{ color: "var(--ink-3)" }}>Size</label>
+                  <select value={data.size ?? "1024x1024"} onChange={(e) => set("size", e.target.value)}
+                    className="input w-full text-sm">
+                    <option value="1024x1024">1024×1024</option>
+                    <option value="1792x1024">1792×1024</option>
+                    <option value="1024x1792">1024×1792</option>
+                  </select>
+                </div>
+              </>
+            )}
+            {data.toolType === "code_execution" && (
+              <>
+                <div>
+                  <label className="mb-1 block text-xs font-medium" style={{ color: "var(--ink-3)" }}>Language</label>
+                  <select
+                    value={data.language === "python" ? "python" : "javascript"}
+                    onChange={(e) => set("language", e.target.value)}
+                    className="input w-full text-sm"
+                  >
+                    <option value="javascript">JavaScript (Node)</option>
+                    <option value="python">Python</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium" style={{ color: "var(--ink-3)" }}>Code</label>
+                  <textarea
+                    value={data.code ?? ""}
+                    onChange={(e) => set("code", e.target.value)}
+                    className="input w-full text-sm font-mono"
+                    rows={5}
+                    placeholder={data.language === "python" ? "print(open('input.txt').read())" : "console.log(require('fs').readFileSync('input.txt','utf8'))"}
+                  />
+                </div>
+                <p className="text-[11px] leading-relaxed" style={{ color: "var(--ink-4)" }}>
+                  Constrained subprocess (tmpdir cwd, 5s timeout, no shell) — not Firecracker.
+                  Prior step output is stdin and input.txt. JavaScript uses Node&apos;s permission model when available (no network).
+                </p>
+              </>
+            )}
+            {data.toolType === "document_analysis" && (
+              <div>
+                <label className="mb-1 block text-xs font-medium" style={{ color: "var(--ink-3)" }}>File ID</label>
+                <input
+                  value={data.fileId ?? ""}
+                  onChange={(e) => set("fileId", e.target.value)}
+                  className="input w-full text-sm"
+                  placeholder="file-… from POST /v1/files"
+                />
+              </div>
+            )}
+            {data.toolType === "data_extraction" && (
+              <>
+                <div>
+                  <label className="mb-1 block text-xs font-medium" style={{ color: "var(--ink-3)" }}>Text</label>
+                  <textarea
+                    value={data.prompt ?? ""}
+                    onChange={(e) => set("prompt", e.target.value)}
+                    className="input w-full text-sm"
+                    rows={3}
+                    placeholder="Text to embed, or leave blank to use the prior step"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium" style={{ color: "var(--ink-3)" }}>Embedding model</label>
+                  <input
+                    value={data.model ?? data.modelId ?? "text-embedding-3-small"}
+                    onChange={(e) => set("model", e.target.value)}
+                    className="input w-full text-sm"
+                    placeholder="text-embedding-3-small"
+                  />
+                </div>
+              </>
+            )}
+          </>
         )}
 
         {/* Condition fields */}
@@ -219,7 +362,11 @@ function ConfigPanel({
           <div>
             <label className="mb-1 block text-xs font-medium" style={{ color: "var(--ink-3)" }}>Condition</label>
             <input value={data.condition ?? ""} onChange={(e) => set("condition", e.target.value)}
-              className="input w-full text-sm" placeholder='e.g. output.includes("error")' />
+              className="input w-full text-sm" placeholder='e.g. includes("error")' />
+            <p className="mt-1 text-[11px] leading-relaxed" style={{ color: "var(--ink-4)" }}>
+              Safe check against the prior step output — no eval. includes/equals/startsWith/endsWith, length &gt; N, or true/false.
+              Connect the True / False handles to branch.
+            </p>
           </div>
         )}
 
@@ -229,6 +376,9 @@ function ConfigPanel({
             <label className="mb-1 block text-xs font-medium" style={{ color: "var(--ink-3)" }}>Reviewer Note</label>
             <textarea value={data.reviewNote ?? ""} onChange={(e) => set("reviewNote", e.target.value)}
               className="input w-full text-sm" rows={3} placeholder="Instructions for the human reviewer…" />
+            <p className="mt-1 text-[11px] leading-relaxed" style={{ color: "var(--ink-4)" }}>
+              Run pauses here as awaiting_review. Approve or reject from the results panel to resume.
+            </p>
           </div>
         )}
 
@@ -303,6 +453,46 @@ export default function WorkflowEditorPage() {
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const [models, setModels] = useState<{ modelId: string; displayName: string }[]>([]);
+  const [runQuery, setRunQuery] = useState("");
+  const [running, setRunning] = useState(false);
+  const [runError, setRunError] = useState<string | null>(null);
+  const [runAddonRequired, setRunAddonRequired] = useState(false);
+  type RunStep = {
+    nodeId: string;
+    type: string;
+    toolType?: string;
+    status: string;
+    code?: string;
+    query?: string;
+    provider?: string;
+    error?: string;
+    text?: string;
+    stdout?: string;
+    stderr?: string;
+    exitCode?: number | null;
+    passed?: boolean;
+    results?: Array<{ title: string; url: string; snippet: string }>;
+    images?: Array<{ url?: string; b64_json?: string }>;
+    embedding?: { model: string; dimensions: number };
+  };
+  type SavedRun = {
+    id: string;
+    status: string;
+    error?: string | null;
+    createdAt?: string;
+    stepOutputs?: RunStep[];
+  };
+  const [runResult, setRunResult] = useState<{
+    runId?: string;
+    status?: string;
+    awaitingReview?: boolean;
+    provider?: string;
+    query?: string;
+    results?: Array<{ title: string; url: string; snippet: string }>;
+    steps?: RunStep[];
+  } | null>(null);
+  const [reviewing, setReviewing] = useState(false);
+  const [recentRuns, setRecentRuns] = useState<SavedRun[]>([]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
@@ -317,7 +507,10 @@ export default function WorkflowEditorPage() {
       fetch("/api/models/available", { credentials: "include" })
         .then((r) => (r.ok ? r.json() : { models: [] }))
         .catch(() => ({ models: [] })),
-    ]).then(([wfData, mData]) => {
+      fetch(`/api/workflows/${id}/run`, { credentials: "include" })
+        .then((r) => (r.ok ? r.json() : { runs: [] }))
+        .catch(() => ({ runs: [] })),
+    ]).then(([wfData, mData, runData]) => {
       if (wfData.workflow) {
         const wf = wfData.workflow;
         setWorkflow(wf);
@@ -335,6 +528,7 @@ export default function WorkflowEditorPage() {
           displayName: m.label || m.displayName || m.id || "",
         }))
       );
+      setRecentRuns(Array.isArray(runData.runs) ? runData.runs : []);
       setLoading(false);
     });
   }, [id]);
@@ -438,6 +632,89 @@ export default function WorkflowEditorPage() {
     doSave(latestGraph.current, name, s);
   }
 
+  async function runWorkflow() {
+    if (saveTimer.current) {
+      clearTimeout(saveTimer.current);
+      await doSave(latestGraph.current, name, status);
+    }
+    setRunning(true);
+    setRunError(null);
+    setRunAddonRequired(false);
+    setRunResult(null);
+    try {
+      const res = await fetch(`/api/workflows/${id}/run`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          query: runQuery.trim() || undefined,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setRunAddonRequired(data.code === "addon_required" || data.addon === "web_search");
+        setRunError(typeof data.error === "string" ? data.error : `Run failed (${res.status})`);
+        return;
+      }
+      if (data.error && !data.search && !data.awaitingReview) {
+        setRunError(data.error);
+      }
+      setRunResult({
+        runId: data.runId,
+        status: data.status,
+        awaitingReview: Boolean(data.awaitingReview),
+        provider: data.search?.provider,
+        query: data.search?.query,
+        results: data.search?.results,
+        steps: data.steps,
+      });
+      fetch(`/api/workflows/${id}/run`, { credentials: "include" })
+        .then((r) => (r.ok ? r.json() : { runs: [] }))
+        .then((runData) => setRecentRuns(Array.isArray(runData.runs) ? runData.runs : []))
+        .catch(() => undefined);
+    } catch (err) {
+      setRunError(err instanceof Error ? err.message : "Run failed");
+    } finally {
+      setRunning(false);
+    }
+  }
+
+  async function reviewRun(runId: string, decision: "approve" | "reject") {
+    setReviewing(true);
+    setRunError(null);
+    try {
+      const res = await fetch(`/api/workflows/${id}/run`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ runId, decision }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setRunError(typeof data.error === "string" ? data.error : `Review failed (${res.status})`);
+        return;
+      }
+      if (data.error && !data.awaitingReview) {
+        setRunError(data.error);
+      }
+      setRunResult({
+        runId: data.runId,
+        status: data.status,
+        awaitingReview: Boolean(data.awaitingReview),
+        provider: data.search?.provider,
+        query: data.search?.query,
+        results: data.search?.results,
+        steps: data.steps,
+      });
+      fetch(`/api/workflows/${id}/run`, { credentials: "include" })
+        .then((r) => (r.ok ? r.json() : { runs: [] }))
+        .then((runData) => setRecentRuns(Array.isArray(runData.runs) ? runData.runs : []))
+        .catch(() => undefined);
+    } catch (err) {
+      setRunError(err instanceof Error ? err.message : "Review failed");
+    } finally {
+      setReviewing(false);
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center">
@@ -445,6 +722,11 @@ export default function WorkflowEditorPage() {
       </div>
     );
   }
+
+  const pendingReviewId =
+    runResult?.awaitingReview && runResult.runId
+      ? runResult.runId
+      : recentRuns.find((r) => r.status === "awaiting_review")?.id;
 
   const PALETTE = Object.entries(NODE_META);
 
@@ -471,6 +753,17 @@ export default function WorkflowEditorPage() {
           <option value="active">Active</option>
           <option value="archived">Archived</option>
         </select>
+        <input
+          value={runQuery}
+          onChange={(e) => setRunQuery(e.target.value)}
+          className="input w-52 text-xs py-1"
+          placeholder="Run input (optional)"
+        />
+        <button type="button" onClick={runWorkflow} disabled={running}
+          className="md-btn-outlined flex items-center gap-1.5 px-3 py-1.5 text-xs">
+          {running ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
+          {running ? "Running…" : "Run"}
+        </button>
         <button type="button" onClick={saveNow}
           className="md-btn-filled flex items-center gap-1.5 px-3 py-1.5 text-xs">
           {saveState === "saving" ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -574,6 +867,138 @@ export default function WorkflowEditorPage() {
           )}
         </div>
       </div>
+
+      {(runError || runResult || recentRuns.length > 0) && (
+        <div className="shrink-0 border-t px-4 py-3 max-h-72 overflow-y-auto"
+          style={{ background: "var(--paper-2)", borderColor: "var(--line-soft)" }}>
+          {runError && (
+            <p className="text-xs" style={{ color: "var(--red)" }}>
+              {runError}
+              {runAddonRequired ? (
+                <>
+                  {" "}
+                  <Link href="/dashboard/billing" className="underline" style={{ color: "var(--ink)" }}>
+                    Subscribe on Billing
+                  </Link>
+                </>
+              ) : null}
+            </p>
+          )}
+          {pendingReviewId && (
+            <div className="mb-3 flex items-center gap-2">
+              <p className="text-[11px]" style={{ color: "var(--ink-3)" }}>Awaiting review</p>
+              <button
+                type="button"
+                disabled={reviewing}
+                onClick={() => reviewRun(pendingReviewId, "approve")}
+                className="md-btn-filled px-2 py-1 text-[11px]"
+              >
+                {reviewing ? "…" : "Approve"}
+              </button>
+              <button
+                type="button"
+                disabled={reviewing}
+                onClick={() => reviewRun(pendingReviewId, "reject")}
+                className="md-btn-outlined px-2 py-1 text-[11px]"
+              >
+                Reject
+              </button>
+            </div>
+          )}
+          {runResult?.steps?.length ? (
+            <div className="space-y-3">
+              {runResult.steps.map((step) => (
+                <div key={step.nodeId}>
+                  <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--ink-4)" }}>
+                    {step.toolType || step.type} · {step.status}
+                    {step.provider ? ` · ${step.provider}` : ""}
+                    {step.query ? ` · ${step.query}` : ""}
+                    {step.passed === true ? " · true" : step.passed === false ? " · false" : ""}
+                  </p>
+                  {step.error && (
+                    <p className="text-[11px]" style={{ color: step.status === "error" ? "var(--red)" : "var(--ink-3)" }}>
+                      {step.error}
+                    </p>
+                  )}
+                  {step.stdout ? (
+                    <p className="text-[11px] whitespace-pre-wrap font-mono" style={{ color: "var(--ink-3)" }}>
+                      {step.stdout.length > 800 ? `${step.stdout.slice(0, 800)}…` : step.stdout}
+                    </p>
+                  ) : null}
+                  {step.stderr ? (
+                    <p className="text-[11px] whitespace-pre-wrap font-mono" style={{ color: "var(--ink-3)" }}>
+                      stderr: {step.stderr.length > 400 ? `${step.stderr.slice(0, 400)}…` : step.stderr}
+                    </p>
+                  ) : null}
+                  {step.results?.map((hit) => (
+                    <div key={hit.url}>
+                      <a href={hit.url} target="_blank" rel="noreferrer"
+                        className="text-xs font-medium hover:underline" style={{ color: "var(--ink)" }}>
+                        {hit.title || hit.url}
+                      </a>
+                      {hit.snippet && (
+                        <p className="text-[11px]" style={{ color: "var(--ink-3)" }}>{hit.snippet}</p>
+                      )}
+                    </div>
+                  ))}
+                  {step.images?.map((img, i) => {
+                    const src = img.url || (img.b64_json ? `data:image/png;base64,${img.b64_json}` : "");
+                    if (!src) return null;
+                    return (
+                      <a key={`${step.nodeId}-img-${i}`} href={src} target="_blank" rel="noreferrer">
+                        <img src={src} alt="" className="mt-1 max-h-28 rounded border" style={{ borderColor: "var(--line-soft)" }} />
+                      </a>
+                    );
+                  })}
+                  {step.embedding && (
+                    <p className="text-[11px]" style={{ color: "var(--ink-3)" }}>
+                      {step.embedding.model} · {step.embedding.dimensions}d embedding
+                    </p>
+                  )}
+                  {step.text && !step.stdout && !step.results?.length && !step.images?.length && (
+                    <p className="text-[11px] whitespace-pre-wrap" style={{ color: "var(--ink-3)" }}>
+                      {step.text.length > 800 ? `${step.text.slice(0, 800)}…` : step.text}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : runResult?.results?.length ? (
+            <div className="space-y-2">
+              <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--ink-4)" }}>
+                {runResult.provider} · {runResult.query}
+              </p>
+              {runResult.results.map((hit) => (
+                <div key={hit.url}>
+                  <a href={hit.url} target="_blank" rel="noreferrer"
+                    className="text-xs font-medium hover:underline" style={{ color: "var(--ink)" }}>
+                    {hit.title || hit.url}
+                  </a>
+                  {hit.snippet && (
+                    <p className="text-[11px]" style={{ color: "var(--ink-3)" }}>{hit.snippet}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : null}
+          {recentRuns.length > 0 && (
+            <div className="mt-3 pt-2 border-t" style={{ borderColor: "var(--line-soft)" }}>
+              <p className="mb-1 text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--ink-4)" }}>
+                Recent runs
+              </p>
+              <div className="space-y-1">
+                {recentRuns.slice(0, 8).map((run) => (
+                  <p key={run.id} className="text-[11px]" style={{ color: "var(--ink-3)" }}>
+                    {run.status}
+                    {run.createdAt ? ` · ${new Date(run.createdAt).toLocaleString()}` : ""}
+                    {run.error ? ` · ${run.error}` : ""}
+                  </p>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

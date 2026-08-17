@@ -4,6 +4,7 @@ import { ArrowRight } from "lucide-react";
 export const MARKETING_PAGES = [
   { href: "/platform", label: "Platform" },
   { href: "/pricing", label: "Pricing" },
+  { href: "/rankings", label: "Rankings" },
   { href: "/how-it-works", label: "How it works" },
   { href: "/security", label: "Security" },
   { href: "/status", label: "Status" },

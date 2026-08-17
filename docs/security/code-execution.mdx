@@ -1,0 +1,59 @@
+---
+title: "Code execution jail"
+description: "Workflow code_execution runs in Cloud Run gVisor in production. Local macOS uses a subprocess fallback. Firecracker is Linux-only."
+showPageTitle: true
+---
+
+Workflow **Code Execution** nodes run JavaScript or Python. Isolation depends on where the dashboard is running.
+
+## Production (GCP) — gVisor on Cloud Run
+
+`opendoor-dashboard` dispatches code to Cloud Run service **`opendoor-sandbox`**. Cloud Run already runs each instance in **gVisor**. That is the production jail — not Firecracker.
+
+The sandbox image is tiny (`apps/sandbox`: Node 22 + `python3`). It accepts only:
+
+```
+POST /internal/sandbox/exec
+Authorization: Bearer $CODE_SANDBOX_TOKEN
+```
+
+It writes a tmpdir, runs `execFile` (no shell), then deletes the directory. Timeout is **10s** inside the process; Cloud Run request timeout is **15s**.
+
+Egress is blocked by attaching the service to an isolated VPC (`opendoor-sandbox-vpc`) with `--vpc-egress=all` and **no Cloud NAT** (and no Private Google Access). Guest code cannot reach the internet, Cloud SQL, or Redis.
+
+### Environment
+
+| Variable | Where | Purpose |
+|----------|--------|---------|
+| `CODE_SANDBOX_URL` | `opendoor-dashboard` | Cloud Run URL of `opendoor-sandbox` |
+| `CODE_SANDBOX_TOKEN` | dashboard + sandbox | Shared secret (`opendoor-code-sandbox-token` in Secret Manager) |
+| `FIRECRACKER_SOCKET` | Linux hosts only | Optional Unix-socket jailer. **Ignored on macOS.** |
+
+### Deploy
+
+```bash
+# Cloud Build (recommended)
+gcloud builds submit --config=infra/gcp/cloudbuild.sandbox.yaml
+
+# Or local Docker + gcloud
+./infra/gcp/deploy-sandbox.sh
+```
+
+Then redeploy the dashboard (`./scripts/deploy-gcp.sh` or `infra/gcp/cloudbuild.dashboard.yaml`). If `opendoor-sandbox` exists, deploy scripts set `CODE_SANDBOX_URL` and bind `CODE_SANDBOX_TOKEN`.
+
+## Local (macOS) — subprocess fallback
+
+This machine cannot run Firecracker/KVM. When `CODE_SANDBOX_URL` is **unset**, `apps/dashboard/src/lib/workflows/code-execution.ts` runs `execFile` in a tmpdir (Node permission model for JS; `resource` limits for Python). That is a constrained subprocess, not a VM.
+
+To use the real jail from a laptop, point at the deployed service:
+
+```bash
+CODE_SANDBOX_URL=https://opendoor-sandbox-….run.app
+CODE_SANDBOX_TOKEN=…
+```
+
+## Firecracker (optional, Linux only)
+
+If `FIRECRACKER_SOCKET` is set **and** the process is running on Linux, the runner sends one JSON line to that Unix socket and expects an `IsolatedRunResult` JSON body. There is no Firecracker stub on macOS — the env var is ignored so we never pretend KVM ran.
+
+Preference order: Firecracker socket (Linux) → Cloud Run gVisor → local subprocess.

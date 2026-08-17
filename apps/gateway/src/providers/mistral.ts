@@ -13,10 +13,10 @@ export class MistralProvider implements ProviderAdapter {
   slug = "mistral";
   private client: any;
 
-  constructor() {
-    const apiKey = process.env.MISTRAL_API_KEY;
-    if (!apiKey) throw new Error("MISTRAL_API_KEY not set");
-    this.client = new MistralClient(apiKey);
+  constructor(apiKey?: string) {
+    const key = apiKey ?? process.env.MISTRAL_API_KEY;
+    if (!key) throw new Error("MISTRAL_API_KEY not set");
+    this.client = new MistralClient(key);
   }
 
   async chatCompletion(

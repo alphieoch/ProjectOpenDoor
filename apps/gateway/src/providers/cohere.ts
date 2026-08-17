@@ -17,9 +17,9 @@ export class CohereProvider implements ProviderAdapter {
   slug = "cohere";
   private client: CohereClient;
 
-  constructor() {
-    const apiKey = process.env.COHERE_API_KEY;
-    this.client = apiKey ? new CohereClient({ token: apiKey }) : (null as any);
+  constructor(apiKey?: string) {
+    const key = apiKey ?? process.env.COHERE_API_KEY;
+    this.client = key ? new CohereClient({ token: key }) : (null as any);
   }
 
   private requireClient() {

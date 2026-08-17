@@ -1,6 +1,18 @@
 import { db, requests, providers } from "@opendoor/database";
 import { eq } from "drizzle-orm";
 
+export function appAttributionFromHeaders(
+  header: (name: string) => string | undefined
+): { httpReferer?: string; xTitle?: string } | undefined {
+  const httpReferer = header("HTTP-Referer") || header("Referer");
+  const xTitle = header("X-Title");
+  if (!httpReferer && !xTitle) return undefined;
+  return {
+    ...(httpReferer ? { httpReferer } : {}),
+    ...(xTitle ? { xTitle } : {}),
+  };
+}
+
 export async function logGatewayRequest(opts: {
   apiKeyId: string;
   organizationId: string;
@@ -14,6 +26,7 @@ export async function logGatewayRequest(opts: {
   status?: "success" | "error";
   errorMessage?: string;
   region?: string;
+  metadata?: Record<string, unknown>;
 }) {
   let providerId: string | null = null;
   try {
@@ -42,6 +55,7 @@ export async function logGatewayRequest(opts: {
       status: opts.status || "success",
       errorMessage: opts.errorMessage,
       region: opts.region || process.env.GCP_REGION || process.env.AZURE_REGION || "global",
+      metadata: opts.metadata || undefined,
     });
   } catch (e) {
     console.error("[request-log] insert failed", e);

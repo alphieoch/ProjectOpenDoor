@@ -12,10 +12,11 @@ import { generateId } from "./base.js";
 import { openaiChatPayload } from "./openai-body.js";
 import { documentText } from "./content.js";
 import { normalizeUsage } from "../utils/usage.js";
+import { isProductionRuntime } from "@opendoor/shared";
 
 /**
- * Wholesale serverless open-weight models via Together AI (OpenAI-compatible).
- * Set TOGETHER_API_KEY. Fireworks/Groq can be added the same way.
+ * Optional Together overflow for legacy serverless ids (OpenAI-compatible).
+ * Primary wholesale path is Vertex Model Garden (`vertex.ts`).
  */
 export class TogetherProvider implements ProviderAdapter {
   name = "Together (serverless)";
@@ -34,11 +35,11 @@ export class TogetherProvider implements ProviderAdapter {
     "BAAI/bge-reranker-v2-m3": "BAAI/bge-reranker-v2-m3",
   };
 
-  constructor() {
-    const apiKey = process.env.TOGETHER_API_KEY;
-    if (apiKey) {
+  constructor(apiKey?: string) {
+    const key = apiKey ?? process.env.TOGETHER_API_KEY;
+    if (key) {
       this.client = new OpenAI({
-        apiKey,
+        apiKey: key,
         baseURL: process.env.TOGETHER_BASE_URL || "https://api.together.xyz/v1",
       });
     }
@@ -47,7 +48,7 @@ export class TogetherProvider implements ProviderAdapter {
   private requireClient(): OpenAI {
     if (!this.client) {
       throw new Error(
-        "Serverless models require TOGETHER_API_KEY. Set it in .env to enable warm wholesale inference (no Request GPU)."
+        "Serverless wholesale path is not configured. Set TOGETHER_API_KEY on the gateway, or add an org BYOK key for provider 'together'."
       );
     }
     return this.client;
@@ -167,6 +168,9 @@ export class TogetherProvider implements ProviderAdapter {
   }
 
   async listModels(): Promise<ModelInfo[]> {
+    if (!this.client && isProductionRuntime()) {
+      return [];
+    }
     return Object.keys(TogetherProvider.MODEL_MAP).map((id) => ({
       id,
       object: "model" as const,

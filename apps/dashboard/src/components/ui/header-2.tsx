@@ -11,6 +11,7 @@ import { docsHref } from '@/lib/public-urls';
 const NAV_LINKS = [
   { label: 'Platform', href: '/platform' },
   { label: 'Pricing', href: '/pricing' },
+  { label: 'Rankings', href: '/rankings' },
   { label: 'How it works', href: '/how-it-works' },
   { label: 'Security', href: '/security' },
   { label: 'Status', href: '/status' },

@@ -1,6 +1,6 @@
-import Redis from "ioredis";
+import { createRedis } from "./redis.js";
 
-const redis = new (Redis as any)(process.env.REDIS_URL || "redis://localhost:6379");
+const redis = createRedis();
 
 export type ServiceTier = "standard" | "priority";
 

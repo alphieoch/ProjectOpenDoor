@@ -20,7 +20,7 @@ Full-featured AI Chatbot Nuxt application with authentication, chat history, col
 ## Features
 
 - ⚡️ **Streaming AI messages** powered by the [AI SDK](https://ai-sdk.dev) with thinking/reasoning support
-- 🤖 **Multiple model support** — Claude Haiku 4.5, Gemini 3 Flash and GPT-5 Nano via [Vercel AI Gateway](https://vercel.com/docs/ai-gateway)
+- 🤖 **Multiple model support** — OpenDoor catalog models via the OpenAI-compatible gateway (`OPENDOOR_API_KEY`)
 - 🔍 **Web search** with built-in provider tools (Anthropic, OpenAI)
 - 📊 **Charts and weather** tool calling with rich UI rendering
 - 🔐 **Authentication** via GitHub OAuth using [nuxt-auth-utils](https://github.com/atinux/nuxt-auth-utils)
@@ -57,16 +57,19 @@ pnpm db:migrate
 
 ### AI Integration
 
-This template uses the [Vercel AI SDK](https://ai-sdk.dev/) for streaming AI responses with support for multiple providers through [Vercel AI Gateway](https://vercel.com/docs/ai-gateway). When deployed on Vercel, the AI Gateway is configured automatically.
-
-For local development, set your API key in `.env`:
+Point this app at the OpenDoor gateway (OpenAI-compatible `POST /v1/chat/completions`). From `apps/chat`:
 
 ```bash
-AI_GATEWAY_API_KEY=<your-vercel-ai-gateway-api-key>
+OPENDOOR_API_KEY=opd_...
+OPENDOOR_BASE_URL=http://localhost:3001   # default
+pnpm dev   # or bun
 ```
 
-> [!TIP]
-> With [Vercel AI Gateway](https://vercel.com/docs/ai-gateway), you don't need individual API keys for OpenAI, Anthropic, etc. It provides a unified API to access hundreds of models through a single endpoint with automatic load balancing, fallbacks, and spend monitoring.
+When `OPENDOOR_API_KEY` is set, `server/api/ai/[slug]/chat.post.ts` streams from `${OPENDOOR_BASE_URL}/v1` via `@ai-sdk/openai`. Assistant billing/limits on the dashboard are skipped on that path.
+
+If the key is unset, the handler still proxies to the Next.js dashboard (`NEXTJS_API_URL`, default `http://localhost:3000`) at `/api/ai/:slug/chat`.
+
+Default model: `gemma-4-26b-a4b-it` (Vertex Model Garden). Change it in the model picker.
 
 ### Authentication (Optional)
 

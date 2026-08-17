@@ -13,6 +13,8 @@ export interface ChatMessage {
   name?: string;
   tool_calls?: ToolCall[];
   tool_call_id?: string;
+  /** DashScope / Qwen reasoning stream (thinking modes). */
+  reasoning_content?: string;
 }
 
 export type ResponseFormat =
@@ -35,6 +37,17 @@ export interface ToolCall {
     name: string;
     arguments: string;
   };
+}
+
+export type ProviderSort = "price" | "latency" | "throughput";
+
+/** OpenRouter-compatible provider routing preferences. */
+export interface ProviderPreferences {
+  order?: string[];
+  allow_fallbacks?: boolean;
+  sort?: ProviderSort;
+  only?: string[];
+  ignore?: string[];
 }
 
 export interface ChatCompletionRequest {
@@ -62,6 +75,14 @@ export interface ChatCompletionRequest {
   service_tier?: "standard" | "priority";
   /** Sticky prompt-cache key forwarded to OpenAI-compatible upstreams when supported */
   prompt_cache_key?: string;
+  /** OpenRouter-style provider routing (order / only / ignore / sort). */
+  provider?: ProviderPreferences;
+  /** OpenRouter-compatible prompt transforms. `middle-out` keeps system + first/last slices. */
+  transforms?: Array<"middle-out" | string>;
+  /** Qwen / DashScope: enable chain-of-thought before the final answer. */
+  enable_thinking?: boolean;
+  /** Qwen / DashScope: max reasoning tokens when thinking is enabled. */
+  thinking_budget?: number;
 }
 
 export interface ToolDefinition {
@@ -161,7 +182,12 @@ export interface BatchJob {
     | "running"
     | "completed"
     | "failed"
+    | "expired"
     | "cancelled";
+  model?: string | null;
+  input_file_id?: string | null;
+  output_file_id?: string | null;
+  completion_window?: string;
   request_counts: {
     total: number;
     completed: number;
@@ -171,10 +197,27 @@ export interface BatchJob {
     custom_id: string;
     response?: unknown;
     error?: { message: string };
-  }>;
+  }> | null;
   error?: string | null;
   created_at: number;
+  expires_at?: number | null;
   completed_at?: number | null;
+}
+
+export interface ModelPricing {
+  /** USD per 1M prompt tokens */
+  prompt?: number | null;
+  /** USD per 1M completion tokens */
+  completion?: number | null;
+  /** OpenRouter-style per-token strings (USD) */
+  prompt_per_token?: string | null;
+  completion_per_token?: string | null;
+}
+
+export interface ModelArchitecture {
+  modality?: string;
+  input_modalities?: string[];
+  output_modalities?: string[];
 }
 
 export interface ModelInfo {
@@ -189,6 +232,10 @@ export interface ModelInfo {
   supports_tools?: boolean;
   supports_json_mode?: boolean;
   supports_rerank?: boolean;
+  pricing?: ModelPricing;
+  architecture?: ModelArchitecture;
+  supported_parameters?: string[];
+  top_provider?: { slug: string };
 }
 
 export interface ApiKey {

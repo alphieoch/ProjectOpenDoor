@@ -13,3 +13,6 @@ build
 .turbo
 coverage
 *.tsbuildinfo
+tmp/
+*.safetensors
+*.ckpt

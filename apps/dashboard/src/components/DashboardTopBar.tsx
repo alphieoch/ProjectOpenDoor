@@ -16,14 +16,20 @@ const CRUMBS: Record<string, [string, string]> = {
   "/dashboard/pricing": ["Workspace", "Pricing"],
   "/dashboard/deployments": ["Workspace", "Deployments"],
   "/dashboard/billing": ["Workspace", "Billing"],
+  "/dashboard/chat": ["Workspace", "OpenDoor Chat"],
   "/dashboard/playground": ["Workspace", "Playground"],
+  "/dashboard/playground/media": ["Workspace", "Media"],
+  "/dashboard/premium": ["Workspace", "Premium"],
+  "/dashboard/studio": ["Workspace", "OpenDoor Studio"],
   "/dashboard/workflow": ["Workspace", "Workflow"],
   "/dashboard/models": ["Workspace", "Models"],
   "/dashboard/agents": ["Workspace", "Agents"],
   "/dashboard/ai-assistants": ["Workspace", "AI Assistants"],
   "/dashboard/deployments/new": ["Workspace", "New deployment"],
   "/dashboard/team": ["Workspace", "Team"],
+  "/dashboard/support": ["Workspace", "Support"],
   "/dashboard/settings": ["Workspace", "Settings"],
+  "/dashboard/settings/byok": ["Workspace", "Provider keys"],
   "/dashboard/audit-logs": ["Workspace", "Audit Logs"],
   "/dashboard/governance": ["Governance", "Trust Center"],
   "/dashboard/governance/policies": ["Governance", "Policies"],
@@ -43,6 +49,7 @@ export default function DashboardTopBar() {
     ["Workspace", "Dashboard"];
   const [searchOpen, setSearchOpen] = useState(false);
   const docs = docsHref("/");
+  const isStudio = pathname === "/dashboard/studio" || pathname.startsWith("/dashboard/studio/");
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -54,6 +61,8 @@ export default function DashboardTopBar() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
+
+  if (isStudio) return null;
 
   return (
     <div

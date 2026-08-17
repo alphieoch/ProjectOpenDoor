@@ -15,10 +15,10 @@ export class OpenAIProvider implements ProviderAdapter {
   slug = "openai";
   private client: OpenAI;
 
-  constructor() {
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) throw new Error("OPENAI_API_KEY not set");
-    this.client = new OpenAI({ apiKey });
+  constructor(apiKey?: string) {
+    const key = apiKey ?? process.env.OPENAI_API_KEY;
+    if (!key) throw new Error("OPENAI_API_KEY not set");
+    this.client = new OpenAI({ apiKey: key });
   }
 
   async chatCompletion(

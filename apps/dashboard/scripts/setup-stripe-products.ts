@@ -137,6 +137,11 @@ async function main() {
     "OpenDoor Agents",
     "Agents add-on — hosted OpenClaw, Hermes, and NemoClaw. Tokens still bill workspace quota."
   );
+  const webSearchProduct = await getOrCreateProduct(
+    stripe,
+    "OpenDoor Web Search",
+    "Web Search add-on — live Google results via Vertex AI Grounding. Platform GCP keys stay on the server."
+  );
 
   await archiveLegacyMonthlyPrices(stripe, proProduct.id, [4900, 900, 700]);
   await archiveLegacyMonthlyPrices(stripe, teamProduct.id, [2000, 1500]);
@@ -151,6 +156,7 @@ async function main() {
   );
 
   const agentsPrice = await getOrCreateMonthlyPrice(stripe, agentsProduct.id, 2000);
+  const webSearchPrice = await getOrCreateMonthlyPrice(stripe, webSearchProduct.id, 2000);
 
   const topup20 = await getOrCreateOneTimePrice(stripe, creditsProduct.id, 2000);
   const topup30 = await getOrCreateOneTimePrice(stripe, creditsProduct.id, 3000);
@@ -163,6 +169,7 @@ async function main() {
   console.log(`STRIPE_TEAM_PRICE_ID=${teamPrice.id}`);
   console.log(`STRIPE_ENTERPRISE_PRICE_ID=${enterprisePrice.id}`);
   console.log(`STRIPE_AGENTS_ADDON_PRICE_ID=${agentsPrice.id}`);
+  console.log(`STRIPE_WEB_SEARCH_ADDON_PRICE_ID=${webSearchPrice.id}`);
   console.log(`STRIPE_TOPUP_20_PRICE_ID=${topup20.id}`);
   console.log(`STRIPE_TOPUP_30_PRICE_ID=${topup30.id}`);
   console.log(`STRIPE_TOPUP_50_PRICE_ID=${topup50.id}`);

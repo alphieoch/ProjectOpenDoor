@@ -16,6 +16,10 @@ const PROVIDER_LABELS: Record<string, string> = {
   qwen: "Qwen",
   custom: "Custom deployment",
   ollama: "Local GPU (Ollama)",
+  vertex: "Vertex AI (Model Garden)",
+  together: "Together (serverless)",
+  groq: "Groq",
+  xai: "xAI",
 };
 
 const PROVIDER_ORDER = [
@@ -29,6 +33,10 @@ const PROVIDER_ORDER = [
   "qwen",
   "custom",
   "ollama",
+  "vertex",
+  "together",
+  "groq",
+  "xai",
 ] as const;
 
 export async function getStatusData() {

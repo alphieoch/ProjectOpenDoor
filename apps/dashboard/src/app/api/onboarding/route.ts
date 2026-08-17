@@ -3,6 +3,7 @@ import { getDb } from "@/lib/db";
 import { organizations } from "@opendoor/database";
 import { eq } from "drizzle-orm";
 import { requireAuth } from "@/lib/auth";
+import { posthogServerCapture } from "@/lib/posthog-server";
 import {
   isChecklistComplete,
   normalizeOnboardingSegment,
@@ -74,7 +75,9 @@ export async function POST(req: NextRequest) {
     step
   );
 
-  if (isChecklistComplete(segment, nextChecklist)) {
+  const wasComplete = isChecklistComplete(segment, currentChecklist);
+  const nowComplete = isChecklistComplete(segment, nextChecklist);
+  if (nowComplete) {
     nextChecklist.completedAt = new Date().toISOString();
   }
 
@@ -88,6 +91,13 @@ export async function POST(req: NextRequest) {
       updatedAt: new Date(),
     })
     .where(eq(organizations.id, orgId));
+
+  if (!wasComplete && nowComplete) {
+    posthogServerCapture(req, session.userId, "onboarding_completed", {
+      organization_id: orgId,
+      onboarding_segment: segment,
+    });
+  }
 
   return NextResponse.json({ ok: true, checklist: nextChecklist });
 }

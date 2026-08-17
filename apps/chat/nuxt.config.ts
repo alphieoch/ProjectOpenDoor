@@ -46,7 +46,9 @@ export default defineNuxtConfig({
   },
 
   runtimeConfig: {
-    nextjsApiUrl: process.env.NEXTJS_API_URL || 'http://localhost:3000'
+    nextjsApiUrl: process.env.NEXTJS_API_URL || 'http://localhost:3000',
+    opendoorApiKey: process.env.OPENDOOR_API_KEY || '',
+    opendoorBaseUrl: process.env.OPENDOOR_BASE_URL || 'http://localhost:3001'
   },
 
   devServer: {

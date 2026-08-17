@@ -1,11 +1,11 @@
 // @ts-nocheck
-import Redis from "ioredis";
 import { db, organizations, creditTransactions } from "@opendoor/database";
 import { eq } from "drizzle-orm";
 import { splitCreditBuckets, welcomeAllowedForFamily } from "@opendoor/shared";
 import type { BillingPlan, ModelFamily } from "./pricing.js";
+import { createRedis } from "../lib/redis.js";
 
-const redis = new (Redis as any)(process.env.REDIS_URL || "redis://localhost:6379");
+const redis = createRedis();
 const FOUR_HOURS_MS = 4 * 60 * 60 * 1000;
 
 export interface BillingContext {
@@ -48,7 +48,12 @@ export async function getPlanBudgetState(orgId: string, plan: BillingPlan) {
   const limitCents = getPlanBudgetLimitCents(plan);
   const windowStartMs = getCurrentWindowStart();
   const windowKey = getPlanBudgetKey(orgId, windowStartMs);
-  const usedCents = Number.parseInt((await redis.get(windowKey)) || "0", 10) || 0;
+  let usedCents = 0;
+  try {
+    usedCents = Number.parseInt((await redis.get(windowKey)) || "0", 10) || 0;
+  } catch {
+    usedCents = 0;
+  }
 
   return {
     usedCents,
@@ -83,10 +88,14 @@ export async function debitPlanBudget(
     Math.ceil((windowStartMs + FOUR_HOURS_MS - Date.now()) / 1000)
   );
 
-  const pipeline = redis.multi();
-  pipeline.incrby(key, amountCents);
-  pipeline.expire(key, ttlSeconds);
-  await pipeline.exec();
+  try {
+    const pipeline = redis.multi();
+    pipeline.incrby(key, amountCents);
+    pipeline.expire(key, ttlSeconds);
+    await pipeline.exec();
+  } catch {
+    /* redis optional */
+  }
 }
 
 export async function expireWelcomeCredits(org: {

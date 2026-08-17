@@ -30,5 +30,7 @@ export function openaiChatPayload(
   // Map OpenDoor service_tier → OpenAI service_tier where applicable
   if (request.service_tier === "priority") body.service_tier = "priority";
   else if (request.service_tier === "standard") body.service_tier = "default";
+  if (request.enable_thinking != null) body.enable_thinking = request.enable_thinking;
+  if (request.thinking_budget != null) body.thinking_budget = request.thinking_budget;
   return body;
 }

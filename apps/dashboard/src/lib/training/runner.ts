@@ -1,6 +1,8 @@
 /**
- * Training job runner — Together fine-tunes when TOGETHER_API_KEY is set,
- * otherwise simulates a local SFT/DPO job and registers an ft: model billed at base price.
+ * Training job runner — Vertex (GCP project + ADC) is the real trainer.
+ * Together is optional overflow when TOGETHER_API_KEY is set.
+ * Simulated ft: ids are local/dev only and require ALLOW_SIMULATED_TRAINING=1.
+ * Production never mints simulated models.
  */
 import { getDb } from "@/lib/db";
 import {
@@ -8,7 +10,9 @@ import {
   trainingDatasets,
   fineTunedModels,
 } from "@opendoor/database";
+import { allowSimulatedTraining } from "@opendoor/shared";
 import { eq } from "drizzle-orm";
+import { canStartVertexTrainingJob, startVertexTrainingJob } from "./vertex-jobs";
 
 const running = new Set<string>();
 
@@ -71,7 +75,39 @@ async function runTrainingJob(jobId: string) {
     }
   }
 
-  // Local / simulated path — still produces a callable ft: model id billed at base price
+  if (await canStartVertexTrainingJob()) {
+    try {
+      await startVertexTrainingJob(job, dataset);
+      return;
+    } catch (err: any) {
+      await db
+        .update(trainingJobs)
+        .set({
+          status: "failed",
+          statusMessage: err?.message || "Vertex training job failed",
+          finishedAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(eq(trainingJobs.id, jobId));
+      return;
+    }
+  }
+
+  if (!allowSimulatedTraining()) {
+    await db
+      .update(trainingJobs)
+      .set({
+        status: "failed",
+        statusMessage:
+          "No trainer configured. Set GOOGLE_CLOUD_PROJECT / GCP_PROJECT / GCP_PROJECT_ID with Application Default Credentials for Vertex supervised tuning, or TOGETHER_API_KEY for optional Together fine-tunes. Production never mints simulated ft: models (ALLOW_SIMULATED_TRAINING=1 is local/dev only).",
+        finishedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(trainingJobs.id, jobId));
+    return;
+  }
+
+  // Local / simulated path — only when ALLOW_SIMULATED_TRAINING=1 and not production
   await simulateProgress(jobId);
   const outputModelId = `ft:${jobId.replace(/-/g, "").slice(0, 20)}`;
 
@@ -97,9 +133,8 @@ async function runTrainingJob(jobId: string) {
       status: "succeeded",
       progressPercent: 100,
       outputModelId,
-      statusMessage: togetherKey
-        ? "Completed"
-        : "Completed (local trainer). Set TOGETHER_API_KEY for wholesale fine-tunes.",
+      statusMessage:
+        "Completed (simulated). Set GOOGLE_CLOUD_PROJECT + ADC for Vertex, or TOGETHER_API_KEY for optional Together.",
       finishedAt: new Date(),
       result: { outputModelId, billAsBase: true },
       updatedAt: new Date(),

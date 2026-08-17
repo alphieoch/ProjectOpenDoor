@@ -8,11 +8,12 @@ COPY packages ./packages
 COPY apps/dashboard/package.json ./apps/dashboard/package.json
 COPY apps/gateway/package.json ./apps/gateway/package.json
 COPY apps/chat/package.json ./apps/chat/package.json
+COPY apps/sandbox/package.json ./apps/sandbox/package.json
 RUN bun install --frozen-lockfile
 
 FROM base AS builder
 WORKDIR /app
-ARG NEXT_PUBLIC_APP_URL=http://localhost:3000
+ARG NEXT_PUBLIC_APP_URL=http://localhost:3010
 ARG NEXT_PUBLIC_GATEWAY_URL=http://localhost:3001
 ARG NEXT_PUBLIC_WORKOS_REDIRECT_URI=http://localhost:3010/callback
 ARG NEXT_PUBLIC_STRIPE_PRO_PRICE_ID=

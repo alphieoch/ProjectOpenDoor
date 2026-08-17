@@ -1,0 +1,15 @@
+---
+title: "Audio"
+description: "Transcriptions and speech, proxied to OpenAI."
+---
+
+# Audio
+
+```
+POST /v1/audio/transcriptions
+POST /v1/audio/speech
+```
+
+Transcriptions are multipart (`file` + optional `model`, default `whisper-1`). Speech is JSON `{ input, model, voice }`.
+
+Both require `OPENAI_API_KEY` or an org BYOK key for `openai`. Otherwise **503**.

@@ -31,6 +31,9 @@ docker build -t opendoor-gateway ./apps/gateway
 
 # Dashboard
 docker build -t opendoor-dashboard ./apps/dashboard
+
+# Workflow code jail (Cloud Run gVisor in GCP)
+docker build -f apps/sandbox/Dockerfile -t opendoor-sandbox apps/sandbox
 ```
 
 ## Docker Compose (Production)

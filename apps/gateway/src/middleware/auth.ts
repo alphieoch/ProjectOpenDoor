@@ -13,6 +13,7 @@ import {
 import { estimateTokens } from "../utils/streaming.js";
 import { calculateCost } from "../utils/pricing.js";
 import { expireWelcomeCredits, shouldUsePlanBudget, usdToCents } from "../utils/billing.js";
+import { applyModelRouting, normalizeAllowlist } from "../lib/model-aliases.js";
 
 function internalGatewaySecret() {
   return process.env.INTERNAL_API_KEY || process.env.GATEWAY_INTERNAL_KEY || "";
@@ -83,6 +84,7 @@ function inferFamilyFromModel(modelId: string, providerSlug?: string): "closed" 
     provider === "custom" ||
     provider === "ollama" ||
     model.startsWith("custom:") ||
+    model.startsWith("premium:") ||
     model.startsWith("ollama:") ||
     model.includes("llama") ||
     model.includes("deepseek") ||
@@ -106,6 +108,10 @@ export async function authMiddleware(c: Context, next: Next) {
   if (apiKey.length < 20) {
     return c.json({ error: "Invalid API key format" }, 401);
   }
+
+  const houseChat =
+    isInternalGatewayKey(apiKey) && c.req.header("X-OpenDoor-House-Chat") === "1";
+  if (houseChat) c.set("skipBilling", true);
 
   let keyRecord;
 
@@ -167,9 +173,12 @@ export async function authMiddleware(c: Context, next: Next) {
     estimatedCostUsd: 0,
   });
 
-  if (c.req.method === "POST" && c.req.path.endsWith("/chat/completions")) {
+  if (c.req.method === "POST" && c.req.path.endsWith("/chat/completions") && !c.get("skipBilling")) {
     try {
       const body = await c.req.json();
+      await applyModelRouting(body, {
+        allowedModels: normalizeAllowlist(keyRecord.allowedModels),
+      });
       c.set("chatRequestBody", body);
 
       const modelId = body?.model;
@@ -287,6 +296,14 @@ export async function authMiddleware(c: Context, next: Next) {
 
   c.set("apiKey", keyRecord);
   c.set("organization", org);
+  const httpReferer = c.req.header("HTTP-Referer") || c.req.header("Referer");
+  const xTitle = c.req.header("X-Title");
+  if (httpReferer || xTitle) {
+    c.set("appAttribution", {
+      ...(httpReferer ? { httpReferer } : {}),
+      ...(xTitle ? { xTitle } : {}),
+    });
+  }
 
   await next();
 }

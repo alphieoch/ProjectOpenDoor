@@ -1,0 +1,50 @@
+---
+title: "Files"
+description: "OpenAI-shaped file upload, list, retrieve, and delete. Stored on the gateway process, not in the database."
+---
+
+# Files
+
+OpenAI-shaped file objects. Bytes go to GCS when `OPENDOOR_FILES_BUCKET` (or `GCS_FILES_BUCKET` / `GCS_BUCKET`) is set — ADC on Cloud Run, same as Vertex. The JSON index stays local (`OPENDOOR_FILES_DIR` or `tmp/opendoor-files`) and is also written to the bucket as `opendoor-files/index.json`. If no bucket is set, uploads stay on local disk so `bun` dev still works. No database migration.
+
+```
+POST   /v1/files
+GET    /v1/files
+GET    /v1/files/:id
+GET    /v1/files/:id/content
+DELETE /v1/files/:id
+```
+
+Text is extracted from `.txt` and `.md` on upload. PDF bytes are always stored. If `pdftotext` is on `PATH` (or `PDFTOTEXT_PATH`), PDF text is extracted and cached next to the blob. There is no `pdf-parse` dependency.
+
+`GET /v1/files/:id/content` returns `{ id, object: "file.content", filename, text }` when a text layer exists. File metadata includes `has_text`.
+
+## Upload
+
+Multipart form: `file` + `purpose`.
+
+```bash
+curl http://localhost:3001/v1/files \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -F purpose=assistants \
+  -F file=@notes.md
+```
+
+## Response
+
+```json
+{
+  "id": "file-abc123",
+  "object": "file",
+  "filename": "notes.md",
+  "bytes": 240,
+  "purpose": "assistants",
+  "created_at": 1777777777
+}
+```
+
+`GET /v1/files` returns `{ "object": "list", "data": [ ... ] }`. Optional `?purpose=` filter. Delete returns `{ "id", "object": "file", "deleted": true }`.
+
+Files are scoped to the authenticated organization. Cap is 32 MB per upload. Mount is documented in `API_MODULES.md`.
+
+Object keys in the bucket are `opendoor-files/{organizationId}/{fileId}` (override prefix with `OPENDOOR_FILES_PREFIX`). `GET /v1/files/:id/content` still returns extracted text, including PDF when `pdftotext` is present.

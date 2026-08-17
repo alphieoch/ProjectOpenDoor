@@ -1,32 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getMinutesRemaining, getWindowMs, isWindowExpired } from "@opendoor/shared";
 import { getDb } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { aiAssistants, assistantPurchases } from "@opendoor/database";
 import { eq, and, gte, isNull, or } from "drizzle-orm";
-
-const WINDOW_MS: Record<string, number> = {
-  "15min": 15 * 60 * 1000,
-  "hourly": 60 * 60 * 1000,
-  "12hour": 12 * 60 * 60 * 1000,
-  "daily": 24 * 60 * 60 * 1000,
-  "weekly": 7 * 24 * 60 * 60 * 1000,
-};
-
-function getWindowMs(window: string | null): number | null {
-  return window && WINDOW_MS[window] ? WINDOW_MS[window] : null;
-}
-
-function isWindowExpired(startedAt: Date | null, windowMs: number): boolean {
-  if (!startedAt) return true;
-  return Date.now() - new Date(startedAt).getTime() >= windowMs;
-}
-
-function getMinutesRemaining(startedAt: Date | null, windowMs: number): number | null {
-  if (!startedAt) return null;
-  const elapsed = Date.now() - new Date(startedAt).getTime();
-  const remaining = windowMs - elapsed;
-  return remaining > 0 ? Math.ceil(remaining / (60 * 1000)) : 0;
-}
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;

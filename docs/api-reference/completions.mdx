@@ -23,3 +23,5 @@ curl http://localhost:3001/v1/completions \
 ```
 
 `stream: true` returns SSE chunks with `object: "text_completion"`. Prefer `/v1/chat/completions` for new work.
+
+Optional `provider` uses the same ranked chain as chat (`order`, `allow_fallbacks`, `sort`, `only`, `ignore`).

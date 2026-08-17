@@ -3,6 +3,7 @@ import { sealData } from "iron-session";
 import fnv1a from "@sindresorhus/fnv1a";
 import { getWorkOS } from "@workos-inc/authkit-nextjs";
 import { getWorkOSClientId } from "@/lib/workos";
+import { appBaseUrl, workosRedirectUri } from "@/lib/public-urls";
 
 const PROVIDERS = {
   google: "GoogleOAuth",
@@ -10,13 +11,6 @@ const PROVIDERS = {
 } as const;
 
 type ProviderKey = keyof typeof PROVIDERS;
-
-function redirectUri() {
-  return (
-    process.env.NEXT_PUBLIC_WORKOS_REDIRECT_URI ||
-    `${(process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3010").replace(/\/$/, "")}/callback`
-  );
-}
 
 /** Must match @workos-inc/authkit-nextjs `getPKCECookieNameForState`. */
 function pkceCookieName(sealedState: string) {
@@ -34,9 +28,7 @@ export async function GET(
 ) {
   const { provider: raw } = await ctx.params;
   const key = raw.toLowerCase() as ProviderKey;
-  const appOrigin = (
-    process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3010"
-  ).replace(/\/$/, "");
+  const appOrigin = appBaseUrl();
 
   if (!(key in PROVIDERS)) {
     return NextResponse.redirect(`${appOrigin}/login?error=oauth_provider`);
@@ -53,7 +45,7 @@ export async function GET(
   const workos = getWorkOS();
   const clientId = getWorkOSClientId();
   const pkce = await workos.pkce.generate();
-  const callback = redirectUri();
+  const callback = workosRedirectUri();
 
   const statePayload = {
     nonce: crypto.randomUUID(),

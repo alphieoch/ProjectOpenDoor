@@ -123,7 +123,7 @@ const defaultForm = {
   monetization: "free", priceCents: "", sellerEarningsCents: "",
   usageMode: "included" as "included" | "metered",
   cooldownMinutes: "",
-  periodWindow: "" as "15min" | "hourly" | "12hour" | "daily" | "weekly" | "",
+  periodWindow: "" as "15min" | "hourly" | "4hour" | "8hour" | "12hour" | "daily" | "weekly" | "",
   periodMessageLimit: "",
   weeklyMessageLimit: "",
   maxTokensPerSession: "",
@@ -246,6 +246,11 @@ export default function AIAssistantsPage() {
     cutOff: boolean;
     welcomeCreditsUsdCents: number;
   } | null>(null);
+  const [webSearchAddon, setWebSearchAddon] = useState<{
+    active: boolean;
+    amountUsd: number;
+    configured: boolean;
+  } | null>(null);
 
   // Logo upload
   const logoInputRef  = useRef<HTMLInputElement>(null);
@@ -289,6 +294,13 @@ export default function AIAssistantsPage() {
     setLoading(true);
     const data = await fetch("/api/ai-assistants").then((r) => r.json());
     setAssistants(data.assistants ?? []);
+    if (data.webSearchAddon) {
+      setWebSearchAddon({
+        active: Boolean(data.webSearchAddon.active),
+        amountUsd: Number(data.webSearchAddon.amountUsd || 20),
+        configured: Boolean(data.webSearchAddon.configured),
+      });
+    }
     setLoading(false);
   }
 
@@ -563,12 +575,12 @@ export default function AIAssistantsPage() {
       periodWindow: (a.periodWindow ?? "") as any,
       periodMessageLimit: a.periodMessageLimit?.toString() ?? "",
       weeklyMessageLimit: a.weeklyMessageLimit?.toString() ?? "",
-      maxTokensPerSession: a.maxTokensPerSession?.toString() ?? "",
-      maxTokensPerPeriod: a.maxTokensPerPeriod?.toString() ?? "",
-      maxTokensPerMessage: a.maxTokensPerMessage?.toString() ?? "",
-      costCapCents: a.costCapCents ? (a.costCapCents / 100).toString() : "",
-      meteredPricePerMessageCents: a.meteredPricePerMessageCents ? (a.meteredPricePerMessageCents / 100).toString() : "",
-      meteredPricePer1kTokensCents: a.meteredPricePer1kTokensCents ? (a.meteredPricePer1kTokensCents / 100).toString() : "",
+      maxTokensPerSession: (a as any).maxTokensPerSession?.toString() ?? "",
+      maxTokensPerPeriod: (a as any).maxTokensPerPeriod?.toString() ?? "",
+      maxTokensPerMessage: (a as any).maxTokensPerMessage?.toString() ?? "",
+      costCapCents: (a as any).costCapCents ? ((a as any).costCapCents / 100).toString() : "",
+      meteredPricePerMessageCents: (a as any).meteredPricePerMessageCents ? ((a as any).meteredPricePerMessageCents / 100).toString() : "",
+      meteredPricePer1kTokensCents: (a as any).meteredPricePer1kTokensCents ? ((a as any).meteredPricePer1kTokensCents / 100).toString() : "",
       deepThinkingEnabled: a.deepThinkingEnabled ?? false,
       webSearchEnabled: a.webSearchEnabled ?? false,
       researchAgentEnabled: a.researchAgentEnabled ?? false,
@@ -674,7 +686,7 @@ export default function AIAssistantsPage() {
       meteredPricePerMessageCents: form.meteredPricePerMessageCents ? Math.round(parseFloat(form.meteredPricePerMessageCents) * 100) : null,
       meteredPricePer1kTokensCents: form.meteredPricePer1kTokensCents ? Math.round(parseFloat(form.meteredPricePer1kTokensCents) * 100) : null,
       deepThinkingEnabled: form.deepThinkingEnabled,
-      webSearchEnabled: form.webSearchEnabled,
+      webSearchEnabled: webSearchAddon && !webSearchAddon.active ? false : form.webSearchEnabled,
       researchAgentEnabled: form.researchAgentEnabled,
       codeExecutionEnabled: form.codeExecutionEnabled,
       imageGenerationEnabled: form.imageGenerationEnabled,
@@ -1320,6 +1332,8 @@ export default function AIAssistantsPage() {
                                   <option value="">No period limit</option>
                                   <option value="15min">15 minutes</option>
                                   <option value="hourly">1 hour</option>
+                                  <option value="4hour">4 hours</option>
+                                  <option value="8hour">8 hours</option>
                                   <option value="12hour">12 hours</option>
                                   <option value="daily">24 hours</option>
                                   <option value="weekly">7 days</option>
@@ -1431,12 +1445,39 @@ export default function AIAssistantsPage() {
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                             {[
                               { key: "deepThinkingEnabled" as const, label: "Deep thinking", icon: Brain, desc: "Extended reasoning chains" },
-                              { key: "webSearchEnabled" as const, label: "Web search", icon: Search, desc: "Live internet lookup" },
+                              { key: "webSearchEnabled" as const, label: "Web search", icon: Search, desc: "Live Google results via Vertex AI Grounding" },
                               { key: "researchAgentEnabled" as const, label: "Research agent", icon: Microscope, desc: "Spawn sub-agents for research" },
                               { key: "codeExecutionEnabled" as const, label: "Code execution", icon: Code, desc: "Generate & run code" },
                               { key: "imageGenerationEnabled" as const, label: "Image generation", icon: Image, desc: "Create images from prompts" },
                             ].map((feat) => {
                               const enabled = f[feat.key];
+                              const searchLocked = feat.key === "webSearchEnabled" && webSearchAddon && !webSearchAddon.active;
+                              if (searchLocked) {
+                                return (
+                                  <div
+                                    key={feat.key}
+                                    className="flex items-center gap-3 rounded-lg border p-3 text-left"
+                                    style={{ borderColor: "var(--line)" }}
+                                  >
+                                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-gray-400 dark:bg-gray-800">
+                                      <feat.icon className="h-4 w-4" />
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                      <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{feat.label}</p>
+                                      <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                                        Subscribe to the Web Search add-on to turn this on.
+                                      </p>
+                                      <Link
+                                        href="/dashboard/billing"
+                                        className="mt-1 inline-block text-[11px] font-medium underline"
+                                        style={{ color: "var(--ink)" }}
+                                      >
+                                        Upgrade on Billing · ${webSearchAddon.amountUsd}/mo
+                                      </Link>
+                                    </div>
+                                  </div>
+                                );
+                              }
                               return (
                                 <button
                                   key={feat.key}

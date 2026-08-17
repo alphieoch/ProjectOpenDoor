@@ -103,7 +103,10 @@ export function AuthPage() {
 			const data = await res.json().catch(() => ({}));
 			try {
 				if (data.user?.id) {
-					posthog.identify(data.user.id, { email: data.user.email });
+					posthog.identify(data.user.id, {
+						email: data.user.email,
+						...(data.user.orgId ? { org_id: data.user.orgId } : {}),
+					});
 				}
 				posthog.capture('user_logged_in_client', { auth_method: 'password' });
 			} catch {
@@ -135,6 +138,7 @@ export function AuthPage() {
 						email: data.user.email,
 						name: data.user.name,
 						onboarding_segment: segment,
+						...(data.user.orgId ? { org_id: data.user.orgId } : {}),
 					});
 				}
 				posthog.capture('user_signed_up_client', {

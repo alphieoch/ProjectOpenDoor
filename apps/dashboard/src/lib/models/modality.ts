@@ -1,4 +1,4 @@
-export type ModelModality = "chat" | "embedding" | "rerank";
+export type ModelModality = "chat" | "embedding" | "rerank" | "image" | "video";
 
 export function inferModelModality(id: string, label = ""): ModelModality {
   const s = `${id} ${label}`.toLowerCase();
@@ -9,6 +9,10 @@ export function inferModelModality(id: string, label = ""): ModelModality {
   ) {
     return "embedding";
   }
+  if (/imagen|dall-e|gpt-image|flux-|stable-diffusion|gemini-[\w.-]*-image/.test(s)) {
+    return "image";
+  }
+  if (/(^|[\s/_-])veo([\s/_-]|$)|text-to-video/.test(s)) return "video";
   return "chat";
 }
 

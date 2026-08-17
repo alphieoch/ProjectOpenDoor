@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "opendoor"
+version = "0.1.0"
+description = "Python client for the OpenDoor LLM gateway"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "OpenDoor" }]
+dependencies = ["httpx>=0.27"]
+
+[project.urls]
+Homepage = "https://opendoor.ai"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+opendoor = ["py.typed"]

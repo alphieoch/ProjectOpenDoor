@@ -98,3 +98,21 @@ export function captureGatewayEvent(
   if (!ph) return;
   ph.capture({ distinctId, event, properties });
 }
+
+export function captureGatewayException(
+  distinctId: string,
+  error: unknown,
+  extra?: Record<string, unknown>
+): void {
+  const ph = getGatewayPostHog();
+  if (!ph) return;
+  if (error instanceof Error) {
+    ph.captureException(error, extra, distinctId);
+    return;
+  }
+  ph.capture({
+    distinctId,
+    event: "$exception",
+    properties: { $exception_message: String(error), ...extra },
+  });
+}

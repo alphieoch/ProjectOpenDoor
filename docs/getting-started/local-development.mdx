@@ -47,6 +47,16 @@ curl http://localhost:3001/v1/chat/completions \
 
 Or open **Playground** — it creates a Playground key and uses the live catalog.
 
+The TypeScript SDK and CLI talk to the same gateway:
+
+```bash
+export OPENDOOR_API_KEY=YOUR_OPENDOOR_KEY
+export OPENDOOR_BASE_URL=http://localhost:3001
+bun run od -- chat --model YOUR_MODEL_ID --message "Hello"
+```
+
+See [TypeScript SDK](/getting-started/sdk) and [CLI](/getting-started/cli).
+
 ```bash
 curl http://localhost:3001/v1/models \
   -H "Authorization: Bearer YOUR_OPENDOOR_KEY"
@@ -58,9 +68,24 @@ curl http://localhost:3001/v1/models \
 bun run db:studio
 ```
 
+## Studio images
+
+Studio (`/dashboard/studio`) talks only to OpenDoor APIs (`/api/studio/*` → gateway `POST /v1/images/generations`). The browser never calls a local image UI.
+
+If `PRIVATE_IMAGE_GEN_URL` is set, the gateway posts to `{url}/v1/images/generations`. Otherwise it uses OpenAI / Azure keys, then Vertex when ADC is configured. If nothing is configured, Studio is **offline** and generate returns **503** `Studio GPU offline`.
+
+```bash
+curl http://localhost:3001/v1/images/generations \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"prompt":"A red door on a white wall","n":1,"size":"1024x1024","response_format":"b64_json"}'
+```
+
 ## Ports in use
 
 Dashboard is **3010**, gateway **3001**. Docs no longer bind 3002.
+
+Workflow **code_execution** on this machine uses a local `execFile` subprocess unless `CODE_SANDBOX_URL` points at Cloud Run `opendoor-sandbox` (gVisor). Firecracker is not available on macOS. See [Code execution jail](/security/code-execution).
 
 ```bash
 lsof -ti:3010 | xargs kill -9

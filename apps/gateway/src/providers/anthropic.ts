@@ -14,10 +14,10 @@ export class AnthropicProvider implements ProviderAdapter {
   slug = "anthropic";
   private client: Anthropic;
 
-  constructor() {
-    const apiKey = process.env.ANTHROPIC_API_KEY;
-    if (!apiKey) throw new Error("ANTHROPIC_API_KEY not set");
-    this.client = new Anthropic({ apiKey });
+  constructor(apiKey?: string) {
+    const key = apiKey ?? process.env.ANTHROPIC_API_KEY;
+    if (!key) throw new Error("ANTHROPIC_API_KEY not set");
+    this.client = new Anthropic({ apiKey: key });
   }
 
   private toAnthropicMessages(messages: ChatCompletionRequest["messages"]) {

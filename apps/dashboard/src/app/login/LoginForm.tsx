@@ -60,7 +60,10 @@ export default function LoginForm() {
       const data = await res.json().catch(() => ({}));
       try {
         if (data.user?.id) {
-          posthog.identify(data.user.id, { email: data.user.email });
+          posthog.identify(data.user.id, {
+            email: data.user.email,
+            ...(data.user.orgId ? { org_id: data.user.orgId } : {}),
+          });
         }
         posthog.capture("user_logged_in_client", { auth_method: "password" });
       } catch {
@@ -94,6 +97,7 @@ export default function LoginForm() {
           posthog.identify(data.user.id, {
             email: data.user.email,
             name: data.user.name,
+            ...(data.user.orgId ? { org_id: data.user.orgId } : {}),
           });
         }
         posthog.capture("user_signed_up_client", { auth_method: "password" });

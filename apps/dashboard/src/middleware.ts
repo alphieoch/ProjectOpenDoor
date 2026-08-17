@@ -1,9 +1,17 @@
+import { NextResponse, type NextRequest } from "next/server";
 import { authkitMiddleware } from "@workos-inc/authkit-nextjs";
+import { workosRedirectUri } from "@/lib/public-urls";
 
-export default authkitMiddleware({
-  redirectUri:
-    process.env.NEXT_PUBLIC_WORKOS_REDIRECT_URI ||
-    `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3010"}/callback`,
+// WorkOS reads `process.env[name]` dynamically, which Next's Edge compiler
+// does not inline. Reference the keys here so the middleware bundle gets them.
+void process.env.WORKOS_API_KEY;
+void process.env.WORKOS_CLIENT_ID;
+void process.env.WORKOS_COOKIE_PASSWORD;
+void process.env.WORKOS_COOKIE_NAME;
+void process.env.NEXT_PUBLIC_WORKOS_REDIRECT_URI;
+
+const workos = authkitMiddleware({
+  redirectUri: workosRedirectUri(),
   middlewareAuth: {
     enabled: false,
     unauthenticatedPaths: [
@@ -26,6 +34,15 @@ export default authkitMiddleware({
     ],
   },
 });
+
+export default async function middleware(request: NextRequest) {
+  try {
+    return await workos(request);
+  } catch (err) {
+    console.error("WorkOS middleware failed; continuing without session refresh.", err);
+    return NextResponse.next();
+  }
+}
 
 export const config = {
   matcher: [

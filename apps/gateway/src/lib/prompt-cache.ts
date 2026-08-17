@@ -1,9 +1,9 @@
 import { createHash } from "crypto";
-import Redis from "ioredis";
 import type { ChatMessage } from "@opendoor/shared";
 import { flattenMessageText } from "@opendoor/shared";
+import { createRedis } from "./redis.js";
 
-const redis = new (Redis as any)(process.env.REDIS_URL || "redis://localhost:6379");
+const redis = createRedis();
 
 const AFFINITY_TTL_SEC = Number(process.env.PROMPT_CACHE_AFFINITY_TTL_SEC || 3600);
 

@@ -2,6 +2,7 @@
 import type { Context, Next } from "hono";
 import { flattenMessageText, mapMessageText } from "@opendoor/shared";
 import { checkPolicy, redactPrompt, type DataClass } from "../lib/policy-engine.js";
+import { applyModelRouting, normalizeAllowlist } from "../lib/model-aliases.js";
 
 export async function policyMiddleware(c: Context, next: Next) {
   const apiKey = c.get("apiKey");
@@ -17,12 +18,19 @@ export async function policyMiddleware(c: Context, next: Next) {
   }
 
   // Parse body early to get model and check data class header
-  let body: Record<string, any>;
-  try {
-    body = await c.req.json();
-  } catch {
-    return await next();
+  let body: Record<string, any> = c.get("chatRequestBody");
+  if (!body) {
+    try {
+      body = await c.req.json();
+    } catch {
+      return await next();
+    }
   }
+
+  await applyModelRouting(body, {
+    allowedModels: normalizeAllowlist(apiKey.allowedModels),
+  });
+  c.set("chatRequestBody", body);
 
   const modelId = body.model;
   if (!modelId) {

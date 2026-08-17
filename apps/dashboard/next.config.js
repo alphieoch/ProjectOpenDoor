@@ -15,7 +15,13 @@ const nextConfig = {
       },
     ],
   },
-  transpilePackages: ["@opendoor/database", "@opendoor/shared"],
+  transpilePackages: [
+    "@opendoor/database",
+    "@opendoor/shared",
+    "border-beam",
+    "liquid-gooey",
+    "thinking-orbs",
+  ],
   serverExternalPackages: ["postgres", "@duckdb/node-api"],
   typescript: {
     ignoreBuildErrors: true,

@@ -1,4 +1,5 @@
 import { gcpAvailable } from "@/lib/gcp/hf-repo";
+import { hasTogetherPlatformKey, hasVertexPlatform } from "@opendoor/shared";
 
 /** Whether this catalog row can actually complete a playground chat right now. */
 export function isProviderConfigured(slug: string | null | undefined): boolean {
@@ -7,8 +8,14 @@ export function isProviderConfigured(slug: string | null | undefined): boolean {
     case "custom":
     case "local gpu":
       return true;
+    case "vertex":
+      return hasVertexPlatform();
     case "together":
-      return Boolean(process.env.TOGETHER_API_KEY);
+      return hasTogetherPlatformKey();
+    case "groq":
+      return Boolean(process.env.GROQ_API_KEY);
+    case "xai":
+      return Boolean(process.env.XAI_API_KEY);
     case "deepseek":
       return Boolean(process.env.DEEPSEEK_API_KEY);
     case "qwen":
@@ -20,7 +27,9 @@ export function isProviderConfigured(slug: string | null | undefined): boolean {
     case "anthropic":
       return Boolean(process.env.ANTHROPIC_API_KEY);
     case "google":
-      return Boolean(process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY);
+      return Boolean(
+        process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY || hasVertexPlatform()
+      );
     case "cohere":
       return Boolean(process.env.COHERE_API_KEY);
     case "azure-foundry":
@@ -43,7 +52,13 @@ export function isCatalogRowReady(opts: {
   id?: string;
 }): boolean {
   if (opts.mine) return true;
-  if (opts.id?.startsWith("custom:") || opts.id?.startsWith("ollama:")) return true;
+  if (
+    opts.id?.startsWith("custom:") ||
+    opts.id?.startsWith("premium:") ||
+    opts.id?.startsWith("ollama:")
+  ) {
+    return true;
+  }
   if (opts.family === "open_weight" && gcpAvailable()) return true;
   if (opts.source === "ollama") return true;
   return isProviderConfigured(opts.providerSlug);

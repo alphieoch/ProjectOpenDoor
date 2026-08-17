@@ -1,0 +1,34 @@
+# Download a public SD 1.5 checkpoint into gs://opendoor-comfy-models.
+# Called by ./infra/gcp/deploy-comfy.sh when the object is missing.
+# Do not commit weight files to git.
+substitutions:
+  _BUCKET: opendoor-comfy-models
+  _OBJECT: checkpoints/v1-5-pruned-emaonly.safetensors
+  _URL: https://huggingface.co/Comfy-Org/stable-diffusion-v1-5-archive/resolve/main/v1-5-pruned-emaonly.safetensors
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+  machineType: E2_HIGHCPU_8
+  diskSizeGb: 50
+
+timeout: 3600s
+
+steps:
+  - id: download-and-upload
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        set -euo pipefail
+        echo "==> Download ${_URL}"
+        curl -L --fail --retry 8 --retry-delay 15 \
+          -A "Mozilla/5.0 (compatible; OpenDoorComfySync/1.0)" \
+          -o /workspace/v1-5-pruned-emaonly.safetensors \
+          "${_URL}"
+        ls -lh /workspace/v1-5-pruned-emaonly.safetensors
+        test "$$(stat -c%s /workspace/v1-5-pruned-emaonly.safetensors)" -gt 1000000000
+        echo "==> Upload gs://${_BUCKET}/${_OBJECT}"
+        gcloud storage cp /workspace/v1-5-pruned-emaonly.safetensors \
+          "gs://${_BUCKET}/${_OBJECT}"
+        gcloud storage objects describe "gs://${_BUCKET}/${_OBJECT}" --format='value(size,name)'

@@ -8,6 +8,7 @@ COPY packages ./packages
 COPY apps/gateway ./apps/gateway
 COPY apps/dashboard/package.json ./apps/dashboard/package.json
 COPY apps/chat/package.json ./apps/chat/package.json
+COPY apps/sandbox/package.json ./apps/sandbox/package.json
 RUN bun install --frozen-lockfile
 # Build workspace packages the gateway imports at runtime
 RUN cd packages/shared && bun run build \

@@ -1,0 +1,5 @@
+# Mounted at /mnt/comfy-models on opendoor-comfy (GCS FUSE).
+# Weights live in gs://opendoor-comfy-models so scale-to-zero does not drop them.
+opendoor:
+    base_path: /mnt/comfy-models
+    checkpoints: checkpoints

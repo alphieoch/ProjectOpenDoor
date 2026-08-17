@@ -102,7 +102,11 @@ export default function DeploymentDetailPage() {
       <PageHeader
         eyebrow="Dedicated"
         title={deployment.name}
-        description={`Call as custom:${deployment.id}${deployment.fqdn ? ` · ${deployment.fqdn}` : ""}`}
+        description={`Call as custom:${deployment.id}${
+          deployment.fqdn && deployment.sourceType !== "image"
+            ? ` · ${deployment.fqdn}`
+            : ""
+        }`}
       />
 
       <div className="mt-6 grid gap-4 md:grid-cols-2">

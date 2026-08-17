@@ -1,0 +1,20 @@
+---
+title: "Bring your own key"
+description: "Org-scoped provider keys, encrypted at rest."
+---
+
+# Bring your own key
+
+Store a provider API key on the organization. The gateway prefers that key for the matching slug, then platform env keys, then fallbacks (unless `provider.allow_fallbacks` is false or the key is `alwaysUse`).
+
+Dashboard API (session auth). The raw secret is never returned after create.
+
+```
+GET    /api/byok
+POST   /api/byok          { providerSlug, apiKey, label?, alwaysUse? }
+DELETE /api/byok/:id
+```
+
+`providerSlug`: `together`, `openai`, `anthropic`, `google`, `cohere`, `mistral`, `deepseek`, `qwen`, `groq`, `xai`, `azure-foundry`, `cerebras`, `perplexity`.
+
+Requires `API_SECRET_KEY` (AES-256-GCM, same as assistant API connections). Apply `packages/database/migrations/0035_organization_provider_keys.sql`.

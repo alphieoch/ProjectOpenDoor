@@ -23,6 +23,8 @@ The dashboard is the Next.js app on port **3010** (`bun --filter @opendoor/dashb
 | Overview | `requests` (30 days), key count, first enabled catalog model in the snippet |
 | Models | `/api/models/available` — enabled catalog + running deployments + local Ollama tags |
 | Playground | Same catalog; sends to the gateway with a real key |
+| Media | Image / video test page at `/dashboard/playground/media` |
+| Studio | Image UI at `/dashboard/studio` — `/api/studio/*` → gateway `/v1/images/generations` |
 | API keys | `/api/keys` create/list/revoke; model checklist is the live catalog |
 | Usage | `/api/usage` aggregates |
 | Pricing (in-app) | `pricing_rules` + GPU SKUs |
@@ -32,8 +34,11 @@ The dashboard is the Next.js app on port **3010** (`bun --filter @opendoor/dashb
 | AI assistants | `/api/ai-assistants` + catalog `modelId` (required) |
 | Team | Members + invitations |
 | Settings | Org SSO / domain / notification flags |
+| Support | `/dashboard/support` → Linear issue + PostHog `support_ticket_created` |
+| Provider keys | `/dashboard/settings/byok` → `/api/byok` (`organization_provider_keys`, never the raw secret) |
 | Governance | Policies, violations, approvals, compliance, sector packs |
 | Audit logs | `audit_logs` |
+| Workflows | Graph editor. **Run** executes tools (web search, [code execution jail](/security/code-execution), images, files, embeddings). `human_review` pauses a persisted run for Approve / Reject. |
 
 **Try** on a model opens `/dashboard/playground?model=<id>`. Creating a key can store it for the playground and link there.
 

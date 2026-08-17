@@ -285,6 +285,185 @@ export default function ApiKeysPage() {
           </tbody>
         </table>
       </div>
+
+      <ByokSection />
+    </div>
+  );
+}
+
+const BYOK_SLUGS = [
+  "together",
+  "openai",
+  "anthropic",
+  "google",
+  "groq",
+  "xai",
+  "mistral",
+  "deepseek",
+  "qwen",
+  "cohere",
+  "azure-foundry",
+];
+
+function ByokSection() {
+  const [keys, setKeys] = useState<
+    Array<{
+      id: string;
+      providerSlug: string;
+      label: string | null;
+      keyPrefix: string;
+      alwaysUse: boolean;
+      createdAt: string;
+    }>
+  >([]);
+  const [providerSlug, setProviderSlug] = useState("together");
+  const [apiKey, setApiKey] = useState("");
+  const [label, setLabel] = useState("");
+  const [alwaysUse, setAlwaysUse] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function fetchByok() {
+    const res = await fetch("/api/byok");
+    if (res.ok) {
+      const data = await res.json();
+      setKeys(data.keys || []);
+    }
+  }
+
+  useEffect(() => {
+    fetchByok();
+  }, []);
+
+  async function addKey(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+    const res = await fetch("/api/byok", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ providerSlug, apiKey, label: label || undefined, alwaysUse }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setError(data.error || "Failed to store key");
+    } else {
+      setApiKey("");
+      setLabel("");
+      fetchByok();
+    }
+    setLoading(false);
+  }
+
+  async function revoke(id: string) {
+    if (!confirm("Revoke this provider key?")) return;
+    await fetch(`/api/byok/${id}`, { method: "DELETE" });
+    fetchByok();
+  }
+
+  return (
+    <div className="mt-8 card p-6">
+      <h2 className="section-title mb-1">Bring your own key</h2>
+      <p className="mb-4 text-sm" style={{ color: "var(--ink-3)" }}>
+        Encrypted at rest. The gateway uses this key for that provider before the platform env key. The secret is never shown again.
+      </p>
+      {error && (
+        <p className="mb-3 text-sm" style={{ color: "var(--red)" }}>
+          {error}
+        </p>
+      )}
+      <form onSubmit={addKey} className="mb-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
+        <label className="text-sm">
+          <span className="mb-1.5 block font-medium" style={{ color: "var(--ink-2)" }}>
+            Provider
+          </span>
+          <select
+            className="input"
+            value={providerSlug}
+            onChange={(e) => setProviderSlug(e.target.value)}
+          >
+            {BYOK_SLUGS.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="text-sm sm:min-w-[16rem] sm:flex-1">
+          <span className="mb-1.5 block font-medium" style={{ color: "var(--ink-2)" }}>
+            API key
+          </span>
+          <input
+            type="password"
+            className="input w-full"
+            value={apiKey}
+            onChange={(e) => setApiKey(e.target.value)}
+            placeholder="sk-…"
+            required
+          />
+        </label>
+        <label className="text-sm">
+          <span className="mb-1.5 block font-medium" style={{ color: "var(--ink-2)" }}>
+            Label
+          </span>
+          <input
+            type="text"
+            className="input"
+            value={label}
+            onChange={(e) => setLabel(e.target.value)}
+            placeholder="Prod Together"
+          />
+        </label>
+        <label className="flex items-center gap-2 text-sm" style={{ color: "var(--ink-2)" }}>
+          <input
+            type="checkbox"
+            checked={alwaysUse}
+            onChange={(e) => setAlwaysUse(e.target.checked)}
+            className="h-4 w-4 accent-[var(--brand)]"
+          />
+          Always use
+        </label>
+        <button type="submit" disabled={loading} className="btn-primary">
+          {loading ? "Saving…" : "Add key"}
+        </button>
+      </form>
+      <table className="min-w-full">
+        <thead>
+          <tr className="border-b border-[var(--line)]">
+            <th className="table-header-cell">Provider</th>
+            <th className="table-header-cell">Prefix</th>
+            <th className="table-header-cell">Label</th>
+            <th className="table-header-cell">Always</th>
+            <th className="table-header-cell text-right">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {keys.map((k) => (
+            <tr key={k.id} className="table-row">
+              <td className="table-cell font-medium">{k.providerSlug}</td>
+              <td className="table-cell font-mono" style={{ color: "var(--ink-3)" }}>
+                {k.keyPrefix}
+              </td>
+              <td className="table-cell" style={{ color: "var(--ink-3)" }}>
+                {k.label || "—"}
+              </td>
+              <td className="table-cell">{k.alwaysUse ? "Yes" : "No"}</td>
+              <td className="table-cell text-right">
+                <button type="button" onClick={() => revoke(k.id)} className="btn-danger btn-sm">
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </td>
+            </tr>
+          ))}
+          {keys.length === 0 && (
+            <tr>
+              <td colSpan={5} className="px-4 py-8 text-center text-sm" style={{ color: "var(--ink-4)" }}>
+                No provider keys yet.
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </table>
     </div>
   );
 }

@@ -1,0 +1,21 @@
+---
+title: "Generation retrieval"
+description: "Look up a logged chat request by id."
+---
+
+# Generation retrieval
+
+```
+GET /v1/generation/:id
+GET /v1/generations/:id
+GET /v1/generation?id=
+```
+
+Returns the row from `requests` for the authenticated organization: model, provider, tokens, cost, latency, created_at.
+
+Chat completions set `id` (and `x-generation-id`) to this UUID.
+
+```bash
+curl http://localhost:3001/v1/generation/GENERATION_UUID \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```

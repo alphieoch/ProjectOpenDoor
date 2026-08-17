@@ -44,10 +44,14 @@ export async function sendEmail(options: SendEmailOptions): Promise<void> {
   try {
     const poller = await client.beginSend({
       senderAddress: sender,
-      recipientAddress: options.to,
-      subject: options.subject,
-      html: options.html,
-      plainText: options.text || options.html.replace(/<[^>]+>/g, ""),
+      content: {
+        subject: options.subject,
+        html: options.html,
+        plainText: options.text || options.html.replace(/<[^>]+>/g, ""),
+      },
+      recipients: {
+        to: [{ address: options.to }],
+      },
     });
 
     await poller.pollUntilDone();
@@ -59,7 +63,7 @@ export async function sendEmail(options: SendEmailOptions): Promise<void> {
 }
 
 export function buildInviteEmail({
-  inviteeEmail,
+  inviteeEmail: _inviteeEmail,
   orgName,
   invitedByName,
   inviteLink,

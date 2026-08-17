@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
         return jsonAuthSuccess(
           {
             success: true,
-            user: { id: session.userId, email: user.email, name },
+            user: { id: session.userId, email: user.email, name, orgId: session.orgId },
           },
           token,
           "/dashboard/onboarding"
@@ -179,7 +179,7 @@ export async function POST(req: NextRequest) {
 
   const response = NextResponse.json({
     success: true,
-    user: { id: user.id, email: user.email, name: user.name },
+    user: { id: user.id, email: user.email, name: user.name, orgId: org.id },
   });
   response.cookies.set("session", token, sessionCookieOptions());
   return response;

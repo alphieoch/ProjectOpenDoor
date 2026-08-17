@@ -101,6 +101,20 @@ const config: Config = {
         "base-200": "#FFFFFF",
         "base-300": "#E9EBF2",
         "base-content": "#191C20",
+        ink: {
+          DEFAULT: "var(--ink)",
+          2: "var(--ink-2)",
+          3: "var(--ink-3)",
+        },
+        inset: "var(--inset)",
+        hover: "var(--hover)",
+        "hover-2": "var(--hover-2)",
+        canvas: "var(--canvas)",
+        page: "var(--page)",
+        line: {
+          DEFAULT: "var(--line)",
+          strong: "var(--line-strong)",
+        },
       },
       borderRadius: {
         "md-xs": "4px",
@@ -109,12 +123,20 @@ const config: Config = {
         "md-lg": "16px",
         "md-xl": "28px",
         "md-full": "9999px",
+        control: "var(--radius-control)",
+      },
+      maxWidth: {
+        95: "23.75rem",
+      },
+      height: {
+        4.5: "1.125rem",
       },
       boxShadow: {
         "md-1": "0px 1px 2px rgba(0,0,0,0.3), 0px 1px 3px 1px rgba(0,0,0,0.15)",
         "md-2": "0px 1px 2px rgba(0,0,0,0.3), 0px 2px 6px 2px rgba(0,0,0,0.15)",
         "md-3": "0px 4px 8px 3px rgba(0,0,0,0.15), 0px 1px 3px rgba(0,0,0,0.3)",
         "md-4": "0px 6px 10px 4px rgba(0,0,0,0.15), 0px 2px 3px rgba(0,0,0,0.3)",
+        hairline: "var(--shadow-hairline)",
       },
       scale: { 101: "1.01" },
     },

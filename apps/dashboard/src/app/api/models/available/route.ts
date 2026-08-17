@@ -2,10 +2,11 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { models, providers, deployments, pricingRules } from "@opendoor/database";
 import { eq, and } from "drizzle-orm";
-import { requireAuth } from "@/lib/auth";
+import { getSession } from "@/lib/auth";
 import { hasDeviceInventoryConsent } from "@/lib/gpu/consent";
 import { inferModelModality, type ModelModality } from "@/lib/models/modality";
 import { isCatalogRowReady } from "@/lib/models/ready";
+import { shouldAdvertiseServerlessModel } from "@opendoor/shared";
 
 export type ModelLocation = "here" | "cloud";
 
@@ -52,12 +53,15 @@ const STATUS_RANK: Record<string, number> = {
   warming: 2,
   available_on_request: 3,
   coming_soon: 4,
+  unavailable: 5,
 };
 
 const MODALITY_RANK: Record<ModelModality, number> = {
   chat: 0,
   embedding: 1,
   rerank: 2,
+  image: 3,
+  video: 4,
 };
 
 function weekAgo(): Date {
@@ -65,7 +69,8 @@ function weekAgo(): Date {
 }
 
 export async function GET() {
-  const session = await requireAuth();
+  const session = await getSession();
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const orgId = session.orgId as string;
   const db = getDb();
   const result: AvailableModel[] = [];
@@ -80,7 +85,6 @@ export async function GET() {
         providerSlug: providers.slug,
         deploymentStatus: models.deploymentStatus,
         family: models.family,
-        origin: models.origin,
         source: models.source,
         listedAt: models.listedAt,
         createdAt: models.createdAt,
@@ -122,8 +126,12 @@ export async function GET() {
         label,
         provider,
         family: m.family || "closed",
-        status: m.deploymentStatus || "warming",
-        origin: m.origin || "global",
+        status:
+          (m.providerSlug === "together" || m.providerSlug === "vertex") &&
+          !shouldAdvertiseServerlessModel(m.modelId, { providerSlug: m.providerSlug || undefined })
+            ? "unavailable"
+            : m.deploymentStatus || "warming",
+        origin: "global",
         source: m.source || "provider_api",
         location: inferLocation({
           provider,
@@ -156,7 +164,6 @@ export async function GET() {
         id: deployments.id,
         name: deployments.name,
         status: deployments.status,
-        runtimeModel: deployments.runtimeModel,
         target: deployments.target,
       })
       .from(deployments)
@@ -191,28 +198,6 @@ export async function GET() {
         ready: true,
         mine: true,
       });
-      if (d.runtimeModel) {
-        result.push({
-          id: d.runtimeModel,
-          label: `${d.name} (${d.runtimeModel})`,
-          provider: d.target === "local" ? "Local GPU" : "GCP GPU",
-          family: "open_weight",
-          status: "live",
-          origin: "global",
-          source: "ollama",
-          location,
-          listedAt: new Date().toISOString(),
-          isNew: false,
-          pricePer1MInputUsd: null,
-          pricePer1MOutputUsd: null,
-          context: "—",
-          vision: false,
-          tools: false,
-          modality: inferModelModality(d.runtimeModel, d.name),
-          ready: true,
-          mine: true,
-        });
-      }
     }
 
     const mayReadDevice = await hasDeviceInventoryConsent(session);

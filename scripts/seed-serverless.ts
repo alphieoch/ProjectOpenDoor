@@ -309,7 +309,7 @@ async function main() {
       modality = COALESCE(NULLIF(modality, ''), 'chat')
   `);
 
-  console.log("✅ Serverless seed complete. Set TOGETHER_API_KEY to route live traffic.");
+  console.log("✅ Serverless seed complete. Vertex ADC/project routes MaaS ids; TOGETHER_API_KEY is optional overflow.");
   process.exit(0);
 }
 

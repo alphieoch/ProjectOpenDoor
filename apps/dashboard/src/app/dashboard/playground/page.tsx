@@ -503,11 +503,17 @@ function ModelPicker({
 function ParamsPanel({
   temperature, setTemperature, maxTokens, setMaxTokens, topP, setTopP,
   dataClass, setDataClass,
+  providerSort, setProviderSort, allowFallbacks, setAllowFallbacks,
+  providerOrder, setProviderOrder,
 }: {
   temperature: number; setTemperature: (v: number) => void;
   maxTokens: number; setMaxTokens: (v: number) => void;
   topP: number; setTopP: (v: number) => void;
   dataClass: string; setDataClass: (v: string) => void;
+  providerSort: "default" | "price" | "latency" | "throughput";
+  setProviderSort: (v: "default" | "price" | "latency" | "throughput") => void;
+  allowFallbacks: boolean; setAllowFallbacks: (v: boolean) => void;
+  providerOrder: string; setProviderOrder: (v: string) => void;
 }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
@@ -545,6 +551,40 @@ function ParamsPanel({
           </div>
         </div>
       ))}
+      <div>
+        <label style={{ fontSize: 12, color: "var(--ink-3)", fontFamily: "var(--font-mono)", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 500 }}>Provider sort</label>
+        <p style={{ fontSize: 11, color: "var(--ink-4)", margin: "4px 0 8px" }}>OpenRouter-style routing. Sent as <code>provider.sort</code>.</p>
+        <select
+          value={providerSort}
+          onChange={(e) => setProviderSort(e.target.value as "default" | "price" | "latency" | "throughput")}
+          className="input w-full text-sm"
+        >
+          <option value="default">Default</option>
+          <option value="price">Price</option>
+          <option value="latency">Latency</option>
+          <option value="throughput">Throughput</option>
+        </select>
+      </div>
+      <label className="flex cursor-pointer items-center gap-2">
+        <input
+          type="checkbox"
+          checked={allowFallbacks}
+          onChange={(e) => setAllowFallbacks(e.target.checked)}
+          className="h-4 w-4 rounded accent-[var(--brand)]"
+        />
+        <span style={{ fontSize: 13, color: "var(--ink-2)" }}>Allow fallbacks</span>
+      </label>
+      <div>
+        <label style={{ fontSize: 12, color: "var(--ink-3)", fontFamily: "var(--font-mono)", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 500 }}>Provider order</label>
+        <p style={{ fontSize: 11, color: "var(--ink-4)", margin: "4px 0 8px" }}>Optional comma-separated slugs.</p>
+        <input
+          type="text"
+          value={providerOrder}
+          onChange={(e) => setProviderOrder(e.target.value)}
+          placeholder="together, groq"
+          className="input w-full text-sm"
+        />
+      </div>
     </div>
   );
 }
@@ -626,6 +666,9 @@ function PlaygroundPage() {
   const [maxTokens, setMaxTokens] = useState(2048);
   const [topP, setTopP] = useState(0.95);
   const [dataClass, setDataClass] = useState("internal");
+  const [providerSort, setProviderSort] = useState<"default" | "price" | "latency" | "throughput">("default");
+  const [allowFallbacks, setAllowFallbacks] = useState(true);
+  const [providerOrder, setProviderOrder] = useState("");
   const [canvasMode, setCanvasMode] = useState<CanvasMode>("markdown");
   const [copiedCanvas, setCopiedCanvas] = useState(false);
   const [splitPct, setSplitPct] = useState(54);
@@ -1093,6 +1136,13 @@ function PlaygroundPage() {
           max_tokens: maxTokens,
           top_p: topP,
           data_class: dataClass,
+          provider: {
+            allow_fallbacks: allowFallbacks,
+            ...(providerSort !== "default" ? { sort: providerSort } : {}),
+            ...(providerOrder.split(",").map((s) => s.trim()).filter(Boolean).length
+              ? { order: providerOrder.split(",").map((s) => s.trim()).filter(Boolean) }
+              : {}),
+          },
         }),
       });
 
@@ -1201,6 +1251,12 @@ function PlaygroundPage() {
         flexWrap: "wrap", padding: "8px 16px", gap: 8, flexShrink: 0, zIndex: 10,
       }}>
         <div className="od-eyebrow" style={{ marginRight: 4 }}>Playground</div>
+        <Link
+          href="/dashboard/playground/media"
+          style={{ fontSize: 12, color: "var(--ink-3)", textDecoration: "none", marginRight: 4 }}
+        >
+          Media
+        </Link>
         <div style={{ width: 1, height: 20, background: "var(--line)" }} />
 
         {catalogLoading ? (
@@ -1416,7 +1472,10 @@ function PlaygroundPage() {
               <ParamsPanel temperature={temperature} setTemperature={setTemperature}
                 maxTokens={maxTokens} setMaxTokens={setMaxTokens}
                 topP={topP} setTopP={setTopP}
-                dataClass={dataClass} setDataClass={setDataClass} />
+                dataClass={dataClass} setDataClass={setDataClass}
+                providerSort={providerSort} setProviderSort={setProviderSort}
+                allowFallbacks={allowFallbacks} setAllowFallbacks={setAllowFallbacks}
+                providerOrder={providerOrder} setProviderOrder={setProviderOrder} />
             </div>
             <div>
               <div className="od-eyebrow" style={{ marginBottom: 8 }}>Response format</div>
@@ -1651,6 +1710,13 @@ function PlaygroundPage() {
     "temperature": ${temperature},
     "max_tokens": ${maxTokens},
     "top_p": ${topP},
+    "provider": ${JSON.stringify({
+      allow_fallbacks: allowFallbacks,
+      ...(providerSort !== "default" ? { sort: providerSort } : {}),
+      ...(providerOrder.split(",").map((s) => s.trim()).filter(Boolean).length
+        ? { order: providerOrder.split(",").map((s) => s.trim()).filter(Boolean) }
+        : {}),
+    })},
     "messages": [
       {"role": "system", "content": ${JSON.stringify(systemPrompt)}},
       {"role": "user", "content": "Hello"}

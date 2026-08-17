@@ -1,0 +1,81 @@
+---
+title: "TypeScript SDK"
+description: "Call the OpenDoor gateway from Node, Bun, or the browser with @opendoor/sdk."
+showPageTitle: true
+---
+
+`@opendoor/sdk` is a small `fetch`-based client. It reads `OPENDOOR_API_KEY` and `OPENDOOR_BASE_URL` (default `http://localhost:3001`).
+
+## Install
+
+From this monorepo:
+
+```bash
+bun add @opendoor/sdk
+```
+
+The package lives at `packages/sdk` and is exported as `@opendoor/sdk`.
+
+## Usage
+
+```ts
+import { OpenDoor } from "@opendoor/sdk";
+
+const client = new OpenDoor();
+// or: new OpenDoor({ apiKey: "opd_…", baseURL: "http://localhost:3001" })
+
+const chat = await client.chat.completions.create({
+  model: "llama-3.1-8b-instruct",
+  messages: [{ role: "user", content: "Hello" }],
+  provider: {
+    sort: "price",
+    allow_fallbacks: true,
+    order: ["together", "groq"],
+  },
+});
+
+console.log(chat.choices[0]?.message.content);
+```
+
+`provider` is OpenRouter-shaped: `{ order, allow_fallbacks, sort, only, ignore }`. Omit it to use the gateway default.
+
+### Streaming
+
+```ts
+const stream = await client.chat.completions.create({
+  model: "llama-3.1-8b-instruct",
+  messages: [{ role: "user", content: "Hello" }],
+  stream: true,
+});
+
+for await (const chunk of stream) {
+  const token = chunk.choices[0]?.delta?.content;
+  if (token) process.stdout.write(token);
+}
+```
+
+### Other methods
+
+```ts
+await client.catalog.list(); // every /v1 endpoint
+await client.account.get();
+await client.account.balance();
+await client.usage.get({ days: 30 });
+await client.models.list();
+await client.assistants.create({ name: "Bot", modelId: "opendoor/auto" });
+await client.assistants.chat(id, { messages: [{ role: "user", content: "Hi" }] });
+await client.workflows.run(id, { query: "Summarize billing" });
+await client.generations.get("request-uuid");
+await client.images.generate({ model: "gemini-2.5-flash-image", prompt: "a red door" });
+await client.videos.generate({ model: "veo-3.1-fast-generate-001", prompt: "a red cube" });
+await client.audio.transcribe({ model: "whisper-1", file });
+await client.batches.list();
+```
+
+The same key covers assistants, workflows, training, deployments, agents, BYOK, policies, files, and premium rentals. See [Platform API](/api-reference/platform).
+
+## Related
+
+- [CLI](/getting-started/cli)
+- [Chat completions](/api-reference/chat-completions)
+- [Playground](/how-it-works/playground)

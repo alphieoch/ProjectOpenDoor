@@ -1,0 +1,70 @@
+---
+title: "Assistants"
+description: "Create an assistant and run it against the calling API key’s usage."
+showPageTitle: true
+---
+
+# Assistants
+
+Assistants are first-class API objects. Create one, then call `POST /v1/assistants/:id/chat`. That run uses the assistant’s `modelId` and `systemPrompt`, optional live web search, and **debits the Bearer key** the same way `POST /v1/chat/completions` does.
+
+```
+GET    /v1/assistants
+POST   /v1/assistants
+GET    /v1/assistants/:id
+PATCH  /v1/assistants/:id
+DELETE /v1/assistants/:id
+POST   /v1/assistants/:id/chat
+```
+
+## Create
+
+```bash
+curl http://localhost:3001/v1/assistants \
+  -H "Authorization: Bearer $OPENDOOR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Docs bot",
+    "modelId": "opendoor/auto",
+    "systemPrompt": "Answer from the OpenDoor docs. Be short.",
+    "webSearchEnabled": false
+  }'
+```
+
+`webSearchEnabled: true` requires the Web Search add-on (402 otherwise).
+
+## Run (usage-billed)
+
+```bash
+curl http://localhost:3001/v1/assistants/$ASSISTANT_ID/chat \
+  -H "Authorization: Bearer $OPENDOOR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "messages": [{"role": "user", "content": "What is an API key spend cap?"}],
+    "tools": [],
+    "temperature": 0.2
+  }'
+```
+
+The response is an OpenAI-shaped chat completion plus `assistant_id` and `assistant_slug`. Tokens and cost land on `GET /v1/usage` and `GET /v1/requests` for this org.
+
+You can still pass `tools` / `tool_choice` / `response_format` — they go to the same provider path as chat completions.
+
+## SDK
+
+```ts
+const a = await client.assistants.create({
+  name: "Docs bot",
+  modelId: "opendoor/auto",
+  systemPrompt: "Be brief.",
+});
+const out = await client.assistants.chat(a.id, {
+  messages: [{ role: "user", content: "Hello" }],
+});
+```
+
+## Related
+
+- [Platform API](/api-reference/platform)
+- [Usage](/api-reference/usage)
+- [Chat completions](/api-reference/chat-completions)

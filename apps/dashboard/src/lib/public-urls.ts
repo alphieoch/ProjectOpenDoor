@@ -2,6 +2,18 @@ export function appBaseUrl() {
   return (process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3010").replace(/\/$/, "");
 }
 
+/** AuthKit / Google / GitHub OAuth callback. Must be allowlisted in WorkOS. */
+export function workosRedirectUri() {
+  return (
+    process.env.NEXT_PUBLIC_WORKOS_REDIRECT_URI || `${appBaseUrl()}/callback`
+  );
+}
+
+/** Standalone SSO callback. Must be allowlisted in WorkOS separately from AuthKit. */
+export function workosSsoCallbackUri() {
+  return `${appBaseUrl()}/api/auth/sso/callback`;
+}
+
 export function gatewayBaseUrl() {
   const raw = process.env.NEXT_PUBLIC_GATEWAY_URL || "http://localhost:3001";
   return raw.replace(/\/$/, "");

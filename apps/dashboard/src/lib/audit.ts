@@ -43,7 +43,11 @@ export type AuditAction =
   | "agent.updated"
   | "agent.started"
   | "agent.stopped"
-  | "agent.deleted";
+  | "agent.deleted"
+  | "byok.created"
+  | "byok.revoked"
+  | "premium.rental.created"
+  | "premium.rental.stopped";
 
 export interface AuditLogInput {
   organizationId: string;

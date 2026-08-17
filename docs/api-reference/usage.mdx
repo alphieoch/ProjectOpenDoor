@@ -1,0 +1,52 @@
+---
+title: "Usage"
+description: "Read the org balance, daily usage, rate limits, and per-request log for the calling API key."
+showPageTitle: true
+---
+
+# Usage
+
+All of these are scoped to the organization on the Bearer key. Builders use them to meter their own apps.
+
+```
+GET /v1/account
+GET /v1/account/balance
+GET /v1/usage?days=30
+GET /v1/usage/rate-limits
+GET /v1/requests?limit=50&status=success&q=llama
+GET /v1/requests/:id
+```
+
+`GET /v1/generation/:id` is the OpenRouter-shaped alias for a single logged request.
+
+## Balance
+
+```json
+{
+  "object": "balance",
+  "credits_usd_cents": 2400,
+  "paid_credits_usd_cents": 1900,
+  "welcome_credits_usd_cents": 500,
+  "spendable_open_weight_usd_cents": 2400,
+  "spendable_closed_usd_cents": 1900,
+  "key_spend_used_usd_cents": 120,
+  "key_spend_limit_usd_cents": 5000
+}
+```
+
+Welcome credit is open-weight only. Closed models need prepaid or a paid plan stipend.
+
+## SDK
+
+```ts
+await client.account.balance();
+await client.usage.get({ days: 7 });
+await client.usage.rateLimits();
+await client.requests.list({ limit: 20, status: "success" });
+```
+
+## Related
+
+- [Platform API](/api-reference/platform)
+- [Spend caps](/billing/spend-caps)
+- [API keys](/how-it-works/api-keys)

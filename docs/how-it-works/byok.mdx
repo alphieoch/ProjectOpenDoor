@@ -1,0 +1,12 @@
+---
+title: "Bring your own key"
+description: "Org-scoped provider keys used by the gateway before platform env keys."
+---
+
+# Bring your own key
+
+Add a provider secret in **Dashboard → API Keys**. It is encrypted with `API_SECRET_KEY` (AES-256-GCM) and never returned after create.
+
+The gateway prefers that key for the matching slug, then the platform env key, then fallbacks — unless `provider.allow_fallbacks` is false or the key is marked always-use.
+
+See [BYOK API](/api-reference/byok).

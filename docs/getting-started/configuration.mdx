@@ -19,6 +19,13 @@ The gateway reads configuration from environment variables. Key settings:
 | `AZURE_AI_FOUNDRY_ENDPOINT` | Azure OpenAI endpoint | — |
 | `AZURE_AI_FOUNDRY_KEY` | Azure OpenAI API key | — |
 | `AZURE_REGION` | Azure region | `uksouth` |
+| `OPENDOOR_API_KEY` | SDK / CLI bearer key | — |
+| `OPENDOOR_BASE_URL` | SDK / CLI gateway origin | `http://localhost:3001` |
+| `OPENDOOR_FILES_BUCKET` | GCS bucket for `/v1/files` (ADC). Unset = local disk | — |
+| `OPENDOOR_FILES_DIR` | Local file index / fallback directory | `tmp/opendoor-files` |
+| `PRIVATE_IMAGE_GEN_URL` | Optional OpenAI-compatible image server (`POST {base}/v1/images/generations`) | unset |
+| `PRIVATE_IMAGE_GEN_KIND` | `openai` (default when URL is set). Do not set `comfy`. | `openai` |
+| `PRIVATE_IMAGE_GEN_ALLOW_FALLBACK` | `1` = continue to OpenAI/Azure/Vertex if the private URL is down | unset |
 
 ## Provider Configuration
 
@@ -31,9 +38,29 @@ AZURE_INFERENCE_ENDPOINT=https://your-ai-services.cognitiveservices.azure.com/
 AZURE_INFERENCE_KEY=your-inference-key
 ```
 
+### Vertex AI Model Garden (primary serverless)
+
+Same ADC / project as web search. No Together key required.
+
+```bash
+GOOGLE_CLOUD_PROJECT=project-800192c2-3ecc-4889-8f7
+# or GCP_PROJECT / GCP_PROJECT_ID
+# gcloud auth application-default login
+# gcloud auth application-default set-quota-project project-800192c2-3ecc-4889-8f7
+# VERTEX_API_KEY=   # optional instead of ADC
+# VERTEX_IMAGE_LOCATION=global
+# VERTEX_IMAGEN_LOCATION=us-central1
+# VERTEX_VEO_LOCATION=us-central1
+# VERTEX_IMAGE_MODEL=gemini-2.5-flash-image
+# VERTEX_VEO_MODEL=veo-3.1-fast-generate-001
+```
+
 ### Optional Fallback Providers
 
 ```bash
+# Together overflow (legacy llama-3.1 / qwen2.5 / deepseek-v3 ids)
+TOGETHER_API_KEY=...
+
 # OpenAI
 OPENAI_API_KEY=sk-...
 
@@ -61,6 +88,20 @@ NEXT_PUBLIC_GATEWAY_URL=http://localhost:3001
 
 # App URL
 NEXT_PUBLIC_APP_URL=http://localhost:3000
+
+# Workflow code_execution jail (unset = local subprocess fallback)
+# CODE_SANDBOX_URL=https://opendoor-sandbox-xxxxx.run.app
+# CODE_SANDBOX_TOKEN=
+# FIRECRACKER_SOCKET=   # Linux only; ignored on macOS
+
+# PostHog (ProjectOpenDoor — project 407244)
+# NEXT_PUBLIC_POSTHOG_KEY=
+# POSTHOG_API_KEY=
+# NEXT_PUBLIC_POSTHOG_PROJECT_ID=407244
+
+# Linear support inbox
+# LINEAR_API_KEY=
+# LINEAR_SUPPORT_TEAM_ID=
 ```
 
 ## Full `.env` Example

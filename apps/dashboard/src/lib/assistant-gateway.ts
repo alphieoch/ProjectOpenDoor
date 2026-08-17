@@ -24,6 +24,7 @@ export function inferAssistantFamily(
   const model = (modelId || "").toLowerCase();
   if (
     model.startsWith("custom:") ||
+    model.startsWith("premium:") ||
     model.startsWith("ollama:") ||
     model.includes("llama") ||
     model.includes("deepseek") ||

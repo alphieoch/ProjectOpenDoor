@@ -14,8 +14,8 @@ export class DeepSeekProvider implements ProviderAdapter {
   private baseUrl = "https://api.deepseek.com/v1";
   private apiKey: string | null;
 
-  constructor() {
-    this.apiKey = process.env.DEEPSEEK_API_KEY || null;
+  constructor(apiKey?: string) {
+    this.apiKey = apiKey ?? process.env.DEEPSEEK_API_KEY ?? null;
   }
 
   /** DeepSeek retired `deepseek-coder`; the chat model covers code + general. */

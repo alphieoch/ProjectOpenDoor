@@ -5,9 +5,10 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, Key, BarChart3, CreditCard, Play, Settings,
   ClipboardList, Users, LogOut, Zap, Server, Calculator,
-  ShieldCheck, Gavel, AlertTriangle, FileCheck, BookOpen,
+  ShieldCheck, Gavel, AlertTriangle, FileCheck, BookOpen, LifeBuoy,
+  Image as ImageIcon,
   Building2, UserCog, Coins, ShieldAlert, GitBranch, List, FlaskConical,
-  ScrollText, Cpu,
+  ScrollText, Cpu, Gem, Aperture, MessageSquare,
 } from "lucide-react";
 import posthog from "posthog-js";
 
@@ -21,10 +22,15 @@ const navItems = [
   { href: "/dashboard/devices", label: "Devices", icon: Cpu },
   { href: "/dashboard/training", label: "Training", icon: FlaskConical },
   { href: "/dashboard/billing", label: "Billing", icon: CreditCard },
+  { href: "/dashboard/chat", label: "Chat", icon: MessageSquare },
   { href: "/dashboard/playground", label: "Playground", icon: Play },
+  { href: "/dashboard/premium", label: "Premium", icon: Gem },
+  { href: "/dashboard/studio", label: "Studio", icon: Aperture },
+  { href: "/dashboard/playground/media", label: "Media", icon: ImageIcon },
   { href: "/dashboard/workflow", label: "Workflow", icon: GitBranch },
   { href: "/dashboard/models", label: "Models", icon: List },
   { href: "/dashboard/team", label: "Team", icon: Users },
+  { href: "/dashboard/support", label: "Support", icon: LifeBuoy },
   { href: "/dashboard/settings", label: "Settings", icon: Settings },
   { href: "/dashboard/audit-logs", label: "Audit Logs", icon: ClipboardList },
 ];
@@ -60,7 +66,14 @@ export default function Sidebar({ isSiteAdmin = false }: { isSiteAdmin?: boolean
 
   function isActive(href: string) {
     if (href === "/dashboard" || href === "/admin") return pathname === href;
-    return pathname?.startsWith(href);
+    const matches = pathname === href || pathname?.startsWith(`${href}/`);
+    if (!matches) return false;
+    return !navItems.some(
+      (s) =>
+        s.href !== href &&
+        s.href.startsWith(`${href}/`) &&
+        (pathname === s.href || pathname?.startsWith(`${s.href}/`)),
+    );
   }
 
   const NavItem = ({ item, isAdmin = false }: { item: { href: string; label: string; icon: React.ComponentType<{ style?: React.CSSProperties }> }; isAdmin?: boolean }) => {

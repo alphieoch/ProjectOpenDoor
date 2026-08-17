@@ -7,7 +7,12 @@ import { Key, List, Search } from "lucide-react";
 const PAGES = [
   { href: "/dashboard", label: "Overview" },
   { href: "/dashboard/models", label: "Models" },
+  { href: "/dashboard/chat", label: "OpenDoor Chat" },
   { href: "/dashboard/playground", label: "Playground" },
+  { href: "/dashboard/playground/media", label: "Media playground" },
+  { href: "/dashboard/premium", label: "Premium" },
+  { href: "/dashboard/studio", label: "OpenDoor Studio" },
+  { href: "/dashboard/studio", label: "Creative AI Studio (Krea + Runway)" },
   { href: "/dashboard/api-keys", label: "API Keys" },
   { href: "/dashboard/usage", label: "Usage" },
   { href: "/dashboard/logs", label: "Request logs" },
@@ -21,7 +26,9 @@ const PAGES = [
   { href: "/dashboard/agents", label: "Agents" },
   { href: "/dashboard/ai-assistants", label: "AI Assistants" },
   { href: "/dashboard/team", label: "Team" },
+  { href: "/dashboard/support", label: "Support" },
   { href: "/dashboard/settings", label: "Settings" },
+  { href: "/dashboard/settings/byok", label: "Provider keys (BYOK)" },
   { href: "/dashboard/audit-logs", label: "Audit logs" },
   { href: "/dashboard/governance", label: "Trust Center" },
   { href: "/dashboard/governance/policies", label: "Policies" },
@@ -59,12 +66,19 @@ export function CommandPalette({
   const hits = useMemo(() => {
     const needle = q.trim().toLowerCase();
     const pages: Hit[] = PAGES.map((p) => ({ ...p, icon: "page" }));
-    const modelHits: Hit[] = models.map((m) => ({
-      href: `/dashboard/playground?model=${encodeURIComponent(m.id)}`,
-      label: m.label,
-      hint: `${m.id} · ${m.provider}`,
-      icon: "model",
-    }));
+    const modelHits: Hit[] = models.map((m) => {
+      const media = /imagen|dall-e|gpt-image|gemini-[\w.-]*-image|(^|[\s/_-])veo([\s/_-]|$)/i.test(
+        `${m.id} ${m.label}`,
+      );
+      return {
+        href: media
+          ? "/dashboard/playground/media"
+          : `/dashboard/playground?model=${encodeURIComponent(m.id)}`,
+        label: m.label,
+        hint: `${m.id} · ${m.provider}`,
+        icon: "model" as const,
+      };
+    });
     const keyHits: Hit[] = keys.map((k) => ({
       href: "/dashboard/api-keys",
       label: k.name,

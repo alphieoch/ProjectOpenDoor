@@ -1,5 +1,4 @@
 import type { Context, Next } from "hono";
-import Redis from "ioredis";
 import { getPlan } from "@opendoor/shared";
 import { resolveRateLimits } from "../lib/spend-tiers.js";
 import {
@@ -8,35 +7,23 @@ import {
   trackInflight,
   type ServiceTier,
 } from "../lib/service-tier.js";
+import { createRedis } from "../lib/redis.js";
 
 /** In-memory fallback when Memorystore is unreachable (e.g. Firebase project without VPC). */
 const memMinute = new Map<string, { n: number; exp: number }>();
 const memTokens = new Map<string, { n: number; exp: number }>();
 
-let redis: any = null;
+const redis = createRedis();
 let redisOk = false;
-try {
-  redis = new (Redis as any)(process.env.REDIS_URL || "redis://127.0.0.1:6379", {
-    maxRetriesPerRequest: 1,
-    enableOfflineQueue: false,
-    connectTimeout: 2000,
-    lazyConnect: true,
-  });
-  redis.on("error", () => {
-    redisOk = false;
-  });
-  void redis
-    .connect()
-    .then(() => {
-      redisOk = true;
-    })
-    .catch(() => {
-      redisOk = false;
-      console.warn("Redis unavailable — using in-memory rate limits");
-    });
-} catch {
+redis.on("ready", () => {
+  redisOk = true;
+});
+redis.on("error", () => {
   redisOk = false;
-}
+});
+setTimeout(() => {
+  if (!redisOk) console.warn("Redis unavailable — using in-memory rate limits");
+}, 2500);
 
 async function incrMinute(key: string): Promise<number> {
   if (redisOk && redis) {

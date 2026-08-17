@@ -1,3 +1,4 @@
+import { existsSync } from "fs";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import * as schema from "@opendoor/database";
@@ -8,9 +9,17 @@ const g = global as typeof global & {
   _db?: ReturnType<typeof drizzle<typeof schema>>;
 };
 
-function createClient(poolMax: number) {
+function cloudSqlInstanceIfReachable() {
   const instance =
     process.env.INSTANCE_CONNECTION_NAME || process.env.CLOUDSQL_CONNECTION_NAME;
+  if (!instance) return null;
+  const dir = `/cloudsql/${instance}`;
+  if (existsSync(dir) || existsSync(`${dir}/.s.PGSQL.5432`)) return instance;
+  return null;
+}
+
+function createClient(poolMax: number) {
+  const instance = cloudSqlInstanceIfReachable();
 
   if (instance) {
     let password = process.env.DB_PASSWORD || "";

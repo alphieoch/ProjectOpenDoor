@@ -1,11 +1,11 @@
 ---
 title: "Batches"
-description: "Async chat jobs, billed at 50% of the live token rate (same idea as Fireworks batch)."
+description: "24h object-storage chat jobs, billed at 50% of the live token rate (same idea as Fireworks batch)."
 ---
 
 # Batches
 
-Async chat jobs, billed at **50%** of the live token rate (same idea as Fireworks batch).
+Async chat jobs, billed at **50%** of the live token rate (same idea as Fireworks batch). Input and output are JSONL files in GCS when `OPENDOOR_FILES_BUCKET` is set (local disk otherwise). `POST /v1/batches` enqueues the job and returns **202** — it does not run completions in the HTTP request.
 
 ```
 POST /v1/batches
@@ -13,13 +13,46 @@ GET  /v1/batches
 GET  /v1/batches/:id
 ```
 
-v1 cap: **100** requests per job. Processing starts immediately after create (HTTP 202).
+`completion_window` defaults to **`24h`** (OpenAI-shaped; that is the only accepted value). Jobs expire at `created_at + 24h`. A gateway background queue processes lines with concurrency 8. Storage-backed jobs (`input_file_id`) are capped at **10 000** lines; inline `requests[]` stays at **1000** (upload JSONL for the higher cap).
+
+Apply `packages/database/migrations/0038_batch_object_storage.sql` (and `0025_fireworks_api_surface.sql` if the table is new).
+
+## Create from a file
+
+Upload JSONL with `POST /v1/files` (`purpose=batch`), then pass `input_file_id`.
+
+```bash
+curl http://localhost:3001/v1/files \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -F purpose=batch \
+  -F file=@batch-input.jsonl
+
+curl http://localhost:3001/v1/batches \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "input_file_id": "file-abc123",
+    "endpoint": "/v1/chat/completions",
+    "completion_window": "24h"
+  }'
+```
+
+Each input line:
+
+```json
+{"custom_id":"row-1","method":"POST","url":"/v1/chat/completions","body":{"model":"llama-3.1-8b-instruct","messages":[{"role":"user","content":"Say hi"}]}}
+```
+
+## Create from `requests[]`
+
+Still accepted. The gateway writes those rows to a JSONL file, then enqueues.
 
 ```bash
 curl http://localhost:3001/v1/batches \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
+    "completion_window": "24h",
     "requests": [
       {
         "custom_id": "row-1",
@@ -32,6 +65,25 @@ curl http://localhost:3001/v1/batches \
   }'
 ```
 
-Poll `GET /v1/batches/:id` until `status` is `completed` or `failed`. `output[]` has `{ custom_id, response }` or `{ custom_id, error }`.
+## Response
 
-Apply `packages/database/migrations/0025_fireworks_api_surface.sql` before using this route.
+```json
+{
+  "id": "…",
+  "object": "batch",
+  "endpoint": "/v1/chat/completions",
+  "status": "pending",
+  "model": "llama-3.1-8b-instruct",
+  "input_file_id": "file-…",
+  "output_file_id": null,
+  "completion_window": "24h",
+  "request_counts": { "total": 1, "completed": 0, "failed": 0 },
+  "output": null,
+  "error": null,
+  "created_at": 1777777777,
+  "expires_at": 1777864177,
+  "completed_at": null
+}
+```
+
+Poll `GET /v1/batches/:id` until `status` is `completed`, `failed`, or `expired`. When done, `output_file_id` is set — download with `GET /v1/files/:id/content`. Each output line is `{ id, custom_id, response, error }` (`response` is `{ status_code, body }` or `null`).

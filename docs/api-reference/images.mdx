@@ -1,0 +1,38 @@
+---
+title: "Images"
+description: "OpenAI-shaped image generation. Studio and the gateway share one path."
+---
+
+# Images
+
+```
+POST /v1/images/generations
+GET  /v1/images/models
+```
+
+Body: `{ "model", "prompt", "n", "size", "aspect_ratio", "quality", "response_format", "image?", "mask?", "mode?" }`.
+
+Response: `{ "created", "data": [{ "b64_json" }] }` or `{ "url" }`.
+
+## Order
+
+1. If `PRIVATE_IMAGE_GEN_URL` is set (or a dedicated image deployment FQDN exists), `POST {base}/v1/images/generations` on that OpenAI-compatible worker.
+2. Else OpenAI (platform key or org BYOK) or Azure Foundry when those keys exist.
+3. Else Vertex image models when ADC / project env is already configured (not branded in Studio).
+4. Else **503** `{ "error": "Studio GPU offline" }`.
+
+Studio UI: **Dashboard → Studio** (`/dashboard/studio`). The browser only calls `/api/studio/*`, which proxies to this endpoint.
+
+```bash
+curl http://localhost:3001/v1/images/generations \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "prompt": "A red door on a white wall",
+    "n": 1,
+    "size": "1024x1024",
+    "response_format": "b64_json"
+  }'
+```
+
+`PRIVATE_IMAGE_GEN_URL` is optional and is **not** `http://127.0.0.1:8188`. Default kind is `openai`.

@@ -1,0 +1,64 @@
+---
+title: "Routing"
+description: "OpenRouter-compatible model suffixes and the OpenDoor auto-router."
+---
+
+# Routing
+
+`POST /v1/chat/completions` (and `POST /v1/completions`) accept OpenRouter-style suffixes on `model`, plus a virtual auto id. Suffixes are stripped before provider resolve. Caller `provider.order` and `provider.allow_fallbacks` are never overwritten.
+
+## Suffixes
+
+| Suffix | Effect |
+|--------|--------|
+| `:nitro` | Prefer throughput (`provider.sort = "throughput"`) unless you already set `sort` |
+| `:floor` | Prefer price (`provider.sort = "price"`) |
+| `:free` | If the catalog has $0 input+output rows for that model, restrict `provider.only` to those slugs. Otherwise `sort=price` and ignore `openai`, `anthropic`, `azure-foundry`, `google` |
+
+Ollama tags such as `llama3.2:3b` are unchanged — only `:nitro`, `:floor`, and `:free` are stripped.
+
+## Auto router
+
+`opendoor/auto`, `openrouter/auto`, and `auto` pick a live serverless or open-weight catalog model, preferring the cheapest healthy option. If the catalog query fails, the gateway falls back to `gemma-4-26b-a4b-it`, then `deepseek-v3.2`, then `llama3.2:3b`.
+
+Restricted API keys are checked against the **resolved** id: `llama-3.1-8b-instruct:nitro` matches an allowlist of `llama-3.1-8b-instruct`. If the key has an allowlist, `opendoor/auto` picks the cheapest/first live model from that list instead of 403ing because `auto` is not listed.
+
+You can still pass `provider` (order, allow_fallbacks, only, ignore). Suffix sort merges in only when `sort` is unset.
+
+## Examples
+
+```bash
+curl http://localhost:3001/v1/chat/completions \
+  -H "Authorization: Bearer $OPENDOOR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"model":"llama-3.1-8b-instruct:nitro","messages":[{"role":"user","content":"hi"}]}'
+```
+
+```bash
+curl http://localhost:3001/v1/chat/completions \
+  -H "Authorization: Bearer $OPENDOOR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"model":"llama-3.1-8b-instruct:floor","messages":[{"role":"user","content":"hi"}]}'
+```
+
+```bash
+curl http://localhost:3001/v1/chat/completions \
+  -H "Authorization: Bearer $OPENDOOR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"model":"opendoor/auto","messages":[{"role":"user","content":"hi"}]}'
+```
+
+Optional app attribution (stored on request `metadata` when present): `HTTP-Referer` and `X-Title`.
+
+## Transforms
+
+`POST /v1/chat/completions` accepts OpenRouter-compatible `transforms`. The only implemented value is `middle-out`.
+
+When `transforms` includes `"middle-out"` and the prompt is longer than the catalog `context_window` minus `max_tokens`, the gateway keeps system messages and the first/last slices of the rest (and clips oversized individual messages). It is opt-in: omitted `transforms` leaves the prompt unchanged. Models without a catalog context window are not truncated.
+
+```bash
+curl http://localhost:3001/v1/chat/completions \
+  -H "Authorization: Bearer $OPENDOOR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"model":"llama-3.1-8b-instruct","transforms":["middle-out"],"messages":[{"role":"user","content":"hi"}]}'
+```

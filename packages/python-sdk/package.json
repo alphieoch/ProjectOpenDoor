@@ -1,0 +1,6 @@
+{
+  "name": "@opendoor/python-sdk",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Python SDK (see pyproject.toml). Not published to npm."
+}

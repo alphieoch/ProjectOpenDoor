@@ -13,12 +13,15 @@ const HF_BY_MODEL: Record<string, string> = {
   "qwen-plus": "Qwen/Qwen2.5-7B-Instruct",
   "qwen-turbo": "Qwen/Qwen2.5-3B-Instruct",
   "qwen-coder-plus": "Qwen/Qwen2.5-Coder-7B-Instruct",
+  "qwen3.8-27b": "Qwen/Qwen3.8-27B",
+  "qwen3.8-27b-fp8": "Qwen/Qwen3.8-27B-FP8",
+  "qwen3.8-27b-awq": "barrydeen/Qwen3.8-27B-AWQ-4bit",
   "mistral-7b-instruct": "mistralai/Mistral-7B-Instruct-v0.3",
   "mistral:7b": "mistralai/Mistral-7B-Instruct-v0.3",
   "mistral-small-latest": "mistralai/Mistral-7B-Instruct-v0.3",
 };
 
-const CLOSED = /^(gpt-|claude-|gemini-|command-r)/i;
+const CLOSED = /^(gpt-|claude-|gemini-|command-r|qwen3\.8-max)/i;
 
 export function isClosedApiModel(modelId: string): boolean {
   return CLOSED.test(modelId);

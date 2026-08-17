@@ -1,6 +1,6 @@
 {
   "hosting": {
-    "site": "opendoor-f39a4",
+    "site": "opendoor-gcp",
     "public": "infra/gcp/hosting-public",
     "ignore": [
       "firebase.json",

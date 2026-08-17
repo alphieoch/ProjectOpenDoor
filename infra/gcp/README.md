@@ -7,6 +7,8 @@ All production traffic is Google-managed:
 | Edge | Firebase Hosting site `opendoor-f39a4` (rewrites to Cloud Run) |
 | App | Cloud Run `opendoor-dashboard` |
 | API | Cloud Run `opendoor-gateway` |
+| Code jail | Cloud Run `opendoor-sandbox` (gVisor, no egress) |
+| Private image GPU | Retired `opendoor-comfy` (do not wire apps to it). Studio uses the gateway image path. |
 | DB | Cloud SQL Postgres 16 `opendoor-pg` |
 | Cache | Memorystore Redis `opendoor-redis` |
 | Images | Artifact Registry `us-central1-docker.pkg.dev/.../opendoor` |
@@ -20,6 +22,8 @@ All production traffic is Google-managed:
 ```bash
 gcloud run services describe opendoor-dashboard --region=us-central1 --format='value(status.url)'
 gcloud run services describe opendoor-gateway --region=us-central1 --format='value(status.url)'
+gcloud run services describe opendoor-sandbox --region=us-central1 --format='value(status.url)'
+# opendoor-comfy is retired — do not point PRIVATE_IMAGE_GEN_URL at it.
 ```
 
 ## Prerequisites
@@ -50,6 +54,25 @@ firebase deploy --only hosting --project project-800192c2-3ecc-4889-8f7
 
 (`opendoor` / `opendoor-app` site IDs are globally reserved — use `opendoor-f39a4`.)
 
+## Persistable Cloud Run env
+
+`--set-env-vars` replaces the entire env list. Shared keys live in `infra/gcp/cloud-run-env.sh` (sourced by `scripts/deploy-gcp.sh` and Cloud Build).
+
+| Key | Value |
+|-----|--------|
+| `GCP_PROJECT_ID` / `GCP_PROJECT` / `GOOGLE_CLOUD_PROJECT` | `project-800192c2-3ecc-4889-8f7` |
+| `VERTEX_LOCATION` | `global` |
+| `OPENDOOR_FILES_BUCKET` | `opendoor-files-800192c2` (gateway) |
+| `STRIPE_WEB_SEARCH_ADDON_PRICE_ID` | `price_1U5OPSBZaqY5cS2ZgTgkHNDX` (test; dashboard) |
+| `PRIVATE_IMAGE_GEN_URL` | Optional OpenAI-compatible image server. Unset by default. Never `opendoor-comfy`. |
+| `PRIVATE_IMAGE_GEN_KIND` | `openai` when URL is set. `comfy` is off by default and undocumented. |
+
+Files bucket: `gs://opendoor-files-800192c2` in `us-central1`. Cloud Run runtime SA `930761303874-compute@developer.gserviceaccount.com` has `roles/storage.objectAdmin`. See `DEPLOY_PERSIST.md`.
+
+Comfy is retired. The `opendoor-comfy` Cloud Run service and `gs://opendoor-comfy-models` may still exist (cost). Deploy does not set app env to them.
+
+Do not create a Together secret — Vertex replaces it.
+
 ## Deploy
 
 Default path uses Cloud Build (avoids local Docker disk issues):
@@ -59,6 +82,9 @@ Default path uses Cloud Build (avoids local Docker disk issues):
 # or separately:
 gcloud builds submit --config=infra/gcp/cloudbuild.dashboard.yaml
 gcloud builds submit --config=infra/gcp/cloudbuild.gateway.yaml
+gcloud builds submit --config=infra/gcp/cloudbuild.sandbox.yaml
+# or: ./infra/gcp/deploy-sandbox.sh
+# Do not deploy Comfy for Studio. Optional image worker: set PRIVATE_IMAGE_GEN_URL.
 # local Docker instead:
 USE_CLOUD_BUILD=0 ./scripts/deploy-gcp.sh
 ```

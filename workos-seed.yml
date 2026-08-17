@@ -1,0 +1,23 @@
+# WorkOS environment allowlist for this repo (OpenDoor).
+# Apply: WORKOS_MODE=agent npx workos@latest seed --file=workos-seed.yml
+#
+# AuthKit / Google / GitHub → /callback
+# Standalone SSO            → /api/auth/sso/callback
+# Do not point these at opendoor-f39a4 (different GCP project).
+
+config:
+  homepage_url: https://opendoor-gcp.web.app
+  redirect_uris:
+    - http://localhost:3010/callback
+    - http://localhost:3010/api/auth/sso/callback
+    - https://opendoor-gcp.web.app/callback
+    - https://opendoor-gcp.web.app/api/auth/sso/callback
+    - https://opendoor-gcp.firebaseapp.com/callback
+    - https://opendoor-gcp.firebaseapp.com/api/auth/sso/callback
+    - https://opendoor-dashboard-u5ojp4qjiq-uc.a.run.app/callback
+    - https://opendoor-dashboard-u5ojp4qjiq-uc.a.run.app/api/auth/sso/callback
+  cors_origins:
+    - http://localhost:3010
+    - https://opendoor-gcp.web.app
+    - https://opendoor-gcp.firebaseapp.com
+    - https://opendoor-dashboard-u5ojp4qjiq-uc.a.run.app

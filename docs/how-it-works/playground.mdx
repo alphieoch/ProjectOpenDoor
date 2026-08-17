@@ -17,18 +17,28 @@ An empty catalog shows a banner and a link to Models. We do not fall back to a h
 
 ## What Run sends
 
-`POST ${NEXT_PUBLIC_GATEWAY_URL}/v1/chat/completions` with:
+`POST /api/playground/chat` (proxies to `${NEXT_PUBLIC_GATEWAY_URL}/v1/chat/completions`) with:
 
 - `Authorization: Bearer <your key>`
 - `model`, `messages`, `stream: true`
 - `temperature`, `max_tokens`, `top_p` from the Params rail
+- `provider: { sort, allow_fallbacks, order }` from the Params rail (sort is omitted when Default)
 - optional `image_url` parts when the catalog row has vision
 - uploaded `.txt` / `.md` / code files inlined as text (native file APIs are noted when the model id is known to support them)
 
 **View code** prints the equivalent curl / SDK call against your gateway URL.
 
+## Media
+
+**Dashboard → Media** (`/dashboard/playground/media`) is a separate page for image and video. It uses the same Playground API key and calls `/api/playground/images` and `/api/playground/videos` (gateway `/v1/images/generations` and `/v1/videos/generations`). Model pickers come from the live `/v1/images/models` and `/v1/videos/models` lists.
+
+**Dashboard → Studio** (`/dashboard/studio`) is the private GPU image UI. It does not use the chat playground.
+
 ## Related
 
 - [API keys](/how-it-works/api-keys)
+- [TypeScript SDK](/getting-started/sdk)
 - [Chat completions](/api-reference/chat-completions)
+- [Images](/api-reference/images)
+- [Videos](/api-reference/videos)
 - [Vision](/api-reference/vision)

@@ -1,0 +1,40 @@
+---
+title: "Workflows"
+description: "Create and run workflow graphs over the same API key. LLM nodes bill usage."
+showPageTitle: true
+---
+
+# Workflows
+
+```
+GET    /v1/workflows
+POST   /v1/workflows
+GET    /v1/workflows/:id
+PATCH  /v1/workflows/:id
+DELETE /v1/workflows/:id
+POST   /v1/workflows/:id/run
+GET    /v1/workflows/:id/runs
+GET    /v1/workflows/:id/runs/:runId
+```
+
+`graph` is `{ nodes, edges }`. Node types the gateway runner executes:
+
+| Type | Behavior |
+|------|----------|
+| `input` / `output` | Pass the current text through |
+| `llm` / `chat` / `generate` | `runBilledChat` on `data.model` or `opendoor/auto` |
+| `web_search` | Live search (Web Search add-on) |
+| `condition` | String contains check |
+| other | Recorded as `skipped` (code jail / human review stay on the dashboard runner) |
+
+```bash
+curl http://localhost:3001/v1/workflows/$ID/run \
+  -H "Authorization: Bearer $OPENDOOR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"query":"Summarize OpenDoor billing"}'
+```
+
+## Related
+
+- [Platform API](/api-reference/platform)
+- [Web search](/api-reference/web-search)

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { pricingRules, providers, models, gpuSkus } from "@opendoor/database";
 import { eq, and, lte, isNull, asc } from "drizzle-orm";
+import { shouldAdvertiseServerlessModel } from "@opendoor/shared";
 
 /** Public pricing — no auth. Source of truth for /pricing (Fireworks-style commercial surface). */
 export async function GET(req: NextRequest) {
@@ -62,7 +63,12 @@ export async function GET(req: NextRequest) {
         providerSlug: r.providerSlug,
         family: r.family || "closed",
         serverless: Boolean(r.serverless),
-        status: r.deploymentStatus || "live",
+        status:
+          r.serverless &&
+          (r.providerSlug === "together" || r.providerSlug === "vertex") &&
+          !shouldAdvertiseServerlessModel(r.modelId, { providerSlug: r.providerSlug || undefined })
+            ? "unavailable"
+            : r.deploymentStatus || "live",
         inputPer1MUsd: input,
         cachedInputPer1MUsd: cached,
         outputPer1MUsd: output,
@@ -114,7 +120,7 @@ export async function GET(req: NextRequest) {
       "Prompt-cache affinity sticks successful provider routes for matching prompt prefixes.",
       "service_tier=priority raises RPM/TPM and skips load-shed; standard may 503 when GATEWAY_SHED_STANDARD=1.",
       "TPM unlocks with lifetime key spend ($10 / $100 / $1k / $10k) and plan multipliers.",
-      "Serverless models need TOGETHER_API_KEY (Secret Manager: opendoor-together-api-key).",
+      "Serverless open-weight models route through Vertex AI Model Garden when GOOGLE_CLOUD_PROJECT / ADC is set. Together is optional overflow.",
       "On-demand GPUs are dedicated. Billed per GPU-second from gpu_skus.",
       "OpenDoor governance and UK/EU residency are the control plane Fireworks does not sell.",
     ],

@@ -33,10 +33,14 @@ export async function POST(req: NextRequest) {
       );
       posthogServerCapture(req, session.userId, "user_signed_in", {
         email: session.email,
+        organization_id: session.orgId,
         auth_method: "workos_password",
       });
       return jsonAuthSuccess(
-        { success: true, user: { id: session.userId, email: user.email } },
+        {
+          success: true,
+          user: { id: session.userId, email: user.email, orgId: session.orgId },
+        },
         token
       );
     } catch (error) {
@@ -79,12 +83,13 @@ export async function POST(req: NextRequest) {
 
   posthogServerCapture(req, user.id, "user_signed_in", {
     email: user.email,
+    organization_id: user.organizationId,
     auth_method: "password",
   });
 
   const response = NextResponse.json({
     success: true,
-    user: { id: user.id, email: user.email },
+    user: { id: user.id, email: user.email, orgId: user.organizationId },
   });
   response.cookies.set("session", token, sessionCookieOptions());
   return response;

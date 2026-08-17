@@ -10,19 +10,26 @@ import {
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
-  const session = await requireAuth();
-  const orgId = session.orgId as string;
-
-  const { searchParams } = new URL(req.url);
-  const days = parseInt(searchParams.get("days") || "30", 10);
-  const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
-
-  const client = new DuckDBAnalyticsClient();
-  if (!client.isEnabled()) {
-    return NextResponse.json({ error: "DuckDB analytics not enabled" }, 503);
-  }
-
   try {
+    const session = await requireAuth();
+    const orgId = session.orgId as string;
+
+    const { searchParams } = new URL(req.url);
+    const days = parseInt(searchParams.get("days") || "30", 10);
+    const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+    const emptyResult = {
+      days,
+      totals: { totalRequests: 0, totalTokens: 0, totalCostUsd: 0 },
+      percentiles: { p50: 0, p90: 0, p99: 0 },
+      topModels: [],
+    };
+
+    const client = new DuckDBAnalyticsClient();
+    if (!client.isEnabled()) {
+      return NextResponse.json(emptyResult);
+    }
+
     await client.init();
 
     const [totals, percentiles, modelBreakdown] = await Promise.all([
@@ -47,11 +54,12 @@ export async function GET(req: NextRequest) {
       percentiles,
       topModels: modelBreakdown,
     });
-  } catch (err) {
-    console.error("[DuckDB] Overview analytics failed:", err);
-    return NextResponse.json(
-      { error: "Analytics query failed", detail: (err as Error).message },
-      500
-    );
+  } catch {
+    return NextResponse.json({
+      days: 30,
+      totals: { totalRequests: 0, totalTokens: 0, totalCostUsd: 0 },
+      percentiles: { p50: 0, p90: 0, p99: 0 },
+      topModels: [],
+    });
   }
 }

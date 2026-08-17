@@ -1,0 +1,47 @@
+# Build + push + deploy opendoor-sandbox (gVisor jail for workflow code_execution)
+substitutions:
+  _REGION: us-central1
+  _REPO: opendoor
+  _TAG: latest
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+  machineType: E2_HIGHCPU_8
+
+steps:
+  - id: build-sandbox
+    name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - -f
+      - apps/sandbox/Dockerfile
+      - -t
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/sandbox:${_TAG}
+      - -t
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/sandbox:latest
+      - apps/sandbox
+
+  - id: push-sandbox
+    name: gcr.io/cloud-builders/docker
+    args:
+      - push
+      - --all-tags
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/sandbox
+
+  - id: deploy-sandbox
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        set -euo pipefail
+        export SKIP_BUILD=1
+        export IMAGE=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/sandbox:${_TAG}
+        export GCP_PROJECT_ID=$PROJECT_ID
+        export GCP_REGION=${_REGION}
+        bash infra/gcp/deploy-sandbox.sh
+
+images:
+  - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/sandbox:${_TAG}
+
+timeout: 1200s

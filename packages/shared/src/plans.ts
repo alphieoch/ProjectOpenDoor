@@ -102,13 +102,16 @@ export function creditWaterfall(args: {
   };
 }
 
-export type PlanId = "free" | "pro" | "team" | "enterprise";
+export type PlanId = "free" | "starter" | "pro" | "ultra" | "family" | "family_max" | "team" | "enterprise";
 
 export type PlanDefinition = {
   id: PlanId;
   name: string;
   amountUsd: number;
   perSeat: boolean;
+  maxSeats?: number;
+  rolloverMonths?: number;
+  isPool?: boolean;
   includedCreditsCents: number;
   rateLimitMultiplier: number;
   maxApiKeys: number;
@@ -120,10 +123,24 @@ export type PlanDefinition = {
 export const PLANS: Record<PlanId, PlanDefinition> = {
   free: {
     id: "free",
-    name: "Pay as you go",
+    name: "Starter Free",
     amountUsd: 0,
     perSeat: false,
-    includedCreditsCents: 0,
+    maxSeats: 1,
+    includedCreditsCents: 500,
+    rateLimitMultiplier: 1,
+    maxApiKeys: 3,
+    maxActiveDeployments: 1,
+    priorityQueue: false,
+    markupByFamily: { closed: 5, open_weight: 35 },
+  },
+  starter: {
+    id: "starter",
+    name: "Starter Free",
+    amountUsd: 0,
+    perSeat: false,
+    maxSeats: 1,
+    includedCreditsCents: 500,
     rateLimitMultiplier: 1,
     maxApiKeys: 3,
     maxActiveDeployments: 1,
@@ -132,22 +149,66 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
   },
   pro: {
     id: "pro",
-    name: "Pro",
-    amountUsd: 12,
+    name: "Pro Studio",
+    amountUsd: 20,
     perSeat: false,
-    includedCreditsCents: 300,
+    maxSeats: 1,
+    includedCreditsCents: 5000,
     rateLimitMultiplier: 3,
     maxApiKeys: 10,
     maxActiveDeployments: 2,
     priorityQueue: true,
     markupByFamily: { closed: 3, open_weight: 30 },
   },
+  ultra: {
+    id: "ultra",
+    name: "Ultra Studio",
+    amountUsd: 45,
+    perSeat: false,
+    maxSeats: 1,
+    includedCreditsCents: 15000,
+    rateLimitMultiplier: 6,
+    maxApiKeys: 25,
+    maxActiveDeployments: 5,
+    priorityQueue: true,
+    markupByFamily: { closed: 2.5, open_weight: 25 },
+  },
+  family: {
+    id: "family",
+    name: "Family Pool",
+    amountUsd: 60,
+    perSeat: false,
+    maxSeats: 4,
+    rolloverMonths: 4,
+    isPool: true,
+    includedCreditsCents: 25000,
+    rateLimitMultiplier: 5,
+    maxApiKeys: 20,
+    maxActiveDeployments: 4,
+    priorityQueue: true,
+    markupByFamily: { closed: 2.5, open_weight: 25 },
+  },
+  family_max: {
+    id: "family_max",
+    name: "Family Max Pool",
+    amountUsd: 110,
+    perSeat: false,
+    maxSeats: 6,
+    rolloverMonths: 4,
+    isPool: true,
+    includedCreditsCents: 60000,
+    rateLimitMultiplier: 10,
+    maxApiKeys: 50,
+    maxActiveDeployments: 10,
+    priorityQueue: true,
+    markupByFamily: { closed: 2, open_weight: 20 },
+  },
   team: {
     id: "team",
-    name: "Team",
-    amountUsd: 18,
+    name: "Team Workspace",
+    amountUsd: 50,
     perSeat: true,
-    includedCreditsCents: 500,
+    includedCreditsCents: 10000,
     rateLimitMultiplier: 5,
     maxApiKeys: 50,
     maxActiveDeployments: 5,
@@ -157,9 +218,9 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
   enterprise: {
     id: "enterprise",
     name: "Enterprise",
-    amountUsd: 45,
+    amountUsd: 120,
     perSeat: true,
-    includedCreditsCents: 800,
+    includedCreditsCents: 25000,
     rateLimitMultiplier: 10,
     maxApiKeys: 500,
     maxActiveDeployments: 20,
@@ -171,7 +232,7 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
 export const ACTIVE_DEPLOYMENT_STATUSES = ["pending", "building", "running"] as const;
 
 export function getPlan(plan: string | null | undefined): PlanDefinition {
-  if (plan === "pro" || plan === "team" || plan === "enterprise") return PLANS[plan];
+  if (plan && plan in PLANS) return PLANS[plan as PlanId];
   return PLANS.free;
 }
 
@@ -240,3 +301,29 @@ export function workspaceHasAgentsAddon(org: {
   if (org.plan === "enterprise") return true;
   return agentsAddonActive(org.agentsAddonStatus);
 }
+
+/** Vertex AI Grounding with Google Search — monthly add-on. Platform GCP keys stay on the server. */
+export const WEB_SEARCH_ADDON = {
+  id: "web_search" as const,
+  name: "Web Search",
+  amountUsd: 20,
+  amountCents: 2000,
+  description: "Live Google results via Vertex AI Grounding.",
+};
+
+export function webSearchAddonActive(status: string | null | undefined) {
+  return status === "active" || status === "trialing";
+}
+
+export function workspaceHasWebSearchAddon(org: {
+  plan?: string | null;
+  webSearchAddonStatus?: string | null;
+}) {
+  if (org.plan === "enterprise") return true;
+  return webSearchAddonActive(org.webSearchAddonStatus);
+}
+
+export function isEnterprisePlan(plan?: string | null): boolean {
+  return (plan || "").toLowerCase() === "enterprise";
+}
+

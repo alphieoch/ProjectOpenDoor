@@ -14,10 +14,10 @@ export class GoogleProvider implements ProviderAdapter {
   slug = "google";
   private client: GoogleGenerativeAI;
 
-  constructor() {
-    const apiKey = process.env.GOOGLE_API_KEY;
-    if (!apiKey) throw new Error("GOOGLE_API_KEY not set");
-    this.client = new GoogleGenerativeAI(apiKey);
+  constructor(apiKey?: string) {
+    const key = apiKey ?? process.env.GOOGLE_API_KEY ?? process.env.GEMINI_API_KEY;
+    if (!key) throw new Error("GOOGLE_API_KEY not set");
+    this.client = new GoogleGenerativeAI(key);
   }
 
   async chatCompletion(

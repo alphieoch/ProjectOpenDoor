@@ -234,7 +234,7 @@ type AnimatedContainerProps = React.ComponentProps<typeof motion.div> & {
 
 function AnimatedContainer({ delay = 0.1, children, ...props }: AnimatedContainerProps) {
   const shouldReduceMotion = useReducedMotion();
-  if (shouldReduceMotion) return <div {...props}>{children}</div>;
+  if (shouldReduceMotion) return <div className={props.className}>{children}</div>;
   return (
     <motion.div
       initial={false}

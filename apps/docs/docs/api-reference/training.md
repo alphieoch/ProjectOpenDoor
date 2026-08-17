@@ -29,10 +29,12 @@ Pricing resolves `ft:` → `fine_tuned_models.base_model_id` when `bill_as_base`
 
 ## Trainer backends
 
-- **`TOGETHER_API_KEY` set** — uploads JSONL and creates a Together fine-tune; polls to completion.
-- **Otherwise** — local simulated trainer still registers an `ft:` model for product/billing testing.
+- **Vertex AI (primary)** — `GOOGLE_CLOUD_PROJECT` / `GCP_PROJECT` / `GCP_PROJECT_ID` + ADC. Gemini/Gemma SFT uses `tuningJobs`; otherwise `customJobs` (needs `VERTEX_CUSTOM_TRAINING_IMAGE`). Production never mints simulated `ft:` models.
+- **`TOGETHER_API_KEY` set** — optional Together fine-tune; uploads JSONL and polls to completion.
+- **`ALLOW_SIMULATED_TRAINING=1`** — local/dev only. Ignored in production / Cloud Run.
 
 ```bash
-export TOGETHER_API_KEY=...
+# Optional Together overflow:
+# export TOGETHER_API_KEY=...
 ./scripts/finish-ops.sh
 ```

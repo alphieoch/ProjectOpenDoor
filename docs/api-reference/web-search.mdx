@@ -1,0 +1,98 @@
+---
+title: "Web search"
+description: "Live web search with citations. Prefers Vertex AI Google Search grounding on GCP, then Gemini API, Gemini CLI, then Tavily / Brave / Serper."
+---
+
+# Web search
+
+Plugin endpoint that runs a live web search and returns citations. **Requires the Web Search add-on** (`STRIPE_WEB_SEARCH_ADDON_PRICE_ID`, $20/month) or an Enterprise plan. Without it the gateway returns **402** `{ error, code: "addon_required", addon: "web_search" }` — it does not silently fall through to Tavily. Results are never invented — if the add-on is active but no provider is configured, the gateway returns 503.
+
+Subscribe from **Dashboard → Billing**. Vertex / GCP credentials stay on the OpenDoor server (`GOOGLE_CLOUD_PROJECT` + ADC). Customers do not paste GCP keys.
+
+```
+POST /v1/plugins/web-search
+```
+
+Provider order:
+
+1. **`vertex_google_search`** — **Production path.** [Vertex AI Grounding with Google Search](https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/grounding/grounding-with-google-search) (`googleSearch` tool on Gemini `generateContent`). Uses your GCP project and Application Default Credentials (Cloud Run service account, `GOOGLE_APPLICATION_CREDENTIALS`, or `gcloud auth application-default login`).
+2. **`google`** — Gemini API Google Search grounding (`GOOGLE_API_KEY` or `GEMINI_API_KEY`). Optional `GOOGLE_SEARCH_MODEL` (default `gemini-2.0-flash`).
+3. **`google_cli`** — Local laptop fallback. Gemini CLI (`gemini` from `@google/gemini-cli`) using its built-in `google_web_search` tool. Set `GOOGLE_CLI` or `GEMINI_CLI`, or leave unset to use `gemini` on `PATH`.
+4. **`google_cse`** — Google Programmable Search JSON API (`GOOGLE_CSE_ID` + `GOOGLE_SEARCH_API_KEY` or `GOOGLE_API_KEY`).
+5. **Tavily** (`TAVILY_API_KEY`), then **Brave** (`BRAVE_SEARCH_API_KEY`), then **Serper** (`SERPER_API_KEY`).
+
+The same helper runs workflow **Web Search** nodes from the dashboard (**Run** on `/dashboard/workflow/[id]`).
+
+## Vertex / GCP env
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `GOOGLE_CLOUD_PROJECT` or `GCP_PROJECT` or `GCP_PROJECT_ID` | Yes (unless `VERTEX_API_KEY`) | GCP project that has Vertex AI enabled |
+| `VERTEX_LOCATION` | No | Defaults to `global` (required by current Google Search grounding docs). Also reads `GOOGLE_CLOUD_LOCATION`. |
+| `VERTEX_SEARCH_MODEL` | No | Defaults to `gemini-2.5-flash` (official Vertex Node sample). |
+| `GOOGLE_APPLICATION_CREDENTIALS` | No | Service-account JSON. On Cloud Run, the runtime service account is used via the metadata server. |
+| `VERTEX_API_KEY` | No | Alternate Vertex API key if you are not using ADC. |
+| `VERTEX_ACCESS_TOKEN` | No | Pre-minted OAuth token (skips ADC). |
+
+```bash
+gcloud auth application-default login
+gcloud auth application-default set-quota-project project-800192c2-3ecc-4889-8f7
+gcloud services enable aiplatform.googleapis.com --project project-800192c2-3ecc-4889-8f7
+```
+
+The caller needs `roles/aiplatform.user` (or equivalent) on that project.
+
+## Request Body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `query` | string | Yes | Search query |
+| `max_results` | integer | No | 1–10, default 5 |
+
+## Example
+
+```bash
+curl http://localhost:3001/v1/plugins/web-search \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "Stellar smart contracts",
+    "max_results": 5
+  }'
+```
+
+## Response
+
+```json
+{
+  "query": "Stellar smart contracts",
+  "provider": "vertex_google_search",
+  "results": [
+    {
+      "title": "Smart Contracts | Stellar Docs",
+      "url": "https://developers.stellar.org/docs/build/smart-contracts",
+      "snippet": "..."
+    }
+  ],
+  "citations": [
+    {
+      "title": "Smart Contracts | Stellar Docs",
+      "url": "https://developers.stellar.org/docs/build/smart-contracts",
+      "snippet": "..."
+    }
+  ]
+}
+```
+
+Without the add-on (and not Enterprise):
+
+```json
+{
+  "error": "Web Search is a $20/month add-on. Subscribe on Billing to unlock live Google results via Vertex AI Grounding.",
+  "code": "addon_required",
+  "addon": "web_search",
+  "amountUsd": 20
+}
+```
+
+`runWebSearch(query)` is exported from `apps/gateway/src/lib/web-search.ts` and used by the dashboard workflow runner after the same add-on check.

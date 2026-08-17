@@ -8,7 +8,11 @@ Living checklist for matching the [Fireworks](https://fireworks.ai/pricing#serve
 
 Structured outputs, vision, rerank, completions, batches, docs, CLI.
 
-## Wave 2 — Commercial honesty — **done** (Together key still needs prod secret)
+## Wave A (OpenRouter/Fireworks honesty, 2026-08) — **done**
+
+Production 503s serverless only when **none** of Vertex ADC/project, Together key, or Together BYOK exist. Vertex Model Garden is the wholesale path (Gemma 4 / Qwen3 Next / DeepSeek V3.2 / Gemini 2.5). Together is optional overflow for legacy ids. Training no longer mints simulated `ft:` ids in production; local simulator requires `ALLOW_SIMULATED_TRAINING=1`. See `OPENROUTER_PARITY.md` for routing, BYOK, generation, images, audio, Groq/xAI.
+
+## Wave 2 — Commercial honesty — **done** (Vertex wholesale; Together optional)
 
 Public pricing, cached/batch rates, GPU SKUs, serverless flag, embeddings, prompt-cache billing + affinity, GPU-second billing, `service_tier`, spend-tier TPM unlock.
 
@@ -47,7 +51,7 @@ Request inspector + consistent dashboard chrome now that AuthKit login works.
 |------|--------|--------|
 | Request logs | **done** | `/dashboard/logs` + `/api/requests` |
 | Page chrome | **done** | Shared `PageHeader` on workspace + governance pages |
-| Together Secret Manager | leftover | Still needs prod key |
+| Together Secret Manager | optional | Overflow only — Vertex ADC is the wholesale path |
 
 ## Ops
 
@@ -56,7 +60,7 @@ Request inspector + consistent dashboard chrome now that AuthKit login works.
 | Cloud Run dashboard + gateway | **done** | |
 | Cloud SQL + Memorystore + VPC | **done** | |
 | HTTPS edge Load Balancer | **done** | `scripts/setup-edge-lb.sh` → `opendoor-edge` |
-| Together Secret Manager | **needs key** | `TOGETHER_API_KEY=... ./scripts/finish-ops.sh` |
+| Together Secret Manager | **optional** | Overflow only. Do not create a Together secret unless you want those leftover ids. |
 | Firebase Hosting `opendoor-f39a4` | **blocked** | Org ToS — accept in Firebase console, then `firebase deploy --only hosting` |
 
 ## Explicitly later / never this year
@@ -66,7 +70,9 @@ FireConnect, FireRouter-as-SKU, BYOC, custom kernels, B200/GB300 catalog, server
 ## How to finish ops
 
 ```bash
-export TOGETHER_API_KEY=...   # from https://api.together.xyz
+# Vertex is primary — ADC + GOOGLE_CLOUD_PROJECT (already used for web search).
+# Together is optional overflow:
+# export TOGETHER_API_KEY=...
 ./scripts/finish-ops.sh
 ```
 

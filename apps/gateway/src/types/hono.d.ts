@@ -9,8 +9,10 @@ declare module "hono" {
       organizationId: string;
       rateLimitRpm: number | null;
       rateLimitTpm: number | null;
+      spendLimitUsdCents?: number | null;
       spendUsedUsdCents?: number | null;
       allowedModels?: unknown;
+      lastUsedAt?: Date | null;
     };
     organization: {
       id: string;
@@ -18,6 +20,13 @@ declare module "hono" {
       slug: string;
       plan: string;
       creditsUsdCents?: number | null;
+      welcomeCreditsUsdCents?: number | null;
+      welcomeExpiresAt?: Date | null;
+      sector?: string | null;
+      dataResidency?: string | null;
+      subscriptionStatus?: string | null;
+      agentsAddonStatus?: string | null;
+      webSearchAddonStatus?: string | null;
     };
     chatRequestBody?: {
       model?: string;
@@ -25,6 +34,7 @@ declare module "hono" {
       max_tokens?: number;
       stream?: boolean;
       prompt?: string | string[];
+      provider?: unknown;
       response_format?: unknown;
       service_tier?: "standard" | "priority";
       prompt_cache_key?: string;
@@ -40,5 +50,6 @@ declare module "hono" {
     };
     serviceTier?: "standard" | "priority";
     effectiveRateLimits?: { tpm: number; rpm: number };
+    appAttribution?: { httpReferer?: string; xTitle?: string };
   }
 }

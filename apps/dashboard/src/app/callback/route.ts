@@ -2,12 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { unsealData } from "iron-session";
 import { getWorkOS, saveSession } from "@workos-inc/authkit-nextjs";
 import { getWorkOSClientId } from "@/lib/workos";
+import { appBaseUrl } from "@/lib/public-urls";
 
 function appOrigin() {
-  return (process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3010").replace(
-    /\/$/,
-    ""
-  );
+  return appBaseUrl();
 }
 
 type PkceState = {

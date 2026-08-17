@@ -1,0 +1,73 @@
+---
+title: "CLI"
+description: "Thin OpenDoor CLI for models, chat, embeddings, images, audio, and batches."
+showPageTitle: true
+---
+
+The CLI is a thin client over the gateway. It does not implement routing or billing.
+
+```bash
+export OPENDOOR_API_KEY=opd_…
+# optional; also accepts OPENDOOR_API_URL
+export OPENDOOR_BASE_URL=http://localhost:3001
+
+bun run od -- help
+```
+
+## Commands
+
+```
+catalog
+account
+usage [--days 30]
+models
+chat --model <id> --message <text> [--provider-sort price|latency|throughput] [--no-fallbacks] [--provider-order a,b]
+assistants list | create --name <name> --model <id> | chat --id <id> --message <text>
+workflows list | run --id <id> --query <text>
+training jobs
+deployments list
+agents list
+byok list
+keys list
+requests [--limit 20]
+embeddings --model <id> --input <text>
+rerank --model <id> --query <text> --documents a||b
+batches create --file <json>
+batches get --id <uuid>
+batches list
+generation get --id <id>
+images generate --prompt <text> --model <id>
+videos generate --prompt <text> --model <id> [--duration 4]
+videos get --id <id>
+audio transcribe --file <path> --model <id>
+```
+
+## Chat with provider routing
+
+```bash
+bun run od -- chat \
+  --model llama-3.1-8b-instruct \
+  --message "Hello" \
+  --provider-sort price \
+  --no-fallbacks \
+  --provider-order together,groq
+```
+
+That sends `provider: { sort, allow_fallbacks, order }` on `POST /v1/chat/completions`.
+
+## Images and audio
+
+```bash
+bun run od -- images generate --prompt "a red door" --model gemini-2.5-flash-image
+bun run od -- videos generate --prompt "a red cube on a table" --model veo-3.1-fast-generate-001
+bun run od -- videos get --id vid_…
+bun run od -- audio transcribe --file ./note.wav --model whisper-1
+bun run od -- generation get --id gen_…
+```
+
+These hit `/v1/images/generations`, `/v1/videos/generations`, `/v1/audio/transcriptions` (multipart), and `/v1/generation/:id`.
+
+## Related
+
+- [TypeScript SDK](/getting-started/sdk)
+- [Batches](/api-reference/batches)

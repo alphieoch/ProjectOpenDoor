@@ -3,10 +3,10 @@ import { Hono } from "hono";
 import { db, requests } from "@opendoor/database";
 import { eq, and, gte, sql } from "drizzle-orm";
 import { DuckDBAnalyticsClient, getUsageDaily, getUsageTotals } from "@opendoor/analytics";
-import Redis from "ioredis";
 import { resolveRateLimits } from "../lib/spend-tiers.js";
+import { createRedis } from "../lib/redis.js";
 
-const redis = new (Redis as any)(process.env.REDIS_URL || "redis://localhost:6379");
+const redis = createRedis();
 
 const usageRouter = new Hono();
 

@@ -132,15 +132,21 @@ export default function DeploymentsPage() {
                 </div>
                 <div className="flex items-center gap-1">
                   {d.fqdn && d.status === "running" && (
-                    <a
-                      href={d.fqdn}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="btn-ghost btn-sm"
-                      title="Open endpoint"
-                    >
-                      <ExternalLink className="h-4 w-4" />
-                    </a>
+                    d.sourceType === "image" ? (
+                      <Link href="/dashboard/studio" className="btn-ghost btn-sm">
+                        Go to Studio
+                      </Link>
+                    ) : (
+                      <a
+                        href={d.fqdn}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="btn-ghost btn-sm"
+                        title="Open endpoint"
+                      >
+                        <ExternalLink className="h-4 w-4" />
+                      </a>
+                    )
                   )}
                   <button
                     type="button"

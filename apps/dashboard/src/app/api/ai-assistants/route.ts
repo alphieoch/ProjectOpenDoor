@@ -4,6 +4,7 @@ import { getDb } from "@/lib/db";
 import { aiAssistants } from "@opendoor/database";
 import { eq, and } from "drizzle-orm";
 import { ensureAssistantStripePrice } from "@/lib/assistant-stripe";
+import { loadWebSearchEntitlement, webSearchAddonRequiredResponse } from "@/lib/web-search/entitlement";
 
 const ALLOWED_MCP_COMMANDS = new Set(["npx", "uvx", "docker", "node", "python", "python3", "bun", "npm", "pnpm", "yarn"]);
 const SHELL_METACHARS = /[;|&$()`<>\\]/;
@@ -41,12 +42,15 @@ function validateMcpServers(mcpServers: unknown): Array<{ id: string; name: stri
 export async function GET() {
   const session = await requireAuth();
   const db = getDb();
-  const rows = await db
-    .select()
-    .from(aiAssistants)
-    .where(and(eq(aiAssistants.organizationId, session.orgId), eq(aiAssistants.enabled, true)))
-    .orderBy(aiAssistants.createdAt);
-  return NextResponse.json({ assistants: rows });
+  const [rows, webSearchAddon] = await Promise.all([
+    db
+      .select()
+      .from(aiAssistants)
+      .where(and(eq(aiAssistants.organizationId, session.orgId), eq(aiAssistants.enabled, true)))
+      .orderBy(aiAssistants.createdAt),
+    loadWebSearchEntitlement(session.orgId, session),
+  ]);
+  return NextResponse.json({ assistants: rows, webSearchAddon });
 }
 
 export async function POST(req: NextRequest) {
@@ -69,6 +73,13 @@ export async function POST(req: NextRequest) {
   }
   if (!modelId || typeof modelId !== "string") {
     return NextResponse.json({ error: "modelId is required" }, { status: 400 });
+  }
+
+  if (webSearchEnabled === true) {
+    const addon = await loadWebSearchEntitlement(session.orgId, session);
+    if (!addon.active) {
+      return NextResponse.json(webSearchAddonRequiredResponse(addon), { status: 402 });
+    }
   }
 
   let validatedMcpServers;

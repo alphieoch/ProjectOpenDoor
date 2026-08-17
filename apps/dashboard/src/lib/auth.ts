@@ -3,6 +3,9 @@ import bcrypt from "bcryptjs";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { cache } from "react";
+import { eq } from "drizzle-orm";
+import { users } from "@opendoor/database";
+import { getDb } from "@/lib/db";
 
 const secret = new TextEncoder().encode(
   process.env.AUTH_SECRET || "opendoor-default-secret-change-me"
@@ -54,7 +57,17 @@ export const getSession = cache(async (): Promise<SessionPayload | null> => {
   if (!token) return null;
   const payload = await verifyToken(token);
   if (!payload) return null;
-  return payload as unknown as SessionPayload;
+  const session = payload as unknown as SessionPayload;
+  try {
+    const row = await getDb().query.users.findFirst({
+      where: eq(users.id, session.userId),
+      columns: { isSiteAdmin: true },
+    });
+    if (row?.isSiteAdmin) session.isSiteAdmin = true;
+  } catch {
+    // Keep the JWT flag if the database is unreachable.
+  }
+  return session;
 });
 
 export async function requireAuth(): Promise<SessionPayload> {

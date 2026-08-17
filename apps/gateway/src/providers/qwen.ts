@@ -11,13 +11,16 @@ import { openaiChatPayload } from "./openai-body.js";
 export class QwenProvider implements ProviderAdapter {
   name = "Alibaba Qwen";
   slug = "qwen";
-  private baseUrl = "https://dashscope.aliyuncs.com/compatible-mode/v1";
+  private baseUrl: string;
   private apiKey: string;
 
-  constructor() {
-    const apiKey = process.env.QWEN_API_KEY;
-    if (!apiKey) throw new Error("QWEN_API_KEY not set");
-    this.apiKey = apiKey;
+  constructor(apiKey?: string) {
+    const key = apiKey ?? process.env.QWEN_API_KEY;
+    if (!key) throw new Error("QWEN_API_KEY not set");
+    this.apiKey = key;
+    this.baseUrl = (
+      process.env.QWEN_BASE_URL || "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
+    ).replace(/\/$/, "");
   }
 
   async chatCompletion(
@@ -49,6 +52,9 @@ export class QwenProvider implements ProviderAdapter {
         message: {
           role: c.message.role,
           content: c.message.content,
+          ...(c.message?.reasoning_content
+            ? { reasoning_content: c.message.reasoning_content }
+            : {}),
         },
         finish_reason: c.finish_reason,
       })),
@@ -107,6 +113,9 @@ export class QwenProvider implements ProviderAdapter {
                 delta: {
                   role: c.delta?.role,
                   content: c.delta?.content,
+                  ...(c.delta?.reasoning_content
+                    ? { reasoning_content: c.delta.reasoning_content }
+                    : {}),
                 },
                 finish_reason: c.finish_reason || null,
               })),

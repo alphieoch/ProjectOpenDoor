@@ -3,6 +3,7 @@ import { getWorkOS, getWorkOSClientId } from "@/lib/workos";
 import { getDb } from "@/lib/db";
 import { organizations } from "@opendoor/database";
 import { eq } from "drizzle-orm";
+import { workosSsoCallbackUri } from "@/lib/public-urls";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -46,7 +47,7 @@ export async function GET(req: NextRequest) {
     const authorizationUrl = workos.sso.getAuthorizationURL({
       organization: workosOrgId,
       clientId,
-      redirectUri: `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/auth/sso/callback`,
+      redirectUri: workosSsoCallbackUri(),
       state: Buffer.from(JSON.stringify({ orgId: workosOrgId })).toString("base64"),
     });
 

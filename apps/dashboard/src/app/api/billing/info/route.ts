@@ -5,6 +5,7 @@ import { eq, sql } from "drizzle-orm";
 import { requireAuth } from "@/lib/auth";
 import { checkoutPlanConfigured } from "@/lib/stripe";
 import { loadAgentsEntitlement } from "@/lib/agents/entitlement";
+import { loadWebSearchEntitlement } from "@/lib/web-search/entitlement";
 
 export async function GET() {
   try {
@@ -35,7 +36,10 @@ export async function GET() {
       .from(users)
       .where(eq(users.organizationId, orgId));
 
-    const addon = await loadAgentsEntitlement(orgId, session);
+    const [addon, webSearchAddon] = await Promise.all([
+      loadAgentsEntitlement(orgId, session),
+      loadWebSearchEntitlement(orgId, session),
+    ]);
 
     return NextResponse.json({
       org,
@@ -44,8 +48,10 @@ export async function GET() {
         pro: checkoutPlanConfigured("pro"),
         team: checkoutPlanConfigured("team"),
         agents: addon.configured,
+        webSearch: webSearchAddon.configured,
       },
       addon,
+      webSearchAddon,
     });
   } catch (error: any) {
     console.error("Billing info error:", error);

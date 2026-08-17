@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { gatewayBaseUrl } from "@/lib/public-urls";
 import { formatGatewayError, inferModelModality } from "@/lib/models/modality";
+import { forbidProtectedChild } from "@/lib/parent-protection";
 
 function gatewayUrl() {
   return (process.env.GATEWAY_URL || gatewayBaseUrl()).replace(/\/$/, "");
@@ -10,6 +11,8 @@ function gatewayUrl() {
 export async function POST(req: NextRequest) {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const blocked = await forbidProtectedChild(session);
+  if (blocked) return blocked;
 
   const apiKey =
     req.headers.get("authorization")?.replace(/^Bearer\s+/i, "") ||
@@ -62,6 +65,9 @@ export async function POST(req: NextRequest) {
         temperature: body.temperature,
         max_tokens: body.max_tokens,
         top_p: body.top_p,
+        ...(body.provider && typeof body.provider === "object" && !Array.isArray(body.provider)
+          ? { provider: body.provider }
+          : {}),
       }),
     });
   } catch (err) {

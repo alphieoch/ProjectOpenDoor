@@ -1,0 +1,56 @@
+---
+title: "Support inbox"
+description: "How dashboard tickets, PostHog, and Linear connect for OpenDoor support."
+---
+
+# Support inbox
+
+Customers file tickets at **`/dashboard/support`**. The dashboard `POST /api/support` creates a Linear issue and captures `support_ticket_created` in PostHog. Product analytics and error tracking stay on PostHog — Linear is for human follow-up.
+
+## PostHog
+
+Use project **ProjectOpenDoor** (`407244`), not Sokohut.
+
+| Item | URL |
+|------|-----|
+| Project | https://us.posthog.com/project/407244 |
+| OpenDoor Support dashboard | https://us.posthog.com/project/407244/dashboard/2003823 |
+
+Events already wired:
+
+| Event | Where |
+|-------|--------|
+| `identify` | Login / signup (user id, email, `org_id`) and `PostHogIdentify` on the dashboard layout |
+| `$exception` | Dashboard `error.tsx` + `capture_exceptions`; gateway `onError` via `captureGatewayException` |
+| `gateway_chat_all_providers_failed` | Gateway `captureGatewayEvent` |
+| `support_ticket_created` | `POST /api/support` |
+| `onboarding_completed` | `POST /api/onboarding` when the checklist first completes |
+| `billing_subscribe` | Stripe `checkout.session.completed` for a plan subscription |
+
+Env: `NEXT_PUBLIC_POSTHOG_KEY`, `NEXT_PUBLIC_POSTHOG_HOST`, `NEXT_PUBLIC_POSTHOG_UI_HOST`, `NEXT_PUBLIC_POSTHOG_PROJECT_ID`, `POSTHOG_API_KEY`, `POSTHOG_HOST`.
+
+## Linear
+
+The Linear MCP in this workspace cannot create teams. Create **Support** in the Linear UI, then set the team id.
+
+1. Open [Linear Settings → Teams](https://linear.app/settings/teams).
+2. **New team** → name `Support` (or `OpenDoor Support`).
+3. Copy the team UUID into `LINEAR_SUPPORT_TEAM_ID`.
+4. Create a personal or workspace API key and set `LINEAR_API_KEY`.
+
+Workspace labels already created (usable on any team):
+
+- `user-report`
+- `billing`
+- `gateway`
+- `urgent` — Linear reserves the name `priority`; high/critical tickets use native Linear priority plus this label
+
+Existing workspace team (do not treat as the support inbox unless you choose to): **Ochieng&Co** (`a6753c8a-b614-4435-95b6-7c7ecde390a2`).
+
+If Linear env is unset, `/dashboard/support` still loads and shows **configure LINEAR_API_KEY**.
+
+Each ticket description includes `org_id:<uuid>`, the reporter email, and PostHog person/session URLs when `NEXT_PUBLIC_POSTHOG_PROJECT_ID` and session headers are present.
+
+## Deploy
+
+`LINEAR_API_KEY` is an optional Secret Manager secret (`opendoor-linear-api-key`). `LINEAR_SUPPORT_TEAM_ID` and public PostHog vars are appended from `infra/gcp/cloud-run-env.sh` only when set, so a deploy does not drop Stripe, Vertex, files, or sandbox keys.

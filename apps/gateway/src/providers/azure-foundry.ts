@@ -204,13 +204,13 @@ export class AzureFoundryProvider implements ProviderAdapter {
   private inferenceKey?: string;
   private deployments: AzureDeployment[] = [];
 
-  constructor() {
+  constructor(apiKey?: string) {
     const endpoint = process.env.AZURE_AI_FOUNDRY_ENDPOINT;
-    const apiKey = process.env.AZURE_AI_FOUNDRY_KEY;
+    const key = apiKey ?? process.env.AZURE_AI_FOUNDRY_KEY;
     if (!endpoint) throw new Error("AZURE_AI_FOUNDRY_ENDPOINT not set");
-    if (!apiKey) throw new Error("AZURE_AI_FOUNDRY_KEY not set");
+    if (!key) throw new Error("AZURE_AI_FOUNDRY_KEY not set");
     this.endpoint = endpoint.replace(/\/$/, "");
-    this.apiKey = apiKey;
+    this.apiKey = key;
 
     // Optional Azure AI Inference API (for serverless models)
     this.inferenceEndpoint = process.env.AZURE_INFERENCE_ENDPOINT?.replace(/\/$/, "");

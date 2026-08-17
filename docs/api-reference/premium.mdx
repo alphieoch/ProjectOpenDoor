@@ -1,0 +1,63 @@
+---
+title: "Premium rentals"
+description: "Rent a private GPU and generate images on that box. Not Vertex Imagen."
+---
+
+# Premium rentals
+
+Auth: same Bearer API key as the rest of `/v1`.
+
+## Create / list / stop
+
+```bash
+# Attach an existing dedicated deployment
+curl "$GATEWAY/v1/premium/rentals" \
+  -H "Authorization: Bearer $OPENDOOR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "deployment_id": "DEPLOYMENT_UUID",
+    "model_id": "flux-1-schnell",
+    "hours": 2
+  }'
+
+curl "$GATEWAY/v1/premium/rentals" \
+  -H "Authorization: Bearer $OPENDOOR_API_KEY"
+
+curl -X DELETE "$GATEWAY/v1/premium/rentals/RENTAL_UUID" \
+  -H "Authorization: Bearer $OPENDOOR_API_KEY"
+```
+
+Local Metal start (Ollama + image-process probe) is on the dashboard: `POST /api/premium/rentals` with `{ "target": "local" }`. The gateway attach path requires `deployment_id`.
+
+## Generate an image
+
+Pins a private OpenAI-compatible image worker when `PRIVATE_IMAGE_GEN_URL` or a rental FQDN is set. **503** `Studio GPU offline` if that process is down.
+
+```bash
+curl "$GATEWAY/v1/premium/images" \
+  -H "Authorization: Bearer $OPENDOOR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "premium:RENTAL_UUID",
+    "prompt": "A red door on a white wall",
+    "size": "1024x1024"
+  }'
+```
+
+`model` may also be `custom:<deployment-uuid>`.
+
+## Chat on the same box
+
+If the rental’s deployment is a chat endpoint (Ollama / vLLM):
+
+```bash
+curl "$GATEWAY/v1/chat/completions" \
+  -H "Authorization: Bearer $OPENDOOR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "premium:RENTAL_UUID",
+    "messages": [{"role":"user","content":"hello"}]
+  }'
+```
+
+`custom:<deployment-uuid>` is equivalent. Neither id is routed to Together or Vertex MaaS.

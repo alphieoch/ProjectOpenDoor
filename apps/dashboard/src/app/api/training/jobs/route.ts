@@ -4,6 +4,7 @@ import { trainingJobs, trainingDatasets } from "@opendoor/database";
 import { eq, and, desc } from "drizzle-orm";
 import { requireAuth } from "@/lib/auth";
 import { enqueueTrainingJob } from "@/lib/training/runner";
+import { allowSimulatedTraining, hasRealTrainer } from "@opendoor/shared";
 
 const METHODS = new Set(["sft", "dpo", "orpo", "rft", "grpo"]);
 
@@ -81,7 +82,19 @@ export async function POST(req: NextRequest) {
       hyperparameters,
       status: "queued",
       statusMessage: "Queued for trainer",
-      providerSlug: process.env.TOGETHER_API_KEY ? "together" : "opendoor-local",
+      providerSlug:
+        process.env.GOOGLE_CLOUD_PROJECT ||
+        process.env.GCP_PROJECT ||
+        process.env.GCP_PROJECT_ID ||
+        process.env.GOOGLE_APPLICATION_CREDENTIALS
+          ? "vertex"
+          : process.env.TOGETHER_API_KEY
+            ? "together"
+            : process.env.LOCAL_TRAINER_URL
+              ? "opendoor-local"
+              : allowSimulatedTraining() && !hasRealTrainer()
+                ? "opendoor-local"
+                : "vertex",
     })
     .returning();
 

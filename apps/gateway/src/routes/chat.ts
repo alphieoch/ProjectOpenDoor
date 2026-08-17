@@ -8,7 +8,17 @@ import {
   splitCreditBuckets,
   welcomeAllowedForFamily,
 } from "@opendoor/shared";
-import { resolveProvider, getProvider } from "../providers/index.js";
+import { resolveProvider, instantiateProvider } from "../providers/index.js";
+import {
+  hasVertexPlatform,
+  isLegacyTogetherServerlessId,
+  isProductionRuntime,
+  shouldAdvertiseServerlessTogether,
+  shouldAdvertiseServerlessWholesale,
+} from "@opendoor/shared";
+import { alwaysUseSlugs, loadOrgProviderKeys, touchOrgProviderKeyUsed } from "../lib/byok.js";
+import { applyProviderRouting } from "../lib/provider-routing.js";
+import { randomUUID } from "crypto";
 import { calculateCost } from "../utils/pricing.js";
 import { encodeSSE, encodeSSEDone } from "../utils/streaming.js";
 import { recordTokens } from "../middleware/rate-limit.js";
@@ -30,6 +40,8 @@ import {
   rememberCacheAffinity,
 } from "../lib/prompt-cache.js";
 import { normalizeServiceTier } from "../lib/service-tier.js";
+import { applyModelRouting, isModelAllowed } from "../lib/model-aliases.js";
+import { applyMessageTransforms } from "../lib/transforms.js";
 
 const chatRouter = new Hono();
 
@@ -46,6 +58,16 @@ function normalizeFamily(
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function isAbortOrTimeout(err: unknown): boolean {
+  const name = err instanceof Error ? err.name : "";
+  const message = err instanceof Error ? err.message : String(err);
+  return (
+    name === "TimeoutError" ||
+    name === "AbortError" ||
+    /aborted|timeout|ETIMEDOUT|UND_ERR_CONNECT_TIMEOUT/i.test(message)
+  );
 }
 
 async function tryProvider(
@@ -67,11 +89,10 @@ async function tryProvider(
         return { response };
       }
     } catch (err: any) {
-      if (attempt < 2) {
-        await sleep(100 * Math.pow(2, attempt));
-      } else {
-        return { error: err };
+      if (isAbortOrTimeout(err) || attempt >= 2) {
+        return { error: err instanceof Error ? err : new Error(String(err)) };
       }
+      await sleep(100 * Math.pow(2, attempt));
     }
   }
   return { error: new Error("Max retries exceeded") };
@@ -94,6 +115,11 @@ chatRouter.post("/completions", async (c) => {
     body.model = overrideModel;
   }
 
+  const requestedModel = body.model;
+  await applyModelRouting(body, {
+    allowedModels: apiKey.allowedModels as string[] | null,
+  });
+
   if (!body.model) {
     return c.json({ error: "Model is required" }, 400);
   }
@@ -105,7 +131,7 @@ chatRouter.post("/completions", async (c) => {
   // Check model permissions
   const allowedModels = apiKey.allowedModels as string[] | null;
   if (allowedModels && allowedModels.length > 0) {
-    if (!allowedModels.includes(body.model)) {
+    if (!isModelAllowed(body.model, allowedModels) && !isModelAllowed(requestedModel, allowedModels)) {
       return c.json(
         {
           error: `Model '${body.model}' is not allowed for this API key. Allowed models: ${allowedModels.join(", ")}`,
@@ -122,6 +148,7 @@ chatRouter.post("/completions", async (c) => {
       deploymentStatus: models.deploymentStatus,
       displayName: models.displayName,
       family: models.family,
+      contextWindow: models.contextWindow,
     })
     .from(models)
     .where(eq(models.modelId, body.model))
@@ -131,6 +158,7 @@ chatRouter.post("/completions", async (c) => {
   const isOpenWeight =
     modelRows[0]?.family === "open_weight" ||
     body.model.startsWith("custom:") ||
+    body.model.startsWith("premium:") ||
     body.model.startsWith("ollama:") ||
     body.model.includes("llama") ||
     body.model.includes("qwen") ||
@@ -187,17 +215,80 @@ chatRouter.post("/completions", async (c) => {
     );
   }
 
-  const resolved = await resolveProvider(body.model);
+  body.messages = applyMessageTransforms(body.messages, {
+    transforms: body.transforms,
+    contextWindow: modelRows[0]?.contextWindow,
+    maxTokens: typeof body.max_tokens === "number" && body.max_tokens > 0 ? body.max_tokens : 1024,
+  });
+
+  const byokKeys = await loadOrgProviderKeys(organization.id);
+  const hasTogetherByok = byokKeys.has("together");
+  const hasVertexByok = byokKeys.has("vertex");
+  const wholesaleConfigured = shouldAdvertiseServerlessWholesale({
+    hasOrgByok: hasTogetherByok || hasVertexByok,
+  });
+
+  const resolved = await resolveProvider(body.model, {
+    byokSlugs: [...byokKeys.keys()],
+    organizationId: organization.id,
+  });
   if (!resolved) {
-    const hint =
-      body.model.startsWith("deepseek")
+    if (isProductionRuntime() && isLegacyTogetherServerlessId(body.model) && !wholesaleConfigured) {
+      return c.json(
+        {
+          error: "Serverless wholesale path is not configured",
+          message:
+            "Set GOOGLE_CLOUD_PROJECT / GCP_PROJECT / GCP_PROJECT_ID with Application Default Credentials (Vertex Model Garden), or TOGETHER_API_KEY / org BYOK for Together overflow.",
+          status: "wholesale_not_configured",
+          model: body.model,
+        },
+        503
+      );
+    }
+    const hint = isLegacyTogetherServerlessId(body.model)
+      ? "This id is not on Vertex MaaS. Call gemma-4-26b-a4b-it, qwen3-next-80b-instruct, or deepseek-v3.2, or use Ollama / Together overflow."
+      : body.model.startsWith("deepseek")
         ? "DeepSeek is not configured. Set DEEPSEEK_API_KEY, or pick a local Ollama model such as llama3.2:3b."
         : "This model is not routed on the gateway. Pick a local model or configure the provider API key.";
     return c.json({ error: `Model not found: ${body.model}. ${hint}` }, 404);
   }
 
+  if (
+    resolved.provider.slug === "together" &&
+    !shouldAdvertiseServerlessTogether({ hasOrgByok: hasTogetherByok })
+  ) {
+    return c.json(
+      {
+        error: "Serverless wholesale path is not configured",
+        message:
+          "Together overflow is not configured. Use a Vertex MaaS id (gemma-4-26b-a4b-it, qwen3-next-80b-instruct, deepseek-v3.2), set TOGETHER_API_KEY, or add org BYOK for 'together'.",
+        status: "wholesale_not_configured",
+        model: body.model,
+      },
+      503
+    );
+  }
+
+  if (
+    resolved.provider.slug === "vertex" &&
+    isProductionRuntime() &&
+    !hasVertexPlatform() &&
+    !hasVertexByok
+  ) {
+    return c.json(
+      {
+        error: "Serverless wholesale path is not configured",
+        message:
+          "Vertex is not configured. Set GOOGLE_CLOUD_PROJECT / GCP_PROJECT / GCP_PROJECT_ID and Application Default Credentials, or VERTEX_API_KEY.",
+        status: "wholesale_not_configured",
+        model: body.model,
+      },
+      503
+    );
+  }
+
   // Pre-authorize affordability before provider execution.
-  try {
+  if (!c.get("skipBilling")) try {
     const promptTokensEstimate = body.messages.reduce((sum, m) => {
       return sum + estimateTokens(flattenMessageText(m?.content));
     }, 0);
@@ -267,27 +358,60 @@ chatRouter.post("/completions", async (c) => {
     resolved.provider.slug
   );
 
-  // Build dynamically ranked provider chain (health, latency, cost)
-  const ranked = await getRankedProviders(body.model, {
-    promptTokens: promptTokensEstimate,
-    completionTokens: completionEstimate,
-    plan: (billingContext?.plan || organization.plan || "free") as "free" | "pro" | "team" | "enterprise",
-    family: requestFamily,
-    region,
-  });
+  // House chat skips Redis-backed ranking — go straight to the resolved provider.
+  const houseChat = Boolean(c.get("skipBilling"));
+  const ranked = houseChat
+    ? [
+        {
+          slug: resolved.provider.slug,
+          score: 0,
+          health: {
+            slug: resolved.provider.slug,
+            successRate: 1,
+            avgLatencyMs: 0,
+            successCount: 0,
+            errorCount: 0,
+            totalCalls: 0,
+            lastSeenAt: null,
+          },
+          estimatedCostUsd: 0,
+          canServe: true,
+        },
+      ]
+    : await getRankedProviders(body.model, {
+        promptTokens: promptTokensEstimate,
+        completionTokens: completionEstimate,
+        plan: (billingContext?.plan || organization.plan || "free") as
+          | "free"
+          | "pro"
+          | "team"
+          | "enterprise",
+        family: requestFamily,
+        region,
+      });
 
-  let chainSlugs = ranked.map((r) => r.slug);
+  let chainSlugs = applyProviderRouting(ranked, body.provider, [
+    ...alwaysUseSlugs(byokKeys),
+    ...byokKeys.keys(),
+  ]);
+
+  if (alwaysUseSlugs(byokKeys).length > 0) {
+    const prefer = alwaysUseSlugs(byokKeys).filter((s) => chainSlugs.includes(s));
+    chainSlugs = [...prefer, ...chainSlugs.filter((s) => !prefer.includes(s))];
+  }
 
   // Prompt-cache session affinity + sticky cache key for wholesale providers
   const cacheFp = promptCacheFingerprint(body.model, body.messages, body.user);
   if (!body.prompt_cache_key) {
     body.prompt_cache_key = `opd_${organization.id.slice(0, 8)}_${cacheFp}`;
   }
-  const sticky = await lookupCacheAffinity({
-    organizationId: organization.id,
-    model: body.model,
-    fingerprint: cacheFp,
-  });
+  const sticky = houseChat
+    ? null
+    : await lookupCacheAffinity({
+        organizationId: organization.id,
+        model: body.model,
+        fingerprint: cacheFp,
+      });
   chainSlugs = applyAffinityToChain(chainSlugs, sticky);
 
   const serviceTier = normalizeServiceTier(
@@ -339,8 +463,10 @@ chatRouter.post("/completions", async (c) => {
   // Try each provider in the chain
   for (let chainIndex = 0; chainIndex < chainSlugs.length; chainIndex++) {
     const slug = chainSlugs[chainIndex];
-    const provider = getProvider(slug);
+    const byok = byokKeys.get(slug);
+    const provider = instantiateProvider(slug, byok?.plaintext);
     if (!provider) continue;
+    if (byok) touchOrgProviderKeyUsed(byok.id);
 
     // Lookup provider UUID for FK constraint
     try {
@@ -380,9 +506,11 @@ chatRouter.post("/completions", async (c) => {
     // Success — handle streaming or non-streaming
     try {
       if (body.stream && result.streamGenerator) {
+        const generationId = randomUUID();
         c.header("Content-Type", "text/event-stream");
         c.header("Cache-Control", "no-cache");
         c.header("Connection", "keep-alive");
+        c.header("x-generation-id", generationId);
 
         const stream = new ReadableStream({
           async start(controller) {
@@ -441,6 +569,7 @@ chatRouter.post("/completions", async (c) => {
               const inserted = await db
                 .insert(requests)
                 .values({
+                id: generationId,
                 apiKeyId: apiKey.id,
                 organizationId: organization.id,
                 providerId: providerId || usedProviderSlug,
@@ -467,11 +596,13 @@ chatRouter.post("/completions", async (c) => {
                   serviceTier,
                   promptCacheKey: body.prompt_cache_key,
                   cachedTokens: 0,
+                  streamed: true,
+                  ...(c.get("appAttribution") || {}),
                 },
                 })
                 .returning({ id: requests.id });
 
-              if (costUsd > 0) {
+              if (costUsd > 0 && !c.get("skipBilling")) {
                 try {
                   await debitUsage(organization.id, costUsd, inserted[0]?.id, {
                     plan: (billingContext?.plan || organization.plan || "free") as
@@ -554,6 +685,7 @@ chatRouter.post("/completions", async (c) => {
                   policyAction: policyResult?.action,
                   businessUnit: c.get("businessUnit"),
                   clientId: c.get("clientId"),
+                  ...(c.get("appAttribution") || {}),
                 },
               });
             } finally {
@@ -594,9 +726,11 @@ chatRouter.post("/completions", async (c) => {
           // pricing not configured
         }
 
+        const generationId = randomUUID();
         const inserted = await db
           .insert(requests)
           .values({
+          id: generationId,
           apiKeyId: apiKey.id,
           organizationId: organization.id,
           providerId: providerId || usedProviderSlug,
@@ -623,11 +757,12 @@ chatRouter.post("/completions", async (c) => {
             serviceTier,
             promptCacheKey: body.prompt_cache_key,
             cachedTokens,
+            ...(c.get("appAttribution") || {}),
           },
           })
           .returning({ id: requests.id });
 
-        if (costUsd > 0) {
+        if (costUsd > 0 && !c.get("skipBilling")) {
           try {
             await debitUsage(organization.id, costUsd, inserted[0]?.id, {
               plan: (billingContext?.plan || organization.plan || "free") as
@@ -684,6 +819,8 @@ chatRouter.post("/completions", async (c) => {
           },
         });
 
+        c.header("x-generation-id", generationId);
+        response.id = generationId;
         return c.json(response);
       }
     } catch (error: any) {
@@ -715,6 +852,7 @@ chatRouter.post("/completions", async (c) => {
       policyAction: policyResult?.action,
       businessUnit: c.get("businessUnit"),
       clientId: c.get("clientId"),
+      ...(c.get("appAttribution") || {}),
     },
   });
 

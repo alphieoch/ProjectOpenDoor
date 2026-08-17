@@ -6,7 +6,7 @@ import { eq, sql, gte, and } from "drizzle-orm";
 import { requireAuth } from "@/lib/auth";
 import { formatCurrency, formatNumber } from "@/lib/utils";
 import Link from "next/link";
-import { redirect } from "next/navigation";
+import { redirect, unstable_rethrow } from "next/navigation";
 import {
   isChecklistComplete,
   normalizeOnboardingSegment,
@@ -22,6 +22,28 @@ import { gatewayBaseUrl } from "@/lib/public-urls";
 import { models as modelsTable, providers } from "@opendoor/database";
 
 export default async function DashboardPage() {
+  try {
+    return await DashboardOverview();
+  } catch (err) {
+    unstable_rethrow(err);
+    console.error("[dashboard] overview unavailable", err);
+    return (
+      <div className="od-page">
+        <div
+          className="od-fade-up"
+          style={{ marginBottom: 32, paddingBottom: 24, borderBottom: "1px solid var(--line)" }}
+        >
+          <h1 className="od-h1">Welcome back.</h1>
+          <p className="page-desc" style={{ marginTop: 8 }}>
+            Workspace stats could not be loaded. Open Studio or another page to keep working.
+          </p>
+        </div>
+      </div>
+    );
+  }
+}
+
+async function DashboardOverview() {
   const session = await requireAuth();
   const orgId = session.orgId as string;
   const since30 = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);

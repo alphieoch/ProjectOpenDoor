@@ -1,0 +1,56 @@
+---
+title: "Videos"
+description: "Vertex Veo long-running video generation. POST starts an operation; GET polls status."
+---
+
+# Videos
+
+```
+POST /v1/videos/generations
+GET  /v1/videos/generations/:id
+GET  /v1/videos/generations/:id/content
+GET  /v1/videos/models
+```
+
+Body: `{ "model", "prompt", "n", "duration", "size" | "aspect_ratio", "image?" }`.
+
+Routes to Vertex **Veo** (`predictLongRunning` + `fetchPredictOperation`) using the same ADC / `GOOGLE_CLOUD_PROJECT` as chat. Returns **503** if Vertex is not configured. Never invents a video.
+
+`X-OpenDoor-Backend: private` or `model: "premium:private"` returns **501** — private GPU video is not implemented.
+
+Live probe on `project-800192c2-3ecc-4889-8f7` (`us-central1`):
+
+| Model | Result |
+|-------|--------|
+| `veo-3.1-fast-generate-001` | **200** + operation, then `videos[].bytesBase64Encoded` |
+| `veo-3.1-generate-001` | **200** + operation, then inline mp4 bytes |
+| `veo-3.0-generate-001` / `veo-3.0-fast-generate-001` / `veo-2.0-generate-001` | **404** — Model Garden Enable |
+
+`duration` is seconds (Veo 3: 4, 6, or 8). `image` is optional base64 / data URL for image-to-video.
+
+Jobs are in-memory, with metadata and mp4 bytes stored in `OPENDOOR_FILES_BUCKET` when set.
+
+```bash
+curl http://localhost:3001/v1/videos/generations \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "veo-3.1-fast-generate-001",
+    "prompt": "A red cube sitting still on a white table",
+    "duration": 4,
+    "aspect_ratio": "16:9"
+  }'
+```
+
+```bash
+curl http://localhost:3001/v1/videos/generations/vid_… \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+```bash
+curl http://localhost:3001/v1/videos/generations/vid_…/content \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -o out.mp4
+```
+
+POST returns `{ "id", "status": "processing", "model" }`. Poll GET until `completed` (then `url` is `/v1/videos/generations/:id/content`) or `failed`.

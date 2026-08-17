@@ -131,6 +131,8 @@ export const organizations = pgTable("organizations", {
   subscriptionStatus: varchar("subscription_status", { length: 50 }).default("inactive"),
   agentsAddonStatus: varchar("agents_addon_status", { length: 50 }).notNull().default("inactive"),
   stripeAgentsSubscriptionId: varchar("stripe_agents_subscription_id", { length: 255 }),
+  webSearchAddonStatus: varchar("web_search_addon_status", { length: 50 }).notNull().default("inactive"),
+  stripeWebSearchSubscriptionId: varchar("stripe_web_search_subscription_id", { length: 255 }),
   workosOrganizationId: varchar("workos_organization_id", { length: 255 }),
   workosConnectionId: varchar("workos_connection_id", { length: 255 }),
   ssoEnabled: boolean("sso_enabled").default(false),
@@ -159,6 +161,7 @@ export const users = pgTable("users", {
   organizationId: uuid("organization_id").references(() => organizations.id),
   role: varchar("role", { length: 50 }).notNull().default("member"),
   isSiteAdmin: boolean("is_site_admin").notNull().default(false),
+  protectedChild: boolean("protected_child").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -1738,9 +1741,30 @@ export const workflows = pgTable("workflows", {
   statusIdx: index("workflows_status_idx").on(t.status),
 }));
 
-export const workflowsRelations = relations(workflows, ({ one }) => ({
+export const workflowRuns = pgTable("workflow_runs", {
+  id:             uuid("id").primaryKey().defaultRandom(),
+  workflowId:     uuid("workflow_id").notNull().references(() => workflows.id, { onDelete: "cascade" }),
+  organizationId: uuid("organization_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+  status:         varchar("status", { length: 50 }).notNull().default("running"),
+  input:          jsonb("input").$type<Record<string, unknown>>().notNull().default({}),
+  stepOutputs:    jsonb("step_outputs").$type<unknown[]>().notNull().default([]),
+  error:          text("error"),
+  createdAt:      timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  completedAt:    timestamp("completed_at", { withTimezone: true }),
+}, (t) => ({
+  workflowIdx: index("workflow_runs_workflow_idx").on(t.workflowId, t.createdAt),
+  orgIdx:      index("workflow_runs_org_idx").on(t.organizationId),
+}));
+
+export const workflowsRelations = relations(workflows, ({ one, many }) => ({
   organization: one(organizations, { fields: [workflows.organizationId], references: [organizations.id] }),
   createdByUser: one(users, { fields: [workflows.createdBy], references: [users.id] }),
+  runs: many(workflowRuns),
+}));
+
+export const workflowRunsRelations = relations(workflowRuns, ({ one }) => ({
+  workflow: one(workflows, { fields: [workflowRuns.workflowId], references: [workflows.id] }),
+  organization: one(organizations, { fields: [workflowRuns.organizationId], references: [organizations.id] }),
 }));
 
 export const batchJobs = pgTable(
@@ -1764,6 +1788,12 @@ export const batchJobs = pgTable(
     totalCount: integer("total_count").notNull().default(0),
     completedCount: integer("completed_count").notNull().default(0),
     failedCount: integer("failed_count").notNull().default(0),
+    inputFileId: varchar("input_file_id", { length: 128 }),
+    outputFileId: varchar("output_file_id", { length: 128 }),
+    completionWindow: varchar("completion_window", { length: 20 })
+      .notNull()
+      .default("24h"),
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -1791,6 +1821,90 @@ export const batchJobsRelations = relations(batchJobs, ({ one }) => ({
   }),
 }));
 
+/** Org-scoped bring-your-own provider keys (encrypted at rest). */
+export const organizationProviderKeys = pgTable(
+  "organization_provider_keys",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: uuid("organization_id")
+      .references(() => organizations.id, { onDelete: "cascade" })
+      .notNull(),
+    providerSlug: varchar("provider_slug", { length: 50 }).notNull(),
+    label: varchar("label", { length: 255 }),
+    keyCiphertext: text("key_ciphertext").notNull(),
+    keyIv: text("key_iv").notNull(),
+    keyTag: text("key_tag").notNull(),
+    keyPrefix: varchar("key_prefix", { length: 16 }).notNull(),
+    alwaysUse: boolean("always_use").notNull().default(false),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    orgIdx: index("organization_provider_keys_org_idx").on(table.organizationId),
+    orgSlugIdx: index("organization_provider_keys_org_slug_idx").on(
+      table.organizationId,
+      table.providerSlug
+    ),
+  })
+);
+
+export const organizationProviderKeysRelations = relations(
+  organizationProviderKeys,
+  ({ one }) => ({
+    organization: one(organizations, {
+      fields: [organizationProviderKeys.organizationId],
+      references: [organizations.id],
+    }),
+  })
+);
+
+/** Private GPU rentals — this Mac or an existing dedicated deployment. Not Vertex MaaS. */
+export const premiumRentals = pgTable(
+  "premium_rentals",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: uuid("organization_id")
+      .references(() => organizations.id, { onDelete: "cascade" })
+      .notNull(),
+    deploymentId: uuid("deployment_id").references(() => deployments.id, {
+      onDelete: "set null",
+    }),
+    sku: varchar("sku", { length: 50 }).notNull().default("metal"),
+    status: varchar("status", { length: 30 }).notNull().default("pending"),
+    hourlyRate: numeric("hourly_rate", { precision: 10, scale: 4 }).notNull().default("0"),
+    hours: integer("hours"),
+    modelId: varchar("model_id", { length: 255 }),
+    weightsUri: text("weights_uri"),
+    ownsDeployment: boolean("owns_deployment").notNull().default(false),
+    startedAt: timestamp("started_at", { withTimezone: true }),
+    endedAt: timestamp("ended_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    orgIdx: index("premium_rentals_org_idx").on(table.organizationId, table.createdAt),
+    statusIdx: index("premium_rentals_status_idx").on(table.status),
+    deploymentIdx: index("premium_rentals_deployment_idx").on(table.deploymentId),
+  })
+);
+
+export const premiumRentalsRelations = relations(premiumRentals, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [premiumRentals.organizationId],
+    references: [organizations.id],
+  }),
+  deployment: one(deployments, {
+    fields: [premiumRentals.deploymentId],
+    references: [deployments.id],
+  }),
+}));
+
 export const assistantPurchasesRelations = relations(assistantPurchases, ({ one }) => ({
   assistant: one(aiAssistants, {
     fields: [assistantPurchases.assistantId],
@@ -1799,5 +1913,97 @@ export const assistantPurchasesRelations = relations(assistantPurchases, ({ one 
   user: one(users, {
     fields: [assistantPurchases.userId],
     references: [users.id],
+  }),
+}));
+
+/* ─────────────────────────────────────────────────────────────────
+   OpenDoor Chat (first-party house model — Qwen 3.8)
+───────────────────────────────────────────────────────────────── */
+export const houseChats = pgTable(
+  "house_chats",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    title: varchar("title", { length: 255 }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    userUpdatedIdx: index("house_chats_user_updated_idx").on(t.userId, t.updatedAt),
+    orgIdx: index("house_chats_org_idx").on(t.organizationId),
+  })
+);
+
+export const houseChatMessages = pgTable(
+  "house_chat_messages",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    chatId: uuid("chat_id")
+      .notNull()
+      .references(() => houseChats.id, { onDelete: "cascade" }),
+    role: varchar("role", { length: 20 }).notNull(),
+    content: text("content").notNull().default(""),
+    mode: varchar("mode", { length: 20 }),
+    reasoning: text("reasoning"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    chatIdx: index("house_chat_messages_chat_idx").on(t.chatId, t.createdAt),
+  })
+);
+
+export const houseChatUsage = pgTable(
+  "house_chat_usage",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    periodMessagesUsed: integer("period_messages_used").notNull().default(0),
+    periodWindowStartedAt: timestamp("period_window_started_at", { withTimezone: true }),
+    weeklyMessagesUsed: integer("weekly_messages_used").notNull().default(0),
+    weekStartedAt: timestamp("week_started_at", { withTimezone: true }),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    userUnique: uniqueIndex("house_chat_usage_user_uidx").on(t.userId),
+  })
+);
+
+export const houseChatsRelations = relations(houseChats, ({ one, many }) => ({
+  organization: one(organizations, {
+    fields: [houseChats.organizationId],
+    references: [organizations.id],
+  }),
+  user: one(users, {
+    fields: [houseChats.userId],
+    references: [users.id],
+  }),
+  messages: many(houseChatMessages),
+}));
+
+export const houseChatMessagesRelations = relations(houseChatMessages, ({ one }) => ({
+  chat: one(houseChats, {
+    fields: [houseChatMessages.chatId],
+    references: [houseChats.id],
+  }),
+}));
+
+export const houseChatUsageRelations = relations(houseChatUsage, ({ one }) => ({
+  user: one(users, {
+    fields: [houseChatUsage.userId],
+    references: [users.id],
+  }),
+  organization: one(organizations, {
+    fields: [houseChatUsage.organizationId],
+    references: [organizations.id],
   }),
 }));

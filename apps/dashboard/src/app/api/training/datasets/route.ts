@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { trainingDatasets } from "@opendoor/database";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 import { requireAuth } from "@/lib/auth";
 
 function slugify(s: string) {

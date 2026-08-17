@@ -5,12 +5,16 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   LayoutDashboard, Key, BarChart3, Calculator, Server, CreditCard,
-  Play, Users, Settings, ClipboardList, LogOut, ShieldCheck, Gavel,
+  Play, Users, Settings, ClipboardList, LogOut, ShieldCheck, Gavel, LifeBuoy,
+  Gem,
+  Aperture,
+  Image as ImageIcon,
   AlertTriangle, FileCheck, BookOpen, Building2, Bot,
   ChevronsUpDown, ChevronDown, UserPlus, UserCog, Blocks, Plus, UserCircle,
-  GitBranch, List, FlaskConical, ScrollText, Sparkles,
+  Lock,
+  GitBranch, List, FlaskConical, ScrollText, Sparkles, MessageSquare,
 } from "lucide-react";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, Badge } from "@heroui/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -68,12 +72,17 @@ const navItems = [
   { href: "/dashboard/deployments",label: "Deployments", icon: Server, badgeKey: "deployments" as const },
   { href: "/dashboard/training",   label: "Training",    icon: FlaskConical },
   { href: "/dashboard/billing",    label: "Billing",     icon: CreditCard },
+  { href: "/dashboard/chat",          label: "Chat",          icon: MessageSquare },
   { href: "/dashboard/playground",    label: "Playground",    icon: Play },
+  { href: "/dashboard/premium",       label: "Premium",       icon: Gem },
+  { href: "/dashboard/studio",        label: "Studio", icon: Aperture },
+  { href: "/dashboard/playground/media", label: "Media",      icon: ImageIcon },
   { href: "/dashboard/workflow",      label: "Workflow",      icon: GitBranch },
   { href: "/dashboard/models",        label: "Models",        icon: List },
   { href: "/dashboard/agents",        label: "Agents",        icon: Sparkles, badgeKey: "agents" as const },
   { href: "/dashboard/ai-assistants", label: "AI Assistants", icon: Bot },
   { href: "/dashboard/team",          label: "Team",          icon: Users },
+  { href: "/dashboard/support",       label: "Support",       icon: LifeBuoy },
   { href: "/dashboard/settings",   label: "Settings",    icon: Settings },
   { href: "/dashboard/audit-logs", label: "Audit Logs",  icon: ClipboardList },
 ];
@@ -108,7 +117,7 @@ function NavItem({
   active,
   animateLayout,
 }: {
-  item: { href: string; label: string; icon: typeof navItems[0]["icon"]; badge?: string };
+  item: { href: string; label: string; icon: typeof navItems[0]["icon"]; badge?: string; locked?: boolean };
   layoutId: string;
   isCollapsed: boolean;
   active: boolean;
@@ -118,6 +127,7 @@ function NavItem({
   return (
     <Link
       href={item.href}
+      prefetch={true}
       className={cn(
         "flex h-8 w-full flex-row items-center rounded-md px-2 py-1.5 transition-colors",
         "relative",
@@ -161,6 +171,12 @@ function NavItem({
                 {item.badge}
               </span>
             )}
+            {item.locked && (
+              <Lock
+                className="h-3 w-3 shrink-0"
+                style={{ color: active ? "var(--brand-tint)" : "var(--ink-4)" }}
+              />
+            )}
           </div>
         )}
       </motion.div>
@@ -174,11 +190,33 @@ function accountInitials(name: string) {
   return name.slice(0, 2).toUpperCase() || "OD";
 }
 
-export function SessionNavBar({ email, displayName }: { email: string; displayName: string }) {
+export function SessionNavBar({
+  email,
+  displayName,
+  enterpriseLocked = false,
+  protectedChild = false,
+  isSiteAdmin = false,
+}: {
+  email: string;
+  displayName: string;
+  enterpriseLocked?: boolean;
+  protectedChild?: boolean;
+  isSiteAdmin?: boolean;
+}) {
   const [isCollapsed, setIsCollapsed] = useState(true);
   const [hydrated, setHydrated] = useState(false);
   const [openGroups, setOpenGroups] = useState({ workspace: true, governance: true });
   const [counts, setCounts] = useState({ deployments: 0, openViolations: 0, pendingApprovals: 0, agents: 0 });
+
+  const CHILD_HIDDEN = new Set([
+    "/dashboard/playground",
+    "/dashboard/playground/media",
+    "/dashboard/studio",
+    "/dashboard/premium",
+  ]);
+  const workspaceNav = protectedChild
+    ? navItems.filter((i) => !CHILD_HIDDEN.has(i.href))
+    : navItems;
 
   useEffect(() => {
     setHydrated(true);
@@ -333,13 +371,13 @@ export function SessionNavBar({ email, displayName }: { email: string; displayNa
                           style={{ overflow: "hidden" }}
                         >
                           <div className="flex flex-col gap-1">
-                            {navItems.map((item) => (
+                            {workspaceNav.map((item) => (
                               <NavItem
                                 key={item.href}
                                 item={withBadge(item)}
                                 layoutId="sidebar-active-workspace"
                                 isCollapsed={isCollapsed}
-                                active={isActive(item.href, navItems)}
+                                active={isActive(item.href, workspaceNav)}
                                 animateLayout={hydrated}
                               />
                             ))}
@@ -358,11 +396,16 @@ export function SessionNavBar({ email, displayName }: { email: string; displayNa
                           onClick={() => toggleGroup("governance")}
                           className="flex w-full items-center justify-between px-2 pb-1 pt-1 transition-colors hover:text-[var(--ink)]"
                         >
-                          <span
-                            className="text-[10px] font-semibold uppercase tracking-[0.14em]"
-                            style={{ color: "var(--ink-4)", fontFamily: "var(--font-mono)" }}
-                          >
-                            Governance
+                          <span className="flex items-center gap-1.5">
+                            <span
+                              className="text-[10px] font-semibold uppercase tracking-[0.14em]"
+                              style={{ color: "var(--ink-4)", fontFamily: "var(--font-mono)" }}
+                            >
+                              Governance
+                            </span>
+                            {enterpriseLocked && (
+                              <Lock className="h-3 w-3" style={{ color: "var(--ink-4)" }} />
+                            )}
                           </span>
                           <motion.div
                             animate={{ rotate: openGroups.governance ? 0 : -90 }}
@@ -388,7 +431,7 @@ export function SessionNavBar({ email, displayName }: { email: string; displayNa
                             {governanceItems.map((item) => (
                               <NavItem
                                 key={item.href}
-                                item={withBadge(item)}
+                                item={{ ...withBadge(item), locked: enterpriseLocked }}
                                 layoutId="sidebar-active-governance"
                                 isCollapsed={isCollapsed}
                                 active={isActive(item.href, governanceItems)}
@@ -434,6 +477,7 @@ export function SessionNavBar({ email, displayName }: { email: string; displayNa
 
                 <Link
                   href="/dashboard/settings"
+                  prefetch={true}
                   className="flex h-8 w-full flex-row items-center rounded-md px-2 py-1.5 transition-colors hover:bg-[var(--paper-3)] hover:text-[var(--ink)]"
                   style={{ color: "var(--ink-2)" }}
                 >
@@ -449,11 +493,16 @@ export function SessionNavBar({ email, displayName }: { email: string; displayNa
                       className="flex h-8 w-full flex-row items-center gap-2 rounded-md px-2 py-1.5 transition-colors hover:bg-[var(--paper-3)] hover:text-[var(--ink)]"
                       style={{ color: "var(--ink-2)" }}
                     >
-                      <Avatar className="size-4 shrink-0">
-                        <AvatarFallback className="text-[10px]" style={{ background: "var(--brand)", color: "white" }}>
-                          {accountInitials(displayName)}
-                        </AvatarFallback>
-                      </Avatar>
+                      <Badge.Anchor className="shrink-0">
+                        <Avatar className="size-5" size="sm">
+                          <Avatar.Fallback>{accountInitials(displayName)}</Avatar.Fallback>
+                        </Avatar>
+                        <Badge
+                          color={isSiteAdmin ? "accent" : "success"}
+                          placement="bottom-right"
+                          size="sm"
+                        />
+                      </Badge.Anchor>
                       <motion.div variants={variants} className="flex w-full items-center gap-2">
                         {!isCollapsed && (
                           <>

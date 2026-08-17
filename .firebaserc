@@ -1,14 +1,5 @@
 {
   "projects": {
-    "default": "opendoor-f39a4"
-  },
-  "targets": {
-    "opendoor-f39a4": {
-      "hosting": {
-        "opendoor": [
-          "opendoor-f39a4"
-        ]
-      }
-    }
+    "default": "project-800192c2-3ecc-4889-8f7"
   }
 }

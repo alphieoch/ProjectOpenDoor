@@ -21,6 +21,12 @@ USE_CLOUD_BUILD="${USE_CLOUD_BUILD:-1}"
 # Public URL (Firebase Hosting). Override after custom domain.
 PUBLIC_URL="${PUBLIC_URL:-https://${SITE_ID}.web.app}"
 
+# Persist Vertex / files / Stripe catalog across --set-env-vars.
+# shellcheck source=../infra/gcp/cloud-run-env.sh
+source "$ROOT/infra/gcp/cloud-run-env.sh"
+OPENDOOR_GCP_PROJECT="$PROJECT"
+opendoor_ensure_files_bucket "$PROJECT" "$OPENDOOR_FILES_BUCKET"
+
 gcloud config set project "$PROJECT" >/dev/null
 
 secret_bindings() {
@@ -34,16 +40,26 @@ secret_bindings() {
   if gcloud secrets describe opendoor-posthog-api-key --project="$PROJECT" >/dev/null 2>&1; then
     secrets="${secrets},POSTHOG_API_KEY=opendoor-posthog-api-key:latest"
   fi
+  if gcloud secrets describe opendoor-linear-api-key --project="$PROJECT" >/dev/null 2>&1; then
+    secrets="${secrets},LINEAR_API_KEY=opendoor-linear-api-key:latest"
+  fi
   if gcloud secrets describe opendoor-workos-api-key --project="$PROJECT" >/dev/null 2>&1; then
     secrets="${secrets},WORKOS_API_KEY=opendoor-workos-api-key:latest,WORKOS_CLIENT_ID=opendoor-workos-client-id:latest,WORKOS_COOKIE_PASSWORD=opendoor-workos-cookie-password:latest"
   fi
+  if gcloud secrets describe opendoor-code-sandbox-token --project="$PROJECT" >/dev/null 2>&1; then
+    secrets="${secrets},CODE_SANDBOX_TOKEN=opendoor-code-sandbox-token:latest"
+  fi
+  if gcloud secrets describe opendoor-qwen-api-key --project="$PROJECT" >/dev/null 2>&1; then
+    secrets="${secrets},QWEN_API_KEY=opendoor-qwen-api-key:latest"
+  fi
+  secrets="${secrets},INTERNAL_API_KEY=opendoor-internal-api-key:latest,GATEWAY_INTERNAL_KEY=opendoor-internal-api-key:latest"
   printf '%s' "$secrets"
 }
 
 deploy_run_services() {
   local connection_name vpc_path secrets
   connection_name=$(gcloud sql instances describe "$SQL_INSTANCE" --project="$PROJECT" --format='value(connectionName)')
-  vpc_path="projects/${PROJECT}/locations/${REGION}/connectors/${VPC_CONNECTOR}"
+  vpc_path="${VPC_CONNECTOR}"
   secrets="$(secret_bindings)"
 
   echo "==> Deploy gateway (Cloud Run)"
@@ -61,7 +77,7 @@ deploy_run_services() {
     --add-cloudsql-instances="$connection_name" \
     --vpc-connector="$vpc_path" \
     --vpc-egress=private-ranges-only \
-    --set-env-vars="NODE_ENV=production,GCP_PROJECT_ID=${PROJECT},GCP_REGION=${REGION},GATEWAY_PORT=3001,INSTANCE_CONNECTION_NAME=${connection_name},DB_NAME=opendoor,DB_USER=opendoor" \
+    --set-env-vars="$(opendoor_gateway_env "$PROJECT" "$REGION" "$connection_name")" \
     --set-secrets="${secrets}" \
     --project="$PROJECT"
 
@@ -80,7 +96,7 @@ deploy_run_services() {
     --add-cloudsql-instances="$connection_name" \
     --vpc-connector="$vpc_path" \
     --vpc-egress=private-ranges-only \
-    --set-env-vars="NODE_ENV=production,GCP_PROJECT_ID=${PROJECT},GCP_REGION=${REGION},NEXT_PUBLIC_APP_URL=${PUBLIC_URL},NEXT_PUBLIC_GATEWAY_URL=${PUBLIC_URL},NEXT_PUBLIC_WORKOS_REDIRECT_URI=${PUBLIC_URL}/callback,HOSTNAME=0.0.0.0,INSTANCE_CONNECTION_NAME=${connection_name},DB_NAME=opendoor,DB_USER=opendoor" \
+    --set-env-vars="$(opendoor_dashboard_env "$PROJECT" "$REGION" "$connection_name" "$PUBLIC_URL")" \
     --set-secrets="${secrets}" \
     --project="$PROJECT"
 }
@@ -127,6 +143,7 @@ else
     -f apps/dashboard/Dockerfile \
     --build-arg "NEXT_PUBLIC_APP_URL=${PUBLIC_URL}" \
     --build-arg "NEXT_PUBLIC_GATEWAY_URL=${PUBLIC_URL}" \
+    --build-arg "NEXT_PUBLIC_WORKOS_REDIRECT_URI=${PUBLIC_URL}/callback" \
     -t "${REGISTRY}/dashboard:${TAG}" \
     -t "${REGISTRY}/dashboard:latest" \
     .
@@ -157,3 +174,11 @@ echo "Deployed tag ${TAG}"
 echo "  Public (Firebase): ${PUBLIC_URL}"
 echo "  Dashboard Run:     ${DASH_URL}"
 echo "  Gateway Run:       ${GW_URL}"
+SANDBOX_URL=$(gcloud run services describe opendoor-sandbox --region="$REGION" --project="$PROJECT" --format='value(status.url)' 2>/dev/null || true)
+if [[ -n "$SANDBOX_URL" ]]; then
+  echo "  Sandbox Run:       ${SANDBOX_URL}"
+else
+  echo "  Sandbox Run:       (not deployed — workflow code_execution uses local subprocess)"
+  echo "  Deploy jail:       gcloud builds submit --config=infra/gcp/cloudbuild.sandbox.yaml"
+fi
+echo "  Studio images:     OpenDoor /v1/images/generations (Comfy retired; not wired)"

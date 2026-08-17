@@ -103,8 +103,9 @@ export function PricingPlans() {
       <p className="mt-5 text-center text-sm text-slate-500">
         No free plan. Pro is $12 vs Perplexity Pro at $20. Top up $20 or more
         and we add $5 of open-weight credit (expires in 30 days). Tokens beyond
-        the monthly stipend and every GPU-second stay prepaid. Agents is a
-        $20/month add-on (included on Enterprise); agent tokens still bill quota.
+        the monthly stipend and every GPU-second stay prepaid. Agents and Web
+        Search are $20/month add-ons (included on Enterprise). Agent tokens still
+        bill quota; search uses OpenDoor’s Vertex project.
       </p>
     </section>
   );

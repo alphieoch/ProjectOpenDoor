@@ -9,47 +9,47 @@ import { inferModelModality } from "@/lib/models/modality";
 import { resolveModelRuntime } from "@/lib/models/runtime";
 
 export async function GET(req: NextRequest) {
-  const session = await getSession();
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  try {
+    const session = await getSession();
+    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { searchParams } = new URL(req.url);
-  const region = searchParams.get("region") || "global";
+    const { searchParams } = new URL(req.url);
+    const region = searchParams.get("region") || "global";
 
-  const db = getDb();
-  const now = new Date();
-  const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const db = getDb();
+    const now = new Date();
+    const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
-  const rules = await db
-    .select({
-      id: pricingRules.id,
-      modelId: pricingRules.modelId,
-      region: pricingRules.region,
-      modality: pricingRules.modality,
-      inputCostPer1K: pricingRules.inputCostPer1K,
-      outputCostPer1K: pricingRules.outputCostPer1K,
-      markupPercent: pricingRules.markupPercent,
-      finalInputCostPer1K: pricingRules.finalInputCostPer1K,
-      finalOutputCostPer1K: pricingRules.finalOutputCostPer1K,
-      providerName: providers.name,
-      providerSlug: providers.slug,
-      family: models.family,
-      status: models.deploymentStatus,
-      displayName: models.displayName,
-    })
-    .from(pricingRules)
-    .innerJoin(providers, eq(pricingRules.providerId, providers.id))
-    .leftJoin(
-      models,
-      and(eq(models.modelId, pricingRules.modelId), eq(models.providerId, providers.id)),
-    )
-    .where(
-      and(
-        eq(pricingRules.region, region),
-        lte(pricingRules.effectiveFrom, now),
-        isNull(pricingRules.effectiveTo),
-      ),
-    )
-    .orderBy(pricingRules.modelId);
+    const rules = await db
+      .select({
+        id: pricingRules.id,
+        modelId: pricingRules.modelId,
+        region: pricingRules.region,
+        inputCostPer1K: pricingRules.inputCostPer1K,
+        outputCostPer1K: pricingRules.outputCostPer1K,
+        markupPercent: pricingRules.markupPercent,
+        finalInputCostPer1K: pricingRules.finalInputCostPer1K,
+        finalOutputCostPer1K: pricingRules.finalOutputCostPer1K,
+        providerName: providers.name,
+        providerSlug: providers.slug,
+        family: models.family,
+        status: models.deploymentStatus,
+        displayName: models.displayName,
+      })
+      .from(pricingRules)
+      .innerJoin(providers, eq(pricingRules.providerId, providers.id))
+      .leftJoin(
+        models,
+        and(eq(models.modelId, pricingRules.modelId), eq(models.providerId, providers.id)),
+      )
+      .where(
+        and(
+          eq(pricingRules.region, region),
+          lte(pricingRules.effectiveFrom, now),
+          isNull(pricingRules.effectiveTo),
+        ),
+      )
+      .orderBy(pricingRules.modelId);
 
   let skuRows: Array<{
     sku: string;
@@ -316,7 +316,7 @@ export async function GET(req: NextRequest) {
       providerSlug: r.providerSlug,
       family: r.family || "closed",
       status: r.status || "live",
-      modality: r.modality || "chat",
+      modality: inferModelModality(r.modelId, r.displayName || ""),
       available: (r.status || "live") === "live" || (r.status || "") === "dedicated",
       inputCostPer1K: r.inputCostPer1K,
       outputCostPer1K: r.outputCostPer1K,
@@ -331,4 +331,18 @@ export async function GET(req: NextRequest) {
       gcp: live.gcp,
     },
   });
+  } catch (err: any) {
+    return NextResponse.json({
+      markupDefault: 15,
+      markupMin: 10,
+      markupMax: 20,
+      rules: [],
+      availableModels: [],
+      gpus: [],
+      gpuLive: {
+        local: { hasGpu: false, ollamaRunning: false, activeModels: [] },
+        gcp: { ready: false, activeDeployments: [] },
+      },
+    });
+  }
 }

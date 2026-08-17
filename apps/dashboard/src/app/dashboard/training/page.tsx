@@ -56,7 +56,7 @@ export default function TrainingPage() {
 
   const [jobName, setJobName] = useState("");
   const [jobMethod, setJobMethod] = useState("sft");
-  const [jobBase, setJobBase] = useState("llama-3.1-8b-instruct");
+  const [jobBase, setJobBase] = useState("gemini-2.5-flash");
   const [jobDataset, setJobDataset] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -164,7 +164,7 @@ export default function TrainingPage() {
       <PageHeader
         eyebrow="Training"
         title="Fine-tunes"
-        description="Upload datasets, run SFT/DPO/ORPO jobs, evaluate, and call ft: models at base-model price."
+        description="Vertex AI is the primary trainer (supervised tuning for Gemini/Gemma SFT, CustomJob otherwise). Together is optional. Production does not mint simulated ft: models."
       />
 
       <div className="mt-4 flex flex-wrap gap-2">
@@ -253,6 +253,9 @@ export default function TrainingPage() {
             <div className="grid gap-6 lg:grid-cols-2">
               <form onSubmit={createJob} className="card space-y-3 p-4">
                 <p className="font-medium text-sm">Start training job</p>
+                <p className="text-xs text-gray-500">
+                  Vertex supervised tuning for Gemini/Gemma SFT. Other methods need a CustomJob image. Together is optional.
+                </p>
                 <input
                   className="w-full rounded-md border px-3 py-2 text-sm"
                   placeholder="Job name"
@@ -295,6 +298,11 @@ export default function TrainingPage() {
                 </button>
               </form>
               <div className="space-y-2">
+                {jobs.length === 0 && (
+                  <p className="text-sm text-gray-500">
+                    No jobs yet. Vertex AI (GCP project + ADC) is the primary trainer; Together is optional.
+                  </p>
+                )}
                 {jobs.map((j) => (
                   <div key={j.id} className="rounded-lg border p-3 text-sm">
                     <div className="flex justify-between">

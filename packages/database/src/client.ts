@@ -1,3 +1,4 @@
+import { existsSync } from "fs";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import * as schema from "./schema.js";
@@ -9,6 +10,8 @@ function cloudSqlOptions(poolMax: number) {
   const instance =
     process.env.INSTANCE_CONNECTION_NAME || process.env.CLOUDSQL_CONNECTION_NAME;
   if (!instance) return null;
+  const dir = `/cloudsql/${instance}`;
+  if (!existsSync(dir) && !existsSync(`${dir}/.s.PGSQL.5432`)) return null;
 
   const database = process.env.DB_NAME || "opendoor";
   const username = process.env.DB_USER || "opendoor";

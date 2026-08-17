@@ -1,0 +1,327 @@
+export type StudioTool = "txt2img" | "img2img" | "txt2vid" | "img2vid" | "v2v" | "nodes";
+
+export interface StudioModelOption {
+  id: string;
+  name: string;
+  category: "image" | "video" | "enhance";
+  family?: "flux" | "sdxl" | "video" | "google" | "vertex" | "custom";
+  speed?: "realtime" | "fast" | "standard" | "high-quality";
+  badge?: string;
+  tagline: string;
+  provider: "opendoor" | "google" | "vertex" | "black-forest-labs" | "stability-ai" | "runway" | "alibaba" | "lightricks" | "openai" | "private-gpu";
+  companyName: string;
+  aspectRatios: string[];
+  maxDuration?: number;
+  supportsMotionBrush?: boolean;
+  supportsCameraControl?: boolean;
+  isAvailable?: boolean;
+}
+
+export const OPENDOOR_STUDIO_MODELS: StudioModelOption[] = [
+  // ── Google DeepMind Models (Vertex AI) ──────────────────────────────────
+  {
+    id: "google-imagen-3",
+    name: "Google Imagen 3 (Ultra 8K)",
+    category: "image",
+    family: "google",
+    speed: "high-quality",
+    badge: "Google Imagen 3",
+    tagline: "Google DeepMind's flagship image generation model with exceptional photorealism, fine details, and clear typography rendering",
+    provider: "google",
+    companyName: "Google DeepMind",
+    aspectRatios: ["1:1", "16:9", "9:16", "4:3", "3:4"],
+    isAvailable: true,
+  },
+  {
+    id: "google-imagen-3-fast",
+    name: "Google Imagen 3 Fast",
+    category: "image",
+    family: "google",
+    speed: "realtime",
+    badge: "Google Fast",
+    tagline: "High-throughput low-latency version of Imagen 3 for real-time interactive generation and rapid iterations",
+    provider: "google",
+    companyName: "Google DeepMind",
+    aspectRatios: ["1:1", "16:9", "9:16", "4:3", "3:4"],
+    isAvailable: true,
+  },
+  {
+    id: "opendoor-imagen-ultra",
+    name: "OpenDoor Ultra Photoreal (8K)",
+    category: "image",
+    family: "google",
+    speed: "high-quality",
+    badge: "Photoreal 8K",
+    tagline: "Photorealistic 8K fidelity, micro-texture typography & scene composition powered by Google Imagen 3",
+    provider: "google",
+    companyName: "Google DeepMind",
+    aspectRatios: ["1:1", "16:9", "9:16", "4:3", "3:4"],
+    isAvailable: true,
+  },
+  {
+    id: "google-veo-2",
+    name: "Google Veo 2 (Cinematic Video)",
+    category: "video",
+    family: "google",
+    speed: "high-quality",
+    badge: "Google Veo 2",
+    tagline: "Google DeepMind's premier video generation model with 1080p cinematic camera control, physics, and temporal consistency",
+    provider: "google",
+    companyName: "Google DeepMind",
+    aspectRatios: ["16:9", "9:16", "1:1"],
+    maxDuration: 12,
+    supportsMotionBrush: true,
+    supportsCameraControl: true,
+    isAvailable: true,
+  },
+  {
+    id: "opendoor-veo-cinematic",
+    name: "OpenDoor Veo Cinematic (Vertex Video)",
+    category: "video",
+    family: "google",
+    speed: "high-quality",
+    badge: "1080p Coherent",
+    tagline: "High-definition temporal coherence with direct camera trajectory control powered by Google Veo",
+    provider: "google",
+    companyName: "Google DeepMind",
+    aspectRatios: ["16:9", "9:16"],
+    maxDuration: 8,
+    supportsMotionBrush: true,
+    supportsCameraControl: true,
+    isAvailable: true,
+  },
+
+  // ── Black Forest Labs (Flux Lineup) ──────────────────────────────────────
+  {
+    id: "opendoor-flux-canvas",
+    name: "OpenDoor Flux Canvas v2",
+    category: "image",
+    family: "flux",
+    speed: "realtime",
+    badge: "Interactive SOTA",
+    tagline: "Sub-second real-time interactive generation & live brush synthesis",
+    provider: "black-forest-labs",
+    companyName: "Black Forest Labs",
+    aspectRatios: ["1:1", "16:9", "9:16", "4:3", "3:2", "21:9"],
+    isAvailable: true,
+  },
+  {
+    id: "flux-1-schnell",
+    name: "Flux.1 Schnell (Turbo)",
+    category: "image",
+    family: "flux",
+    speed: "realtime",
+    badge: "4-Step Ultra Fast",
+    tagline: "Ultra-fast 4-step diffusion distillation for instant high-quality drafts",
+    provider: "black-forest-labs",
+    companyName: "Black Forest Labs",
+    aspectRatios: ["1:1", "16:9", "9:16", "4:3", "3:2"],
+    isAvailable: true,
+  },
+  {
+    id: "flux-1-dev",
+    name: "Flux.1 Dev (Pro 12B)",
+    category: "image",
+    family: "flux",
+    speed: "high-quality",
+    badge: "12B SOTA Quality",
+    tagline: "12-billion parameter flagship model with extreme prompt adherence and typography",
+    provider: "black-forest-labs",
+    companyName: "Black Forest Labs",
+    aspectRatios: ["1:1", "16:9", "9:16", "4:3", "3:2", "21:9"],
+    isAvailable: true,
+  },
+
+  // ── Stability AI Models ──────────────────────────────────────────────────
+  {
+    id: "sdxl-realvis-v5",
+    name: "RealVisXL V5.0 Photoreal",
+    category: "image",
+    family: "sdxl",
+    speed: "fast",
+    badge: "Skin & Architecture",
+    tagline: "Specialized for realistic human portraits, natural lighting, and architectural scenes",
+    provider: "stability-ai",
+    companyName: "Stability AI",
+    aspectRatios: ["1:1", "16:9", "9:16", "4:3", "3:2"],
+    isAvailable: true,
+  },
+  {
+    id: "dreamshaper-xl",
+    name: "DreamShaper XL (Cinematic)",
+    category: "image",
+    family: "sdxl",
+    speed: "fast",
+    badge: "Cinematic Art",
+    tagline: "Richly stylized art, fantasy aesthetics, and dramatic cinematic lighting",
+    provider: "stability-ai",
+    companyName: "Stability AI",
+    aspectRatios: ["1:1", "16:9", "9:16", "4:3"],
+    isAvailable: true,
+  },
+  {
+    id: "animatediff-v3",
+    name: "AnimateDiff V3 Motion Module",
+    category: "video",
+    family: "video",
+    speed: "fast",
+    badge: "Motion Module",
+    tagline: "Temporal motion adapter for styling and transforming images into looping video",
+    provider: "stability-ai",
+    companyName: "Stability AI",
+    aspectRatios: ["1:1", "16:9", "9:16", "4:3"],
+    maxDuration: 6,
+    isAvailable: true,
+  },
+
+  // ── Runway Models ────────────────────────────────────────────────────────
+  {
+    id: "opendoor-runway-motion-v3",
+    name: "OpenDoor Motion Director (Runway Engine)",
+    category: "video",
+    family: "video",
+    speed: "standard",
+    badge: "Motion Director",
+    tagline: "Multi-zone motion brush with 6-axis camera navigation & cinematic frame rate",
+    provider: "runway",
+    companyName: "Runway",
+    aspectRatios: ["16:9", "9:16", "1:1", "21:9"],
+    maxDuration: 16,
+    supportsMotionBrush: true,
+    supportsCameraControl: true,
+    isAvailable: true,
+  },
+
+  // ── Luma AI Models ───────────────────────────────────────────────────────
+  {
+    id: "luma-dream-machine",
+    name: "Luma Dream Machine 1.5 (Ray 2)",
+    category: "video",
+    family: "video",
+    speed: "high-quality",
+    badge: "Luma Dream Machine",
+    tagline: "Luma AI's premier video diffusion model with realistic camera trajectories, keyframing, and temporal consistency",
+    provider: "opendoor",
+    companyName: "Luma AI",
+    aspectRatios: ["16:9", "9:16", "1:1", "21:9", "4:3"],
+    maxDuration: 14,
+    supportsMotionBrush: true,
+    supportsCameraControl: true,
+    isAvailable: true,
+  },
+
+  // ── Alibaba Wan Team ─────────────────────────────────────────────────────
+  {
+    id: "wan-2-1-video",
+    name: "Wan 2.1 Video (Open SOTA)",
+    category: "video",
+    family: "video",
+    speed: "standard",
+    badge: "Open SOTA Video",
+    tagline: "State-of-the-art text-to-video & image-to-video with natural fluid physics",
+    provider: "alibaba",
+    companyName: "Alibaba Cloud",
+    aspectRatios: ["16:9", "9:16", "1:1"],
+    maxDuration: 10,
+    supportsMotionBrush: true,
+    supportsCameraControl: true,
+    isAvailable: true,
+  },
+
+  // ── Lightricks Models ────────────────────────────────────────────────────
+  {
+    id: "ltx-video-fast",
+    name: "LTX-Video Realtime (24fps)",
+    category: "video",
+    family: "video",
+    speed: "realtime",
+    badge: "Fast 24fps",
+    tagline: "High-framerate real-time video generation with prompt-following motion",
+    provider: "lightricks",
+    companyName: "Lightricks",
+    aspectRatios: ["16:9", "9:16"],
+    maxDuration: 8,
+    isAvailable: true,
+  },
+
+  // ── OpenDoor Enhancement ─────────────────────────────────────────────────
+  {
+    id: "opendoor-krea-enhance-4k",
+    name: "OpenDoor 4K Enhancer (Krea Pipeline)",
+    category: "enhance",
+    family: "custom",
+    speed: "fast",
+    badge: "4K Super-Res",
+    tagline: "Deep detail magnification, face recovery, and texture synthesis up to 8K",
+    provider: "opendoor",
+    companyName: "OpenDoor Studio",
+    aspectRatios: ["1:1", "16:9", "9:16", "4:3"],
+    isAvailable: true,
+  },
+];
+
+export const STYLE_PRESETS = [
+  {
+    id: "none",
+    name: "None (Raw Prompt)",
+    icon: "Sparkles",
+    promptSuffix: "",
+    previewGradient: "from-zinc-700 to-zinc-900",
+  },
+  {
+    id: "photorealistic",
+    name: "Photorealistic 8K",
+    icon: "Camera",
+    promptSuffix: ", highly detailed photograph, 85mm f/1.4 lens, natural lighting, ultra-realistic texture, 8k resolution, award winning photography",
+    previewGradient: "from-amber-600/30 to-amber-900/40",
+  },
+  {
+    id: "cinematic",
+    name: "Cinematic Film",
+    icon: "Film",
+    promptSuffix: ", cinematic movie still, 35mm anamorphic lens, shallow depth of field, dramatic color grading, atmospheric haze, moody lighting, Panavision",
+    previewGradient: "from-blue-600/30 to-indigo-950/60",
+  },
+  {
+    id: "anime",
+    name: "Anime / Studio Ghibli",
+    icon: "Palette",
+    promptSuffix: ", master anime key visual, Makoto Shinkai and Studio Ghibli style, vibrant colors, lush environmental details, soft emotional lighting, cell shaded",
+    previewGradient: "from-pink-600/30 to-rose-950/60",
+  },
+  {
+    id: "cyberpunk",
+    name: "Cyberpunk / Sci-Fi",
+    icon: "Zap",
+    promptSuffix: ", futuristic cyberpunk aesthetic, neon volumetric lighting, chrome reflections, wet asphalt, hologram interface, intricate technological detailing",
+    previewGradient: "from-cyan-500/30 to-purple-950/60",
+  },
+  {
+    id: "unreal-3d",
+    name: "3D Render / Unreal 5",
+    icon: "Layers",
+    promptSuffix: ", Unreal Engine 5 render, Octane render, ray tracing, subsurface scattering, ambient occlusion, hyper-detailed materials, 8k CGI masterpiece",
+    previewGradient: "from-emerald-600/30 to-teal-950/60",
+  },
+  {
+    id: "architecture",
+    name: "Architectural Digest",
+    icon: "Home",
+    promptSuffix: ", architectural photography, modern minimalist design, clean lines, brutalist concrete and warm cedar wood, floor-to-ceiling glass, golden hour sunlight",
+    previewGradient: "from-orange-500/30 to-stone-900/60",
+  },
+  {
+    id: "dark-fantasy",
+    name: "Dark Fantasy / Elden",
+    icon: "Flame",
+    promptSuffix: ", dark fantasy concept art, mystical fog, ancient ominous ruins, ethereal glowing magic runes, oil painting texture, moody grimdark atmosphere",
+    previewGradient: "from-red-600/30 to-zinc-950/80",
+  },
+  {
+    id: "watercolor",
+    name: "Artistic Watercolor",
+    icon: "Brush",
+    promptSuffix: ", expressive watercolor and ink wash painting, fluid color bleed, textured cold-press paper grain, delicate splatters, evocative impressionist style",
+    previewGradient: "from-sky-500/30 to-violet-950/50",
+  },
+];

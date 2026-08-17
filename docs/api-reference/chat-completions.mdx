@@ -24,7 +24,7 @@ POST /v1/chat/completions
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `model` | string | Yes | Model ID (e.g., `gpt-4o`, `DeepSeek-R1`) |
+| `model` | string | Yes | Model ID (e.g., `gpt-4o`, `llama-3.1-8b-instruct:nitro`, `opendoor/auto`). See [Routing](/api-reference/routing). |
 | `messages` | array | Yes | Array of message objects |
 | `stream` | boolean | No | Enable streaming (default: false) |
 | `max_tokens` | integer | No | Maximum tokens to generate |
@@ -36,6 +36,7 @@ POST /v1/chat/completions
 | `tool_choice` | string/object | No | `auto`, `none`, `required`, or a named function |
 | `response_format` | object | No | `{ "type": "json_object" }` or `{ "type": "json_schema", "json_schema": { ... } }` |
 | `messages[].content` | string or array | Yes | String, or multimodal parts (`text` + `image_url`) |
+| `provider` | object | No | OpenRouter-style routing: `order`, `allow_fallbacks`, `sort`, `only`, `ignore` |
 
 ## Example Request
 
@@ -104,15 +105,38 @@ data: {"id":"...","choices":[{"delta":{"content":"!"}}]}
 data: [DONE]
 ```
 
+## Provider routing
+
+Pass an OpenRouter-compatible `provider` object. Residency filters and policy `route_fallback` still apply after this list is built.
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `order` | string[] | — | Try these provider slugs first (`together`, `groq`, `openai`, `azure-foundry`, …) |
+| `allow_fallbacks` | boolean | `true` | If false, only the first remaining provider is tried |
+| `sort` | `price` \| `latency` \| `throughput` | — | Re-rank the candidate chain |
+| `only` | string[] | — | Restrict to these slugs |
+| `ignore` | string[] | — | Drop these slugs |
+
+```bash
+curl http://localhost:3001/v1/chat/completions \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "llama-3.1-8b-instruct",
+    "messages": [{"role": "user", "content": "Hello"}],
+    "provider": {
+      "order": ["together", "groq"],
+      "allow_fallbacks": true,
+      "sort": "latency"
+    }
+  }'
+```
+
+Successful responses set `id` to the logged generation UUID (also `x-generation-id`). Fetch it with `GET /v1/generation/:id`.
+
 ## Fallback Behavior
 
-If the primary provider fails, OpenDoor automatically retries with fallback providers:
-
-1. Azure AI Foundry (primary)
-2. OpenAI Direct (fallback)
-3. Other configured providers
-
-Retries use exponential backoff (100ms, 200ms).
+The gateway ranks `fallbackChains` with health, latency, and cost (`getRankedProviders`), then applies `provider` preferences, then residency. Each hop retries up to 3 times with exponential backoff (100ms, 200ms).
 
 ## Error Responses
 

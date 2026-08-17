@@ -26,6 +26,7 @@ gcloud services enable \
   firebase.googleapis.com \
   firebasehosting.googleapis.com \
   servicenetworking.googleapis.com \
+  storage.googleapis.com \
   --project="$PROJECT"
 
 echo "==> Artifact Registry"
@@ -126,22 +127,26 @@ upsert_secret opendoor-database-url "$DATABASE_URL"
 upsert_secret opendoor-redis-url "$REDIS_URL"
 upsert_secret opendoor-auth-secret "${AUTH_SECRET:-$(openssl rand -hex 32)}"
 upsert_secret opendoor-gateway-hash-secret "${GATEWAY_API_KEY_HASH_SECRET:-$(openssl rand -hex 32)}"
+upsert_secret opendoor-code-sandbox-token "${CODE_SANDBOX_TOKEN:-$(openssl rand -hex 32)}"
 
 # Optional keys from env if present (do not overwrite REDIS_URL / DATABASE_URL)
 if [[ -f .env ]]; then
   # shellcheck disable=SC1091
   set -a
-  source <(grep -E '^(TOGETHER_API_KEY|STRIPE_SECRET_KEY|POSTHOG_API_KEY|AUTH_SECRET|GATEWAY_API_KEY_HASH_SECRET)=' .env || true)
+  source <(grep -E '^(TOGETHER_API_KEY|STRIPE_SECRET_KEY|POSTHOG_API_KEY|LINEAR_API_KEY|AUTH_SECRET|GATEWAY_API_KEY_HASH_SECRET|QWEN_API_KEY)=' .env || true)
   set +a
 fi
 [[ -n "${TOGETHER_API_KEY:-}" ]] && upsert_secret opendoor-together-api-key "$TOGETHER_API_KEY"
 [[ -n "${STRIPE_SECRET_KEY:-}" ]] && upsert_secret opendoor-stripe-secret-key "$STRIPE_SECRET_KEY"
 [[ -n "${POSTHOG_API_KEY:-}" ]] && upsert_secret opendoor-posthog-api-key "$POSTHOG_API_KEY"
+[[ -n "${LINEAR_API_KEY:-}" ]] && upsert_secret opendoor-linear-api-key "$LINEAR_API_KEY"
+[[ -n "${QWEN_API_KEY:-}" ]] && upsert_secret opendoor-qwen-api-key "$QWEN_API_KEY"
 
 # Grant Cloud Run default SA access to secrets + Cloud SQL
 PROJECT_NUMBER=$(gcloud projects describe "$PROJECT" --format='value(projectNumber)')
 RUNTIME_SA="${PROJECT_NUMBER}-compute@developer.gserviceaccount.com"
-for S in opendoor-database-url opendoor-redis-url opendoor-auth-secret opendoor-gateway-hash-secret; do
+for S in opendoor-database-url opendoor-redis-url opendoor-auth-secret opendoor-gateway-hash-secret opendoor-code-sandbox-token opendoor-qwen-api-key; do
+  gcloud secrets describe "$S" --project="$PROJECT" >/dev/null 2>&1 || continue
   gcloud secrets add-iam-policy-binding "$S" \
     --member="serviceAccount:${RUNTIME_SA}" \
     --role="roles/secretmanager.secretAccessor" \
@@ -151,6 +156,13 @@ gcloud projects add-iam-policy-binding "$PROJECT" \
   --member="serviceAccount:${RUNTIME_SA}" \
   --role="roles/cloudsql.client" \
   --condition=None >/dev/null
+
+echo "==> Files bucket (gateway /v1/files)"
+# shellcheck source=../infra/gcp/cloud-run-env.sh
+source "$(cd "$(dirname "$0")/.." && pwd)/infra/gcp/cloud-run-env.sh"
+OPENDOOR_GCP_PROJECT="$PROJECT"
+OPENDOOR_RUNTIME_SA="$RUNTIME_SA"
+opendoor_ensure_files_bucket "$PROJECT" "$OPENDOOR_FILES_BUCKET" "$RUNTIME_SA"
 
 echo "==> Firebase"
 if ! firebase projects:addfirebase "$PROJECT" 2>/dev/null; then

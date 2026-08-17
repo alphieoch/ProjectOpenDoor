@@ -4,6 +4,7 @@ import { getDb } from "@/lib/db";
 import { aiAssistants } from "@opendoor/database";
 import { eq, and } from "drizzle-orm";
 import { ensureAssistantStripePrice } from "@/lib/assistant-stripe";
+import { loadWebSearchEntitlement, webSearchAddonRequiredResponse } from "@/lib/web-search/entitlement";
 
 const ALLOWED_MCP_COMMANDS = new Set(["npx", "uvx", "docker", "node", "python", "python3", "bun", "npm", "pnpm", "yarn"]);
 const SHELL_METACHARS = /[;|&$()`<>\\]/;
@@ -80,7 +81,16 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   const nextMeteredPricePerMessageCents = body.meteredPricePerMessageCents !== undefined ? (body.meteredPricePerMessageCents ? parseInt(body.meteredPricePerMessageCents) : null) : existing.meteredPricePerMessageCents;
   const nextMeteredPricePer1kTokensCents = body.meteredPricePer1kTokensCents !== undefined ? (body.meteredPricePer1kTokensCents ? parseInt(body.meteredPricePer1kTokensCents) : null) : existing.meteredPricePer1kTokensCents;
   const nextDeepThinkingEnabled = body.deepThinkingEnabled !== undefined ? body.deepThinkingEnabled === true : existing.deepThinkingEnabled;
-  const nextWebSearchEnabled = body.webSearchEnabled !== undefined ? body.webSearchEnabled === true : existing.webSearchEnabled;
+  let nextWebSearchEnabled = body.webSearchEnabled !== undefined ? body.webSearchEnabled === true : existing.webSearchEnabled;
+  if (nextWebSearchEnabled) {
+    const addon = await loadWebSearchEntitlement(session.orgId, session);
+    if (!addon.active) {
+      if (body.webSearchEnabled === true) {
+        return NextResponse.json(webSearchAddonRequiredResponse(addon), { status: 402 });
+      }
+      nextWebSearchEnabled = false;
+    }
+  }
   const nextResearchAgentEnabled = body.researchAgentEnabled !== undefined ? body.researchAgentEnabled === true : existing.researchAgentEnabled;
   const nextCodeExecutionEnabled = body.codeExecutionEnabled !== undefined ? body.codeExecutionEnabled === true : existing.codeExecutionEnabled;
   const nextImageGenerationEnabled = body.imageGenerationEnabled !== undefined ? body.imageGenerationEnabled === true : existing.imageGenerationEnabled;

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
-import { getPlanFromPriceId, getStripeInstance, isAgentsAddonPriceId } from "@/lib/stripe";
+import { getPlanFromPriceId, getStripeInstance, isAgentsAddonPriceId, isWebSearchAddonPriceId } from "@/lib/stripe";
 import {
   includedCreditCents,
   qualifiesForTopupBonus,
@@ -21,6 +21,8 @@ import {
   paymentMethodFromCheckoutSession,
   persistCustomerPaymentMethod,
 } from "@/lib/billing-stripe";
+import { ensureWebSearchAddonColumns } from "@/lib/web-search/entitlement";
+import { posthogServerCapture } from "@/lib/posthog-server";
 
 function parseAmountCents(value: unknown): number {
   const parsed = Number.parseInt(String(value ?? "0"), 10);
@@ -38,6 +40,10 @@ function getPlanForSession(session: Stripe.Checkout.Session): PlanId {
 
 function isAgentsAddonMeta(meta?: Stripe.Metadata | null) {
   return meta?.kind === "agents_addon";
+}
+
+function isWebSearchAddonMeta(meta?: Stripe.Metadata | null) {
+  return meta?.kind === "web_search_addon";
 }
 
 async function setAgentsAddon(
@@ -70,6 +76,23 @@ async function setAgentsAddon(
       console.warn("Failed to stop agents after add-on change:", error);
     }
   }
+}
+
+async function setWebSearchAddon(
+  orgId: string,
+  status: string,
+  subscriptionId?: string | null,
+) {
+  await ensureWebSearchAddonColumns();
+  const db = getDb();
+  await db
+    .update(organizations)
+    .set({
+      webSearchAddonStatus: status,
+      ...(subscriptionId === undefined ? {} : { stripeWebSearchSubscriptionId: subscriptionId }),
+      updatedAt: new Date(),
+    })
+    .where(eq(organizations.id, orgId));
 }
 
 function invoiceSubscriptionId(invoice: Stripe.Invoice): string | null {
@@ -271,16 +294,24 @@ export async function POST(req: NextRequest) {
 
       if (session.mode === "subscription" && orgId && session.subscription && isAgentsAddonMeta(session.metadata)) {
         await setAgentsAddon(orgId, "active", session.subscription as string);
+      } else if (session.mode === "subscription" && orgId && session.subscription && isWebSearchAddonMeta(session.metadata)) {
+        await setWebSearchAddon(orgId, "active", session.subscription as string);
       } else if (session.mode === "subscription" && orgId && session.subscription && !assistantId) {
+        const plan = getPlanForSession(session);
         await db
           .update(organizations)
           .set({
             stripeSubscriptionId: session.subscription as string,
             stripePriceId: (session.metadata?.priceId as string | undefined) || null,
             subscriptionStatus: "active",
-            plan: getPlanForSession(session),
+            plan,
           })
           .where(eq(organizations.id, orgId));
+        posthogServerCapture(null, orgId, "billing_subscribe", {
+          organization_id: orgId,
+          plan,
+          stripe_subscription_id: session.subscription,
+        });
       }
 
       if (session.mode === "payment" && kind === "topup" && orgId) {
@@ -320,11 +351,18 @@ export async function POST(req: NextRequest) {
           const subscription = await stripe.subscriptions.retrieve(
             subscriptionId
           );
-          const addonItem = subscription.items.data.find((item) =>
+          const agentsItem = subscription.items.data.find((item) =>
             isAgentsAddonPriceId(item.price.id) || isAgentsAddonMeta(subscription.metadata),
           );
-          if (addonItem || isAgentsAddonMeta(subscription.metadata)) {
+          if (agentsItem || isAgentsAddonMeta(subscription.metadata)) {
             await setAgentsAddon(org.id, "active", subscription.id);
+            break;
+          }
+          const webSearchItem = subscription.items.data.find((item) =>
+            isWebSearchAddonPriceId(item.price.id) || isWebSearchAddonMeta(subscription.metadata),
+          );
+          if (webSearchItem || isWebSearchAddonMeta(subscription.metadata)) {
+            await setWebSearchAddon(org.id, "active", subscription.id);
             break;
           }
           const item = subscription.items.data[0];
@@ -377,6 +415,16 @@ export async function POST(req: NextRequest) {
         if (org) await setAgentsAddon(org.id, "canceled", null);
         break;
       }
+      if (isWebSearchAddonMeta(subscription.metadata) || subscription.items.data.some((item) => isWebSearchAddonPriceId(item.price.id))) {
+        const org = subscription.customer
+          ? await db.query.organizations.findFirst({
+              where: eq(organizations.stripeCustomerId, subscription.customer as string),
+              columns: { id: true },
+            })
+          : null;
+        if (org) await setWebSearchAddon(org.id, "canceled", null);
+        break;
+      }
       // Also update org plan if it matches
       if (subscription.customer) {
         await db
@@ -417,6 +465,19 @@ export async function POST(req: NextRequest) {
         if (org) {
           const dead = subscription.status === "canceled" || subscription.status === "unpaid" || subscription.status === "incomplete_expired";
           await setAgentsAddon(org.id, dead ? "canceled" : subscription.status, dead ? null : subscription.id);
+        }
+        break;
+      }
+      if (isWebSearchAddonMeta(subscription.metadata) || subscription.items.data.some((item) => isWebSearchAddonPriceId(item.price.id))) {
+        const org = subscription.customer
+          ? await db.query.organizations.findFirst({
+              where: eq(organizations.stripeCustomerId, subscription.customer as string),
+              columns: { id: true },
+            })
+          : null;
+        if (org) {
+          const dead = subscription.status === "canceled" || subscription.status === "unpaid" || subscription.status === "incomplete_expired";
+          await setWebSearchAddon(org.id, dead ? "canceled" : subscription.status, dead ? null : subscription.id);
         }
         break;
       }

@@ -1,0 +1,91 @@
+---
+title: "Platform API"
+description: "One API key covers inference, assistants, workflows, training, deployments, and usage. Build on OpenDoor as the product grows."
+showPageTitle: true
+---
+
+# Platform API
+
+Every product surface that the dashboard uses is also on the gateway under `/v1`, authenticated with the same `Authorization: Bearer opd_…` key. Chat, assistants, and workflow LLM steps debit **that key** and the org’s prepaid credits.
+
+```
+GET /v1/catalog
+```
+
+Returns the live endpoint list, grouped. Start there when you add a new integration — new features show up on this catalog instead of a second undocumented API.
+
+## Auth and usage
+
+| Header | Required | Description |
+|--------|----------|-------------|
+| `Authorization` | Yes | `Bearer opd_…` from [API keys](/how-it-works/api-keys) |
+| `Content-Type` | JSON bodies | `application/json` |
+
+`GET /v1/account` returns the org, plan, add-ons, spendable credit buckets, and the calling key’s spend cap. `GET /v1/account/balance` is the short form. `GET /v1/usage` is the daily rollup billed to this org.
+
+A 402 means the key or org cannot cover the estimated cost. Top up on Billing, or raise the key spend cap.
+
+## Build on top
+
+```ts
+import { OpenDoor } from "@opendoor/sdk";
+
+const client = new OpenDoor(); // OPENDOOR_API_KEY + OPENDOOR_BASE_URL
+
+const catalog = await client.catalog.list();
+const account = await client.account.get();
+
+const assistant = await client.assistants.create({
+  name: "Support",
+  modelId: "opendoor/auto",
+  systemPrompt: "You answer from the product docs.",
+});
+
+const reply = await client.assistants.chat(assistant.id, {
+  messages: [{ role: "user", content: "How do I create an API key?" }],
+});
+```
+
+Python:
+
+```python
+from opendoor import OpenDoor
+
+client = OpenDoor()  # OPENDOOR_API_KEY
+print(client.account.balance())
+print(client.assistants.chat(assistant_id, messages=[{"role": "user", "content": "Hello"}]))
+```
+
+CLI:
+
+```bash
+bun run od -- catalog
+bun run od -- account
+bun run od -- assistants create --name Support --model opendoor/auto
+bun run od -- assistants chat --id "$ID" --message "Hello"
+```
+
+## Groups
+
+| Group | What it covers |
+|-------|----------------|
+| `ai` | Chat, completions, responses, embeddings, rerank, models, generation lookup |
+| `assistants` | CRUD + `POST /v1/assistants/:id/chat` (usage-billed) |
+| `workflows` | CRUD + run (LLM steps billed; web search needs the add-on) |
+| `media` | Images, videos, audio |
+| `files` | Files + batches |
+| `training` | Datasets and jobs |
+| `capacity` | Deployments + premium rentals |
+| `agents` | Workspace agents (add-on) |
+| `byok` | Org provider keys |
+| `governance` | Model policies |
+| `account` | Balance, usage, request log, API keys |
+
+Dashboard session routes stay for login, Stripe checkout, and SSO. Everything a builder needs to ship on top of OpenDoor is on this key.
+
+## Related
+
+- [Assistants](/api-reference/assistants)
+- [Usage](/api-reference/usage)
+- [Chat completions](/api-reference/chat-completions)
+- [TypeScript SDK](/getting-started/sdk)

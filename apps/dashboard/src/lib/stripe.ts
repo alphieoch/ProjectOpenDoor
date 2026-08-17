@@ -91,7 +91,11 @@ export const TOPUP_PRESETS = [
 ] as const;
 
 const PLAN_PRICE_ENV: Record<Exclude<PlanId, "free">, string> = {
+  starter: "STRIPE_STARTER_PRICE_ID",
   pro: "STRIPE_PRO_PRICE_ID",
+  ultra: "STRIPE_ULTRA_PRICE_ID",
+  family: "STRIPE_FAMILY_PRICE_ID",
+  family_max: "STRIPE_FAMILY_MAX_PRICE_ID",
   team: "STRIPE_TEAM_PRICE_ID",
   enterprise: "STRIPE_ENTERPRISE_PRICE_ID",
 };
@@ -103,7 +107,7 @@ export function getPriceIdForPlan(planId: PlanId): string {
 
 export function getPlanFromPriceId(priceId: string): PlanId {
   if (!priceId) return "free";
-  for (const id of ["pro", "team", "enterprise"] as const) {
+  for (const id of ["starter", "pro", "ultra", "family", "family_max", "team", "enterprise"] as const) {
     if (getPriceIdForPlan(id) === priceId) return id;
   }
   return "free";
@@ -119,6 +123,15 @@ export function agentsAddonPriceId() {
 
 export function isAgentsAddonPriceId(priceId: string | null | undefined) {
   const configured = agentsAddonPriceId();
+  return Boolean(configured && priceId && priceId === configured);
+}
+
+export function webSearchAddonPriceId() {
+  return process.env.STRIPE_WEB_SEARCH_ADDON_PRICE_ID || "";
+}
+
+export function isWebSearchAddonPriceId(priceId: string | null | undefined) {
+  const configured = webSearchAddonPriceId();
   return Boolean(configured && priceId && priceId === configured);
 }
 

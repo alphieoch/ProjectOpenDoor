@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { streamText } from "ai";
+import { streamText, tool, zodSchema } from "ai";
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createOpenAI } from "@ai-sdk/openai";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { createMistral } from "@ai-sdk/mistral";
-import { welcomeAllowedForFamily } from "@opendoor/shared";
+import { z } from "zod";
+import { getMinutesRemaining, getWindowMs, isWindowExpired, welcomeAllowedForFamily } from "@opendoor/shared";
 import { getDb } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { aiAssistants, assistantApiSecrets, assistantConnections, assistantConnectionTools, assistantPurchases } from "@opendoor/database";
@@ -20,30 +21,8 @@ import {
   inferAssistantFamily,
 } from "@/lib/assistant-gateway";
 import { assertOrgCanSpend, debitOrgUsage } from "@/lib/credits";
-
-const WINDOW_MS: Record<string, number> = {
-  "15min": 15 * 60 * 1000,
-  "hourly": 60 * 60 * 1000,
-  "12hour": 12 * 60 * 60 * 1000,
-  "daily": 24 * 60 * 60 * 1000,
-  "weekly": 7 * 24 * 60 * 60 * 1000,
-};
-
-function getWindowMs(window: string | null): number | null {
-  return window && WINDOW_MS[window] ? WINDOW_MS[window] : null;
-}
-
-function isWindowExpired(startedAt: Date | null, windowMs: number): boolean {
-  if (!startedAt) return true;
-  return Date.now() - new Date(startedAt).getTime() >= windowMs;
-}
-
-function getMinutesRemaining(startedAt: Date | null, windowMs: number): number | null {
-  if (!startedAt) return null;
-  const elapsed = Date.now() - new Date(startedAt).getTime();
-  const remaining = windowMs - elapsed;
-  return remaining > 0 ? Math.ceil(remaining / (60 * 1000)) : 0;
-}
+import { loadWebSearchEntitlement } from "@/lib/web-search/entitlement";
+import { runWebSearch, type WebSearchResult } from "@/lib/web-search";
 
 interface LimitStatus {
   allowed: boolean;
@@ -325,6 +304,13 @@ function resolveDirectModel(modelId: string) {
   return createOpenAI()(modelId);
 }
 
+function formatSearchContext(result: WebSearchResult): string {
+  const lines = result.results
+    .map((hit, i) => `${i + 1}. ${hit.title}\n   ${hit.url}\n   ${hit.snippet}`)
+    .join("\n");
+  return `Live web search (${result.provider}) for "${result.query}":\n${lines}`;
+}
+
 function billedGatewayModel(modelId: string, orgId: string) {
   const secret = assistantGatewaySecret();
   return createOpenAI({
@@ -446,6 +432,24 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
     ? [{ role: "system" as const, content: assistant.systemPrompt }]
     : [];
 
+  let webSearchAllowed = false;
+  if (assistant.webSearchEnabled) {
+    const searchAddon = await loadWebSearchEntitlement(assistant.organizationId);
+    webSearchAllowed = searchAddon.active;
+    if (webSearchAllowed) {
+      const lastUser = [...messages].reverse().find((m) => m.role === "user");
+      const query = typeof lastUser?.content === "string" ? lastUser.content.trim() : "";
+      if (query) {
+        try {
+          const search = await runWebSearch(query);
+          systemMessages.push({ role: "system", content: formatSearchContext(search) });
+        } catch (err) {
+          console.error("Assistant web search failed:", err);
+        }
+      }
+    }
+  }
+
   // ─── Token limit check for non-owners ───
   if (!isOwner && purchaseRecord && assistant.monetization !== "free") {
     const tokenLimitStatus = await checkTokenLimits(db, assistant, purchaseRecord, estimatedInputTokens);
@@ -523,6 +527,22 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
     }
   }
 
+  if (webSearchAllowed) {
+    allTools.web_search = (tool as any)({
+      description:
+        "Search the live web via Vertex AI Grounding with Google Search. Returns titles, URLs, and snippets. Do not invent URLs.",
+      parameters: zodSchema(
+        z.object({
+          query: z.string().describe("Search query"),
+          max_results: z.number().int().min(1).max(10).optional(),
+        }),
+      ) as any,
+      execute: async (args: { query: string; max_results?: number }) => {
+        return runWebSearch(args.query, args.max_results);
+      },
+    });
+  }
+
   // 3. API connections (dynamic REST tools)
   const apiConnections = (assistant.apiConnections ?? []).filter((c: any) => c.enabled);
   if (apiConnections.length > 0) {
@@ -594,9 +614,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
   // ─── Gateway proxy (no tools or streamText error fallback) ───
   await mcpCleanup?.();
 
-  const gatewayMessages = assistant.systemPrompt
-    ? [{ role: "system", content: assistant.systemPrompt }, ...messages]
-    : messages;
+  const gatewayMessages = [...systemMessages, ...messages];
 
   if (!assistantGatewaySecret()) {
     return NextResponse.json(
