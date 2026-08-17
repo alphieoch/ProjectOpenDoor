@@ -67,6 +67,9 @@ export async function POST(req: NextRequest) {
   if (!name || !slug) {
     return NextResponse.json({ error: "name and slug are required" }, { status: 400 });
   }
+  if (!modelId || typeof modelId !== "string") {
+    return NextResponse.json({ error: "modelId is required" }, { status: 400 });
+  }
 
   let validatedMcpServers;
   try {
@@ -103,7 +106,7 @@ export async function POST(req: NextRequest) {
       avatarLetter:   avatarLetter || name.charAt(0).toUpperCase(),
       logoUrl:        logoUrl || null,
       primaryColor:   primaryColor || "#1A73E8",
-      modelId:        modelId || "gpt-4o",
+      modelId,
       systemPrompt:   systemPrompt || null,
       welcomeMessage: welcomeMessage || null,
       maxMessages:    maxMessages ? parseInt(maxMessages) : null,

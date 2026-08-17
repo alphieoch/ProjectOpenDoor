@@ -6,7 +6,7 @@
  */
 import Stripe from "stripe";
 
-const API_VERSION = "2025-03-31.basil" as const;
+const API_VERSION = "2026-04-22.dahlia" as const;
 const APP_METADATA = { app: "opendoor" };
 
 async function getOrCreateProduct(
@@ -79,9 +79,10 @@ async function getOrCreateOneTimePrice(
   });
 }
 
-async function archiveLegacyEnterpriseMonthlyPrice(
+async function archiveLegacyMonthlyPrices(
   stripe: Stripe,
-  productId: string
+  productId: string,
+  amounts: number[]
 ): Promise<void> {
   const prices = await stripe.prices.list({
     product: productId,
@@ -90,7 +91,10 @@ async function archiveLegacyEnterpriseMonthlyPrice(
   });
 
   const legacy = prices.data.filter(
-    (pr) => pr.recurring?.interval === "month" && pr.unit_amount === 29900
+    (pr) =>
+      pr.recurring?.interval === "month" &&
+      typeof pr.unit_amount === "number" &&
+      amounts.includes(pr.unit_amount)
   );
   for (const oldPrice of legacy) {
     await stripe.prices.update(oldPrice.id, { active: false });
@@ -111,28 +115,44 @@ async function main() {
   const proProduct = await getOrCreateProduct(
     stripe,
     "OpenDoor Pro",
-    "Pro plan — reduced markup, priority routing"
+    "Pro account — personal storage, inference credits, and GPU quota"
+  );
+  const teamProduct = await getOrCreateProduct(
+    stripe,
+    "OpenDoor Team",
+    "Team plan — SSO, audit logs, and shared GPU quota per seat"
   );
   const enterpriseProduct = await getOrCreateProduct(
     stripe,
     "OpenDoor Enterprise",
-    "Enterprise — custom markup, SSO, dedicated capacity"
+    "Enterprise — SCIM, residency, and dedicated support"
   );
   const creditsProduct = await getOrCreateProduct(
     stripe,
     "OpenDoor Credits",
     "Prepaid balance top-ups for token-based API usage"
   );
+  const agentsProduct = await getOrCreateProduct(
+    stripe,
+    "OpenDoor Agents",
+    "Agents add-on — hosted OpenClaw, Hermes, and NemoClaw. Tokens still bill workspace quota."
+  );
 
-  await archiveLegacyEnterpriseMonthlyPrice(stripe, enterpriseProduct.id);
+  await archiveLegacyMonthlyPrices(stripe, proProduct.id, [4900, 900, 700]);
+  await archiveLegacyMonthlyPrices(stripe, teamProduct.id, [2000, 1500]);
+  await archiveLegacyMonthlyPrices(stripe, enterpriseProduct.id, [29900, 29999, 5000, 3900]);
 
-  const proPrice = await getOrCreateMonthlyPrice(stripe, proProduct.id, 4900);
+  const proPrice = await getOrCreateMonthlyPrice(stripe, proProduct.id, 1200);
+  const teamPrice = await getOrCreateMonthlyPrice(stripe, teamProduct.id, 1800);
   const enterprisePrice = await getOrCreateMonthlyPrice(
     stripe,
     enterpriseProduct.id,
-    29999
+    4500
   );
 
+  const agentsPrice = await getOrCreateMonthlyPrice(stripe, agentsProduct.id, 2000);
+
+  const topup20 = await getOrCreateOneTimePrice(stripe, creditsProduct.id, 2000);
   const topup30 = await getOrCreateOneTimePrice(stripe, creditsProduct.id, 3000);
   const topup50 = await getOrCreateOneTimePrice(stripe, creditsProduct.id, 5000);
   const topup100 = await getOrCreateOneTimePrice(stripe, creditsProduct.id, 10000);
@@ -140,22 +160,19 @@ async function main() {
 
   console.log("\nStripe prices ready. Add to .env / apps/dashboard/.env.local:\n");
   console.log(`STRIPE_PRO_PRICE_ID=${proPrice.id}`);
+  console.log(`STRIPE_TEAM_PRICE_ID=${teamPrice.id}`);
   console.log(`STRIPE_ENTERPRISE_PRICE_ID=${enterprisePrice.id}`);
-  console.log(`NEXT_PUBLIC_STRIPE_PRO_PRICE_ID=${proPrice.id}`);
-  console.log(`NEXT_PUBLIC_STRIPE_ENTERPRISE_PRICE_ID=${enterprisePrice.id}`);
+  console.log(`STRIPE_AGENTS_ADDON_PRICE_ID=${agentsPrice.id}`);
+  console.log(`STRIPE_TOPUP_20_PRICE_ID=${topup20.id}`);
   console.log(`STRIPE_TOPUP_30_PRICE_ID=${topup30.id}`);
   console.log(`STRIPE_TOPUP_50_PRICE_ID=${topup50.id}`);
   console.log(`STRIPE_TOPUP_100_PRICE_ID=${topup100.id}`);
   console.log(`STRIPE_TOPUP_200_PRICE_ID=${topup200.id}`);
-  console.log(`NEXT_PUBLIC_STRIPE_TOPUP_30_PRICE_ID=${topup30.id}`);
-  console.log(`NEXT_PUBLIC_STRIPE_TOPUP_50_PRICE_ID=${topup50.id}`);
-  console.log(`NEXT_PUBLIC_STRIPE_TOPUP_100_PRICE_ID=${topup100.id}`);
-  console.log(`NEXT_PUBLIC_STRIPE_TOPUP_200_PRICE_ID=${topup200.id}`);
   console.log(
     "\nOptional:\nNEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...\nSTRIPE_WEBHOOK_SECRET=whsec_...\n"
   );
   console.log(
-    "Local webhooks: stripe listen --forward-to localhost:3000/api/webhooks/stripe\n"
+    "Local webhooks: stripe listen --forward-to localhost:3010/api/webhooks/stripe\n"
   );
 }
 

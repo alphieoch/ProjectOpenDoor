@@ -1,9 +1,13 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
-import { Search, Bell, BookOpen, ExternalLink } from "lucide-react";
+import { Search, BookOpen } from "lucide-react";
 import Link from "next/link";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { CommandPalette } from "@/components/command-palette";
+import { InboxMenu } from "@/components/inbox-menu";
+import { docsHref } from "@/lib/public-urls";
 
 const CRUMBS: Record<string, [string, string]> = {
   "/dashboard": ["Workspace", "Overview"],
@@ -15,6 +19,9 @@ const CRUMBS: Record<string, [string, string]> = {
   "/dashboard/playground": ["Workspace", "Playground"],
   "/dashboard/workflow": ["Workspace", "Workflow"],
   "/dashboard/models": ["Workspace", "Models"],
+  "/dashboard/agents": ["Workspace", "Agents"],
+  "/dashboard/ai-assistants": ["Workspace", "AI Assistants"],
+  "/dashboard/deployments/new": ["Workspace", "New deployment"],
   "/dashboard/team": ["Workspace", "Team"],
   "/dashboard/settings": ["Workspace", "Settings"],
   "/dashboard/audit-logs": ["Workspace", "Audit Logs"],
@@ -28,71 +35,124 @@ const CRUMBS: Record<string, [string, string]> = {
 
 export default function DashboardTopBar() {
   const pathname = usePathname();
-  const crumbs = CRUMBS[pathname] || ["Workspace", "Dashboard"];
+  const crumbs =
+    CRUMBS[pathname] ||
+    Object.entries(CRUMBS)
+      .filter(([path]) => pathname.startsWith(`${path}/`))
+      .sort((a, b) => b[0].length - a[0].length)[0]?.[1] ||
+    ["Workspace", "Dashboard"];
+  const [searchOpen, setSearchOpen] = useState(false);
+  const docs = docsHref("/");
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setSearchOpen(true);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   return (
-    <div style={{
-      height: 64, borderBottom: "1px solid var(--line)",
-      display: "flex", alignItems: "center", padding: "0 32px", gap: 16,
-      background: "var(--paper-2)", flexShrink: 0,
-    }}>
-      {/* Breadcrumbs */}
+    <div
+      className="od-glass"
+      style={{
+        height: 60,
+        borderBottom: "1px solid var(--line)",
+        display: "flex",
+        alignItems: "center",
+        padding: "0 28px",
+        gap: 16,
+        flexShrink: 0,
+      }}
+    >
       <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "var(--ink-3)" }}>
         <span>{crumbs[0]}</span>
-        <span style={{ opacity: 0.4 }}>›</span>
+        <span style={{ opacity: 0.35 }}>/</span>
         <strong style={{ color: "var(--ink)", fontWeight: 500 }}>{crumbs[1]}</strong>
       </div>
 
-      {/* Search */}
-      <div style={{
-        flex: 1, maxWidth: 420, margin: "0 auto",
-        display: "flex", alignItems: "center", gap: 8,
-        background: "var(--paper)", border: "1px solid var(--line)",
-        borderRadius: 8, padding: "7px 12px", fontSize: 13, color: "var(--ink-3)",
-      }}>
+      <button
+        type="button"
+        onClick={() => setSearchOpen(true)}
+        style={{
+          flex: 1,
+          maxWidth: 440,
+          margin: "0 auto",
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          background: "var(--paper)",
+          border: "1px solid var(--line)",
+          borderRadius: 999,
+          padding: "7px 14px",
+          fontSize: 13,
+          color: "var(--ink-3)",
+          cursor: "pointer",
+          textAlign: "left",
+        }}
+        className="hover:border-[var(--ink-4)]"
+      >
         <Search style={{ width: 14, height: 14, flexShrink: 0 }} />
-        <span style={{ flex: 1 }}>Search models, keys, policies…</span>
-        <kbd style={{
-          fontFamily: "var(--font-mono)", fontSize: 10,
-          background: "var(--paper-2)", border: "1px solid var(--line)",
-          borderRadius: 4, padding: "1px 5px", color: "var(--ink-3)",
-        }}>⌘K</kbd>
-      </div>
+        <span style={{ flex: 1 }}>Search models, keys, pages…</span>
+        <kbd
+          style={{
+            fontFamily: "var(--font-mono)",
+            fontSize: 10,
+            background: "var(--paper-2)",
+            border: "1px solid var(--line)",
+            borderRadius: 6,
+            padding: "1px 6px",
+            color: "var(--ink-3)",
+          }}
+        >
+          ⌘K
+        </kbd>
+      </button>
 
-      {/* Actions */}
-      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
         <ThemeToggle />
-        <button
-          type="button"
-          aria-label="Notifications"
-          title="Notifications"
-          style={{ width: 34, height: 34, display: "grid", placeItems: "center", borderRadius: 8, border: "1px solid transparent", background: "transparent", color: "var(--ink-3)", cursor: "pointer", transition: "all 0.15s" }}
-          className="hover:bg-[var(--paper-3)] hover:text-[var(--ink)]">
-          <Bell style={{ width: 16, height: 16 }} />
-        </button>
-        <button
-          type="button"
+        <InboxMenu />
+        <Link
+          href={docsHref("/")}
           aria-label="Help"
           title="Help"
-          style={{ width: 34, height: 34, display: "grid", placeItems: "center", borderRadius: 8, border: "1px solid transparent", background: "transparent", color: "var(--ink-3)", cursor: "pointer", transition: "all 0.15s" }}
-          className="hover:bg-[var(--paper-3)] hover:text-[var(--ink)]">
-          <BookOpen style={{ width: 16, height: 16 }} />
-        </button>
-        <div style={{ width: 1, height: 24, background: "var(--line)" }} />
-        <Link
-          href="https://docs.opendoor.ai"
-          target="_blank"
           style={{
-            display: "inline-flex", alignItems: "center", gap: 6,
-            padding: "7px 14px", borderRadius: 999, fontSize: 13, fontWeight: 500,
-            border: "1px solid var(--line)", background: "var(--paper-2)",
-            color: "var(--ink-2)", textDecoration: "none", transition: "all 0.12s",
+            width: 34,
+            height: 34,
+            display: "grid",
+            placeItems: "center",
+            borderRadius: 999,
+            color: "var(--ink-3)",
           }}
-          className="hover:border-[var(--ink-4)]"
+          className="hover:bg-[var(--paper-3)] hover:text-[var(--ink)]"
         >
-          <ExternalLink style={{ width: 13, height: 13 }} /> Docs
+          <BookOpen style={{ width: 16, height: 16 }} />
+        </Link>
+        <div style={{ width: 1, height: 20, background: "var(--line)", margin: "0 4px" }} />
+        <Link
+          href={docs}
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+            padding: "6px 13px",
+            borderRadius: 999,
+            fontSize: 13,
+            fontWeight: 500,
+            border: "1px solid var(--line)",
+            background: "var(--paper-2)",
+            color: "var(--ink-2)",
+            textDecoration: "none",
+          }}
+          className="hover:border-[var(--ink-4)] hover:-translate-y-px"
+        >
+          <BookOpen style={{ width: 13, height: 13 }} /> Docs
         </Link>
       </div>
+      <CommandPalette open={searchOpen} onClose={() => setSearchOpen(false)} />
     </div>
   );
 }

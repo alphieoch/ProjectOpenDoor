@@ -7,6 +7,7 @@ import type {
 } from "@opendoor/shared";
 import type { ProviderAdapter } from "./base.js";
 import { generateId } from "./base.js";
+import { toAnthropicContent } from "./content.js";
 
 export class AnthropicProvider implements ProviderAdapter {
   name = "Anthropic";
@@ -22,7 +23,7 @@ export class AnthropicProvider implements ProviderAdapter {
   private toAnthropicMessages(messages: ChatCompletionRequest["messages"]) {
     return messages.map((m) => ({
       role: m.role === "assistant" ? "assistant" : "user",
-      content: m.content,
+      content: toAnthropicContent(m.content) as Anthropic.MessageParam["content"],
     })) as Anthropic.MessageParam[];
   }
 
@@ -62,6 +63,7 @@ export class AnthropicProvider implements ProviderAdapter {
         completion_tokens: response.usage.output_tokens,
         total_tokens:
           response.usage.input_tokens + response.usage.output_tokens,
+        cached_tokens: Number((response.usage as any).cache_read_input_tokens || 0),
       },
     };
   }

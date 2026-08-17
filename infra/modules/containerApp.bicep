@@ -40,6 +40,9 @@ param stripeProPriceId string = ''
 @description('Stripe Enterprise price ID')
 param stripeEnterprisePriceId string = ''
 
+@description('Stripe Agents add-on price ID')
+param stripeAgentsAddonPriceId string = ''
+
 @description('Public app URL')
 param appUrl string = ''
 
@@ -311,6 +314,10 @@ resource dashboardApp 'Microsoft.App/containerApps@2023-05-01' = {
             {
               name: 'STRIPE_ENTERPRISE_PRICE_ID'
               value: stripeEnterprisePriceId
+            }
+            {
+              name: 'STRIPE_AGENTS_ADDON_PRICE_ID'
+              value: stripeAgentsAddonPriceId
             }
             {
               name: 'WORKOS_API_KEY'

@@ -68,6 +68,7 @@
         { "title": "Dashboard", "href": "/how-it-works/dashboard" },
         { "title": "API keys", "href": "/how-it-works/api-keys" },
         { "title": "Playground", "href": "/how-it-works/playground" },
+        { "title": "Agents", "href": "/how-it-works/agents" },
         { "title": "Deployments", "href": "/how-it-works/deployments" },
         { "title": "Billing", "href": "/how-it-works/billing" },
         { "title": "Governance", "href": "/how-it-works/governance" }

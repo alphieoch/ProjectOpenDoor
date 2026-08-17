@@ -1,32 +1,46 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
-import { sectorTemplates } from "@opendoor/database";
-import { eq, and } from "drizzle-orm";
-import { requireAuth } from "@/lib/auth";
+import { sectorTemplates, modelPolicies } from "@opendoor/database";
+import { eq } from "drizzle-orm";
 import { logAuditEvent } from "@/lib/audit";
+import { orgActorId } from "@/lib/governance/actor";
+import { emptyOnMissingTable, governanceSession, unauthorized } from "@/lib/governance/http";
+import { appliedPackIds, pickCanonicalPacks } from "@/lib/governance/sector-packs";
 
 export async function GET(req: NextRequest) {
-  await requireAuth();
+  const session = await governanceSession();
+  if (!session) return unauthorized();
 
-  const { searchParams } = new URL(req.url);
-  const sector = searchParams.get("sector");
+  try {
+    const { searchParams } = new URL(req.url);
+    const sector = searchParams.get("sector");
+    const all = searchParams.get("all") === "1";
 
-  const db = getDb();
-  let query = db.select().from(sectorTemplates).where(eq(sectorTemplates.enabled, true));
-  const items = await query;
+    const db = getDb();
+    const [items, policies] = await Promise.all([
+      db.select().from(sectorTemplates).where(eq(sectorTemplates.enabled, true)),
+      db
+        .select({ metadata: modelPolicies.metadata })
+        .from(modelPolicies)
+        .where(eq(modelPolicies.organizationId, session.orgId)),
+    ]);
 
-  let filtered = items;
-  if (sector) {
-    filtered = filtered.filter((i) => i.sector === sector);
+    const scoped = sector ? items.filter((i) => i.sector === sector) : items;
+    const templates = all ? scoped : pickCanonicalPacks(scoped);
+    const appliedIds = appliedPackIds(policies);
+
+    return NextResponse.json({ templates, appliedIds });
+  } catch (err) {
+    return NextResponse.json(emptyOnMissingTable({ templates: [], appliedIds: [] }, err));
   }
-
-  return NextResponse.json({ templates: filtered });
 }
 
 export async function POST(req: NextRequest) {
-  const session = await requireAuth();
-  const orgId = session.orgId as string;
+  const session = await governanceSession();
+  if (!session) return unauthorized();
+  const orgId = session.orgId;
   const body = await req.json();
+  const actorId = await orgActorId(session);
 
   const db = getDb();
   const [item] = await db
@@ -46,7 +60,7 @@ export async function POST(req: NextRequest) {
 
   await logAuditEvent({
     organizationId: orgId,
-    userId: session.sub as string,
+    userId: actorId ?? undefined,
     action: "governance.sector_template.created",
     entityType: "sector_template",
     entityId: item.id,

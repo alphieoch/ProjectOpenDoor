@@ -3,6 +3,9 @@ node_modules
 .env
 .env.local
 .env.*.local
+.firebase/
+infra/gcp/.secrets/
+infra/gcp/connection.env
 dist
 build
 *.log

@@ -4,6 +4,12 @@ import { users } from "@opendoor/database";
 import { eq } from "drizzle-orm";
 import { verifyPassword, createToken } from "@/lib/auth";
 import { posthogServerCapture } from "@/lib/posthog-server";
+import {
+  authenticateWorkOSPassword,
+  jsonAuthSuccess,
+  workosErrorMessage,
+} from "@/lib/workos-password-auth";
+import { sessionCookieOptions } from "@/lib/workos-sync";
 
 export async function POST(req: NextRequest) {
   const { email, password } = await req.json();
@@ -15,9 +21,36 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  const normalized = String(email).toLowerCase().trim();
+
+  // Prefer WorkOS User Management when configured (custom UI, no hosted AuthKit).
+  if (process.env.WORKOS_API_KEY && process.env.WORKOS_CLIENT_ID) {
+    try {
+      const { token, session, user } = await authenticateWorkOSPassword(
+        req,
+        normalized,
+        password
+      );
+      posthogServerCapture(req, session.userId, "user_signed_in", {
+        email: session.email,
+        auth_method: "workos_password",
+      });
+      return jsonAuthSuccess(
+        { success: true, user: { id: session.userId, email: user.email } },
+        token
+      );
+    } catch (error) {
+      // Fall through to local password hash for legacy accounts.
+      const msg = workosErrorMessage(error, "");
+      if (msg.includes("verify your account")) {
+        return NextResponse.json({ error: msg }, { status: 403 });
+      }
+    }
+  }
+
   const db = getDb();
   const user = await db.query.users.findFirst({
-    where: eq(users.email, email),
+    where: eq(users.email, normalized),
   });
 
   if (!user || !user.passwordHash) {
@@ -53,13 +86,6 @@ export async function POST(req: NextRequest) {
     success: true,
     user: { id: user.id, email: user.email },
   });
-  response.cookies.set("session", token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    maxAge: 60 * 60 * 24 * 7,
-    path: "/",
-  });
-
+  response.cookies.set("session", token, sessionCookieOptions());
   return response;
 }

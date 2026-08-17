@@ -8,12 +8,12 @@ import {
   Play, Users, Settings, ClipboardList, LogOut, ShieldCheck, Gavel,
   AlertTriangle, FileCheck, BookOpen, Building2, Bot,
   ChevronsUpDown, ChevronDown, UserPlus, UserCog, Blocks, Plus, UserCircle,
-  GitBranch, List,
+  GitBranch, List, FlaskConical, ScrollText, Sparkles,
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -63,12 +63,15 @@ const navItems = [
   { href: "/dashboard", label: "Overview",   icon: LayoutDashboard },
   { href: "/dashboard/api-keys",   label: "API Keys",    icon: Key },
   { href: "/dashboard/usage",      label: "Usage",       icon: BarChart3 },
+  { href: "/dashboard/logs",       label: "Logs",        icon: ScrollText },
   { href: "/dashboard/pricing",    label: "Pricing",     icon: Calculator },
-  { href: "/dashboard/deployments",label: "Deployments", icon: Server,       badge: "5" },
+  { href: "/dashboard/deployments",label: "Deployments", icon: Server, badgeKey: "deployments" as const },
+  { href: "/dashboard/training",   label: "Training",    icon: FlaskConical },
   { href: "/dashboard/billing",    label: "Billing",     icon: CreditCard },
   { href: "/dashboard/playground",    label: "Playground",    icon: Play },
   { href: "/dashboard/workflow",      label: "Workflow",      icon: GitBranch },
   { href: "/dashboard/models",        label: "Models",        icon: List },
+  { href: "/dashboard/agents",        label: "Agents",        icon: Sparkles, badgeKey: "agents" as const },
   { href: "/dashboard/ai-assistants", label: "AI Assistants", icon: Bot },
   { href: "/dashboard/team",          label: "Team",          icon: Users },
   { href: "/dashboard/settings",   label: "Settings",    icon: Settings },
@@ -78,11 +81,24 @@ const navItems = [
 const governanceItems = [
   { href: "/dashboard/governance",                  label: "Trust Center", icon: ShieldCheck },
   { href: "/dashboard/governance/policies",         label: "Policies",     icon: Gavel },
-  { href: "/dashboard/governance/violations",       label: "Violations",   icon: AlertTriangle, badge: "3" },
-  { href: "/dashboard/governance/approvals",        label: "Approvals",    icon: FileCheck },
+  { href: "/dashboard/governance/violations",       label: "Violations",   icon: AlertTriangle, badgeKey: "openViolations" as const },
+  { href: "/dashboard/governance/approvals",        label: "Approvals",    icon: FileCheck, badgeKey: "pendingApprovals" as const },
   { href: "/dashboard/governance/compliance",       label: "Compliance",   icon: BookOpen },
   { href: "/dashboard/governance/sector-templates", label: "Sector Packs", icon: Building2 },
 ];
+
+function isNavActive(pathname: string | null, href: string, siblings: { href: string }[]) {
+  if (!pathname) return false;
+  if (href === "/dashboard") return pathname === "/dashboard";
+  const matches = pathname === href || pathname.startsWith(`${href}/`);
+  if (!matches) return false;
+  return !siblings.some(
+    (s) =>
+      s.href !== href &&
+      s.href.startsWith(`${href}/`) &&
+      (pathname === s.href || pathname.startsWith(`${s.href}/`)),
+  );
+}
 
 /* ── Stable NavItem (must be outside SessionNavBar so React never remounts it) ── */
 function NavItem({
@@ -90,11 +106,13 @@ function NavItem({
   layoutId,
   isCollapsed,
   active,
+  animateLayout,
 }: {
-  item: typeof navItems[0];
+  item: { href: string; label: string; icon: typeof navItems[0]["icon"]; badge?: string };
   layoutId: string;
   isCollapsed: boolean;
   active: boolean;
+  animateLayout: boolean;
 }) {
   const Icon = item.icon;
   return (
@@ -107,12 +125,16 @@ function NavItem({
       )}
     >
       {active && (
-        <motion.div
-          layoutId={layoutId}
-          className="absolute inset-0 rounded-md bg-[var(--ink)]"
-          style={{ zIndex: 0 }}
-          transition={{ type: "spring", stiffness: 400, damping: 32 }}
-        />
+        animateLayout ? (
+          <motion.div
+            layoutId={layoutId}
+            className="absolute inset-0 rounded-md bg-[var(--ink)]"
+            style={{ zIndex: 0 }}
+            transition={{ type: "spring", stiffness: 400, damping: 32 }}
+          />
+        ) : (
+          <div className="absolute inset-0 rounded-md bg-[var(--ink)]" style={{ zIndex: 0 }} />
+        )
       )}
       <Icon
         className="h-4 w-4 shrink-0"
@@ -121,7 +143,7 @@ function NavItem({
           position: "relative", zIndex: 1,
         }}
       />
-      <motion.li variants={variants} style={{ position: "relative", zIndex: 1 }}>
+      <motion.div variants={variants} style={{ position: "relative", zIndex: 1 }}>
         {!isCollapsed && (
           <div className="ml-2 flex items-center gap-2">
             <p className="text-sm font-medium" style={{ fontWeight: active ? 500 : 400 }}>
@@ -141,14 +163,46 @@ function NavItem({
             )}
           </div>
         )}
-      </motion.li>
+      </motion.div>
     </Link>
   );
 }
 
-export function SessionNavBar() {
+function accountInitials(name: string) {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+  return name.slice(0, 2).toUpperCase() || "OD";
+}
+
+export function SessionNavBar({ email, displayName }: { email: string; displayName: string }) {
   const [isCollapsed, setIsCollapsed] = useState(true);
+  const [hydrated, setHydrated] = useState(false);
   const [openGroups, setOpenGroups] = useState({ workspace: true, governance: true });
+  const [counts, setCounts] = useState({ deployments: 0, openViolations: 0, pendingApprovals: 0, agents: 0 });
+
+  useEffect(() => {
+    setHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    fetch("/api/nav/counts", { credentials: "include" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!data) return;
+        setCounts({
+          deployments: Number(data.deployments || 0),
+          openViolations: Number(data.openViolations || 0),
+          pendingApprovals: Number(data.pendingApprovals || 0),
+          agents: Number(data.agents || 0),
+        });
+      })
+      .catch(() => {});
+  }, []);
+
+  function withBadge<T extends { href: string; badgeKey?: keyof typeof counts }>(item: T) {
+    const n = item.badgeKey ? counts[item.badgeKey] : 0;
+    return { ...item, badge: n > 0 ? String(n) : undefined };
+  }
   const toggleGroup = (k: "workspace" | "governance") =>
     setOpenGroups((s) => ({ ...s, [k]: !s[k] }));
   const pathname = usePathname();
@@ -159,10 +213,8 @@ export function SessionNavBar() {
     window.location.href = "/login";
   }
 
-  const isActive = (href: string) => {
-    if (href === "/dashboard") return pathname === href;
-    return pathname?.startsWith(href) ?? false;
-  };
+  const isActive = (href: string, siblings: { href: string }[]) =>
+    isNavActive(pathname, href, siblings);
 
   return (
     <motion.div
@@ -180,7 +232,7 @@ export function SessionNavBar() {
         style={{ background: "var(--paper-2)", color: "var(--ink-2)" }}
         variants={contentVariants}
       >
-        <motion.ul variants={staggerVariants} className="flex h-full flex-col">
+        <motion.div variants={staggerVariants} className="flex h-full flex-col">
           <div className="flex grow flex-col items-center">
 
             {/* ── Brand + org ── */}
@@ -208,7 +260,7 @@ export function SessionNavBar() {
                       />
                       <span style={{ fontFamily: "var(--font-serif)", fontSize: 11, color: "white", position: "relative", zIndex: 1 }}>O</span>
                     </div>
-                    <motion.li variants={variants} className="flex w-fit items-center gap-2">
+                    <motion.div variants={variants} className="flex w-fit items-center gap-2">
                       {!isCollapsed && (
                         <>
                           <span className="text-sm font-medium" style={{ color: "var(--ink)", fontFamily: "var(--font-serif)" }}>
@@ -217,7 +269,7 @@ export function SessionNavBar() {
                           <ChevronsUpDown className="h-4 w-4" style={{ color: "var(--ink-4)" }} />
                         </>
                       )}
-                    </motion.li>
+                    </motion.div>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start">
@@ -247,7 +299,7 @@ export function SessionNavBar() {
                   <div className="flex w-full flex-col gap-1">
 
                     {/* ── Workspace section ── */}
-                    <motion.li variants={variants}>
+                    <motion.div variants={variants}>
                       {!isCollapsed && (
                         <button
                           type="button"
@@ -268,7 +320,7 @@ export function SessionNavBar() {
                           </motion.div>
                         </button>
                       )}
-                    </motion.li>
+                    </motion.div>
 
                     <AnimatePresence initial={false}>
                       {(isCollapsed || openGroups.workspace) && (
@@ -282,7 +334,14 @@ export function SessionNavBar() {
                         >
                           <div className="flex flex-col gap-1">
                             {navItems.map((item) => (
-                              <NavItem key={item.href} item={item} layoutId="sidebar-active-workspace" isCollapsed={isCollapsed} active={isActive(item.href)} />
+                              <NavItem
+                                key={item.href}
+                                item={withBadge(item)}
+                                layoutId="sidebar-active-workspace"
+                                isCollapsed={isCollapsed}
+                                active={isActive(item.href, navItems)}
+                                animateLayout={hydrated}
+                              />
                             ))}
                           </div>
                         </motion.div>
@@ -292,7 +351,7 @@ export function SessionNavBar() {
                     <Separator className="my-1 bg-[var(--line)]" />
 
                     {/* ── Governance section ── */}
-                    <motion.li variants={variants}>
+                    <motion.div variants={variants}>
                       {!isCollapsed && (
                         <button
                           type="button"
@@ -313,7 +372,7 @@ export function SessionNavBar() {
                           </motion.div>
                         </button>
                       )}
-                    </motion.li>
+                    </motion.div>
 
                     <AnimatePresence initial={false}>
                       {(isCollapsed || openGroups.governance) && (
@@ -327,7 +386,14 @@ export function SessionNavBar() {
                         >
                           <div className="flex flex-col gap-1">
                             {governanceItems.map((item) => (
-                              <NavItem key={item.href} item={item} layoutId="sidebar-active-governance" isCollapsed={isCollapsed} active={isActive(item.href)} />
+                              <NavItem
+                                key={item.href}
+                                item={withBadge(item)}
+                                layoutId="sidebar-active-governance"
+                                isCollapsed={isCollapsed}
+                                active={isActive(item.href, governanceItems)}
+                                animateLayout={hydrated}
+                              />
                             ))}
                           </div>
                         </motion.div>
@@ -342,7 +408,7 @@ export function SessionNavBar() {
               <div className="flex flex-col p-2">
 
                 {/* Invite card — only when expanded */}
-                <motion.li variants={variants}>
+                <motion.div variants={variants}>
                   {!isCollapsed && (
                     <div className="od-invite-card mb-2">
                       <h4 style={{ margin: 0, fontSize: 12, fontWeight: 600, color: "var(--ink)", position: "relative" }}>
@@ -364,7 +430,7 @@ export function SessionNavBar() {
                       </Link>
                     </div>
                   )}
-                </motion.li>
+                </motion.div>
 
                 <Link
                   href="/dashboard/settings"
@@ -372,9 +438,9 @@ export function SessionNavBar() {
                   style={{ color: "var(--ink-2)" }}
                 >
                   <Settings className="h-4 w-4 shrink-0" style={{ color: "var(--ink-3)" }} />
-                  <motion.li variants={variants}>
+                  <motion.div variants={variants}>
                     {!isCollapsed && <p className="ml-2 text-sm font-medium">Settings</p>}
-                  </motion.li>
+                  </motion.div>
                 </Link>
 
                 <DropdownMenu modal={false}>
@@ -385,17 +451,22 @@ export function SessionNavBar() {
                     >
                       <Avatar className="size-4 shrink-0">
                         <AvatarFallback className="text-[10px]" style={{ background: "var(--brand)", color: "white" }}>
-                          U
+                          {accountInitials(displayName)}
                         </AvatarFallback>
                       </Avatar>
-                      <motion.li variants={variants} className="flex w-full items-center gap-2">
+                      <motion.div variants={variants} className="flex w-full items-center gap-2">
                         {!isCollapsed && (
                           <>
-                            <p className="text-sm font-medium" style={{ color: "var(--ink)" }}>Your Account</p>
+                            <div className="min-w-0 flex-1 text-left">
+                              <p className="truncate text-sm font-medium" style={{ color: "var(--ink)" }}>{displayName}</p>
+                              {displayName !== email && (
+                                <p className="truncate text-[10px]" style={{ color: "var(--ink-4)" }}>{email}</p>
+                              )}
+                            </div>
                             <ChevronsUpDown className="ml-auto h-4 w-4 shrink-0" style={{ color: "var(--ink-4)" }} />
                           </>
                         )}
-                      </motion.li>
+                      </motion.div>
                     </div>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent sideOffset={5}>
@@ -418,7 +489,7 @@ export function SessionNavBar() {
             </div>
 
           </div>
-        </motion.ul>
+        </motion.div>
       </motion.div>
     </motion.div>
   );

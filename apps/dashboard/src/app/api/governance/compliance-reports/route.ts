@@ -2,36 +2,39 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { complianceReports, modelGovernance, complianceRules, modelEvaluations, modelComplianceMappings, complianceControls } from "@opendoor/database";
 import { eq, and, desc } from "drizzle-orm";
-import { requireAuth } from "@/lib/auth";
 import { logAuditEvent } from "@/lib/audit";
+import { orgActorId } from "@/lib/governance/actor";
+import { emptyOnMissingTable, governanceSession, unauthorized } from "@/lib/governance/http";
 
 export async function GET() {
-  try {
-    const session = await requireAuth();
-    const orgId = session.orgId as string;
+  const session = await governanceSession();
+  if (!session) return unauthorized();
 
+  try {
     const db = getDb();
     const reports = await db
       .select()
       .from(complianceReports)
-      .where(eq(complianceReports.organizationId, orgId))
+      .where(eq(complianceReports.organizationId, session.orgId))
       .orderBy(desc(complianceReports.generatedAt));
 
     return NextResponse.json({ reports });
-  } catch (error: any) {
-    console.error("Compliance reports fetch error:", error);
-    return NextResponse.json(
-      { error: error.message || "Failed to fetch compliance reports" },
-      { status: 500 }
-    );
+  } catch (error) {
+    try {
+      return NextResponse.json(emptyOnMissingTable({ reports: [] }, error));
+    } catch {
+      console.error("Compliance reports fetch error:", error);
+      return NextResponse.json({ error: "Failed to fetch compliance reports" }, { status: 500 });
+    }
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await requireAuth();
-    const orgId = session.orgId as string;
-    const userId = session.sub as string;
+    const session = await governanceSession();
+    if (!session) return unauthorized();
+    const orgId = session.orgId;
+    const userId = await orgActorId(session);
 
     const { modelGovernanceId, framework } = await req.json();
     if (!modelGovernanceId) {
@@ -190,13 +193,13 @@ export async function POST(req: NextRequest) {
         recommendations,
         score,
         passed: failedCount === 0,
-        generatedBy: userId,
+        generatedBy: userId ?? undefined,
       })
       .returning();
 
     await logAuditEvent({
       organizationId: orgId,
-      userId,
+      userId: userId ?? undefined,
       action: "governance.compliance.report.generated",
       entityType: "compliance_report",
       entityId: report.id,

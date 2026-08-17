@@ -1,20 +1,55 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getStripeInstance, getPlanFromPriceId } from "@/lib/stripe";
+import {
+  checkoutIntegrationId,
+  getPlanFromPriceId,
+  getPriceIdForPlan,
+  getStripeInstance,
+} from "@/lib/stripe";
 import { getDb } from "@/lib/db";
 import { organizations } from "@opendoor/database";
 import { eq } from "drizzle-orm";
 import { requireAuth } from "@/lib/auth";
 import { logAuditEvent } from "@/lib/audit";
+import { appBaseUrl } from "@/lib/public-urls";
+import type { PlanId } from "@opendoor/shared";
+
+function asCheckoutPlan(value: unknown): Extract<PlanId, "pro" | "team"> | null {
+  return value === "pro" || value === "team" ? value : null;
+}
 
 export async function POST(req: NextRequest) {
   try {
     const session = await requireAuth();
     const orgId = session.orgId as string;
-    const { priceId } = await req.json();
+    const body = await req.json();
 
-    if (!priceId) {
-      return NextResponse.json({ error: "Price ID required" }, { status: 400 });
+    const requestedPlan = asCheckoutPlan(body.planId);
+    const requestedPriceId =
+      typeof body.priceId === "string" && body.priceId.startsWith("price_")
+        ? body.priceId
+        : "";
+
+    if (body.planId === "enterprise") {
+      return NextResponse.json(
+        { error: "Enterprise is billed through sales", sales: "mailto:sales@opendoor.ai?subject=OpenDoor%20Enterprise" },
+        { status: 400 }
+      );
     }
+
+    const plan = requestedPlan || (requestedPriceId ? getPlanFromPriceId(requestedPriceId) : null);
+    const priceId = (requestedPlan ? getPriceIdForPlan(requestedPlan) : requestedPriceId) || "";
+
+    if (!plan || plan === "free" || !priceId) {
+      return NextResponse.json(
+        { error: "This plan is not configured for checkout" },
+        { status: 400 }
+      );
+    }
+
+    const seats =
+      plan === "team"
+        ? Math.min(500, Math.max(1, Number(body.seats) || 1))
+        : 1;
 
     const db = getDb();
     const org = await db.query.organizations.findFirst({
@@ -25,8 +60,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Organization not found" }, { status: 404 });
     }
 
+    const activeSub =
+      Boolean(org.stripeSubscriptionId) &&
+      (org.subscriptionStatus === "active" || org.subscriptionStatus === "trialing");
+    if (activeSub) {
+      return NextResponse.json(
+        { error: "Use the billing portal to change plans", usePortal: true },
+        { status: 409 }
+      );
+    }
+
     const stripe = getStripeInstance();
-    const plan = getPlanFromPriceId(priceId);
+    const origin = appBaseUrl();
 
     let customerId = org.stripeCustomerId;
     if (!customerId) {
@@ -43,17 +88,22 @@ export async function POST(req: NextRequest) {
 
     const checkoutSession = await stripe.checkout.sessions.create({
       customer: customerId,
-      line_items: [{ price: priceId, quantity: 1 }],
+      line_items: [{ price: priceId, quantity: seats }],
       mode: "subscription",
-      success_url: `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/dashboard/billing?success=true`,
-      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/dashboard/billing?canceled=true`,
+      integration_identifier: checkoutIntegrationId("subscription"),
+      success_url: `${origin}/dashboard/billing?success=true`,
+      cancel_url: `${origin}/dashboard/billing?canceled=true`,
       metadata: {
         organizationId: orgId,
         plan,
         priceId,
+        seats: String(seats),
       },
       subscription_data: {
-        metadata: { organizationId: orgId, plan, priceId },
+        metadata: { organizationId: orgId, plan, priceId, seats: String(seats) },
+      },
+      saved_payment_method_options: {
+        payment_method_save: "enabled",
       },
     });
 
@@ -63,7 +113,7 @@ export async function POST(req: NextRequest) {
       action: "billing.checkout_started",
       entityType: "organization",
       entityId: orgId,
-      metadata: { priceId, stripeCustomerId: customerId },
+      metadata: { plan, priceId, seats, stripeCustomerId: customerId },
     });
 
     return NextResponse.json({ url: checkoutSession.url });

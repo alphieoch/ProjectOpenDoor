@@ -18,7 +18,32 @@ export type AuditAction =
   | "settings.updated"
   | "deployment.created"
   | "deployment.updated"
-  | "deployment.deleted";
+  | "deployment.deleted"
+  | "deployment.lora_loaded"
+  | "deployment.lora_unloaded"
+  | "deployment.router_created"
+  | "deployment.router_deleted"
+  | "governance.policy.created"
+  | "governance.policy.updated"
+  | "governance.policy.deleted"
+  | "governance.approval.requested"
+  | "governance.approval.reviewed"
+  | "governance.violation.resolved"
+  | "governance.model.created"
+  | "governance.model.updated"
+  | "governance.model.deleted"
+  | "governance.evaluation.created"
+  | "governance.compliance.updated"
+  | "governance.compliance.report.generated"
+  | "governance.sector_template.created"
+  | "governance.sector_pack.applied"
+  | "device_inventory.consented"
+  | "device_inventory.withdrawn"
+  | "agent.created"
+  | "agent.updated"
+  | "agent.started"
+  | "agent.stopped"
+  | "agent.deleted";
 
 export interface AuditLogInput {
   organizationId: string;

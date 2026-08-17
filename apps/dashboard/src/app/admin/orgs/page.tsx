@@ -72,7 +72,7 @@ export default function AdminOrgsPage() {
                     </div>
                   </td>
                   <td className="table-cell">
-                    <span className={org.plan === "enterprise" ? "badge-info" : org.plan === "pro" ? "badge-success" : "badge-neutral"}>
+                    <span className={org.plan === "enterprise" ? "badge-info" : org.plan === "pro" || org.plan === "team" ? "badge-success" : "badge-neutral"}>
                       {org.plan}
                     </span>
                   </td>

@@ -1,34 +1,100 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
-import { getStripeInstance } from "@/lib/stripe";
+import { getPlanFromPriceId, getStripeInstance, isAgentsAddonPriceId } from "@/lib/stripe";
+import {
+  includedCreditCents,
+  qualifiesForTopupBonus,
+  TOPUP_BONUS_CENTS,
+  welcomeExpiresAt,
+  type PlanId,
+} from "@opendoor/shared";
 import { getDb } from "@/lib/db";
-import { organizations, creditTransactions, assistantPurchases } from "@opendoor/database";
+import {
+  organizations,
+  creditTransactions,
+  assistantPurchases,
+  aiAssistants,
+  workspaceAgents,
+} from "@opendoor/database";
 import { and, eq } from "drizzle-orm";
+import {
+  paymentMethodFromCheckoutSession,
+  persistCustomerPaymentMethod,
+} from "@/lib/billing-stripe";
 
 function parseAmountCents(value: unknown): number {
   const parsed = Number.parseInt(String(value ?? "0"), 10);
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
-function getPlanForSession(session: Stripe.Checkout.Session): "free" | "pro" | "enterprise" {
-  const metadataPlan = session.metadata?.plan;
-  if (metadataPlan === "pro" || metadataPlan === "enterprise") {
-    return metadataPlan;
-  }
+function asPlanId(value: unknown): PlanId {
+  if (value === "pro" || value === "team" || value === "enterprise") return value;
   return "free";
 }
 
-async function applyTopupCredit(
+function getPlanForSession(session: Stripe.Checkout.Session): PlanId {
+  return asPlanId(session.metadata?.plan);
+}
+
+function isAgentsAddonMeta(meta?: Stripe.Metadata | null) {
+  return meta?.kind === "agents_addon";
+}
+
+async function setAgentsAddon(
   orgId: string,
-  paymentIntentId: string,
-  amountCents: number,
-  source: "checkout" | "auto_recharge"
+  status: string,
+  subscriptionId?: string | null,
 ) {
   const db = getDb();
-  if (!paymentIntentId || amountCents <= 0) return;
+  await db
+    .update(organizations)
+    .set({
+      agentsAddonStatus: status,
+      ...(subscriptionId === undefined ? {} : { stripeAgentsSubscriptionId: subscriptionId }),
+      updatedAt: new Date(),
+    })
+    .where(eq(organizations.id, orgId));
 
+  if (status === "canceled" || status === "unpaid" || status === "incomplete_expired") {
+    try {
+      await db
+        .update(workspaceAgents)
+        .set({
+          status: "stopped",
+          statusMessage: "Agents add-on is no longer active",
+          stoppedAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(eq(workspaceAgents.organizationId, orgId));
+    } catch (error) {
+      console.warn("Failed to stop agents after add-on change:", error);
+    }
+  }
+}
+
+function invoiceSubscriptionId(invoice: Stripe.Invoice): string | null {
+  const fromParent = invoice.parent?.subscription_details?.subscription;
+  if (typeof fromParent === "string" && fromParent) return fromParent;
+  if (fromParent && typeof fromParent === "object" && "id" in fromParent) {
+    return String(fromParent.id);
+  }
+  const legacy = (invoice as { subscription?: unknown }).subscription;
+  return typeof legacy === "string" && legacy ? legacy : null;
+}
+
+async function applyPlanStipend(
+  orgId: string,
+  plan: PlanId,
+  seats: number,
+  invoiceId: string
+) {
+  const amountCents = includedCreditCents(plan, seats);
+  if (amountCents <= 0) return;
+
+  const db = getDb();
+  const grantKey = `invoice:${invoiceId}`;
   const existing = await db.query.creditTransactions.findFirst({
-    where: eq(creditTransactions.stripePaymentIntentId, paymentIntentId),
+    where: eq(creditTransactions.stripePaymentIntentId, grantKey),
   });
   if (existing) return;
 
@@ -48,12 +114,85 @@ async function applyTopupCredit(
 
   await db.insert(creditTransactions).values({
     organizationId: orgId,
-    kind: "topup",
+    kind: "plan_grant",
     amountCents,
     balanceAfterCents: next,
-    stripePaymentIntentId: paymentIntentId,
-    metadata: { source },
+    stripePaymentIntentId: grantKey,
+    metadata: { source: "plan_stipend", plan, seats, invoiceId },
   });
+}
+
+async function applyTopupCredit(
+  orgId: string,
+  paymentIntentId: string,
+  amountCents: number,
+  source: "checkout" | "auto_recharge"
+) {
+  const db = getDb();
+  if (!paymentIntentId || amountCents <= 0) return;
+
+  const existing = await db.query.creditTransactions.findFirst({
+    where: eq(creditTransactions.stripePaymentIntentId, paymentIntentId),
+  });
+
+  const org = await db.query.organizations.findFirst({
+    where: eq(organizations.id, orgId),
+    columns: {
+      creditsUsdCents: true,
+      welcomeCreditsUsdCents: true,
+      welcomeExpiresAt: true,
+      signupCreditGranted: true,
+    },
+  });
+  if (!org) return;
+
+  let current = Number(org.creditsUsdCents || 0);
+  let currentWelcome = Number(org.welcomeCreditsUsdCents || 0);
+  const alreadyGranted = Boolean(org.signupCreditGranted);
+
+  if (!existing) {
+    current += amountCents;
+    await db
+      .update(organizations)
+      .set({ creditsUsdCents: current })
+      .where(eq(organizations.id, orgId));
+    await db.insert(creditTransactions).values({
+      organizationId: orgId,
+      kind: "topup",
+      amountCents,
+      balanceAfterCents: current,
+      stripePaymentIntentId: paymentIntentId,
+      metadata: { source },
+    });
+  }
+
+  if (qualifiesForTopupBonus(amountCents, alreadyGranted)) {
+    const bonusCents = TOPUP_BONUS_CENTS;
+    const expires = welcomeExpiresAt();
+    current += bonusCents;
+    currentWelcome += bonusCents;
+    await db
+      .update(organizations)
+      .set({
+        creditsUsdCents: current,
+        welcomeCreditsUsdCents: currentWelcome,
+        welcomeExpiresAt: expires,
+        signupCreditGranted: true,
+      })
+      .where(eq(organizations.id, orgId));
+    await db.insert(creditTransactions).values({
+      organizationId: orgId,
+      kind: "topup_bonus",
+      amountCents: bonusCents,
+      balanceAfterCents: current,
+      metadata: {
+        source: "topup_open_weight_bonus",
+        restricted_to: "open_weight",
+        qualifying_topup_cents: amountCents,
+        expires_at: expires.toISOString(),
+      },
+    });
+  }
 }
 
 export async function POST(req: NextRequest) {
@@ -130,8 +269,9 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      // Org plan subscription
-      if (session.mode === "subscription" && orgId && session.subscription && !assistantId) {
+      if (session.mode === "subscription" && orgId && session.subscription && isAgentsAddonMeta(session.metadata)) {
+        await setAgentsAddon(orgId, "active", session.subscription as string);
+      } else if (session.mode === "subscription" && orgId && session.subscription && !assistantId) {
         await db
           .update(organizations)
           .set({
@@ -151,16 +291,58 @@ export async function POST(req: NextRequest) {
           "checkout"
         );
       }
+
+      if (orgId && session.customer) {
+        try {
+          const paymentMethodId = await paymentMethodFromCheckoutSession(session);
+          await persistCustomerPaymentMethod(
+            orgId,
+            session.customer as string,
+            paymentMethodId
+          );
+        } catch (error) {
+          console.warn("Failed to persist checkout payment method:", error);
+        }
+      }
       break;
     }
 
     case "invoice.payment_succeeded": {
       const invoice = event.data.object as Stripe.Invoice;
-      if (invoice.subscription && invoice.customer) {
-        await db
-          .update(organizations)
-          .set({ subscriptionStatus: "active" })
-          .where(eq(organizations.stripeCustomerId, invoice.customer as string));
+      const subscriptionId = invoiceSubscriptionId(invoice);
+      if (subscriptionId && invoice.customer) {
+        const org = await db.query.organizations.findFirst({
+          where: eq(organizations.stripeCustomerId, invoice.customer as string),
+          columns: { id: true, plan: true },
+        });
+        if (org) {
+          const stripe = getStripeInstance();
+          const subscription = await stripe.subscriptions.retrieve(
+            subscriptionId
+          );
+          const addonItem = subscription.items.data.find((item) =>
+            isAgentsAddonPriceId(item.price.id) || isAgentsAddonMeta(subscription.metadata),
+          );
+          if (addonItem || isAgentsAddonMeta(subscription.metadata)) {
+            await setAgentsAddon(org.id, "active", subscription.id);
+            break;
+          }
+          const item = subscription.items.data[0];
+          const plan = asPlanId(
+            subscription.metadata?.plan || getPlanFromPriceId(item?.price.id || "")
+          );
+          const seats = Math.max(1, item?.quantity || 1);
+          await db
+            .update(organizations)
+            .set({
+              subscriptionStatus: "active",
+              plan,
+              stripeSubscriptionId: subscription.id,
+              stripePriceId: item?.price.id || null,
+            })
+            .where(eq(organizations.id, org.id));
+          await applyPlanStipend(org.id, plan, seats, invoice.id);
+        }
       }
       break;
     }
@@ -184,6 +366,16 @@ export async function POST(req: NextRequest) {
           .update(assistantPurchases)
           .set({ status: "canceled", updatedAt: new Date() })
           .where(eq(assistantPurchases.stripeSubscriptionId, subscription.id));
+      }
+      if (isAgentsAddonMeta(subscription.metadata) || subscription.items.data.some((item) => isAgentsAddonPriceId(item.price.id))) {
+        const org = subscription.customer
+          ? await db.query.organizations.findFirst({
+              where: eq(organizations.stripeCustomerId, subscription.customer as string),
+              columns: { id: true },
+            })
+          : null;
+        if (org) await setAgentsAddon(org.id, "canceled", null);
+        break;
       }
       // Also update org plan if it matches
       if (subscription.customer) {
@@ -214,6 +406,19 @@ export async function POST(req: NextRequest) {
           .update(assistantPurchases)
           .set(updates)
           .where(eq(assistantPurchases.stripeSubscriptionId, subscription.id));
+      }
+      if (isAgentsAddonMeta(subscription.metadata) || subscription.items.data.some((item) => isAgentsAddonPriceId(item.price.id))) {
+        const org = subscription.customer
+          ? await db.query.organizations.findFirst({
+              where: eq(organizations.stripeCustomerId, subscription.customer as string),
+              columns: { id: true },
+            })
+          : null;
+        if (org) {
+          const dead = subscription.status === "canceled" || subscription.status === "unpaid" || subscription.status === "incomplete_expired";
+          await setAgentsAddon(org.id, dead ? "canceled" : subscription.status, dead ? null : subscription.id);
+        }
+        break;
       }
       // Update org plan
       if (subscription.customer) {

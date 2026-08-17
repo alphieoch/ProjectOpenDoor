@@ -4,6 +4,7 @@ import { getDb } from "@/lib/db";
 import { organizations } from "@opendoor/database";
 import { eq } from "drizzle-orm";
 import { requireAuth } from "@/lib/auth";
+import { appBaseUrl } from "@/lib/public-urls";
 
 export async function POST() {
   try {
@@ -25,7 +26,7 @@ export async function POST() {
     const stripe = getStripeInstance();
     const portalSession = await stripe.billingPortal.sessions.create({
       customer: org.stripeCustomerId,
-      return_url: `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/dashboard/billing`,
+      return_url: `${appBaseUrl()}/dashboard/billing`,
     });
 
     return NextResponse.json({ url: portalSession.url });

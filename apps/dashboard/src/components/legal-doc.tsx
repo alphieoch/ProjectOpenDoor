@@ -1,0 +1,27 @@
+import MarketingHeader from "@/components/MarketingHeader";
+import { StickyFooter } from "@/components/ui/sticky-footer";
+
+export function LegalDoc({
+  title,
+  updated,
+  children,
+}: {
+  title: string;
+  updated: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <main className="min-h-screen bg-[#F6F5F1] text-slate-950">
+      <MarketingHeader />
+      <article className="mx-auto max-w-3xl px-6 py-16 lg:px-8">
+        <p className="text-sm font-semibold uppercase tracking-[0.25em] text-blue-600">Legal</p>
+        <h1 className="mt-4 text-4xl font-semibold tracking-tight">{title}</h1>
+        <p className="mt-3 text-sm text-slate-500">Last updated {updated}</p>
+        <div className="prose prose-slate mt-10 max-w-none space-y-6 text-[15px] leading-7 text-slate-700">
+          {children}
+        </div>
+      </article>
+      <StickyFooter />
+    </main>
+  );
+}

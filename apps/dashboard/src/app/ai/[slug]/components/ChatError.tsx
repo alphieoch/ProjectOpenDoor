@@ -4,10 +4,12 @@ import { AlertCircle, RotateCcw } from "lucide-react";
 
 interface ChatErrorProps {
   message: string;
+  href?: string;
+  hrefLabel?: string;
   onRetry?: () => void;
 }
 
-export function ChatError({ message, onRetry }: ChatErrorProps) {
+export function ChatError({ message, href, hrefLabel, onRetry }: ChatErrorProps) {
   return (
     <div className="flex justify-center px-4 py-2">
       <div
@@ -19,7 +21,14 @@ export function ChatError({ message, onRetry }: ChatErrorProps) {
         }}
       >
         <AlertCircle className="w-4 h-4 shrink-0" />
-        <p className="text-sm flex-1">{message}</p>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm">{message}</p>
+          {href && (
+            <a href={href} className="mt-1 inline-block text-xs font-medium underline underline-offset-2">
+              {hrefLabel || "Open billing"}
+            </a>
+          )}
+        </div>
         {onRetry && (
           <button
             onClick={onRetry}

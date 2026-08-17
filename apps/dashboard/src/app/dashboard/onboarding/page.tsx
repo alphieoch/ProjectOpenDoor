@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import posthog from "posthog-js";
 import { CheckCircle2, Circle, ArrowRight, School, Building2 } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
 
 type Segment = "standard" | "education" | "enterprise_intent";
 type Checklist = {
@@ -119,16 +120,17 @@ export default function OnboardingPage() {
 
   return (
     <div>
-      <div className="mb-8">
-        <h1 className="page-title">Welcome to OpenDoor</h1>
-        <p className="page-desc">
-          {state.segment === "education"
+      <PageHeader
+        eyebrow="Getting started"
+        title="Welcome to OpenDoor"
+        description={
+          state.segment === "education"
             ? "Education onboarding helps you get to a first successful request quickly."
             : state.segment === "enterprise_intent"
               ? "Enterprise onboarding routes you to the right SSO and sales paths."
-              : "Complete these steps to finish your setup."}
-        </p>
-      </div>
+              : "Complete these steps to finish your setup."
+        }
+      />
 
       <div className="card p-6 space-y-5">
         <div className="flex items-center gap-2 text-sm" style={{ color: "var(--ink-3)" }}>

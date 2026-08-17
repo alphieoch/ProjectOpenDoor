@@ -3,6 +3,7 @@ import { getDb } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
 import { organizations } from "@opendoor/database";
 import { eq } from "drizzle-orm";
+import { persistCustomerPaymentMethod } from "@/lib/billing-stripe";
 
 export async function GET() {
   try {
@@ -25,11 +26,20 @@ export async function GET() {
       return NextResponse.json({ error: "Organization not found" }, { status: 404 });
     }
 
+    let paymentMethodId = org.defaultPaymentMethodId;
+    if (!paymentMethodId && org.stripeCustomerId) {
+      try {
+        paymentMethodId = await persistCustomerPaymentMethod(orgId, org.stripeCustomerId);
+      } catch (error) {
+        console.warn("Auto-recharge payment method sync failed:", error);
+      }
+    }
+
     return NextResponse.json({
       enabled: Boolean(org.autoRechargeEnabled),
       thresholdCents: Number(org.autoRechargeThresholdCents || 0),
       amountCents: Number(org.autoRechargeAmountCents || 0),
-      hasPaymentMethod: Boolean(org.defaultPaymentMethodId),
+      hasPaymentMethod: Boolean(paymentMethodId),
       hasStripeCustomer: Boolean(org.stripeCustomerId),
     });
   } catch (error: any) {

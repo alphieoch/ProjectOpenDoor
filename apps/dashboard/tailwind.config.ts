@@ -19,6 +19,12 @@ const config: Config = {
           "Arial",
           "sans-serif",
         ],
+        serif: [
+          "var(--font-instrument-serif)",
+          "Iowan Old Style",
+          "Georgia",
+          "serif",
+        ],
         mono: [
           "var(--font-roboto-mono)",
           "Roboto Mono",

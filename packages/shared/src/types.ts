@@ -1,10 +1,32 @@
+export type ChatContentPart =
+  | { type: "text"; text: string }
+  | {
+      type: "image_url";
+      image_url: { url: string; detail?: "auto" | "low" | "high" };
+    };
+
+export type ChatMessageContent = string | ChatContentPart[];
+
 export interface ChatMessage {
   role: "system" | "user" | "assistant" | "tool";
-  content: string;
+  content: ChatMessageContent;
   name?: string;
   tool_calls?: ToolCall[];
   tool_call_id?: string;
 }
+
+export type ResponseFormat =
+  | { type: "text" }
+  | { type: "json_object" }
+  | {
+      type: "json_schema";
+      json_schema: {
+        name: string;
+        description?: string;
+        schema: Record<string, unknown>;
+        strict?: boolean;
+      };
+    };
 
 export interface ToolCall {
   id: string;
@@ -25,8 +47,21 @@ export interface ChatCompletionRequest {
   presence_penalty?: number;
   stream?: boolean;
   tools?: ToolDefinition[];
-  tool_choice?: "auto" | "none" | { type: "function"; function: { name: string } };
+  tool_choice?:
+    | "auto"
+    | "none"
+    | "required"
+    | { type: "function"; function: { name: string } };
+  response_format?: ResponseFormat;
   user?: string;
+  /**
+   * Fireworks-style capacity tier.
+   * `priority` gets higher RPM/TPM and is never load-shed.
+   * `standard` may 503 when GATEWAY_SHED_STANDARD=1 under load.
+   */
+  service_tier?: "standard" | "priority";
+  /** Sticky prompt-cache key forwarded to OpenAI-compatible upstreams when supported */
+  prompt_cache_key?: string;
 }
 
 export interface ToolDefinition {
@@ -71,6 +106,75 @@ export interface UsageInfo {
   prompt_tokens: number;
   completion_tokens: number;
   total_tokens: number;
+  /** Prompt tokens served from cache when the provider reports them */
+  cached_tokens?: number;
+}
+
+export interface CompletionRequest {
+  model: string;
+  prompt: string | string[];
+  temperature?: number;
+  max_tokens?: number;
+  top_p?: number;
+  stream?: boolean;
+  user?: string;
+}
+
+export interface CompletionResponse {
+  id: string;
+  object: "text_completion";
+  created: number;
+  model: string;
+  choices: Array<{
+    index: number;
+    text: string;
+    finish_reason: "stop" | "length" | null;
+  }>;
+  usage: UsageInfo;
+}
+
+export interface RerankRequest {
+  model: string;
+  query: string;
+  documents: Array<string | { text: string }>;
+  top_n?: number;
+}
+
+export interface RerankResult {
+  results: Array<{ index: number; relevance_score: number }>;
+}
+
+export interface BatchRequestLine {
+  custom_id: string;
+  method?: "POST";
+  url?: string;
+  body: ChatCompletionRequest;
+}
+
+export interface BatchJob {
+  id: string;
+  object: "batch";
+  endpoint: string;
+  status:
+    | "validating"
+    | "pending"
+    | "running"
+    | "completed"
+    | "failed"
+    | "cancelled";
+  request_counts: {
+    total: number;
+    completed: number;
+    failed: number;
+  };
+  output?: Array<{
+    custom_id: string;
+    response?: unknown;
+    error?: { message: string };
+  }>;
+  error?: string | null;
+  created_at: number;
+  completed_at?: number | null;
 }
 
 export interface ModelInfo {
@@ -84,6 +188,7 @@ export interface ModelInfo {
   supports_vision?: boolean;
   supports_tools?: boolean;
   supports_json_mode?: boolean;
+  supports_rerank?: boolean;
 }
 
 export interface ApiKey {
@@ -126,7 +231,7 @@ export interface RequestLog {
   organizationId: string;
   providerId: string;
   modelId: string;
-  requestType: "chat" | "embedding" | "image";
+  requestType: "chat" | "embedding" | "image" | "rerank" | "completion";
   promptTokens: number;
   completionTokens: number;
   totalTokens: number;

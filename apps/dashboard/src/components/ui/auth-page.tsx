@@ -144,7 +144,7 @@ export function AuthPage() {
 			} catch {
 				// Analytics is optional.
 			}
-			router.push('/dashboard/onboarding');
+			router.push(data.redirectTo || '/dashboard/onboarding');
 			router.refresh();
 		} else {
 			const data = await res.json();
@@ -165,7 +165,17 @@ export function AuthPage() {
 		ssoError === 'org_not_found' ? 'Organization not found' :
 		ssoError === 'sso_disabled' ? 'SSO is not enabled for your organization' :
 		ssoError === 'invalid_org' ? 'Invalid organization' :
+		ssoError === 'workos_failed' ? 'Sign-in failed. Try again.' :
+		ssoError === 'workos_sync_failed' ? 'Signed in, but we could not finish account setup.' :
+		ssoError === 'oauth_provider' ? 'Unknown sign-in provider.' :
+		ssoError === 'missing_pkce_cookie' || ssoError === 'oauth_state_mismatch' || ssoError === 'missing_auth_params'
+			? 'Sign-in session expired. Click Continue with Google or GitHub again.' :
+		ssoError === 'missing_tokens' ? 'Sign-in could not be completed. Try again.' :
 		ssoError ? 'SSO callback failed' : null;
+
+	function continueWithOAuth(provider: 'google' | 'github') {
+		window.location.href = `/api/auth/oauth/${provider}`;
+	}
 
 	return (
 		<main className="relative bg-white text-zinc-900 dark:bg-black dark:text-white md:h-screen md:overflow-hidden lg:grid lg:grid-cols-2">
@@ -266,13 +276,14 @@ export function AuthPage() {
 						</div>
 					)}
 
-					{/* Social login buttons */}
+					{/* Social login — WorkOS User Management (stays in OpenDoor UI) */}
 					<div className="space-y-2">
 						<Button
 							type="button"
 							size="lg"
 							className="w-full !border-zinc-900 !bg-transparent !text-zinc-900 hover:!bg-zinc-100 dark:!border-white dark:!text-white dark:hover:!bg-white/10"
 							variant="outline"
+							onClick={() => continueWithOAuth('google')}
 						>
 							<GoogleIcon className="size-4 me-2" />
 							Continue with Google
@@ -282,15 +293,7 @@ export function AuthPage() {
 							size="lg"
 							className="w-full !border-zinc-900 !bg-transparent !text-zinc-900 hover:!bg-zinc-100 dark:!border-white dark:!text-white dark:hover:!bg-white/10"
 							variant="outline"
-						>
-							<AppleIcon className="size-4 me-2" />
-							Continue with Apple
-						</Button>
-						<Button
-							type="button"
-							size="lg"
-							className="w-full !border-zinc-900 !bg-transparent !text-zinc-900 hover:!bg-zinc-100 dark:!border-white dark:!text-white dark:hover:!bg-white/10"
-							variant="outline"
+							onClick={() => continueWithOAuth('github')}
 						>
 							<GithubIcon className="size-4 me-2" />
 							Continue with GitHub
@@ -417,13 +420,13 @@ export function AuthPage() {
 							</div>
 							<div className="relative">
 								<Input
-									placeholder="Password (min 8 chars)"
+									placeholder="Password (min 10 chars)"
 									className="peer ps-9 !bg-white !border-zinc-300 !text-zinc-900 placeholder:!text-zinc-400 dark:!bg-zinc-900 dark:!border-zinc-700 dark:!text-white dark:placeholder:!text-zinc-500"
 									type="password"
 									value={password}
 									onChange={(e) => setPassword(e.target.value)}
 									required
-									minLength={8}
+									minLength={10}
 								/>
 								<div className="pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center ps-3 text-zinc-400 peer-disabled:opacity-50">
 									<Shield className="size-4" aria-hidden="true" />
@@ -482,19 +485,19 @@ export function AuthPage() {
 
 					<p className="mt-8 text-sm text-zinc-500 dark:text-zinc-400">
 						By clicking continue, you agree to our{' '}
-						<a
-							href="#"
+						<Link
+							href="/terms"
 							className="underline underline-offset-4 hover:text-zinc-700 dark:hover:text-zinc-200"
 						>
 							Terms of Service
-						</a>{' '}
+						</Link>{' '}
 						and{' '}
-						<a
-							href="#"
+						<Link
+							href="/privacy"
 							className="underline underline-offset-4 hover:text-zinc-700 dark:hover:text-zinc-200"
 						>
 							Privacy Policy
-						</a>
+						</Link>
 						.
 					</p>
 				</div>
@@ -560,17 +563,6 @@ const GoogleIcon = (props: React.ComponentProps<'svg'>) => (
 		<g>
 			<path d="M12.479,14.265v-3.279h11.049c0.108,0.571,0.164,1.247,0.164,1.979c0,2.46-0.672,5.502-2.84,7.669   C18.744,22.829,16.051,24,12.483,24C5.869,24,0.308,18.613,0.308,12S5.869,0,12.483,0c3.659,0,6.265,1.436,8.223,3.307L18.392,5.62   c-1.404-1.317-3.307-2.341-5.913-2.341C7.65,3.279,3.873,7.171,3.873,12s3.777,8.721,8.606,8.721c3.132,0,4.916-1.258,6.059-2.401   c0.927-0.927,1.537-2.251,1.777-4.059L12.479,14.265z" />
 		</g>
-	</svg>
-);
-
-const AppleIcon = (props: React.ComponentProps<'svg'>) => (
-	<svg
-		xmlns="http://www.w3.org/2000/svg"
-		viewBox="0 0 24 24"
-		fill="currentColor"
-		{...props}
-	>
-		<path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z" />
 	</svg>
 );
 

@@ -9,7 +9,8 @@ showPageTitle: true
 ## What you pay for
 
 - **Pay-as-you-go** on the Free plan — token cost from `pricing_rules` (USD per 1K in the DB, shown per 1M in the UI)
-- **Pro / Enterprise** — Stripe Checkout using `STRIPE_PRO_PRICE_ID` / `STRIPE_ENTERPRISE_PRICE_ID`. If those env vars are missing, the button tells you so; it does not pretend checkout worked
+- **Pro / Team / Enterprise** — $12 / $18 per user / $45 per user. Signup credit is $3. Stripe Checkout uses `STRIPE_PRO_PRICE_ID` and `STRIPE_TEAM_PRICE_ID`. Each paid invoice grants a monthly inference stipend ($3 / $5 per seat / $8 per seat) onto prepaid credits. Tokens after that and every GPU-second are pay-as-you-go. Enterprise is talk-to-sales. If those env vars are missing, the button tells you so; it does not pretend checkout worked
+- **Agents add-on** — $20/month (`STRIPE_AGENTS_ADDON_PRICE_ID`). Separate subscription from the seat plan. Included on Enterprise. Tokens still bill quota
 - **Credit top-ups** — Stripe payment, then `credit_transactions`
 - **Auto-recharge** — when the credit balance crosses your threshold
 

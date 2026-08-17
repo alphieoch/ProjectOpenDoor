@@ -6,6 +6,7 @@ import type {
 } from "@opendoor/shared";
 import type { ProviderAdapter } from "./base.js";
 import { generateId } from "./base.js";
+import { openaiChatPayload } from "./openai-body.js";
 
 export class QwenProvider implements ProviderAdapter {
   name = "Alibaba Qwen";
@@ -28,14 +29,7 @@ export class QwenProvider implements ProviderAdapter {
         "Content-Type": "application/json",
         Authorization: `Bearer ${this.apiKey}`,
       },
-      body: JSON.stringify({
-        model: request.model,
-        messages: request.messages,
-        temperature: request.temperature,
-        max_tokens: request.max_tokens,
-        top_p: request.top_p,
-        stream: false,
-      }),
+      body: JSON.stringify(openaiChatPayload(request, false)),
     });
 
     if (!response.ok) {
@@ -75,14 +69,7 @@ export class QwenProvider implements ProviderAdapter {
         "Content-Type": "application/json",
         Authorization: `Bearer ${this.apiKey}`,
       },
-      body: JSON.stringify({
-        model: request.model,
-        messages: request.messages,
-        temperature: request.temperature,
-        max_tokens: request.max_tokens,
-        top_p: request.top_p,
-        stream: true,
-      }),
+      body: JSON.stringify(openaiChatPayload(request, true)),
     });
 
     if (!response.ok || !response.body) {
@@ -167,6 +154,14 @@ export class QwenProvider implements ProviderAdapter {
         owned_by: "alibaba",
         provider: this.slug,
         display_name: "Qwen Coder Plus",
+      },
+      {
+        id: "qwen3.8-max",
+        object: "model",
+        created: 0,
+        owned_by: "alibaba",
+        provider: this.slug,
+        display_name: "Qwen3.8 Max",
       },
     ];
   }

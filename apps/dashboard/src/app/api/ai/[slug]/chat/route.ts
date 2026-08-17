@@ -4,6 +4,7 @@ import { createAnthropic } from "@ai-sdk/anthropic";
 import { createOpenAI } from "@ai-sdk/openai";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { createMistral } from "@ai-sdk/mistral";
+import { welcomeAllowedForFamily } from "@opendoor/shared";
 import { getDb } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { aiAssistants, assistantApiSecrets, assistantConnections, assistantConnectionTools, assistantPurchases } from "@opendoor/database";
@@ -12,9 +13,13 @@ import { getComposio, entityId } from "@/lib/composio/client";
 import { buildMcpTools } from "@/lib/mcp/client";
 import type { McpServerConfig } from "@/lib/mcp/client";
 import { buildApiConnectionTools } from "@/lib/api-connections/http-tool-builder";
-
-const GATEWAY     = process.env.GATEWAY_URL ?? "http://localhost:3001";
-const GATEWAY_KEY = process.env.GATEWAY_INTERNAL_KEY ?? "";
+import {
+  assistantGatewayHeaders,
+  assistantGatewaySecret,
+  assistantGatewayUrl,
+  inferAssistantFamily,
+} from "@/lib/assistant-gateway";
+import { assertOrgCanSpend, debitOrgUsage } from "@/lib/credits";
 
 const WINDOW_MS: Record<string, number> = {
   "15min": 15 * 60 * 1000,
@@ -313,11 +318,38 @@ function calculateMeteredCost(assistant: typeof aiAssistants.$inferSelect, token
   return 0;
 }
 
-function resolveModel(modelId: string) {
+function resolveDirectModel(modelId: string) {
   if (modelId.startsWith("claude-"))  return createAnthropic()(modelId);
   if (modelId.startsWith("gemini-"))  return createGoogleGenerativeAI()(modelId);
   if (modelId.startsWith("mistral-")) return createMistral()(modelId);
-  return createOpenAI()(modelId); // gpt-4o, gpt-4o-mini, command-r-plus, etc.
+  return createOpenAI()(modelId);
+}
+
+function billedGatewayModel(modelId: string, orgId: string) {
+  const secret = assistantGatewaySecret();
+  return createOpenAI({
+    baseURL: `${assistantGatewayUrl()}/v1`,
+    apiKey: secret || "missing",
+    headers: {
+      "X-OpenDoor-Organization-Id": orgId,
+    },
+  })(modelId);
+}
+
+function insufficientBalanceResponse(
+  detail: string,
+  extra?: Record<string, unknown>
+) {
+  return NextResponse.json(
+    {
+      error: "Insufficient balance",
+      detail,
+      reason: "org_limit",
+      topupUrl: "/dashboard/billing",
+      ...extra,
+    },
+    { status: 402 }
+  );
 }
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
@@ -331,6 +363,16 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
 
   if (!assistant) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
+  const family = inferAssistantFamily(assistant.modelId);
+  const afford = await assertOrgCanSpend(assistant.organizationId, family);
+  if (!afford.ok) {
+    return insufficientBalanceResponse(afford.detail, {
+      includedQuotaCents: afford.waterfall.quotaCents,
+      prepaidCreditsUsdCents: afford.waterfall.prepaidCents,
+      welcomeCreditsUsdCents: afford.waterfall.welcomeCents,
+    });
   }
 
   const session = await getSession();
@@ -499,40 +541,53 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
 
   // ─── Agentic mode: use Vercel AI SDK if we have any tools ───
   if (Object.keys(allTools).length > 0) {
-    try {
-      const model = resolveModel(assistant.modelId ?? "gpt-4o");
+    const modelId = assistant.modelId ?? "gpt-4o";
+    const tryModels = assistantGatewaySecret()
+      ? [billedGatewayModel(modelId, assistant.organizationId), resolveDirectModel(modelId)]
+      : [resolveDirectModel(modelId)];
 
-      const result = await streamText({
-        model,
-        messages: [
-          ...systemMessages,
-          ...messages.map((m) => ({ role: m.role as "user" | "assistant", content: m.content })),
-        ],
-        tools: allTools,
-        maxOutputTokens: assistant.maxTokensPerMessage ?? undefined,
-      });
+    for (const [index, model] of tryModels.entries()) {
+      const billedByGateway = index === 0 && Boolean(assistantGatewaySecret());
+      try {
+        const result = await streamText({
+          model,
+          messages: [
+            ...systemMessages,
+            ...messages.map((m) => ({ role: m.role as "user" | "assistant", content: m.content })),
+          ],
+          tools: allTools,
+          maxOutputTokens: assistant.maxTokensPerMessage ?? undefined,
+        });
 
-      // Track actual usage when stream completes
-      const safetyTimeout = setTimeout(() => mcpCleanup?.(), 5 * 60 * 1000);
-      Promise.resolve(result.text).then(async () => {
-        clearTimeout(safetyTimeout);
-        await mcpCleanup?.();
-        if (purchaseRecord) {
-          const usage = await result.totalUsage;
+        const safetyTimeout = setTimeout(() => mcpCleanup?.(), 5 * 60 * 1000);
+        Promise.resolve(result.text).then(async () => {
+          clearTimeout(safetyTimeout);
+          await mcpCleanup?.();
+          const usage = await result.totalUsage.catch(() => null);
           const totalTokens = usage?.totalTokens ?? estimatedInputTokens;
-          const costCents = calculateMeteredCost(assistant, totalTokens);
-          await incrementUsage(db, purchaseRecord.id, assistant, totalTokens, costCents);
-        }
-      }).catch(() => {
-        clearTimeout(safetyTimeout);
-        mcpCleanup?.();
-      });
+          if (purchaseRecord) {
+            const costCents = calculateMeteredCost(assistant, totalTokens);
+            await incrementUsage(db, purchaseRecord.id, assistant, totalTokens, costCents);
+          }
+          if (!billedByGateway) {
+            const estCents = Math.max(1, Math.ceil(totalTokens / 1000));
+            await debitOrgUsage(assistant.organizationId, estCents, undefined, {
+              allowWelcome: welcomeAllowedForFamily(family),
+              source: "ai_assistant_tools",
+            }).catch((err) => console.error("Assistant debit failed:", err));
+          }
+        }).catch(() => {
+          clearTimeout(safetyTimeout);
+          mcpCleanup?.();
+        });
 
-      return result.toTextStreamResponse();
-    } catch (err) {
-      console.error("streamText error:", err);
-      await mcpCleanup?.();
-      // Fall through to gateway proxy on error
+        return result.toTextStreamResponse();
+      } catch (err) {
+        console.error("streamText error:", err);
+        if (index === tryModels.length - 1) {
+          await mcpCleanup?.();
+        }
+      }
     }
   }
 
@@ -543,13 +598,19 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
     ? [{ role: "system", content: assistant.systemPrompt }, ...messages]
     : messages;
 
+  if (!assistantGatewaySecret()) {
+    return NextResponse.json(
+      { error: "Gateway billing is not configured. Set INTERNAL_API_KEY or GATEWAY_INTERNAL_KEY." },
+      { status: 503 }
+    );
+  }
+
   try {
-    const upstream = await fetch(`${GATEWAY}/v1/chat/completions`, {
+    const upstream = await fetch(`${assistantGatewayUrl()}/v1/chat/completions`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${GATEWAY_KEY}`,
-      },
+      headers: assistantGatewayHeaders(assistant.organizationId, {
+        "X-OpenDoor-Assistant-Id": assistant.id,
+      }),
       body: JSON.stringify({
         model: assistant.modelId ?? "gpt-4o",
         messages: gatewayMessages,
@@ -559,8 +620,30 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
     });
 
     if (!upstream.ok) {
-      const text = await upstream.text().catch(() => "Gateway error");
-      return NextResponse.json({ error: text }, { status: upstream.status });
+      const data = (await upstream.json().catch(() => ({ error: "Gateway error" }))) as {
+        error?: string;
+        detail?: string;
+        topupUrl?: string;
+      };
+      if (upstream.status === 402) {
+        return NextResponse.json(
+          {
+            error: data.error || "Insufficient balance",
+            detail:
+              data.detail ||
+              "Included credit is used up and prepaid balance cannot cover this chat. Top up on Billing.",
+            reason: "org_limit",
+            topupUrl: data.topupUrl || "/dashboard/billing",
+            includedQuotaCents: afford.waterfall.quotaCents,
+            prepaidCreditsUsdCents: afford.waterfall.prepaidCents,
+          },
+          { status: 402 }
+        );
+      }
+      return NextResponse.json(
+        { error: data.error || data.detail || "Gateway error" },
+        { status: upstream.status }
+      );
     }
 
     if (purchaseRecord) {

@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { apiKeys, organizations } from "@opendoor/database";
-import { eq, and, isNull } from "drizzle-orm";
+import { eq, and, isNull, ne } from "drizzle-orm";
 import { requireAuth } from "@/lib/auth";
 import { logAuditEvent } from "@/lib/audit";
 import { createHash, randomBytes } from "crypto";
 import { parseOnboardingChecklist } from "@/lib/onboarding";
+import { getPlan, SYSTEM_ASSISTANT_KEY_NAME } from "@opendoor/shared";
 
 export async function GET() {
   const session = await requireAuth();
@@ -15,7 +16,8 @@ export async function GET() {
   const keys = await db.query.apiKeys.findMany({
     where: and(
       eq(apiKeys.organizationId, orgId),
-      isNull(apiKeys.revokedAt)
+      isNull(apiKeys.revokedAt),
+      ne(apiKeys.name, SYSTEM_ASSISTANT_KEY_NAME)
     ),
     columns: {
       id: true,
@@ -35,11 +37,34 @@ export async function POST(req: NextRequest) {
   const orgId = session.orgId as string;
   const { name, allowedModels } = await req.json();
 
+  const db2 = getDb();
+  const orgForPlan = await db2.query.organizations.findFirst({
+    where: eq(organizations.id, orgId),
+    columns: { plan: true },
+  });
+  const limits = getPlan(orgForPlan?.plan);
+  const existingKeys = await db2.query.apiKeys.findMany({
+    where: and(
+      eq(apiKeys.organizationId, orgId),
+      isNull(apiKeys.revokedAt),
+      ne(apiKeys.name, SYSTEM_ASSISTANT_KEY_NAME)
+    ),
+    columns: { id: true },
+  });
+  if (existingKeys.length >= limits.maxApiKeys) {
+    return NextResponse.json(
+      {
+        error: `${limits.name} includes ${limits.maxApiKeys} API keys. Upgrade to add more.`,
+        limit: limits.maxApiKeys,
+      },
+      { status: 402 }
+    );
+  }
+
   const rawKey = `opd_${randomBytes(32).toString("hex")}`;
   const prefix = rawKey.slice(0, 16);
   const hash = createHash("sha256").update(rawKey).digest("hex");
 
-  const db2 = getDb();
   const [newKey] = await db2.insert(apiKeys).values({
     name: name || "Unnamed Key",
     keyHash: hash,

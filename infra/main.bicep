@@ -42,6 +42,9 @@ param stripeProPriceId string = ''
 @description('Stripe Enterprise price ID')
 param stripeEnterprisePriceId string = ''
 
+@description('Stripe Agents add-on price ID')
+param stripeAgentsAddonPriceId string = ''
+
 @description('Public app URL')
 param appUrl string = ''
 
@@ -133,6 +136,7 @@ module containerEnvPrimary 'modules/containerApp.bicep' = {
     stripeWebhookSecret: stripeWebhookSecret
     stripeProPriceId: stripeProPriceId
     stripeEnterprisePriceId: stripeEnterprisePriceId
+    stripeAgentsAddonPriceId: stripeAgentsAddonPriceId
     appUrl: appUrl
     workosApiKey: workosApiKey
     workosClientId: workosClientId
@@ -174,6 +178,7 @@ module containerEnvSecondary 'modules/containerApp.bicep' = {
     stripeWebhookSecret: stripeWebhookSecret
     stripeProPriceId: stripeProPriceId
     stripeEnterprisePriceId: stripeEnterprisePriceId
+    stripeAgentsAddonPriceId: stripeAgentsAddonPriceId
     appUrl: appUrl
     workosApiKey: workosApiKey
     workosClientId: workosClientId

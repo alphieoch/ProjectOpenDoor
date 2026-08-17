@@ -13,7 +13,6 @@ import {
   X,
   Loader2,
   FileText,
-  Lock,
   ShieldCheck,
   Zap,
   Umbrella,
@@ -22,6 +21,8 @@ import {
   Tv,
   Truck,
 } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
+import { loadGovernanceData } from "@/lib/governance/ensure-client";
 
 interface SectorTemplate {
   id: string;
@@ -77,13 +78,6 @@ function uniqueFrameworks(reqs: string[]) {
     });
 }
 
-function fmtGuardrail(key: string, val: unknown): string | null {
-  if (key === "requireDisclosure") return val ? "Disclosure Required" : null;
-  const label = key.replace(/([A-Z])/g, " $1").trim();
-  const capitalized = label.charAt(0).toUpperCase() + label.slice(1);
-  return `${capitalized}: ${String(val).charAt(0).toUpperCase() + String(val).slice(1)}`;
-}
-
 function ApplyModal({
   template,
   onClose,
@@ -95,14 +89,13 @@ function ApplyModal({
 }) {
   const [state, setState] = useState<"idle" | "loading" | "done">("idle");
   const [policiesCreated, setPoliciesCreated] = useState(0);
+  const [alreadyApplied, setAlreadyApplied] = useState(false);
   const meta = SECTOR_META[template.sector] ?? SECTOR_META.general;
   const Icon = meta.icon;
 
   const bannedUses = template.defaultPolicies?.bannedUses ?? [];
-  const guardrailCount = Object.keys(template.guardrailConfig ?? {}).length;
-  const promptCount = Object.keys(template.promptTemplates ?? {}).length;
+  const dataClass = template.defaultPolicies?.dataClass ?? "internal";
   const modelCount = template.defaultModels?.length ?? 0;
-  const controlCount = template.complianceRequirements?.length ?? 0;
   const policyCount = 1 + bannedUses.length;
 
   async function apply() {
@@ -114,7 +107,8 @@ function ApplyModal({
       );
       if (res.ok) {
         const data = await res.json();
-        setPoliciesCreated(data.policiesCreated ?? policyCount);
+        setAlreadyApplied(Boolean(data.alreadyApplied));
+        setPoliciesCreated(data.policiesCreated ?? (data.alreadyApplied ? 0 : policyCount));
         setState("done");
         onApplied(template.id, data.policiesCreated ?? policyCount);
       } else {
@@ -172,10 +166,12 @@ function ApplyModal({
                 <CheckCircle2 className="h-6 w-6" style={{ color: "var(--green)" }} />
               </div>
               <p className="text-base font-semibold" style={{ color: "var(--ink)" }}>
-                Pack applied successfully
+                {alreadyApplied ? "Pack already applied" : "Pack applied"}
               </p>
               <p className="mt-1 text-sm" style={{ color: "var(--ink-3)" }}>
-                {policiesCreated} model {policiesCreated === 1 ? "policy" : "policies"} created for your organisation.
+                {alreadyApplied
+                  ? "Gateway policies for this pack are already live. Applying again does not create duplicates."
+                  : `${policiesCreated} live ${policiesCreated === 1 ? "policy" : "policies"} written for this organisation.`}
               </p>
               <div className="mt-5 flex gap-2 justify-center">
                 <a
@@ -192,16 +188,16 @@ function ApplyModal({
           ) : (
             <>
               <p className="text-sm mb-4" style={{ color: "var(--ink-2)" }}>
-                Applying this pack will configure governance settings for your organisation:
+                Apply writes gateway policies for this organisation. The next completion with this data class is evaluated against them.
               </p>
 
               <ul className="space-y-2.5">
                 {[
-                  { icon: FileText, text: `${policyCount} model ${policyCount === 1 ? "policy" : "policies"} (data class + ${bannedUses.length} banned use${bannedUses.length !== 1 ? "s" : ""})` },
-                  { icon: Zap, text: `${guardrailCount} guardrail setting${guardrailCount !== 1 ? "s" : ""} enabled` },
-                  { icon: ShieldCheck, text: `${controlCount} compliance control${controlCount !== 1 ? "s" : ""} linked` },
-                  { icon: Lock, text: `${promptCount} prompt template${promptCount !== 1 ? "s" : ""} available` },
-                  { icon: Globe, text: `${modelCount} pre-approved model${modelCount !== 1 ? "s" : ""} configured` },
+                  { icon: FileText, text: `${policyCount} live ${policyCount === 1 ? "policy" : "policies"} (${dataClass} data${bannedUses.length ? `, ${bannedUses.length} banned-use deny${bannedUses.length === 1 ? "" : "s"}` : ""})` },
+                  ...(template.defaultPolicies?.requireHumanApproval
+                    ? [{ icon: ShieldCheck, text: "Confidential / restricted calls hold for human approval" }]
+                    : []),
+                  { icon: Globe, text: `${modelCount} recommended model${modelCount === 1 ? "" : "s"} — approve them in the Trust Center` },
                 ].map(({ icon: ItemIcon, text }) => (
                   <li key={text} className="flex items-center gap-2.5">
                     <div
@@ -258,13 +254,13 @@ function PackCard({
   onApply: (t: SectorTemplate) => void;
   applied: boolean;
 }) {
-  const [expanded, setExpanded] = useState(false);
   const meta = SECTOR_META[template.sector] ?? SECTOR_META.general;
   const Icon = meta.icon;
   const frameworks = uniqueFrameworks(template.complianceRequirements ?? []);
-  const guardrails = Object.entries(template.guardrailConfig ?? {})
-    .map(([k, v]) => fmtGuardrail(k, v))
-    .filter(Boolean) as string[];
+  const bannedUses = template.defaultPolicies?.bannedUses ?? [];
+  const policyCount = 1 + bannedUses.length;
+  const dataClass = template.defaultPolicies?.dataClass ?? "internal";
+  const needsApproval = Boolean(template.defaultPolicies?.requireHumanApproval);
 
   return (
     <div className="card flex flex-col overflow-hidden od-lift">
@@ -306,19 +302,17 @@ function PackCard({
           {template.description}
         </p>
 
-        {/* Stats row */}
         <div
-          className="mt-4 grid grid-cols-4 rounded-xl py-3"
+          className="mt-4 grid grid-cols-3 rounded-xl py-3"
           style={{ background: "var(--paper-3)" }}
         >
           {[
-            { n: template.defaultModels?.length ?? 0, label: "Models" },
-            { n: 1 + (template.defaultPolicies?.bannedUses?.length ?? 0), label: "Policies" },
-            { n: Object.keys(template.guardrailConfig ?? {}).length, label: "Guardrails" },
-            { n: template.complianceRequirements?.length ?? 0, label: "Controls" },
+            { n: String(policyCount), label: "Live policies" },
+            { n: dataClass, label: "Data class" },
+            { n: needsApproval ? "Required" : "Off", label: "Human review" },
           ].map(({ n, label }) => (
-            <div key={label} className="text-center">
-              <p className="text-lg font-semibold tabular-nums" style={{ color: "var(--ink)" }}>
+            <div key={label} className="text-center px-1">
+              <p className="text-sm font-semibold capitalize truncate" style={{ color: "var(--ink)" }}>
                 {n}
               </p>
               <p className="text-[10px] font-medium" style={{ color: "var(--ink-4)" }}>
@@ -328,11 +322,35 @@ function PackCard({
           ))}
         </div>
 
-        {/* Compliance frameworks */}
+        {bannedUses.length > 0 && (
+          <div className="mt-4">
+            <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--ink-4)" }}>
+              Banned uses
+            </p>
+            <div className="flex flex-wrap gap-1">
+              {bannedUses.map((use) => (
+                <span
+                  key={use}
+                  className="rounded-full px-2 py-0.5 text-[11px] font-medium"
+                  style={{ background: "var(--paper-3)", color: "var(--ink-2)" }}
+                >
+                  {use}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {(template.defaultModels?.length ?? 0) > 0 && (
+          <p className="mt-3 text-xs" style={{ color: "var(--ink-4)" }}>
+            {template.defaultModels.length} recommended model{template.defaultModels.length === 1 ? "" : "s"} — approve in the Trust Center
+          </p>
+        )}
+
         {frameworks.length > 0 && (
           <div className="mt-4">
             <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--ink-4)" }}>
-              Compliance
+              Designed around
             </p>
             <div className="flex flex-wrap gap-1">
               {frameworks.map((f) => (
@@ -341,60 +359,6 @@ function PackCard({
                 </span>
               ))}
             </div>
-          </div>
-        )}
-
-        {/* Guardrails */}
-        {guardrails.length > 0 && (
-          <div className="mt-3">
-            <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--ink-4)" }}>
-              Guardrails
-            </p>
-            <div className="flex flex-wrap gap-1">
-              {guardrails.map((g) => (
-                <span
-                  key={g}
-                  className="rounded-full px-2 py-0.5 text-[11px] font-medium"
-                  style={{ background: "var(--paper-3)", color: "var(--ink-2)" }}
-                >
-                  {g}
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Prompt templates toggle */}
-        {Object.keys(template.promptTemplates ?? {}).length > 0 && (
-          <div className="mt-3">
-            <button
-              onClick={() => setExpanded(!expanded)}
-              className="inline-flex items-center gap-1 text-xs font-medium transition-colors"
-              style={{ color: "var(--brand, #1A73E8)" }}
-            >
-              {expanded ? "Hide" : "View"} prompt templates
-              <ChevronRight
-                className="h-3.5 w-3.5 transition-transform"
-                style={{ transform: expanded ? "rotate(90deg)" : "none" }}
-              />
-            </button>
-            {expanded && (
-              <div
-                className="mt-2 space-y-2 rounded-xl p-3"
-                style={{ background: "var(--paper-3)" }}
-              >
-                {Object.entries(template.promptTemplates).map(([name, prompt]) => (
-                  <div key={name}>
-                    <p className="text-[10px] font-semibold capitalize" style={{ color: "var(--ink-2)" }}>
-                      {name.replace(/([A-Z])/g, " $1").trim()}
-                    </p>
-                    <p className="mt-0.5 text-[11px] leading-relaxed" style={{ color: "var(--ink-4)" }}>
-                      {prompt}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
         )}
 
@@ -428,12 +392,22 @@ export default function SectorTemplatesPage() {
   const [appliedIds, setAppliedIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    fetch("/api/governance/sector-templates")
-      .then((r) => r.json())
-      .then((data) => {
-        setTemplates(data.templates ?? []);
-        setLoading(false);
-      });
+    (async () => {
+      const data = await loadGovernanceData(
+        () => fetch("/api/governance/sector-templates").then((r) => r.json()),
+        {
+          isEmpty: (d) => !(d.templates ?? []).length,
+          onFirst: (d) => {
+            setTemplates(d.templates ?? []);
+            setAppliedIds(new Set(d.appliedIds ?? []));
+            setLoading(false);
+          },
+        },
+      );
+      setTemplates(data.templates ?? []);
+      setAppliedIds(new Set(data.appliedIds ?? []));
+      setLoading(false);
+    })();
   }, []);
 
   const sectors = useMemo(() => {
@@ -452,38 +426,28 @@ export default function SectorTemplatesPage() {
     [templates, filter]
   );
 
-  const totalControls = useMemo(() => {
-    const all = new Set<string>();
-    templates.forEach((t) => t.complianceRequirements?.forEach((r) => all.add(r)));
-    return all.size;
-  }, [templates]);
-
   function handleApplied(id: string) {
     setAppliedIds((prev) => new Set([...prev, id]));
   }
 
   return (
     <div>
-      {/* Header */}
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="page-title">Sector Packs</h1>
-          <p className="page-desc">Pre-configured governance templates for UK industries.</p>
-        </div>
-
-        {/* Summary pills */}
-        {!loading && templates.length > 0 && (
-          <div className="flex shrink-0 flex-wrap items-center gap-2">
-            <span className="od-tag od-tag-neutral">{templates.length} Packs</span>
-            <span className="od-tag od-tag-neutral">4 Frameworks</span>
-            <span className="od-tag od-tag-green">{totalControls} Controls</span>
-            <span className="od-tag od-tag-brand">UK Ready</span>
-          </div>
-        )}
-      </div>
+      <PageHeader
+        eyebrow="Governance"
+        title="Sector Packs"
+        description="One pack per industry. Apply writes live gateway policies for that data class — including human-approval holds and banned-use denies. Recommended models still need Trust Center approval."
+        actions={
+          !loading && templates.length > 0 ? (
+            <div className="flex shrink-0 flex-wrap items-center gap-2">
+              <span className="od-tag od-tag-neutral">{templates.length} industries</span>
+              <span className="od-tag od-tag-green">{appliedIds.size} applied</span>
+            </div>
+          ) : undefined
+        }
+      />
 
       {loading ? (
-        <div className="flex h-64 items-center justify-center">
+        <div className="flex h-48 items-center justify-center">
           <Loader2 className="h-5 w-5 animate-spin" style={{ color: "var(--ink-3)" }} />
         </div>
       ) : templates.length === 0 ? (
@@ -492,7 +456,7 @@ export default function SectorTemplatesPage() {
             No sector packs available
           </p>
           <p className="text-xs" style={{ color: "var(--ink-4)" }}>
-            Run the enterprise governance seed script to load UK sector packs.
+            Sector packs load automatically the first time you open Governance. Refresh if this stays empty.
           </p>
         </div>
       ) : (
@@ -539,7 +503,7 @@ export default function SectorTemplatesPage() {
               <div
                 key={t.id}
                 className="od-fade-up"
-                style={{ animationDelay: `${i * 60}ms` }}
+                style={{ animationDelay: `${i * 30}ms` }}
               >
                 <PackCard
                   template={t}

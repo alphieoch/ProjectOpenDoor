@@ -5,6 +5,7 @@ import {
   Shield, Save, Loader2, Check, Globe, Mail, ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { PageHeader } from "@/components/ui/page-header";
 
 /* ── Types ── */
 interface OrgSettings {
@@ -104,11 +105,11 @@ export default function SettingsPage() {
 
   return (
     <div>
-      {/* Page header */}
-      <div className="mb-8">
-        <h1 className="page-title">Settings</h1>
-        <p className="page-desc">Manage your organisation&apos;s configuration and integrations.</p>
-      </div>
+      <PageHeader
+        eyebrow="Workspace"
+        title="Settings"
+        description="Manage your organisation's configuration and integrations."
+      />
 
       <div className="flex gap-8">
         {/* ── Left tab nav ── */}

@@ -1,21 +1,25 @@
 FROM oven/bun:1-alpine AS base
-RUN apk add --no-cache libc6-compat npm
+RUN apk add --no-cache libc6-compat
 
 FROM base AS deps
 WORKDIR /app
-COPY package.json pnpm-workspace.yaml .npmrc pnpm-lock.yaml ./
+COPY package.json bun.lock ./
 COPY packages ./packages
-COPY apps/gateway/package.json ./apps/gateway/package.json
-RUN npm install -g pnpm@9.0.0 && pnpm install --frozen-lockfile
+COPY apps/gateway ./apps/gateway
+COPY apps/dashboard/package.json ./apps/dashboard/package.json
+COPY apps/chat/package.json ./apps/chat/package.json
+RUN bun install --frozen-lockfile
+# Build workspace packages the gateway imports at runtime
+RUN cd packages/shared && bun run build \
+ && cd ../database && bun run build \
+ && cd ../analytics && bun run build
 
 FROM base AS runner
 WORKDIR /app
 ENV NODE_ENV=production
-COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/packages ./packages
-COPY apps/gateway ./apps/gateway
-
+COPY --from=deps /app /app
 WORKDIR /app/apps/gateway
 EXPOSE 3001
 ENV PORT=3001
-CMD ["bun", "src/index.ts"]
+ENV GATEWAY_PORT=3001
+CMD ["bun", "run", "src/index.ts"]

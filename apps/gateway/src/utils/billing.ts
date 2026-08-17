@@ -2,6 +2,7 @@
 import Redis from "ioredis";
 import { db, organizations, creditTransactions } from "@opendoor/database";
 import { eq } from "drizzle-orm";
+import { splitCreditBuckets, welcomeAllowedForFamily } from "@opendoor/shared";
 import type { BillingPlan, ModelFamily } from "./pricing.js";
 
 const redis = new (Redis as any)(process.env.REDIS_URL || "redis://localhost:6379");
@@ -16,19 +17,10 @@ export interface BillingContext {
   estimatedCostUsd?: number;
 }
 
-function parseEnvInt(name: string, fallback: number): number {
-  const value = process.env[name];
-  const parsed = Number.parseInt(value || "", 10);
-  return Number.isFinite(parsed) && parsed >= 0 ? parsed : fallback;
-}
-
-export function getPlanBudgetLimitCents(plan: BillingPlan): number {
-  if (plan === "pro") {
-    return parseEnvInt("PLAN_BUDGET_PRO_PER_4H_CENTS", 500);
-  }
-  if (plan === "enterprise") {
-    return parseEnvInt("PLAN_BUDGET_ENTERPRISE_PER_4H_CENTS", 3000);
-  }
+export function getPlanBudgetLimitCents(_plan: BillingPlan): number {
+  // Included usage is a monthly credit stipend on invoice.payment_succeeded.
+  // A rolling 4h window at the old defaults ($5 / $15 / $30) would give
+  // Pro ~$900/mo of free inference on a $7 seat.
   return 0;
 }
 
@@ -97,31 +89,98 @@ export async function debitPlanBudget(
   await pipeline.exec();
 }
 
+export async function expireWelcomeCredits(org: {
+  id: string;
+  creditsUsdCents?: number | null;
+  welcomeCreditsUsdCents?: number | null;
+  welcomeExpiresAt?: Date | string | null;
+}) {
+  const buckets = splitCreditBuckets(org);
+  if (!buckets.expired || buckets.clawbackCents <= 0) return buckets;
+
+  const nextTotal = Math.max(0, buckets.totalCents - buckets.clawbackCents);
+  await db
+    .update(organizations)
+    .set({ creditsUsdCents: nextTotal, welcomeCreditsUsdCents: 0 })
+    .where(eq(organizations.id, org.id));
+  await db.insert(creditTransactions).values({
+    organizationId: org.id,
+    kind: "welcome_expire",
+    amountCents: -buckets.clawbackCents,
+    balanceAfterCents: nextTotal,
+    metadata: { source: "welcome_expiry" },
+  });
+  return splitCreditBuckets({
+    creditsUsdCents: nextTotal,
+    welcomeCreditsUsdCents: 0,
+    welcomeExpiresAt: org.welcomeExpiresAt,
+  });
+}
+
 export async function debitCredits(
   orgId: string,
   amountCents: number,
-  requestId?: string
+  requestId?: string,
+  options?: { allowWelcome?: boolean }
 ) {
   if (amountCents <= 0) return 0;
+  const allowWelcome = Boolean(options?.allowWelcome);
 
   return db.transaction(async (tx) => {
     const org = await tx.query.organizations.findFirst({
       where: eq(organizations.id, orgId),
-      columns: { creditsUsdCents: true },
+      columns: {
+        creditsUsdCents: true,
+        welcomeCreditsUsdCents: true,
+        welcomeExpiresAt: true,
+      },
     });
     if (!org) {
       throw new Error("Organization not found");
     }
 
-    const currentBalance = Number(org.creditsUsdCents || 0);
-    if (currentBalance < amountCents) {
-      throw new Error("Insufficient prepaid balance");
+    let buckets = splitCreditBuckets(org);
+    if (buckets.expired && buckets.clawbackCents > 0) {
+      const nextTotal = Math.max(0, buckets.totalCents - buckets.clawbackCents);
+      await tx
+        .update(organizations)
+        .set({ creditsUsdCents: nextTotal, welcomeCreditsUsdCents: 0 })
+        .where(eq(organizations.id, orgId));
+      await tx.insert(creditTransactions).values({
+        organizationId: orgId,
+        kind: "welcome_expire",
+        amountCents: -buckets.clawbackCents,
+        balanceAfterCents: nextTotal,
+        metadata: { source: "welcome_expiry" },
+      });
+      buckets = splitCreditBuckets({
+        creditsUsdCents: nextTotal,
+        welcomeCreditsUsdCents: 0,
+        welcomeExpiresAt: org.welcomeExpiresAt,
+      });
     }
 
-    const newBalance = currentBalance - amountCents;
+    const spendable = allowWelcome ? buckets.totalCents : buckets.paidCents;
+    if (spendable < amountCents) {
+      throw new Error(
+        allowWelcome
+          ? "Insufficient prepaid balance"
+          : "Welcome credit cannot cover this charge. Add prepaid credit."
+      );
+    }
+
+    const fromWelcome = allowWelcome
+      ? Math.min(buckets.welcomeCents, amountCents)
+      : 0;
+    const newBalance = buckets.totalCents - amountCents;
+    const newWelcome = buckets.welcomeCents - fromWelcome;
+
     await tx
       .update(organizations)
-      .set({ creditsUsdCents: newBalance })
+      .set({
+        creditsUsdCents: newBalance,
+        welcomeCreditsUsdCents: newWelcome,
+      })
       .where(eq(organizations.id, orgId));
 
     await tx.insert(creditTransactions).values({
@@ -130,6 +189,10 @@ export async function debitCredits(
       amountCents: -amountCents,
       balanceAfterCents: newBalance,
       requestId: requestId || null,
+      metadata: {
+        from_welcome_cents: fromWelcome,
+        from_paid_cents: amountCents - fromWelcome,
+      },
     });
 
     return newBalance;
@@ -189,7 +252,9 @@ export async function debitUsage(
   }
 
   if (billingContext.useFromCredits) {
-    await debitCredits(orgId, costCents, requestId);
+    await debitCredits(orgId, costCents, requestId, {
+      allowWelcome: welcomeAllowedForFamily(billingContext.family),
+    });
   }
 }
 

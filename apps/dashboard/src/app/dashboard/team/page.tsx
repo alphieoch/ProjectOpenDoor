@@ -5,6 +5,7 @@ import {
   Users, Mail, Loader2, Copy, Check,
   Shield, User, MoreHorizontal, UserPlus, Trash2,
 } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -128,12 +129,11 @@ export default function TeamPage() {
 
   return (
     <div>
-      {/* Header */}
-      <div className="mb-8 flex items-start justify-between gap-4">
-        <div>
-          <h1 className="page-title">Team</h1>
-          <p className="page-desc">Manage members and pending invitations for your organisation.</p>
-        </div>
+      <PageHeader
+        eyebrow="Workspace"
+        title="Team"
+        description="Manage members and pending invitations for your organisation."
+        actions={
         <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
           <DialogTrigger asChild>
             <button className="btn-primary shrink-0">
@@ -184,7 +184,8 @@ export default function TeamPage() {
             </form>
           </DialogContent>
         </Dialog>
-      </div>
+        }
+      />
 
       {/* Members table */}
       <div className="card overflow-hidden">

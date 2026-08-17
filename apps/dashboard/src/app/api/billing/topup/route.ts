@@ -1,13 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getStripeInstance, TOPUP_PRESETS } from "@/lib/stripe";
+import { checkoutIntegrationId, getStripeInstance, TOPUP_PRESETS } from "@/lib/stripe";
+import { TOPUP_BONUS_MIN_CENTS } from "@opendoor/shared";
 import { getDb } from "@/lib/db";
 import { organizations } from "@opendoor/database";
 import { eq } from "drizzle-orm";
 import { requireAuth } from "@/lib/auth";
 import { logAuditEvent } from "@/lib/audit";
+import { appBaseUrl } from "@/lib/public-urls";
 
 function clampCustomAmount(amountCents: number): number {
-  const min = 500;
+  const min = TOPUP_BONUS_MIN_CENTS;
   const max = 500000;
   return Math.max(min, Math.min(max, amountCents));
 }
@@ -22,6 +24,13 @@ export async function POST(req: NextRequest) {
     if (!Number.isFinite(amountCents) || amountCents <= 0) {
       return NextResponse.json(
         { error: "amountCents must be a positive integer" },
+        { status: 400 }
+      );
+    }
+
+    if (amountCents < TOPUP_BONUS_MIN_CENTS) {
+      return NextResponse.json(
+        { error: `Minimum top-up is $${(TOPUP_BONUS_MIN_CENTS / 100).toFixed(0)}` },
         { status: 400 }
       );
     }
@@ -65,16 +74,22 @@ export async function POST(req: NextRequest) {
         };
 
     const finalAmount = clampCustomAmount(amountCents);
+    const origin = appBaseUrl();
     const checkoutSession = await stripe.checkout.sessions.create({
       customer: customerId,
       mode: "payment",
+      integration_identifier: checkoutIntegrationId("topup"),
       line_items: [lineItem as any],
-      success_url: `${
-        process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
-      }/dashboard/billing?topup=success`,
-      cancel_url: `${
-        process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
-      }/dashboard/billing?topup=canceled`,
+      success_url: `${origin}/dashboard/billing?topup=success`,
+      cancel_url: `${origin}/dashboard/billing?topup=canceled`,
+      payment_intent_data: {
+        setup_future_usage: "off_session",
+        metadata: {
+          kind: "topup",
+          organizationId: orgId,
+          amountCents: finalAmount.toString(),
+        },
+      },
       metadata: {
         kind: "topup",
         organizationId: orgId,

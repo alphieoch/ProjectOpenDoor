@@ -6,36 +6,44 @@ import type {
 } from "@opendoor/shared";
 import type { ProviderAdapter } from "./base.js";
 import { generateId } from "./base.js";
+import { openaiChatPayload } from "./openai-body.js";
 
 export class DeepSeekProvider implements ProviderAdapter {
   name = "DeepSeek";
   slug = "deepseek";
   private baseUrl = "https://api.deepseek.com/v1";
-  private apiKey: string;
+  private apiKey: string | null;
 
   constructor() {
-    const apiKey = process.env.DEEPSEEK_API_KEY;
-    if (!apiKey) throw new Error("DEEPSEEK_API_KEY not set");
-    this.apiKey = apiKey;
+    this.apiKey = process.env.DEEPSEEK_API_KEY || null;
+  }
+
+  /** DeepSeek retired `deepseek-coder`; the chat model covers code + general. */
+  private upstreamModel(modelId: string): string {
+    if (modelId === "deepseek-coder") return "deepseek-chat";
+    return modelId;
+  }
+
+  private requireKey(): string {
+    if (!this.apiKey) {
+      throw new Error(
+        "DeepSeek is not configured. Set DEEPSEEK_API_KEY, or pick a local model such as llama3.2:3b.",
+      );
+    }
+    return this.apiKey;
   }
 
   async chatCompletion(
     request: ChatCompletionRequest
   ): Promise<ChatCompletionResponse> {
+    const apiKey = this.requireKey();
     const response = await fetch(`${this.baseUrl}/chat/completions`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${this.apiKey}`,
+        Authorization: `Bearer ${apiKey}`,
       },
-      body: JSON.stringify({
-        model: request.model,
-        messages: request.messages,
-        temperature: request.temperature,
-        max_tokens: request.max_tokens,
-        top_p: request.top_p,
-        stream: false,
-      }),
+      body: JSON.stringify(openaiChatPayload({ ...request, model: this.upstreamModel(request.model) }, false)),
     });
 
     if (!response.ok) {
@@ -69,20 +77,14 @@ export class DeepSeekProvider implements ProviderAdapter {
   async *chatCompletionStream(
     request: ChatCompletionRequest
   ): AsyncGenerator<ChatCompletionChunk, void, unknown> {
+    const apiKey = this.requireKey();
     const response = await fetch(`${this.baseUrl}/chat/completions`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${this.apiKey}`,
+        Authorization: `Bearer ${apiKey}`,
       },
-      body: JSON.stringify({
-        model: request.model,
-        messages: request.messages,
-        temperature: request.temperature,
-        max_tokens: request.max_tokens,
-        top_p: request.top_p,
-        stream: true,
-      }),
+      body: JSON.stringify(openaiChatPayload({ ...request, model: this.upstreamModel(request.model) }, true)),
     });
 
     if (!response.ok || !response.body) {

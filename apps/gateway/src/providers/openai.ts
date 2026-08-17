@@ -7,6 +7,8 @@ import type {
 } from "@opendoor/shared";
 import type { ProviderAdapter } from "./base.js";
 import { generateId } from "./base.js";
+import { openaiChatPayload } from "./openai-body.js";
+import { normalizeUsage } from "../utils/usage.js";
 
 export class OpenAIProvider implements ProviderAdapter {
   name = "OpenAI";
@@ -23,18 +25,8 @@ export class OpenAIProvider implements ProviderAdapter {
     request: ChatCompletionRequest
   ): Promise<ChatCompletionResponse> {
     const response = await this.client.chat.completions.create({
-      model: request.model,
-      messages: request.messages as any,
-      temperature: request.temperature,
-      max_tokens: request.max_tokens,
-      top_p: request.top_p,
-      frequency_penalty: request.frequency_penalty,
-      presence_penalty: request.presence_penalty,
-      tools: request.tools as any,
-      tool_choice: request.tool_choice as any,
-      user: request.user,
-      stream: false,
-    });
+      ...openaiChatPayload(request, false),
+    } as any);
 
     return {
       id: response.id,
@@ -50,11 +42,7 @@ export class OpenAIProvider implements ProviderAdapter {
         },
         finish_reason: c.finish_reason as any,
       })),
-      usage: {
-        prompt_tokens: response.usage?.prompt_tokens || 0,
-        completion_tokens: response.usage?.completion_tokens || 0,
-        total_tokens: response.usage?.total_tokens || 0,
-      },
+      usage: normalizeUsage(response.usage),
     };
   }
 
@@ -62,18 +50,8 @@ export class OpenAIProvider implements ProviderAdapter {
     request: ChatCompletionRequest
   ): AsyncGenerator<ChatCompletionChunk, void, unknown> {
     const stream = await this.client.chat.completions.create({
-      model: request.model,
-      messages: request.messages as any,
-      temperature: request.temperature,
-      max_tokens: request.max_tokens,
-      top_p: request.top_p,
-      frequency_penalty: request.frequency_penalty,
-      presence_penalty: request.presence_penalty,
-      tools: request.tools as any,
-      tool_choice: request.tool_choice as any,
-      user: request.user,
-      stream: true,
-    });
+      ...openaiChatPayload(request, true),
+    } as any);
 
     for await (const chunk of stream) {
       yield {
@@ -94,10 +72,35 @@ export class OpenAIProvider implements ProviderAdapter {
     }
   }
 
+  async createEmbedding(opts: {
+    model: string;
+    input: string | string[];
+    encoding_format?: string;
+    dimensions?: number;
+  }) {
+    const response = await this.client.embeddings.create({
+      model: opts.model,
+      input: opts.input,
+      encoding_format: (opts.encoding_format as any) || "float",
+      dimensions: opts.dimensions,
+    });
+    return {
+      data: response.data.map((d) => ({
+        object: "embedding" as const,
+        embedding: d.embedding,
+        index: d.index,
+      })),
+      usage: {
+        prompt_tokens: response.usage?.prompt_tokens || 0,
+        total_tokens: response.usage?.total_tokens || 0,
+      },
+    };
+  }
+
   async listModels(): Promise<ModelInfo[]> {
     const models = await this.client.models.list();
     return models.data
-      .filter((m) => m.id.startsWith("gpt") || m.id.startsWith("o1"))
+      .filter((m) => m.id.startsWith("gpt") || m.id.startsWith("o1") || m.id.includes("embedding"))
       .map((m) => ({
         id: m.id,
         object: "model" as const,

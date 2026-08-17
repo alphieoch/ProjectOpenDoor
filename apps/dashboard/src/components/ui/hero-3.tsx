@@ -2,11 +2,19 @@ import Link from "next/link";
 import { ArrowRight, ChevronRight, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+export type HeroPreview = {
+  gatewayHost: string;
+  liveModels: number;
+  providerCount: number;
+  providers: Array<{ name: string; liveModels: number }>;
+};
+
 interface HeroSectionProps {
   signedIn?: boolean;
+  preview?: HeroPreview | null;
 }
 
-export function HeroSection({ signedIn = false }: HeroSectionProps) {
+export function HeroSection({ signedIn = false, preview = null }: HeroSectionProps) {
   return (
     <section className="relative mx-auto w-full max-w-7xl overflow-hidden px-6 pt-16 lg:px-8">
       {/* Radial glow — top-left sweep */}
@@ -23,7 +31,7 @@ export function HeroSection({ signedIn = false }: HeroSectionProps) {
 
         {/* Announcement badge */}
         <a
-          href="/#platform"
+          href="/platform"
           className={cn(
             "group flex w-fit items-center gap-3 rounded-full border border-slate-200 bg-white px-1.5 py-1 shadow-sm",
             "animate-in fade-in slide-in-from-bottom-4 fill-mode-backwards delay-500 duration-500 ease-out"
@@ -89,7 +97,7 @@ export function HeroSection({ signedIn = false }: HeroSectionProps) {
                 href="/login"
                 className="inline-flex items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-7 py-4 text-base font-semibold text-slate-800 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300"
               >
-                View demo <ChevronRight className="h-5 w-5" />
+                Sign in <ChevronRight className="h-5 w-5" />
               </Link>
             </>
           )}
@@ -103,9 +111,9 @@ export function HeroSection({ signedIn = false }: HeroSectionProps) {
           )}
         >
           {[
-            { value: "8+", label: "Providers" },
+            { value: preview ? String(preview.providerCount) : "—", label: "Providers" },
             { value: "0", label: "Code changes" },
-            { value: "1", label: "Control plane" },
+            { value: preview ? String(preview.liveModels) : "—", label: "Live models" },
           ].map((stat) => (
             <div
               key={stat.label}
@@ -122,7 +130,7 @@ export function HeroSection({ signedIn = false }: HeroSectionProps) {
         </div>
       </div>
 
-      {/* ── Dashboard mockup ── */}
+      {/* ── Live catalog preview ── */}
       <div
         className={cn(
           "relative mt-14 sm:mt-16 md:mt-20",
@@ -149,7 +157,7 @@ export function HeroSection({ signedIn = false }: HeroSectionProps) {
                 <span className="h-3 w-3 rounded-full bg-emerald-400" />
               </div>
               <div className="rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-slate-300">
-                gateway.opendoor.ai
+                {preview?.gatewayHost || "gateway"}
               </div>
             </div>
 
@@ -167,21 +175,25 @@ export function HeroSection({ signedIn = false }: HeroSectionProps) {
                     </h2>
                   </div>
                   <span className="rounded-full bg-emerald-400/10 px-3 py-1 text-xs font-semibold text-emerald-300">
-                    Healthy
+                    {preview && preview.liveModels > 0 ? `${preview.liveModels} live` : "Catalog"}
                   </span>
                 </div>
                 <div className="grid grid-cols-3 gap-3">
-                  {[
-                    ["OpenAI", "42ms", "48%"],
-                    ["Anthropic", "58ms", "31%"],
-                    ["Gemini", "64ms", "21%"],
-                  ].map(([name, latency, share]) => (
-                    <div key={name} className="rounded-2xl bg-white/[0.06] p-4">
-                      <div className="text-sm font-semibold text-white">{name}</div>
-                      <div className="mt-3 text-2xl font-semibold text-blue-200">{latency}</div>
-                      <div className="mt-1 text-xs text-slate-400">{share} share</div>
+                  {preview?.providers.length ? (
+                    preview.providers.map((row) => (
+                      <div key={row.name} className="rounded-2xl bg-white/[0.06] p-4">
+                        <div className="text-sm font-semibold text-white">{row.name}</div>
+                        <div className="mt-3 text-2xl font-semibold text-blue-200">
+                          {row.liveModels}
+                        </div>
+                        <div className="mt-1 text-xs text-slate-400">live models</div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="col-span-3 rounded-2xl bg-white/[0.06] p-4 text-sm text-slate-300">
+                      No live models in the catalog yet. Seed the database, then refresh this page.
                     </div>
-                  ))}
+                  )}
                 </div>
               </div>
 
@@ -201,13 +213,16 @@ export function HeroSection({ signedIn = false }: HeroSectionProps) {
                   </div>
                 </div>
                 <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-5 font-mono text-xs text-slate-300">
-                  <div className="text-slate-500">curl -X POST /v1/chat/completions</div>
-                  <div className="mt-3 text-blue-200">model: route:auto</div>
-                  <div className="text-emerald-200">policy: production-safe</div>
-                  <div className="text-purple-200">fallback: enabled</div>
-                  <div className="mt-4 rounded-xl bg-emerald-400/10 px-3 py-2 text-emerald-200">
-                    200 OK — 46ms — $0.0021
-                  </div>
+                  <div className="text-slate-500">curl -X POST {preview?.gatewayHost || "localhost:3001"}/v1/chat/completions</div>
+                  <div className="mt-3 text-blue-200">Authorization: Bearer YOUR_OPENDOOR_KEY</div>
+                  <div className="text-emerald-200">model: from your catalog</div>
+                  <div className="text-purple-200">OpenAI-compatible body</div>
+                  <Link
+                    href="/status"
+                    className="mt-4 block rounded-xl bg-emerald-400/10 px-3 py-2 text-emerald-200"
+                  >
+                    Check live status →
+                  </Link>
                 </div>
               </div>
             </div>

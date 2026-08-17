@@ -1,4 +1,5 @@
 import Stripe from "stripe";
+import { PLANS, type PlanId } from "@opendoor/shared";
 
 let _stripe: Stripe | null = null;
 
@@ -9,61 +10,64 @@ export function getStripeInstance(): Stripe {
     throw new Error("STRIPE_SECRET_KEY is not defined");
   }
   _stripe = new Stripe(key, {
-    apiVersion: "2025-03-31.basil",
+    apiVersion: "2026-04-22.dahlia",
     typescript: true,
   });
   return _stripe;
 }
 
-export type PlanId = "free" | "pro" | "enterprise";
+export type { PlanId };
 export type ModelFamily = "closed" | "open_weight";
 
-export const PLANS = [
+export const STRIPE_PLANS = [
   {
-    id: "free",
-    name: "Free",
-    description: "Start with free credit, then prepaid top-ups",
+    id: "free" as const,
+    name: PLANS.free.name,
+    description: "Top up to use the API. $20+ adds $5 open-weight credit once.",
     priceId: "",
-    amount: 0,
-    budgetPer4hCents: 0,
-    markupByFamily: {
-      closed: 5,
-      open_weight: 35,
-    },
+    amount: PLANS.free.amountUsd,
+    includedCreditsCents: PLANS.free.includedCreditsCents,
+    markupByFamily: PLANS.free.markupByFamily,
   },
   {
-    id: "pro",
-    name: "Pro",
-    description: "Lower markup plus included rolling usage allowance",
+    id: "pro" as const,
+    name: PLANS.pro.name,
+    description: "Personal workspace with a monthly inference stipend",
     priceId: process.env.STRIPE_PRO_PRICE_ID || "",
-    amount: 49,
-    budgetPer4hCents: Number.parseInt(
-      process.env.PLAN_BUDGET_PRO_PER_4H_CENTS || "500",
-      10
-    ),
-    markupByFamily: {
-      closed: 3,
-      open_weight: 30,
-    },
+    amount: PLANS.pro.amountUsd,
+    includedCreditsCents: PLANS.pro.includedCreditsCents,
+    markupByFamily: PLANS.pro.markupByFamily,
   },
   {
-    id: "enterprise",
-    name: "Enterprise",
-    description: "Highest allowance and lowest markups",
+    id: "team" as const,
+    name: PLANS.team.name,
+    description: "SSO, audit logs, and a per-seat inference stipend",
+    priceId: process.env.STRIPE_TEAM_PRICE_ID || "",
+    amount: PLANS.team.amountUsd,
+    includedCreditsCents: PLANS.team.includedCreditsCents,
+    markupByFamily: PLANS.team.markupByFamily,
+  },
+  {
+    id: "enterprise" as const,
+    name: PLANS.enterprise.name,
+    description: "SCIM, residency, and the highest rate limits",
     priceId: process.env.STRIPE_ENTERPRISE_PRICE_ID || "",
-    amount: 299.99,
-    budgetPer4hCents: Number.parseInt(
-      process.env.PLAN_BUDGET_ENTERPRISE_PER_4H_CENTS || "3000",
-      10
-    ),
-    markupByFamily: {
-      closed: 2,
-      open_weight: 25,
-    },
+    amount: PLANS.enterprise.amountUsd,
+    includedCreditsCents: PLANS.enterprise.includedCreditsCents,
+    markupByFamily: PLANS.enterprise.markupByFamily,
   },
 ] as const;
 
+/** @deprecated use STRIPE_PLANS — kept so existing imports keep working */
+export const PLANS_STRIPE = STRIPE_PLANS;
+export { STRIPE_PLANS as PLANS };
+
 export const TOPUP_PRESETS = [
+  {
+    amountCents: 2000,
+    label: "$20",
+    priceId: process.env.STRIPE_TOPUP_20_PRICE_ID || "",
+  },
   {
     amountCents: 3000,
     label: "$30",
@@ -86,8 +90,41 @@ export const TOPUP_PRESETS = [
   },
 ] as const;
 
+const PLAN_PRICE_ENV: Record<Exclude<PlanId, "free">, string> = {
+  pro: "STRIPE_PRO_PRICE_ID",
+  team: "STRIPE_TEAM_PRICE_ID",
+  enterprise: "STRIPE_ENTERPRISE_PRICE_ID",
+};
+
+export function getPriceIdForPlan(planId: PlanId): string {
+  if (planId === "free") return "";
+  return process.env[PLAN_PRICE_ENV[planId]] || "";
+}
+
 export function getPlanFromPriceId(priceId: string): PlanId {
-  const plan = PLANS.find((p) => p.priceId === priceId);
-  if (!plan) return "free";
-  return plan.id;
+  if (!priceId) return "free";
+  for (const id of ["pro", "team", "enterprise"] as const) {
+    if (getPriceIdForPlan(id) === priceId) return id;
+  }
+  return "free";
+}
+
+export function checkoutPlanConfigured(planId: PlanId): boolean {
+  return Boolean(getPriceIdForPlan(planId));
+}
+
+export function agentsAddonPriceId() {
+  return process.env.STRIPE_AGENTS_ADDON_PRICE_ID || "";
+}
+
+export function isAgentsAddonPriceId(priceId: string | null | undefined) {
+  const configured = agentsAddonPriceId();
+  return Boolean(configured && priceId && priceId === configured);
+}
+
+export function checkoutIntegrationId(flow: "subscription" | "topup" | "addon"): string {
+  const suffix = Array.from({ length: 8 }, () =>
+    "abcdefghijklmnopqrstuvwxyz"[Math.floor(Math.random() * 26)]
+  ).join("");
+  return `opendoor-${flow}-${suffix}`;
 }

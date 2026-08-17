@@ -12,6 +12,10 @@ import chatRouter from "./routes/chat.js";
 import modelsRouter from "./routes/models.js";
 import usageRouter from "./routes/usage.js";
 import analyticsRouter from "./routes/analytics.js";
+import embeddingsRouter from "./routes/embeddings.js";
+import rerankRouter from "./routes/rerank.js";
+import completionsRouter from "./routes/completions.js";
+import batchesRouter from "./routes/batches.js";
 import { statusHandler } from "./routes/status.js";
 import { cachetSyncHandler } from "./routes/cachet-sync.js";
 
@@ -25,7 +29,7 @@ app.get("/health", (c) => {
     status: "ok",
     service: "opendoor-gateway",
     version: "1.0.0",
-    region: process.env.AZURE_REGION || "unknown",
+    region: process.env.GCP_REGION || process.env.AZURE_REGION || "local",
   });
 });
 
@@ -40,6 +44,10 @@ app.use("/v1/*", rateLimitMiddleware);
 app.use("/v1/*", policyMiddleware);
 
 app.route("/v1/chat", chatRouter);
+app.route("/v1/embeddings", embeddingsRouter);
+app.route("/v1/rerank", rerankRouter);
+app.route("/v1/completions", completionsRouter);
+app.route("/v1/batches", batchesRouter);
 app.route("/v1/models", modelsRouter);
 app.route("/v1/usage", usageRouter);
 app.route("/v1/analytics", analyticsRouter);
@@ -59,7 +67,7 @@ app.get("/v1/models/:model", async (c) => {
   });
 });
 
-const port = parseInt(process.env.PORT || "3001", 10);
+const port = parseInt(process.env.GATEWAY_PORT || process.env.PORT || "3001", 10);
 
 serve({
   fetch: app.fetch,

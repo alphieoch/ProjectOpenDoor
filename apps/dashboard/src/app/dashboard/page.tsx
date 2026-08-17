@@ -13,9 +13,13 @@ import {
   parseOnboardingChecklist,
 } from "@/lib/onboarding";
 import {
-  Activity, CreditCard, Key, TrendingUp, Globe, Sparkles, Copy,
-  RotateCcw, Plug, Download, ArrowRight,
+  Activity, CreditCard, Key, TrendingUp, Globe, Sparkles, ArrowRight,
 } from "lucide-react";
+import { MetricCard } from "@/components/ui/metric-card";
+import { CopyButton } from "@/components/ui/copy-button";
+import { fillDailySeries, deltaLabel } from "@/lib/series";
+import { gatewayBaseUrl } from "@/lib/public-urls";
+import { models as modelsTable, providers } from "@opendoor/database";
 
 export default async function DashboardPage() {
   const session = await requireAuth();
@@ -38,7 +42,7 @@ export default async function DashboardPage() {
     redirect("/dashboard/onboarding");
   }
 
-  const [stats, keyCount] = await Promise.all([
+  const [stats, keyCount, daily, firstModel] = await Promise.all([
     db.select({
       totalRequests: sql<number>`COUNT(*)`,
       totalTokens: sql<number>`SUM(${requests.totalTokens})`,
@@ -46,6 +50,21 @@ export default async function DashboardPage() {
       avgLatency: sql<number>`AVG(${requests.latencyMs})`,
     }).from(requests).where(and(eq(requests.organizationId, orgId), gte(requests.createdAt, since30))),
     db.select({ count: sql<number>`COUNT(*)` }).from(apiKeys).where(eq(apiKeys.organizationId, orgId)),
+    db.select({
+      day: sql<string>`(${requests.createdAt})::date`,
+      requests: sql<number>`COUNT(*)`,
+      tokens: sql<number>`COALESCE(SUM(${requests.totalTokens}), 0)`,
+      cost: sql<number>`COALESCE(SUM(${requests.costUsd}), 0)`,
+      latency: sql<number>`COALESCE(AVG(${requests.latencyMs}), 0)`,
+    }).from(requests).where(and(eq(requests.organizationId, orgId), gte(requests.createdAt, since30)))
+      .groupBy(sql`1`)
+      .orderBy(sql`1`),
+    db
+      .select({ modelId: modelsTable.modelId })
+      .from(modelsTable)
+      .innerJoin(providers, eq(modelsTable.providerId, providers.id))
+      .where(eq(modelsTable.enabled, true))
+      .limit(1),
   ]);
 
   const stat = stats[0];
@@ -53,12 +72,34 @@ export default async function DashboardPage() {
   const totalTokens = Number(stat?.totalTokens || 0);
   const totalCost = Number(stat?.totalCost || 0);
   const avgLatency = Number(stat?.avgLatency || 0);
+  const requestSeries = fillDailySeries(daily.map((d) => ({ day: d.day, value: Number(d.requests) })));
+  const tokenSeries = fillDailySeries(daily.map((d) => ({ day: d.day, value: Number(d.tokens) })));
+  const costSeries = fillDailySeries(daily.map((d) => ({ day: d.day, value: Number(d.cost) })));
+  const latencySeries = fillDailySeries(daily.map((d) => ({ day: d.day, value: Number(d.latency) })));
+  const mid = 15;
+  const sum = (arr: number[]) => arr.reduce((a, b) => a + b, 0);
+  const avg = (arr: number[]) => (arr.length ? sum(arr) / arr.length : 0);
+  const reqDelta = deltaLabel(sum(requestSeries.slice(mid)), sum(requestSeries.slice(0, mid)));
+  const tokDelta = deltaLabel(sum(tokenSeries.slice(mid)), sum(tokenSeries.slice(0, mid)));
+  const costDelta = deltaLabel(sum(costSeries.slice(mid)), sum(costSeries.slice(0, mid)));
+  const latDelta = deltaLabel(avg(latencySeries.slice(mid)), avg(latencySeries.slice(0, mid)), true);
 
   const today = new Date().toLocaleDateString("en-US", { weekday: "short", month: "long", day: "numeric" });
+  const gateway = gatewayBaseUrl();
+  const sampleModel = firstModel[0]?.modelId || "YOUR_MODEL_ID";
+  const snippet = `from openai import OpenAI
+
+client = OpenAI(
+  base_url="${gateway}/v1",
+  api_key="YOUR_OPENDOOR_KEY"
+)
+r = client.chat.completions.create(
+  model="${sampleModel}",
+  messages=[{"role":"user","content":"Hello"}]
+)`;
 
   return (
-    <div>
-      {/* Page header */}
+    <div className="od-page">
       <div className="od-fade-up" style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", marginBottom: 32, paddingBottom: 24, borderBottom: "1px solid var(--line)" }}>
         <div>
           <div className="od-eyebrow">{today}</div>
@@ -66,46 +107,59 @@ export default async function DashboardPage() {
           <h1 className="od-h1-grad" style={{ marginTop: 4, display: "block" }}>How can I help you today?</h1>
         </div>
         <div className="od-fade-up-2" style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <button className="od-btn-pulse" style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "8px 18px", borderRadius: 999, background: "var(--brand)", color: "white", border: "1px solid var(--brand)", fontSize: 13, fontWeight: 500, cursor: "pointer" }}>
-            <Sparkles style={{ width: 14, height: 14 }} /> Ask AI
-          </button>
-          <Link href="/dashboard/usage" style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "8px 18px", borderRadius: 999, background: "var(--paper-2)", color: "var(--ink-2)", border: "1px solid var(--line)", fontSize: 13, fontWeight: 500, textDecoration: "none", transition: "all 0.12s" }} className="hover:border-[var(--ink-4)] od-lift">
-            Usage updates
+          <Link href="/dashboard/playground" className="od-btn-pulse" style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "8px 18px", borderRadius: 999, background: "var(--brand)", color: "white", border: "1px solid var(--brand)", fontSize: 13, fontWeight: 500, textDecoration: "none" }}>
+            <Sparkles style={{ width: 14, height: 14 }} /> Open playground
           </Link>
-          <Link href="/dashboard/api-keys" style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "8px 18px", borderRadius: 999, background: "var(--paper-2)", color: "var(--ink-2)", border: "1px solid var(--line)", fontSize: 13, fontWeight: 500, textDecoration: "none", transition: "all 0.12s" }} className="hover:border-[var(--ink-4)] od-lift">
+          <Link href="/dashboard/usage" style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "8px 18px", borderRadius: 999, background: "var(--paper-2)", color: "var(--ink-2)", border: "1px solid var(--line)", fontSize: 13, fontWeight: 500, textDecoration: "none" }} className="od-lift">
+            Usage
+          </Link>
+          <Link href="/dashboard/api-keys" style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "8px 18px", borderRadius: 999, background: "var(--paper-2)", color: "var(--ink-2)", border: "1px solid var(--line)", fontSize: 13, fontWeight: 500, textDecoration: "none" }} className="od-lift">
             <Key style={{ width: 13, height: 13 }} /> Create API key
           </Link>
         </div>
       </div>
 
-      {/* Stat cards */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 24 }}>
-        <StatCard
-          label="Requests" icon={<Activity style={{ width: 12, height: 12 }} />}
-          value={formatNumber(totalRequests)} delta="+18.4%" deltaUp
+      <div className="od-metric-grid" style={{ marginBottom: 24 }}>
+        <MetricCard
+          label="Requests"
+          icon={<Activity style={{ width: 12, height: 12 }} />}
+          value={formatNumber(totalRequests)}
+          delta={`${reqDelta.text} vs prior 15d`}
+          deltaUp={reqDelta.up}
+          series={requestSeries}
           className="od-fade-up-1"
         />
-        <StatCard
-          label="Tokens" icon={<TrendingUp style={{ width: 12, height: 12 }} />}
-          value={formatNumber(totalTokens)} delta="+21.7%" deltaUp
+        <MetricCard
+          label="Tokens"
+          icon={<TrendingUp style={{ width: 12, height: 12 }} />}
+          value={formatNumber(totalTokens)}
+          delta={`${tokDelta.text} vs prior 15d`}
+          deltaUp={tokDelta.up}
+          series={tokenSeries}
           className="od-fade-up-2"
         />
-        <StatCard
-          label="Spend" icon={<CreditCard style={{ width: 12, height: 12 }} />}
-          value={formatCurrency(totalCost)} delta="+14.2%" deltaUp
-          gradient
+        <MetricCard
+          label="Spend"
+          icon={<CreditCard style={{ width: 12, height: 12 }} />}
+          value={formatCurrency(totalCost)}
+          delta={`${costDelta.text} vs prior 15d`}
+          deltaUp={costDelta.up}
+          series={costSeries}
+          featured
           className="od-fade-up-3"
         />
-        <StatCard
-          label="P50 Latency" icon={<Globe style={{ width: 12, height: 12 }} />}
-          value={avgLatency > 0 ? `${Math.round(avgLatency)}ms` : "—"} delta="−3.8% faster" deltaUp
+        <MetricCard
+          label="P50 Latency"
+          icon={<Globe style={{ width: 12, height: 12 }} />}
+          value={avgLatency > 0 ? `${Math.round(avgLatency)}ms` : "—"}
+          delta={`${latDelta.text} vs prior 15d`}
+          deltaUp={latDelta.up}
+          series={latencySeries}
           className="od-fade-up-4"
         />
       </div>
 
-      {/* Bottom row: quick start + API keys */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 24 }}>
-        {/* API Keys summary */}
         <div className="od-card od-fade-up-3">
           <div style={{ padding: "20px 24px", borderBottom: "1px solid var(--line)" }}>
             <div className="od-eyebrow">Access</div>
@@ -122,22 +176,22 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        {/* Quick links */}
         <div className="od-card od-fade-up-4" style={{ padding: "20px 24px" }}>
           <div className="od-eyebrow" style={{ marginBottom: 14 }}>Quick nav</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
             {[
-              { href: "/dashboard/usage", label: "Usage & Costs", icon: TrendingUp },
+              { href: "/dashboard/models", label: "Model catalog", icon: Sparkles },
               { href: "/dashboard/playground", label: "Playground", icon: Activity },
-              { href: "/dashboard/governance", label: "Trust Center", icon: Key },
+              { href: "/dashboard/usage", label: "Usage & costs", icon: TrendingUp },
+              { href: "/dashboard/logs", label: "Request logs", icon: Activity },
               { href: "/dashboard/billing", label: "Billing", icon: CreditCard },
             ].map(({ href, label, icon: Icon }) => (
               <Link key={href} href={href} style={{
                 display: "flex", alignItems: "center", gap: 10,
-                padding: "9px 12px", borderRadius: 8, color: "var(--ink-2)",
+                padding: "9px 12px", borderRadius: 10, color: "var(--ink-2)",
                 fontSize: 13.5, fontWeight: 500, textDecoration: "none",
-                transition: "background 0.12s",
-              }} className="hover:bg-[var(--paper)]">
+                transition: "background 0.16s, transform 0.16s",
+              }} className="hover:bg-[var(--paper)] hover:translate-x-0.5">
                 <Icon style={{ width: 14, height: 14, color: "var(--ink-3)" }} />
                 {label}
                 <ArrowRight style={{ width: 12, height: 12, marginLeft: "auto", color: "var(--ink-4)" }} />
@@ -147,51 +201,19 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* Quick start banner */}
       <div className="od-banner od-fade-up-5">
         <div className="od-banner__shape" />
         <div style={{ position: "relative" }}>
           <div className="od-eyebrow" style={{ color: "rgba(255,255,255,0.7)" }}>Quick start</div>
           <h2>Make your first call.</h2>
           <p>Drop the gateway URL in your existing OpenAI client. No SDK changes — just point and go.</p>
-          <div style={{ marginTop: 16, display: "flex", gap: 8 }}>
-            <button className="od-lift" style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 18px", borderRadius: 999, background: "white", color: "var(--ink)", border: "none", fontSize: 13, fontWeight: 500, cursor: "pointer" }}>
-              <Copy style={{ width: 13, height: 13 }} /> Copy snippet
-            </button>
-            <Link href="/dashboard/api-keys" style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 18px", borderRadius: 999, background: "transparent", color: "white", border: "none", fontSize: 13, fontWeight: 500, textDecoration: "none" }}>
-              Read docs <ArrowRight style={{ width: 13, height: 13 }} />
+          <div style={{ marginTop: 16, display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <CopyButton value={snippet} label="Copy snippet" className="od-lift" />
+            <Link href="/dashboard/models" style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 18px", borderRadius: 999, background: "transparent", color: "white", border: "1px solid rgba(255,255,255,0.28)", fontSize: 13, fontWeight: 500, textDecoration: "none" }}>
+              Browse models <ArrowRight style={{ width: 13, height: 13 }} />
             </Link>
           </div>
         </div>
-      </div>
-
-      {/* FAB */}
-      <button className="od-fab" title="Ask AI">
-        <Sparkles style={{ width: 20, height: 20 }} />
-      </button>
-    </div>
-  );
-}
-
-function StatCard({
-  label, icon, value, delta, deltaUp, gradient, className,
-}: {
-  label: string; icon: React.ReactNode; value: string;
-  delta: string; deltaUp: boolean; gradient?: boolean; className?: string;
-}) {
-  return (
-    <div
-      className={`od-numberblock od-lift ${className || ""}`}
-      style={gradient ? { background: "linear-gradient(135deg, #1A1A2E 0%, #5B3DE0 100%)", border: "none" } : {}}
-    >
-      <div className="od-numberblock__label" style={gradient ? { color: "rgba(255,255,255,0.6)" } : {}}>
-        {icon} {label}
-      </div>
-      <div className="od-display" style={{ fontSize: 44, ...(gradient ? { color: "white" } : {}) }}>
-        {value}
-      </div>
-      <div className={deltaUp ? "od-numberblock__delta-up" : "od-numberblock__delta-down"} style={gradient ? { color: "#1FD1A3" } : {}}>
-        {deltaUp ? "↑" : "↓"} {delta}
       </div>
     </div>
   );

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { Roboto, Roboto_Mono } from "next/font/google";
+import { Instrument_Serif, Roboto, Roboto_Mono } from "next/font/google";
+import { AuthKitProvider } from "@workos-inc/authkit-nextjs/components";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 
@@ -15,6 +16,12 @@ const robotoMono = Roboto_Mono({
   weight: ["400", "500", "600"],
   display: "swap",
 });
+const instrumentSerif = Instrument_Serif({
+  variable: "--font-instrument-serif",
+  subsets: ["latin"],
+  weight: "400",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "OpenDoor — LLM Gateway",
@@ -25,12 +32,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html
       lang="en"
-      className={`${roboto.variable} ${robotoMono.variable}`}
+      className={`${roboto.variable} ${robotoMono.variable} ${instrumentSerif.variable}`}
       suppressHydrationWarning
     >
       <body className="min-h-screen font-sans antialiased">
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} disableTransitionOnChange>
-          {children}
+          <AuthKitProvider>{children}</AuthKitProvider>
         </ThemeProvider>
       </body>
     </html>

@@ -2,14 +2,18 @@
 
 import { useEffect, useState, useMemo, useCallback } from "react";
 import {
-  AlertTriangle, ShieldCheck, ShieldAlert, ShieldX,
+  AlertTriangle, ShieldCheck, ShieldAlert,
   Clock, Loader2, ChevronDown, ChevronUp,
-  Zap, Key, Scale, Bug, X,
+  Key, Scale, Bug, X,
 } from "lucide-react";
-import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid,
-  Tooltip, ResponsiveContainer,
-} from "recharts";
+import dynamic from "next/dynamic";
+import { PageHeader } from "@/components/ui/page-header";
+import { loadGovernanceData } from "@/lib/governance/ensure-client";
+
+const ViolationsTrend = dynamic(
+  () => import("./trend-chart").then((m) => m.ViolationsTrend),
+  { ssr: false, loading: () => <div style={{ height: 120 }} /> },
+);
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -148,6 +152,11 @@ function ViolationRow({
           <span className="text-sm font-medium capitalize" style={{ color: vt.color }}>
             {vt.label}
           </span>
+          {(v.details?.source === "seed" || v.details?.live === false) && (
+            <span className="ml-2 rounded-full px-1.5 py-0.5 text-[10px] font-medium" style={{ background: "var(--paper-3)", color: "var(--ink-4)" }}>
+              Example
+            </span>
+          )}
         </td>
         <td className="table-cell">
           {v.policyName ? (
@@ -299,16 +308,11 @@ function GuardrailRow({
 
 // ── Main page ────────────────────────────────────────────────────────────────
 
-const axisTick = { fontSize: 11, fill: "var(--ink-4)" } as const;
-const tooltipStyle = {
-  borderRadius: "8px", border: "1px solid var(--line)",
-  fontSize: "12px", background: "var(--paper-2)", color: "var(--ink)",
-} as const;
-
 export default function ViolationsPage() {
   const [violations, setViolations] = useState<Violation[]>([]);
   const [outcomes, setOutcomes] = useState<GuardrailOutcome[]>([]);
   const [loading, setLoading] = useState(true);
+  const [guardrailsReady, setGuardrailsReady] = useState(false);
   const [tab, setTab] = useState<Tab>("violations");
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
@@ -323,17 +327,34 @@ export default function ViolationsPage() {
   const [gTimeframe, setGTimeframe] = useState("30");
 
   const load = useCallback(async () => {
-    const [vRes, oRes] = await Promise.all([
-      fetch("/api/governance/violations"),
-      fetch("/api/governance/guardrail-outcomes?days=90"),
-    ]);
-    const [vData, oData] = await Promise.all([vRes.json(), oRes.json()]);
-    setViolations(vData.violations ?? []);
-    setOutcomes(oData.outcomes ?? []);
+    const data = await loadGovernanceData(
+      () => fetch("/api/governance/violations?days=90").then((r) => r.json()),
+      {
+        isEmpty: (d) => !(d.violations ?? []).length,
+        onFirst: (d) => {
+          setViolations(d.violations ?? []);
+          setLoading(false);
+        },
+      },
+    );
+    setViolations(data.violations ?? []);
     setLoading(false);
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  const loadGuardrails = useCallback(async () => {
+    if (guardrailsReady) return;
+    const oData = await fetch("/api/governance/guardrail-outcomes?days=90").then((r) => r.json());
+    setOutcomes(oData.outcomes ?? []);
+    setGuardrailsReady(true);
+  }, [guardrailsReady]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  useEffect(() => {
+    if (tab === "guardrails") loadGuardrails();
+  }, [tab, loadGuardrails]);
 
   async function resolveViolation(id: string) {
     await fetch(`/api/governance/violations/${id}`, {
@@ -396,21 +417,20 @@ export default function ViolationsPage() {
 
   const hasVFilters = fSeverity !== "all" || fResolved !== "open" || fDataClass !== "all" || fTimeframe !== "30";
 
-  if (loading) {
-    return (
-      <div className="flex h-64 items-center justify-center">
-        <Loader2 className="h-5 w-5 animate-spin" style={{ color: "var(--ink-3)" }} />
-      </div>
-    );
-  }
-
   return (
     <div>
-      {/* Header */}
-      <div className="mb-6">
-        <h1 className="page-title">Violations</h1>
-        <p className="page-desc">Guardrail triggers, policy breaches, and blocked requests across your gateway.</p>
-      </div>
+      <PageHeader
+        eyebrow="Governance"
+        title="Violations"
+        description="Live blocks from the gateway: policy denies, pending-model holds, and guardrail hits. Resolve a row once the team has handled it."
+      />
+
+      {loading ? (
+        <div className="flex h-48 items-center justify-center">
+          <Loader2 className="h-5 w-5 animate-spin" style={{ color: "var(--ink-3)" }} />
+        </div>
+      ) : (
+        <>
 
       {/* Stats */}
       <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -431,15 +451,7 @@ export default function ViolationsPage() {
       {violations.length > 0 && (
         <div className="card mb-6 p-5">
           <p className="section-title mb-3">Violations — last 7 days</p>
-          <ResponsiveContainer width="100%" height={120}>
-            <BarChart data={trendData} barSize={14}>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--line-soft)" vertical={false} />
-              <XAxis dataKey="date" tick={axisTick} axisLine={false} tickLine={false} />
-              <YAxis tick={axisTick} axisLine={false} tickLine={false} width={20} allowDecimals={false} />
-              <Tooltip contentStyle={tooltipStyle} cursor={{ fill: "var(--paper-3)" }} />
-              <Bar dataKey="count" name="Violations" fill="var(--red)" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+          <ViolationsTrend data={trendData} />
         </div>
       )}
 
@@ -542,7 +554,12 @@ export default function ViolationsPage() {
       )}
 
       {/* ── GUARDRAIL TRIGGERS TAB ── */}
-      {tab === "guardrails" && (
+      {tab === "guardrails" && !guardrailsReady && (
+        <div className="flex h-40 items-center justify-center">
+          <Loader2 className="h-5 w-5 animate-spin" style={{ color: "var(--ink-3)" }} />
+        </div>
+      )}
+      {tab === "guardrails" && guardrailsReady && (
         <div className="space-y-4">
           {/* Type stats */}
           <div className="flex flex-wrap gap-2">
@@ -628,6 +645,8 @@ export default function ViolationsPage() {
             )}
           </div>
         </div>
+      )}
+        </>
       )}
     </div>
   );

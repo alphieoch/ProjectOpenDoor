@@ -1,17 +1,28 @@
 'use client';
 import React from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { ArrowRight, DoorOpen } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { MenuToggleIcon } from '@/components/ui/menu-toggle-icon';
 import { useScroll } from '@/components/ui/use-scroll';
+import { docsHref } from '@/lib/public-urls';
 
 const NAV_LINKS = [
-  { label: 'Platform', href: '/#platform' },
-  { label: 'How it works', href: '/#workflow' },
-  { label: 'Security', href: '/#security' },
+  { label: 'Platform', href: '/platform' },
+  { label: 'Pricing', href: '/pricing' },
+  { label: 'How it works', href: '/how-it-works' },
+  { label: 'Security', href: '/security' },
   { label: 'Status', href: '/status' },
+  { label: 'Docs', href: docsHref('/') },
 ];
+
+function isNavActive(href: string, pathname: string) {
+  if (href === '/docs' || href.startsWith('/docs/')) {
+    return pathname === '/docs' || pathname.startsWith('/docs/');
+  }
+  return pathname === href;
+}
 
 interface HeaderProps {
   signedIn?: boolean;
@@ -20,6 +31,7 @@ interface HeaderProps {
 export function Header({ signedIn = false }: HeaderProps) {
   const [open, setOpen] = React.useState(false);
   const scrolled = useScroll(10);
+  const pathname = usePathname();
 
   React.useEffect(() => {
     document.body.style.overflow = open ? 'hidden' : '';
@@ -50,17 +62,27 @@ export function Header({ signedIn = false }: HeaderProps) {
           <span className="text-lg font-semibold tracking-tight text-slate-950">OpenDoor</span>
         </Link>
 
-        {/* Desktop nav */}
+          {/* Desktop nav */}
         <div className="hidden items-center gap-1 md:flex">
-          {NAV_LINKS.map((link) => (
-            <a
-              key={link.label}
-              href={link.href}
-              className="rounded-full px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100 hover:text-slate-950"
-            >
-              {link.label}
-            </a>
-          ))}
+          {NAV_LINKS.map((link) => {
+            const active = isNavActive(link.href, pathname);
+            return (
+              <Link
+                key={link.label}
+                href={link.href}
+                scroll
+                aria-current={active ? 'page' : undefined}
+                className={cn(
+                  'rounded-full px-4 py-2 text-sm font-medium transition',
+                  active
+                    ? 'bg-slate-950 text-white'
+                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950',
+                )}
+              >
+                {link.label}
+              </Link>
+            );
+          })}
         </div>
 
         {/* Desktop CTAs */}
@@ -115,16 +137,26 @@ export function Header({ signedIn = false }: HeaderProps) {
           )}
         >
           <div className="grid gap-1">
-            {NAV_LINKS.map((link) => (
-              <a
-                key={link.label}
-                href={link.href}
-                onClick={() => setOpen(false)}
-                className="rounded-2xl px-4 py-3 text-base font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-950"
-              >
-                {link.label}
-              </a>
-            ))}
+            {NAV_LINKS.map((link) => {
+              const active = isNavActive(link.href, pathname);
+              return (
+                <Link
+                  key={link.label}
+                  href={link.href}
+                  scroll
+                  onClick={() => setOpen(false)}
+                  aria-current={active ? 'page' : undefined}
+                  className={cn(
+                    'rounded-2xl px-4 py-3 text-base font-medium transition',
+                    active
+                      ? 'bg-slate-950 text-white'
+                      : 'text-slate-700 hover:bg-slate-100 hover:text-slate-950',
+                  )}
+                >
+                  {link.label}
+                </Link>
+              );
+            })}
           </div>
 
           <div className="flex flex-col gap-3 pb-4">

@@ -25,16 +25,16 @@
   --md-error-container: #F9DEDC;
   --md-on-error-container: #410E0B;
 
-  --md-surface: #FAFBFF;
+  --md-surface: #F6F5F1;
   --md-on-surface: #191C20;
-  --md-surface-variant: #DFE2EB;
-  --md-on-surface-variant: #43474E;
+  --md-surface-variant: #E4E2DA;
+  --md-on-surface-variant: #4A4A44;
 
-  --md-surface-container-lowest: #FFFFFF;
-  --md-surface-container-low: #F2F3FB;
-  --md-surface-container: #E9EBF2;
-  --md-surface-container-high: #E3E5EC;
-  --md-surface-container-highest: #DDE0E7;
+  --md-surface-container-lowest: #FFFEF9;
+  --md-surface-container-low: #F3F2EC;
+  --md-surface-container: #EBEAE3;
+  --md-surface-container-high: #E4E3DC;
+  --md-surface-container-highest: #DDDCD4;
 
   --md-outline: #73777F;
   --md-outline-variant: #C3C7CF;
@@ -76,11 +76,19 @@
   /* Semantic aliases for dashboard */
   --brand: var(--md-primary);
   --brand-container: var(--md-primary-container);
+  --brand-soft: var(--md-primary-container);
+  --brand-deep: var(--md-on-primary-container);
+  --brand-tint: #8AB4F8;
   --surface: var(--md-surface);
   --surface-container: var(--md-surface-container);
   --on-surface: var(--md-on-surface);
   --outline: var(--md-outline);
   --outline-variant: var(--md-outline-variant);
+  --font-serif: var(--font-instrument-serif), "Iowan Old Style", Georgia, serif;
+  --font-mono: var(--font-roboto-mono), ui-monospace, Menlo, monospace;
+  --font-geist-sans: var(--font-roboto), Roboto, ui-sans-serif, system-ui, sans-serif;
+  --shadow-soft: 0 1px 0 rgba(20, 18, 12, 0.04), 0 12px 32px -16px rgba(20, 18, 12, 0.18);
+  --shadow-lift: 0 1px 0 rgba(20, 18, 12, 0.05), 0 18px 40px -18px rgba(20, 18, 12, 0.22);
 
   /* Dashboard palette (keep for existing pages) */
   --paper: var(--md-surface-container-low);
@@ -171,6 +179,11 @@
   --ink-4: var(--md-outline);
   --line: var(--md-outline-variant);
   --line-soft: #2D3440;
+  --brand-soft: var(--md-primary-container);
+  --brand-deep: var(--md-on-primary-container);
+  --brand-tint: #A8C8FF;
+  --shadow-soft: 0 1px 0 rgba(0, 0, 0, 0.2), 0 16px 40px -18px rgba(0, 0, 0, 0.55);
+  --shadow-lift: 0 1px 0 rgba(0, 0, 0, 0.25), 0 22px 48px -16px rgba(0, 0, 0, 0.65);
 }
 
 /* ── Base ─────────────────────────────────────────────────────── */
@@ -549,16 +562,18 @@ body {
 .od-mono { font-family: var(--font-roboto-mono), monospace; font-feature-settings: "tnum", "zero"; }
 
 .od-h1 {
-  font-size: 32px;
-  line-height: 40px;
-  letter-spacing: 0;
+  font-family: var(--font-serif);
+  font-size: 36px;
+  line-height: 42px;
+  letter-spacing: -0.02em;
   font-weight: 400;
   color: var(--md-on-surface);
 }
 
 .od-h1-grad {
-  font-size: 32px;
-  line-height: 40px;
+  font-family: var(--font-serif);
+  font-size: 36px;
+  line-height: 42px;
   font-weight: 400;
   background: linear-gradient(92deg, var(--md-primary) 0%, #1FD1A3 100%);
   background-size: 200% auto;
@@ -569,9 +584,10 @@ body {
 }
 
 .od-h2 {
-  font-size: 22px;
-  line-height: 28px;
-  letter-spacing: 0;
+  font-family: var(--font-serif);
+  font-size: 24px;
+  line-height: 30px;
+  letter-spacing: -0.015em;
   font-weight: 400;
   color: var(--md-on-surface);
 }
@@ -588,16 +604,16 @@ body {
 .od-numberblock {
   background: var(--md-surface-container-lowest);
   border: 1px solid var(--md-outline-variant);
-  border-radius: var(--md-shape-md);
-  box-shadow: var(--md-elevation-1);
-  padding: 24px;
+  border-radius: 16px;
+  box-shadow: var(--shadow-soft);
+  padding: 22px 22px 18px;
   position: relative;
   overflow: hidden;
-  transition: transform 0.25s var(--md-easing-standard), box-shadow 0.25s;
+  transition: transform 0.35s var(--md-easing-emphasized), box-shadow 0.35s var(--md-easing-emphasized);
 }
 .od-numberblock:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--md-elevation-3);
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-lift);
 }
 .od-numberblock__label {
   font-family: var(--font-roboto-mono), monospace;
@@ -616,8 +632,8 @@ body {
 .od-card {
   background: var(--md-surface-container-lowest);
   border: 1px solid var(--md-outline-variant);
-  border-radius: var(--md-shape-md);
-  box-shadow: var(--md-elevation-1);
+  border-radius: 16px;
+  box-shadow: var(--shadow-soft);
 }
 
 .od-tag {
@@ -801,8 +817,8 @@ body {
 .table-row:hover { background: color-mix(in srgb, var(--md-on-surface) 4%, transparent); }
 
 /* Page headers */
-.page-title { font-size: 22px; line-height: 28px; font-weight: 400; color: var(--md-on-surface); }
-.page-desc  { margin-top: 4px; font-size: 14px; color: var(--md-on-surface-variant); }
+.page-title { font-family: var(--font-serif); font-size: 32px; line-height: 38px; letter-spacing: -0.02em; font-weight: 400; color: var(--md-on-surface); }
+.page-desc  { margin-top: 6px; font-size: 15px; line-height: 22px; color: var(--md-on-surface-variant); max-width: 52ch; }
 .section-title { font-size: 14px; font-weight: 500; color: var(--md-on-surface); }
 
 /* ── Keyframes ── */
@@ -825,6 +841,202 @@ body {
 @keyframes od-pulse {
   0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--md-primary) 45%, transparent); }
   70%       { box-shadow: 0 0 0 14px transparent; }
+}
+
+/* ── Studio chrome (Mobbin: WRITER / Adaline / Grok / Claude) ─ */
+.od-glass {
+  background: color-mix(in srgb, var(--paper-2) 72%, transparent);
+  backdrop-filter: blur(18px) saturate(1.25);
+  -webkit-backdrop-filter: blur(18px) saturate(1.25);
+}
+
+.od-page {
+  max-width: 1180px;
+}
+
+.od-hairline { border-color: color-mix(in srgb, var(--line) 70%, transparent); }
+
+.od-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+@media (max-width: 1100px) {
+  .od-metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 640px) {
+  .od-metric-grid { grid-template-columns: 1fr; }
+}
+
+.od-model-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+@media (max-width: 1100px) {
+  .od-model-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 720px) {
+  .od-model-grid { grid-template-columns: 1fr; }
+}
+
+.od-model-card {
+  background: var(--md-surface-container-lowest);
+  border: 1px solid var(--md-outline-variant);
+  border-radius: 16px;
+  padding: 18px 18px 16px;
+  text-align: left;
+  cursor: pointer;
+  box-shadow: var(--shadow-soft);
+  transition: transform 0.32s var(--md-easing-emphasized), box-shadow 0.32s var(--md-easing-emphasized), border-color 0.2s;
+}
+.od-model-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-lift);
+  border-color: color-mix(in srgb, var(--md-primary) 35%, var(--md-outline-variant));
+}
+.od-model-card[data-active="true"] {
+  border-color: var(--md-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--md-primary) 16%, transparent);
+}
+
+.od-seg {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 999px;
+  background: var(--md-surface-container);
+  border: 1px solid var(--md-outline-variant);
+}
+.od-seg button {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--md-on-surface-variant);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  padding: 6px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.2s var(--md-easing-standard), color 0.2s;
+}
+.od-seg button[data-active="true"] {
+  background: var(--md-surface-container-lowest);
+  color: var(--md-on-surface);
+  box-shadow: var(--shadow-soft);
+}
+
+.od-price-table { width: 100%; border-collapse: collapse; }
+.od-price-table thead th {
+  text-align: left;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--md-on-surface-variant);
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--md-outline-variant);
+}
+.od-price-table tbody td {
+  padding: 16px;
+  border-bottom: 1px solid color-mix(in srgb, var(--md-outline-variant) 70%, transparent);
+  vertical-align: top;
+  transition: background 0.18s var(--md-easing-standard);
+}
+.od-price-table tbody tr:nth-child(even) td {
+  background: color-mix(in srgb, var(--md-primary) 3.5%, transparent);
+}
+.od-price-table tbody tr:hover td {
+  background: color-mix(in srgb, var(--md-primary) 7%, transparent);
+}
+
+.od-drawer-scrim {
+  position: fixed;
+  inset: 0;
+  background: rgba(18, 16, 12, 0.28);
+  z-index: 60;
+}
+.od-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  height: 100vh;
+  width: min(420px, 100vw);
+  background: var(--md-surface-container-lowest);
+  border-left: 1px solid var(--md-outline-variant);
+  box-shadow: -18px 0 48px rgba(18, 16, 12, 0.12);
+  z-index: 70;
+  display: flex;
+  flex-direction: column;
+}
+
+.od-composer {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--md-outline-variant);
+  border-radius: 18px;
+  background: var(--md-surface-container-lowest);
+  box-shadow: var(--shadow-soft);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.od-composer:focus-within {
+  border-color: var(--md-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--md-primary) 16%, transparent);
+}
+
+.od-send {
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  border: 0;
+  display: grid;
+  place-items: center;
+  background: var(--md-on-surface);
+  color: var(--md-surface-container-lowest);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: transform 0.18s var(--md-easing-emphasized), background 0.18s;
+}
+.od-send:hover { transform: scale(1.04); }
+.od-send:disabled {
+  background: var(--md-surface-container-high);
+  color: var(--md-on-surface-variant);
+  cursor: not-allowed;
+  transform: none;
+}
+
+.od-pulse-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--green);
+  box-shadow: 0 0 0 0 color-mix(in srgb, var(--green) 55%, transparent);
+  animation: od-live 1.8s ease-out infinite;
+}
+
+@keyframes od-live {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--green) 50%, transparent); }
+  70% { box-shadow: 0 0 0 8px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+
+@keyframes od-drawer-in {
+  from { transform: translateX(18px); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .od-fade-up, .od-fade-up-1, .od-fade-up-2, .od-fade-up-3, .od-fade-up-4, .od-fade-up-5,
+  .od-stagger > *, .od-h1-grad, .od-display, .od-btn-pulse, .od-pulse-dot {
+    animation: none !important;
+  }
+  .od-numberblock, .od-model-card, .od-lift {
+    transition: none !important;
+  }
 }
 
 /* ── Chat UI additions ─────────────────────────────────────── */

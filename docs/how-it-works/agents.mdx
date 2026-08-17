@@ -1,0 +1,38 @@
+---
+title: "Agents"
+description: "Create OpenClaw, Hermes, or NemoClaw agents that call the live gateway and spend this workspace's quota."
+showPageTitle: true
+---
+
+**Dashboard → Agents** lets a workspace stand up its own agent runtime. Agents is a **$20/month add-on** (included on Enterprise). Pick **OpenClaw**, **Hermes**, or **NemoClaw**, choose a catalog model, and spin it up. Completions use a dedicated API key, so spend hits the same prepaid quota as Playground and `/v1/chat/completions`.
+
+## Pricing
+
+The add-on unlocks the hosted runtimes. It is a separate Stripe subscription from Pro/Team, so canceling Agents does not cancel the seat plan. Token usage still bills workspace quota. Subscribe from **Agents** or **Billing**.
+
+## Runtimes
+
+| Runtime | Best for |
+| --- | --- |
+| **OpenClaw** | Multi-channel gateway agent (Slack, Discord, Telegram) |
+| **Hermes** | One self-improving agent with durable memory |
+| **NemoClaw** | NVIDIA's sandboxed OpenClaw for a tighter production runtime |
+
+## What create / start does
+
+1. Writes a `workspace_agents` row for the chosen runtime and model.
+2. Mints a scoped API key (`Agent · <name>`) allowed to call that model.
+3. Probes `GET /v1/models` with that key. If the gateway is down, the agent is **failed** with the real error.
+4. Seeds runtime skills (OpenClaw channels, Hermes memory/skills, NemoClaw sandbox).
+5. Marks the agent **running**. Chat runs a tool loop against the live gateway, so spend hits Usage and Billing.
+
+## Hosted runtime
+
+`POST /api/agents/:id/chat` runs the agent loop (tools + memory + outbox), persists the thread, then streams tool events and the reply. Stop pauses spend. Delete revokes the key.
+
+## Related
+
+- [Playground](/how-it-works/playground)
+- [API keys](/how-it-works/api-keys)
+- [Chat completions](/api-reference/chat-completions)
+- [Billing](/how-it-works/billing)

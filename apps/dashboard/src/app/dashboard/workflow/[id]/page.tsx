@@ -314,7 +314,9 @@ export default function WorkflowEditorPage() {
   useEffect(() => {
     Promise.all([
       fetch(`/api/workflows/${id}`).then((r) => r.json()),
-      fetch("/api/models").then((r) => r.json()).catch(() => ({ models: [] })),
+      fetch("/api/models/available", { credentials: "include" })
+        .then((r) => (r.ok ? r.json() : { models: [] }))
+        .catch(() => ({ models: [] })),
     ]).then(([wfData, mData]) => {
       if (wfData.workflow) {
         const wf = wfData.workflow;
@@ -327,7 +329,12 @@ export default function WorkflowEditorPage() {
         setEdges(rfEdges);
         latestGraph.current = { nodes: wf.graph?.nodes ?? [], edges: wf.graph?.edges ?? [] };
       }
-      setModels((mData.models ?? []).map((m: any) => ({ modelId: m.modelId, displayName: m.displayName })));
+      setModels(
+        (mData.models ?? []).map((m: { id?: string; label?: string; modelId?: string; displayName?: string }) => ({
+          modelId: m.id || m.modelId || "",
+          displayName: m.label || m.displayName || m.id || "",
+        }))
+      );
       setLoading(false);
     });
   }, [id]);

@@ -7,19 +7,12 @@ import {
   creditTransactions,
 } from "@opendoor/database";
 import { and, desc, eq, gte, sql } from "drizzle-orm";
+import { expireWelcomeIfNeeded, getMonthCreditActivity } from "@/lib/credits";
+import { creditWaterfall, includedCreditCents } from "@opendoor/shared";
 
 const FOUR_HOURS_MS = 4 * 60 * 60 * 1000;
 
-function getPlanBudgetLimitCents(plan: string): number {
-  if (plan === "pro") {
-    return Number.parseInt(process.env.PLAN_BUDGET_PRO_PER_4H_CENTS || "500", 10);
-  }
-  if (plan === "enterprise") {
-    return Number.parseInt(
-      process.env.PLAN_BUDGET_ENTERPRISE_PER_4H_CENTS || "3000",
-      10
-    );
-  }
+function getPlanBudgetLimitCents(_plan: string): number {
   return 0;
 }
 
@@ -39,6 +32,8 @@ export async function GET() {
         id: true,
         plan: true,
         creditsUsdCents: true,
+        welcomeCreditsUsdCents: true,
+        welcomeExpiresAt: true,
         autoRechargeEnabled: true,
         autoRechargeAmountCents: true,
         autoRechargeThresholdCents: true,
@@ -48,6 +43,10 @@ export async function GET() {
     if (!org) {
       return NextResponse.json({ error: "Organization not found" }, { status: 404 });
     }
+
+    const buckets = await expireWelcomeIfNeeded(org);
+    const activity = await getMonthCreditActivity(orgId);
+    const waterfall = creditWaterfall({ buckets, ...activity });
 
     const now = Date.now();
     const windowStart = getWindowStart(now);
@@ -76,7 +75,14 @@ export async function GET() {
     });
 
     return NextResponse.json({
-      creditsUsdCents: Number(org.creditsUsdCents || 0),
+      creditsUsdCents: buckets.totalCents,
+      welcomeCreditsUsdCents: buckets.welcomeCents,
+      paidCreditsUsdCents: buckets.paidCents,
+      includedQuotaCents: waterfall.quotaCents,
+      prepaidCreditsUsdCents: waterfall.prepaidCents,
+      includedMonthlyCents: includedCreditCents(org.plan, 1),
+      cutOff: waterfall.cutOff,
+      welcomeExpiresAt: buckets.expiresAt ? buckets.expiresAt.toISOString() : null,
       planBudget: {
         usedCents,
         totalCents: limitCents,

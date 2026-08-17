@@ -2,6 +2,12 @@
 import { Hono } from "hono";
 import { db, requests, providers, models, apiKeys } from "@opendoor/database";
 import type { ChatCompletionRequest } from "@opendoor/shared";
+import {
+  flattenMessageText,
+  spendableCents,
+  splitCreditBuckets,
+  welcomeAllowedForFamily,
+} from "@opendoor/shared";
 import { resolveProvider, getProvider } from "../providers/index.js";
 import { calculateCost } from "../utils/pricing.js";
 import { encodeSSE, encodeSSEDone } from "../utils/streaming.js";
@@ -17,6 +23,13 @@ import {
 } from "../lib/posthog.js";
 import { recordSuccess, recordError } from "../lib/health-tracker.js";
 import { getRankedProviders } from "../lib/smart-router.js";
+import {
+  applyAffinityToChain,
+  lookupCacheAffinity,
+  promptCacheFingerprint,
+  rememberCacheAffinity,
+} from "../lib/prompt-cache.js";
+import { normalizeServiceTier } from "../lib/service-tier.js";
 
 const chatRouter = new Hono();
 
@@ -102,20 +115,59 @@ chatRouter.post("/completions", async (c) => {
     }
   }
 
-  // Check if model exists and its deployment status
+  // Catalog status: live = callable; warming/dedicated = listed but not served yet.
+  // Do not block open-weight models with Azure-era "available_on_request".
   const modelRows = await db
-    .select({ deploymentStatus: models.deploymentStatus, displayName: models.displayName })
+    .select({
+      deploymentStatus: models.deploymentStatus,
+      displayName: models.displayName,
+      family: models.family,
+    })
     .from(models)
     .where(eq(models.modelId, body.model))
     .limit(1);
 
   const modelStatus = modelRows[0]?.deploymentStatus || null;
+  const isOpenWeight =
+    modelRows[0]?.family === "open_weight" ||
+    body.model.startsWith("custom:") ||
+    body.model.startsWith("ollama:") ||
+    body.model.includes("llama") ||
+    body.model.includes("qwen") ||
+    body.model.includes("deepseek") ||
+    body.model.includes("mistral") ||
+    body.model.includes("gemma");
 
-  if (modelStatus === "available_on_request") {
+  if (modelStatus === "warming") {
+    return c.json(
+      {
+        error: `Model '${body.model}' is warming`,
+        message: `'${modelRows[0]?.displayName || body.model}' is in the catalog and will be callable shortly. Request a GPU deployment or check back soon.`,
+        status: "warming",
+        model: body.model,
+      },
+      503
+    );
+  }
+
+  if (modelStatus === "dedicated") {
+    return c.json(
+      {
+        error: `Model '${body.model}' needs a dedicated GPU`,
+        message: `Deploy '${modelRows[0]?.displayName || body.model}' from Dashboard → Deployments (this Mac or GCP), then call custom:<deploymentId>.`,
+        status: "dedicated",
+        model: body.model,
+      },
+      400
+    );
+  }
+
+  // Legacy Azure gate only for closed models still marked available_on_request
+  if (modelStatus === "available_on_request" && !isOpenWeight) {
     return c.json(
       {
         error: `Model '${body.model}' is available upon request`,
-        message: `This model is not currently deployed. Contact your administrator to enable '${modelRows[0]?.displayName || body.model}'`,
+        message: `This closed model is not currently deployed. Contact your administrator to enable '${modelRows[0]?.displayName || body.model}'`,
         status: "available_on_request",
         model: body.model,
       },
@@ -127,7 +179,7 @@ chatRouter.post("/completions", async (c) => {
     return c.json(
       {
         error: `Model '${body.model}' is coming soon`,
-        message: `'${modelRows[0]?.displayName || body.model}' will be available shortly. Check back soon or contact your administrator for early access.`,
+        message: `'${modelRows[0]?.displayName || body.model}' will be available shortly.`,
         status: "coming_soon",
         model: body.model,
       },
@@ -137,15 +189,17 @@ chatRouter.post("/completions", async (c) => {
 
   const resolved = await resolveProvider(body.model);
   if (!resolved) {
-    return c.json({ error: `Model not found: ${body.model}` }, 404);
+    const hint =
+      body.model.startsWith("deepseek")
+        ? "DeepSeek is not configured. Set DEEPSEEK_API_KEY, or pick a local Ollama model such as llama3.2:3b."
+        : "This model is not routed on the gateway. Pick a local model or configure the provider API key.";
+    return c.json({ error: `Model not found: ${body.model}. ${hint}` }, 404);
   }
 
   // Pre-authorize affordability before provider execution.
   try {
     const promptTokensEstimate = body.messages.reduce((sum, m) => {
-      const content =
-        typeof m?.content === "string" ? m.content : JSON.stringify(m?.content ?? "");
-      return sum + estimateTokens(content);
+      return sum + estimateTokens(flattenMessageText(m?.content));
     }, 0);
     const completionEstimate =
       typeof body.max_tokens === "number" && body.max_tokens > 0 ? body.max_tokens : 1024;
@@ -174,16 +228,23 @@ chatRouter.post("/completions", async (c) => {
         | "enterprise",
       estimatedCostCents
     );
-    const credits = Number(organization.creditsUsdCents || 0);
+    const buckets = splitCreditBuckets(organization);
+    const credits = spendableCents(
+      buckets,
+      welcomeAllowedForFamily(requestFamily)
+    );
 
     if (!canUsePlan && credits < estimatedCostCents) {
       return c.json(
         {
           error: "Insufficient balance",
-          detail:
-            "Your current 4-hour plan allowance and prepaid credits cannot cover this request estimate.",
+          detail: welcomeAllowedForFamily(requestFamily)
+            ? "Prepaid credits cannot cover this request estimate."
+            : "Welcome credit is for open-weight models only. Add prepaid credit to use this model.",
           estimatedCostUsd: estimatedCost.totalCost,
-          creditsUsdCents: credits,
+          creditsUsdCents: buckets.totalCents,
+          paidCreditsUsdCents: buckets.paidCents,
+          welcomeCreditsUsdCents: buckets.welcomeCents,
           topupUrl: `${
             process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
           }/dashboard/billing`,
@@ -197,8 +258,7 @@ chatRouter.post("/completions", async (c) => {
 
   // Compute token estimates for routing
   const promptTokensEstimate = body.messages.reduce((sum, m) => {
-    const content = typeof m?.content === "string" ? m.content : JSON.stringify(m?.content ?? "");
-    return sum + estimateTokens(content);
+    return sum + estimateTokens(flattenMessageText(m?.content));
   }, 0);
   const completionEstimate =
     typeof body.max_tokens === "number" && body.max_tokens > 0 ? body.max_tokens : 1024;
@@ -211,12 +271,29 @@ chatRouter.post("/completions", async (c) => {
   const ranked = await getRankedProviders(body.model, {
     promptTokens: promptTokensEstimate,
     completionTokens: completionEstimate,
-    plan: (billingContext?.plan || organization.plan || "free") as "free" | "pro" | "enterprise",
+    plan: (billingContext?.plan || organization.plan || "free") as "free" | "pro" | "team" | "enterprise",
     family: requestFamily,
     region,
   });
 
   let chainSlugs = ranked.map((r) => r.slug);
+
+  // Prompt-cache session affinity + sticky cache key for wholesale providers
+  const cacheFp = promptCacheFingerprint(body.model, body.messages, body.user);
+  if (!body.prompt_cache_key) {
+    body.prompt_cache_key = `opd_${organization.id.slice(0, 8)}_${cacheFp}`;
+  }
+  const sticky = await lookupCacheAffinity({
+    organizationId: organization.id,
+    model: body.model,
+    fingerprint: cacheFp,
+  });
+  chainSlugs = applyAffinityToChain(chainSlugs, sticky);
+
+  const serviceTier = normalizeServiceTier(
+    body.service_tier ?? c.get("serviceTier")
+  );
+  body.service_tier = serviceTier;
 
   // Enforce data residency: filter providers by org dataResidency and model governance allowedRegions
   const allowedRegions = new Set<string>();
@@ -272,7 +349,7 @@ chatRouter.post("/completions", async (c) => {
         .from(providers)
         .where(eq(providers.slug as any, slug))
         .limit(1);
-      providerId = providerRows[0]?.id || slug;
+      providerId = providerRows[0]?.id || null;
     } catch {
       providerId = slug;
     }
@@ -293,6 +370,12 @@ chatRouter.post("/completions", async (c) => {
 
     // Provider responded successfully (time-to-first-response)
     await recordSuccess(slug, Date.now() - providerStartTime);
+    await rememberCacheAffinity({
+      organizationId: organization.id,
+      model: body.model,
+      fingerprint: cacheFp,
+      providerSlug: slug,
+    });
 
     // Success — handle streaming or non-streaming
     try {
@@ -311,7 +394,7 @@ chatRouter.post("/completions", async (c) => {
             try {
               // Estimate prompt tokens
               promptTokens = body.messages.reduce(
-                (sum, m) => sum + estimateTokens(m.content),
+                (sum, m) => sum + estimateTokens(flattenMessageText(m.content)),
                 0
               );
 
@@ -342,6 +425,7 @@ chatRouter.post("/completions", async (c) => {
                   modelId: body.model,
                   promptTokens,
                   completionTokens,
+                  cachedTokens: 0,
                   region,
                   plan: (billingContext?.plan || organization.plan || "free") as
                     | "free"
@@ -380,6 +464,9 @@ chatRouter.post("/completions", async (c) => {
                   governanceModelId: policyResult?.governance?.id,
                   businessUnit: c.get("businessUnit"),
                   clientId: c.get("clientId"),
+                  serviceTier,
+                  promptCacheKey: body.prompt_cache_key,
+                  cachedTokens: 0,
                 },
                 })
                 .returning({ id: requests.id });
@@ -481,6 +568,7 @@ chatRouter.post("/completions", async (c) => {
         const promptTokens = response.usage.prompt_tokens;
         const completionTokens = response.usage.completion_tokens;
         const totalTokens = response.usage.total_tokens;
+        const cachedTokens = Number(response.usage?.cached_tokens || 0);
 
         let costUsd = 0;
         const requestFamily = normalizeFamily(
@@ -493,6 +581,7 @@ chatRouter.post("/completions", async (c) => {
             modelId: body.model,
             promptTokens,
             completionTokens,
+            cachedTokens,
             region,
             plan: (billingContext?.plan || organization.plan || "free") as
               | "free"
@@ -531,6 +620,9 @@ chatRouter.post("/completions", async (c) => {
             governanceModelId: policyResult?.governance?.id,
             businessUnit: c.get("businessUnit"),
             clientId: c.get("clientId"),
+            serviceTier,
+            promptCacheKey: body.prompt_cache_key,
+            cachedTokens,
           },
           })
           .returning({ id: requests.id });

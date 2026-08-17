@@ -2,38 +2,49 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { modelEvaluations } from "@opendoor/database";
 import { eq, desc } from "drizzle-orm";
-import { requireAuth } from "@/lib/auth";
 import { logAuditEvent } from "@/lib/audit";
+import { orgActorId } from "@/lib/governance/actor";
+import { routeId } from "@/lib/governance/route-id";
+import { emptyOnMissingTable, governanceSession, unauthorized } from "@/lib/governance/http";
 
 export async function GET(
   _req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> },
 ) {
-  await requireAuth();
-  const db = getDb();
+  const session = await governanceSession();
+  if (!session) return unauthorized();
+  const id = await routeId(params);
 
-  const items = await db
-    .select()
-    .from(modelEvaluations)
-    .where(eq(modelEvaluations.modelGovernanceId, params.id))
-    .orderBy(desc(modelEvaluations.evaluatedAt));
+  try {
+    const db = getDb();
+    const items = await db
+      .select()
+      .from(modelEvaluations)
+      .where(eq(modelEvaluations.modelGovernanceId, id))
+      .orderBy(desc(modelEvaluations.evaluatedAt));
 
-  return NextResponse.json({ evaluations: items });
+    return NextResponse.json({ evaluations: items });
+  } catch (err) {
+    return NextResponse.json(emptyOnMissingTable({ evaluations: [] }, err));
+  }
 }
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> },
 ) {
-  const session = await requireAuth();
-  const orgId = session.orgId as string;
+  const session = await governanceSession();
+  if (!session) return unauthorized();
+  const orgId = session.orgId;
+  const id = await routeId(params);
   const body = await req.json();
+  const actorId = await orgActorId(session);
 
   const db = getDb();
   const [item] = await db
     .insert(modelEvaluations)
     .values({
-      modelGovernanceId: params.id,
+      modelGovernanceId: id,
       organizationId: orgId,
       evaluationName: body.evaluationName,
       evaluationType: body.evaluationType,
@@ -43,17 +54,17 @@ export async function POST(
       passed: body.passed,
       details: body.details,
       datasetRef: body.datasetRef,
-      evaluatedBy: session.sub as string,
+      evaluatedBy: actorId ?? undefined,
     })
     .returning();
 
   await logAuditEvent({
     organizationId: orgId,
-    userId: session.sub as string,
+    userId: actorId ?? undefined,
     action: "governance.evaluation.created",
     entityType: "model_evaluation",
     entityId: item.id,
-    metadata: { modelGovernanceId: params.id, evaluationName: body.evaluationName, passed: body.passed },
+    metadata: { modelGovernanceId: id, evaluationName: body.evaluationName, passed: body.passed },
   });
 
   return NextResponse.json({ evaluation: item });

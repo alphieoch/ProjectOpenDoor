@@ -6,6 +6,8 @@ import {
   Play, FileText, ChevronLeft, ShieldAlert, ShieldCheck, Info,
   ExternalLink, Printer, ArrowRight,
 } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
+import { loadGovernanceData } from "@/lib/governance/ensure-client";
 
 /* ── Types ── */
 interface ComplianceControl {
@@ -126,22 +128,47 @@ export default function CompliancePage() {
   const [reports, setReports]         = useState<ComplianceReport[]>([]);
   const [runningCheck, setRunningCheck] = useState(false);
   const [loadingAuto, setLoadingAuto]   = useState(false);
+  const autoLoaded = useRef(false);
 
   const reportRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => { loadControls(); loadModels(); loadRules(); loadReports(); }, []);
+  useEffect(() => {
+    (async () => {
+      const data = await loadGovernanceData(
+        async () => {
+          const [cRes, mRes] = await Promise.all([
+            fetch("/api/governance/compliance-controls"),
+            fetch("/api/governance/models?lite=1"),
+          ]);
+          return {
+            controls: await cRes.json(),
+            models: await mRes.json(),
+          };
+        },
+        {
+          isEmpty: (d) => !(d.controls.controls ?? []).length,
+          onFirst: (d) => {
+            setControls(d.controls.controls || []);
+            setModels(d.models.models || []);
+            if (d.models.models?.length) setSelected(d.models.models[0].id);
+            setLoading(false);
+          },
+        },
+      );
+      setControls(data.controls.controls || []);
+      setModels(data.models.models || []);
+      if (data.models.models?.length) setSelected(data.models.models[0].id);
+      setLoading(false);
+    })();
+  }, []);
   useEffect(() => { if (selectedModel) loadCompliance(selectedModel); }, [selectedModel]);
+  useEffect(() => {
+    if (activeTab !== "automated" || autoLoaded.current) return;
+    autoLoaded.current = true;
+    setLoadingAuto(true);
+    Promise.all([loadRules(), loadReports()]).finally(() => setLoadingAuto(false));
+  }, [activeTab]);
 
-  async function loadControls() {
-    const data = await fetch("/api/governance/compliance-controls").then((r) => r.json());
-    setControls(data.controls || []);
-  }
-  async function loadModels() {
-    const data = await fetch("/api/governance/models").then((r) => r.json());
-    setModels(data.models || []);
-    if (data.models?.length) setSelected(data.models[0].id);
-    setLoading(false);
-  }
   async function loadCompliance(id: string) {
     const data = await fetch(`/api/governance/models/${id}/compliance`).then((r) => r.json());
     setCompliance(data.compliance || []);
@@ -230,10 +257,11 @@ export default function CompliancePage() {
 
   return (
     <div>
-      <div className="mb-8">
-        <h1 className="page-title">Compliance</h1>
-        <p className="page-desc">Track model compliance against GDPR, EU AI Act, ICO UK, and NIST AI RMF.</p>
-      </div>
+      <PageHeader
+        eyebrow="Governance"
+        title="Compliance"
+        description="Map registry models to GDPR, EU AI Act, ICO UK, and NIST controls, then run an automated check. Evidence lives here; enforcement still happens on the gateway."
+      />
 
       {/* Tabs */}
       <div className="mb-6 flex gap-1 border-b" style={{ borderColor: "var(--line-soft)" }}>
@@ -363,7 +391,12 @@ export default function CompliancePage() {
       )}
 
       {/* ── Automated Tab ── */}
-      {activeTab === "automated" && (
+      {activeTab === "automated" && loadingAuto && (
+        <div className="flex h-40 items-center justify-center">
+          <Loader2 className="h-5 w-5 animate-spin" style={{ color: "var(--ink-3)" }} />
+        </div>
+      )}
+      {activeTab === "automated" && !loadingAuto && (
         <div className="space-y-6">
           {/* Model selector + Run button */}
           <div className="card p-4">

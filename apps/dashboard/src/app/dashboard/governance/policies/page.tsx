@@ -6,6 +6,8 @@ import {
   Search, Pencil, ShieldAlert, ShieldCheck, Shield,
   ChevronDown, Layers, X,
 } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
+import { loadGovernanceData } from "@/lib/governance/ensure-client";
 
 interface Policy {
   id: string;
@@ -105,7 +107,7 @@ function SourceBadge({ metadata }: { metadata: Record<string, unknown> | null })
 
 const BLANK: Partial<Policy> = {
   action: "allow", dataClass: "internal", enabled: true, priority: 100,
-  requireHumanApproval: false, modelIdPattern: "%", scope: "organization",
+  requireHumanApproval: false, modelIdPattern: "*", scope: "organization",
 };
 
 // ── Create / Edit modal ──────────────────────────────────────────────────────
@@ -138,6 +140,10 @@ function PolicyModal({
     });
     setSaving(false);
     if (res.ok) { onSaved(); onClose(); }
+    else {
+      const data = await res.json().catch(() => ({}));
+      alert(data.error || "Could not save this policy.");
+    }
   }
 
   return (
@@ -276,13 +282,23 @@ export default function PoliciesPage() {
   const [filterEnabled, setFilterEnabled] = useState("all");
 
   async function load() {
-    const res = await fetch("/api/governance/policies");
-    const data = await res.json();
+    const data = await loadGovernanceData(
+      () => fetch("/api/governance/policies").then((r) => r.json()),
+      {
+        isEmpty: (d) => !(d.policies ?? []).length,
+        onFirst: (d) => {
+          setPolicies(d.policies ?? []);
+          setLoading(false);
+        },
+      },
+    );
     setPolicies(data.policies ?? []);
     setLoading(false);
   }
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+  }, []);
 
   async function seedDefaults() {
     setSeeding(true);
@@ -340,16 +356,16 @@ export default function PoliciesPage() {
 
   return (
     <div>
-      {/* Header */}
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="page-title">Policies</h1>
-          <p className="page-desc">Define which models can access which data classes, and with what safeguards.</p>
-        </div>
-        <button onClick={() => setModalTarget(BLANK)} className="md-btn-filled shrink-0 flex items-center gap-2 px-4 py-2">
-          <Plus className="h-4 w-4" /> New policy
-        </button>
-      </div>
+      <PageHeader
+        eyebrow="Governance"
+        title="Policies"
+        description="These rules run on every /v1/chat/completions call before a provider is reached. Use * for all models, or globs like gpt-*|claude-*."
+        actions={
+          <button onClick={() => setModalTarget(BLANK)} className="md-btn-filled shrink-0 flex items-center gap-2 px-4 py-2">
+            <Plus className="h-4 w-4" /> New policy
+          </button>
+        }
+      />
 
       {/* Stats */}
       {policies.length > 0 && (
@@ -396,7 +412,7 @@ export default function PoliciesPage() {
             </button>
           </div>
           <p className="text-xs" style={{ color: "var(--ink-4)" }}>
-            Policies are also created automatically when you apply a Sector Pack.
+            Apply a Sector Pack to write a set of live gateway rules for that industry.
           </p>
         </div>
       ) : (

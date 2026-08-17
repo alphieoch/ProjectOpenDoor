@@ -4,10 +4,8 @@ import { getDb } from "@/lib/db";
 import { aiAssistants, assistantApiSecrets } from "@opendoor/database";
 import { eq, and } from "drizzle-orm";
 import { encryptSecret } from "@/lib/api-connections/crypto";
+import { assistantGatewayHeaders, assistantGatewayUrl } from "@/lib/assistant-gateway";
 import crypto from "crypto";
-
-const GATEWAY = process.env.GATEWAY_URL ?? "http://localhost:3001";
-const GATEWAY_KEY = process.env.GATEWAY_INTERNAL_KEY ?? "";
 
 async function fetchDocsContent(docsUrl: string): Promise<string> {
   const res = await fetch(docsUrl, {
@@ -20,7 +18,7 @@ async function fetchDocsContent(docsUrl: string): Promise<string> {
   return res.text();
 }
 
-async function parseDocsWithLLM(docsContent: string, baseUrl: string): Promise<{
+async function parseDocsWithLLM(docsContent: string, baseUrl: string, orgId: string): Promise<{
   endpoints: Array<{
     name: string;
     method: string;
@@ -65,12 +63,9 @@ Documentation content:
 ${docsContent.slice(0, 30000)}
 ---`;
 
-  const res = await fetch(`${GATEWAY}/v1/chat/completions`, {
+  const res = await fetch(`${assistantGatewayUrl()}/v1/chat/completions`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${GATEWAY_KEY}`,
-    },
+    headers: assistantGatewayHeaders(orgId),
     body: JSON.stringify({
       model: "gpt-4o-mini",
       messages: [
@@ -153,7 +148,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   let parsed: { endpoints: any[] };
   try {
-    parsed = await parseDocsWithLLM(docsContent, baseUrl);
+    parsed = await parseDocsWithLLM(docsContent, baseUrl, session.orgId);
   } catch (err: any) {
     return NextResponse.json({ error: `Failed to parse docs: ${err.message}` }, { status: 500 });
   }

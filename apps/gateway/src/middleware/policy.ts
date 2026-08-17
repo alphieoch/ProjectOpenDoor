@@ -1,5 +1,6 @@
 // @ts-nocheck
 import type { Context, Next } from "hono";
+import { flattenMessageText, mapMessageText } from "@opendoor/shared";
 import { checkPolicy, redactPrompt, type DataClass } from "../lib/policy-engine.js";
 
 export async function policyMiddleware(c: Context, next: Next) {
@@ -43,7 +44,10 @@ export async function policyMiddleware(c: Context, next: Next) {
     userRole: apiKey.role || "member",
     businessUnit,
     clientId,
-    prompt: body.messages?.map((m: any) => m.content).join(" ") || "",
+    prompt:
+      body.messages?.map((m: any) => flattenMessageText(m.content)).join(" ") ||
+      (typeof body.prompt === "string" ? body.prompt : "") ||
+      "",
     metadata: { headers: Object.fromEntries(c.req.raw.headers) },
   });
 
@@ -86,10 +90,13 @@ export async function policyMiddleware(c: Context, next: Next) {
   );
   if (needsRedaction && Array.isArray(body.messages)) {
     body.messages = body.messages.map((m: any) => {
-      if (typeof m?.content === "string") {
-        return { ...m, content: redactPrompt(m.content, policyResult.guardrailResults) };
-      }
-      return m;
+      if (m?.content == null) return m;
+      return {
+        ...m,
+        content: mapMessageText(m.content, (text) =>
+          redactPrompt(text, policyResult.guardrailResults)
+        ),
+      };
     });
     c.set("chatRequestBody", body);
   }

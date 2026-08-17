@@ -86,3 +86,7 @@ export async function verifySiteAdmin(): Promise<{ session: SessionPayload } | {
 export function getEffectiveOrgId(session: SessionPayload): string {
   return (session.impersonatingOrgId as string) || (session.orgId as string);
 }
+
+export function sessionActorId(session: SessionPayload): string {
+  return String(session.userId || session.sub || "");
+}

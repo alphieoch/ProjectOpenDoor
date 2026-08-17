@@ -1,0 +1,14 @@
+{
+  "projects": {
+    "default": "opendoor-f39a4"
+  },
+  "targets": {
+    "opendoor-f39a4": {
+      "hosting": {
+        "opendoor": [
+          "opendoor-f39a4"
+        ]
+      }
+    }
+  }
+}

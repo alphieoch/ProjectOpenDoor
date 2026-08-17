@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import { PageHeader } from "@/components/ui/page-header";
 import {
   GitBranch, Plus, Loader2, MoreVertical,
   Archive, Trash2, Copy, ArrowRight, Bot, Wrench,
@@ -314,17 +315,17 @@ export default function WorkflowsPage() {
 
   return (
     <div>
-      {/* Header */}
-      <div className="mb-6 flex items-start justify-between gap-4">
-        <div>
-          <h1 className="page-title">Workflows</h1>
-          <p className="page-desc">Design and manage node-based LLM pipelines with models, tools, and approvals.</p>
-        </div>
-        <button onClick={() => setShowCreate(true)}
-          className="md-btn-filled shrink-0 flex items-center gap-2 px-4 py-2">
-          <Plus className="h-4 w-4" /> New Workflow
-        </button>
-      </div>
+      <PageHeader
+        eyebrow="Build"
+        title="Workflows"
+        description="Design and manage node-based LLM pipelines with models, tools, and approvals."
+        actions={
+          <button onClick={() => setShowCreate(true)}
+            className="md-btn-filled shrink-0 flex items-center gap-2 px-4 py-2">
+            <Plus className="h-4 w-4" /> New Workflow
+          </button>
+        }
+      />
 
       {/* Stats */}
       {workflows.length > 0 && (

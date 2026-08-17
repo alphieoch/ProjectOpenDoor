@@ -15,6 +15,7 @@ const nextConfig = {
       },
     ],
   },
+  transpilePackages: ["@opendoor/database", "@opendoor/shared"],
   serverExternalPackages: ["postgres", "@duckdb/node-api"],
   typescript: {
     ignoreBuildErrors: true,
@@ -23,10 +24,16 @@ const nextConfig = {
     ignoreDuringBuilds: true,
   },
   skipTrailingSlashRedirect: true,
+  outputFileTracingIncludes: {
+    "/docs/[[...slug]]": ["../../docs/**/*", "../../docs.json"],
+  },
   webpack: (config, { isServer }) => {
     if (isServer) {
       config.externals.push(/^@duckdb\//);
     }
+    config.resolve.extensionAlias = {
+      ".js": [".ts", ".tsx", ".js"],
+    };
     return config;
   },
   async rewrites() {

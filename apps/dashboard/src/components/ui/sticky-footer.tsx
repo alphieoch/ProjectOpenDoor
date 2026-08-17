@@ -6,6 +6,7 @@ import { DIcons } from "dicons";
 import { useTheme } from "next-themes";
 import { DoorOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { docsHref } from "@/lib/public-urls";
 import { motion, useReducedMotion } from "framer-motion";
 
 /* ── Theme toggle + scroll-to-top pill ── */
@@ -181,10 +182,10 @@ const footerLinkGroups = [
   {
     label: "Product",
     links: [
-      { title: "Platform", href: "/#platform" },
-      { title: "How it works", href: "/#workflow" },
-      { title: "Security", href: "/#security" },
-      { title: "Pricing", href: "/dashboard/pricing" },
+      { title: "Platform", href: "/platform" },
+      { title: "How it works", href: "/how-it-works" },
+      { title: "Security", href: "/security" },
+      { title: "Pricing", href: "/pricing" },
       { title: "Playground", href: "/dashboard/playground" },
     ],
   },
@@ -195,6 +196,7 @@ const footerLinkGroups = [
       { title: "API keys", href: "/dashboard/api-keys" },
       { title: "Usage", href: "/dashboard/usage" },
       { title: "System status", href: "/status" },
+      { title: "Docs", href: docsHref("/") },
     ],
   },
   {
@@ -218,6 +220,8 @@ const footerLinkGroups = [
       { title: "Sign in", href: "/login" },
       { title: "Create account", href: "/signup" },
       { title: "Status", href: "/status" },
+      { title: "Terms", href: "/terms" },
+      { title: "Privacy", href: "/privacy" },
     ],
   },
 ];

@@ -300,6 +300,7 @@ export class AzureFoundryProvider implements ProviderAdapter {
       if (request.tool_choice) body.tool_choice = request.tool_choice;
     }
     if (request.user) body.user = request.user;
+    if (request.response_format) body.response_format = request.response_format;
 
     // Azure AI Inference API requires model in body; Azure OpenAI ignores it
     body.model = request.model;

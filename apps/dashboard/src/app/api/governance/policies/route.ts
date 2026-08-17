@@ -1,28 +1,35 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { modelPolicies } from "@opendoor/database";
-import { eq, and, desc } from "drizzle-orm";
-import { requireAuth } from "@/lib/auth";
+import { eq, desc } from "drizzle-orm";
 import { logAuditEvent } from "@/lib/audit";
+import { orgActorId } from "@/lib/governance/actor";
+import { emptyOnMissingTable, governanceSession, unauthorized } from "@/lib/governance/http";
 
 export async function GET() {
-  const session = await requireAuth();
-  const orgId = session.orgId as string;
+  const session = await governanceSession();
+  if (!session) return unauthorized();
 
-  const db = getDb();
-  const items = await db
-    .select()
-    .from(modelPolicies)
-    .where(eq(modelPolicies.organizationId, orgId))
-    .orderBy(desc(modelPolicies.priority), desc(modelPolicies.createdAt));
+  try {
+    const db = getDb();
+    const items = await db
+      .select()
+      .from(modelPolicies)
+      .where(eq(modelPolicies.organizationId, session.orgId))
+      .orderBy(desc(modelPolicies.priority), desc(modelPolicies.createdAt));
 
-  return NextResponse.json({ policies: items });
+    return NextResponse.json({ policies: items });
+  } catch (err) {
+    return NextResponse.json(emptyOnMissingTable({ policies: [] }, err));
+  }
 }
 
 export async function POST(req: NextRequest) {
-  const session = await requireAuth();
-  const orgId = session.orgId as string;
+  const session = await governanceSession();
+  if (!session) return unauthorized();
+  const orgId = session.orgId;
   const body = await req.json();
+  const actorId = await orgActorId(session);
 
   const db = getDb();
   const [item] = await db
@@ -40,13 +47,14 @@ export async function POST(req: NextRequest) {
       requireHumanApproval: body.requireHumanApproval || false,
       priority: body.priority || 100,
       enabled: body.enabled !== false,
+      scope: body.scope || "organization",
       metadata: body.metadata,
     })
     .returning();
 
   await logAuditEvent({
     organizationId: orgId,
-    userId: session.sub as string,
+    userId: actorId ?? undefined,
     action: "governance.policy.created",
     entityType: "model_policy",
     entityId: item.id,

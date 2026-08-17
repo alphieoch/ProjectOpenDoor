@@ -5,6 +5,8 @@ import {
   CheckCircle2, XCircle, Loader2, Clock, Search,
   Shield, ShieldCheck, AlertTriangle, Cpu, RefreshCw,
 } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
+import { loadGovernanceData } from "@/lib/governance/ensure-client";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -421,6 +423,7 @@ export default function ApprovalsPage() {
   const [approvals, setApprovals] = useState<Approval[]>([]);
   const [models, setModels] = useState<GovernanceModel[]>([]);
   const [loading, setLoading] = useState(true);
+  const [modelsReady, setModelsReady] = useState(false);
   const [tab, setTab] = useState<Tab>("queue");
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterRisk, setFilterRisk] = useState("all");
@@ -428,18 +431,44 @@ export default function ApprovalsPage() {
   const [reviewNotes, setReviewNotes] = useState<Record<string, string>>({});
   const [requesting, setRequesting] = useState<string | null>(null);
 
-  async function load() {
-    const [aRes, mRes] = await Promise.all([
-      fetch("/api/governance/approvals"),
-      fetch("/api/governance/models"),
-    ]);
-    const [aData, mData] = await Promise.all([aRes.json(), mRes.json()]);
-    setApprovals(aData.approvals ?? []);
-    setModels(mData.models ?? []);
+  async function loadApprovals() {
+    const data = await loadGovernanceData(
+      () => fetch("/api/governance/approvals").then((r) => r.json()),
+      {
+        isEmpty: (d) => !(d.approvals ?? []).length,
+        onFirst: (d) => {
+          setApprovals(d.approvals ?? []);
+          setLoading(false);
+        },
+      },
+    );
+    setApprovals(data.approvals ?? []);
     setLoading(false);
   }
 
-  useEffect(() => { load(); }, []);
+  async function loadModels() {
+    if (modelsReady) return;
+    const data = await fetch("/api/governance/models?lite=1").then((r) => r.json());
+    setModels(data.models ?? []);
+    setModelsReady(true);
+  }
+
+  useEffect(() => {
+    loadApprovals();
+  }, []);
+
+  useEffect(() => {
+    if (tab === "request") loadModels();
+  }, [tab]);
+
+  async function load() {
+    await loadApprovals();
+    if (tab === "request" || modelsReady) {
+      const data = await fetch("/api/governance/models?lite=1").then((r) => r.json());
+      setModels(data.models ?? []);
+      setModelsReady(true);
+    }
+  }
 
   async function reviewApproval(id: string, status: string) {
     await fetch(`/api/governance/approvals/${id}`, {
@@ -500,21 +529,20 @@ export default function ApprovalsPage() {
     { id: "request", label: "Request Access" },
   ];
 
-  if (loading) {
-    return (
-      <div className="flex h-64 items-center justify-center">
-        <Loader2 className="h-5 w-5 animate-spin" style={{ color: "var(--ink-3)" }} />
-      </div>
-    );
-  }
-
   return (
     <div>
-      {/* Header */}
-      <div className="mb-6">
-        <h1 className="page-title">Approvals</h1>
-        <p className="page-desc">Request access to LLMs for your organisation, and review pending approval requests.</p>
-      </div>
+      <PageHeader
+        eyebrow="Governance"
+        title="Approvals"
+        description="A pending model is held at the gateway — the API returns 403 until someone here approves it. This is the human gate, not a separate workflow engine."
+      />
+
+      {loading ? (
+        <div className="flex h-48 items-center justify-center">
+          <Loader2 className="h-5 w-5 animate-spin" style={{ color: "var(--ink-3)" }} />
+        </div>
+      ) : (
+        <>
 
       {/* Stats */}
       <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -644,7 +672,11 @@ export default function ApprovalsPage() {
           </div>
 
           {/* Model catalogue */}
-          {models.length === 0 ? (
+          {!modelsReady ? (
+            <div className="flex h-40 items-center justify-center">
+              <Loader2 className="h-5 w-5 animate-spin" style={{ color: "var(--ink-3)" }} />
+            </div>
+          ) : models.length === 0 ? (
             <div className="card flex flex-col items-center justify-center gap-4 py-16 text-center">
               <AlertTriangle className="h-8 w-8" style={{ color: "var(--ink-4)" }} />
               <div>
@@ -673,6 +705,8 @@ export default function ApprovalsPage() {
             </div>
           )}
         </div>
+      )}
+        </>
       )}
     </div>
   );

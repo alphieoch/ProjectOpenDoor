@@ -8,18 +8,6 @@ const PLATFORM_FEE_PERCENT = 15; // 15%
 const STRIPE_PERCENT = 0.015; // 1.5%
 const STRIPE_FIXED_PENCE = 20; // £0.20
 
-/* Fallback pricing when DB is not seeded (costs in USD per 1K tokens) */
-const FALLBACK_PRICING: Record<string, { inputCostPer1K: number; outputCostPer1K: number }> = {
-  "gpt-4o":                    { inputCostPer1K: 0.005,   outputCostPer1K: 0.015 },
-  "gpt-4o-mini":               { inputCostPer1K: 0.00015, outputCostPer1K: 0.0006 },
-  "claude-3-5-sonnet-20241022":{ inputCostPer1K: 0.003,   outputCostPer1K: 0.015 },
-  "claude-3-haiku-20240307":   { inputCostPer1K: 0.00025, outputCostPer1K: 0.00125 },
-  "gemini-1.5-pro":            { inputCostPer1K: 0.0035,  outputCostPer1K: 0.0105 },
-  "gemini-1.5-flash":          { inputCostPer1K: 0.00035, outputCostPer1K: 0.00105 },
-  "mistral-large-latest":      { inputCostPer1K: 0.002,   outputCostPer1K: 0.006 },
-  "command-r-plus":            { inputCostPer1K: 0.003,   outputCostPer1K: 0.015 },
-};
-
 /* Rough estimate: ~600 input tokens (system prompt + context + user) + ~400 output tokens per message */
 const EST_INPUT_TOKENS_PER_MSG = 600;
 const EST_OUTPUT_TOKENS_PER_MSG = 400;
@@ -50,7 +38,7 @@ async function getModelPricing(modelId: string) {
     };
   }
 
-  return FALLBACK_PRICING[modelId] ?? null;
+  return null;
 }
 
 function estimateAiCostCents(modelId: string, maxMessages: number, pricing: { inputCostPer1K: number; outputCostPer1K: number } | null): number {
@@ -101,7 +89,7 @@ export async function POST(req: NextRequest) {
   }
 
   const earningsCents = typeof body.earningsCents === "number" ? body.earningsCents : 0;
-  const modelId = body.modelId || "gpt-4o";
+  const modelId = body.modelId || "";
   const maxMessages = typeof body.maxMessages === "number" ? body.maxMessages : 100;
   const usageMode = body.usageMode || "included";
 
@@ -115,5 +103,5 @@ export async function POST(req: NextRequest) {
   const aiCostCents = estimateAiCostCents(modelId, maxMessages, pricing);
   const result = calculatePricing(earningsCents, aiCostCents);
 
-  return NextResponse.json({ ...result, usageMode });
+  return NextResponse.json({ ...result, usageMode, pricingFound: Boolean(pricing) });
 }

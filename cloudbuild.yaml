@@ -1,0 +1,137 @@
+# Cloud Build — build & deploy OpenDoor to Cloud Run (Firebase Hosting via firebase deploy)
+substitutions:
+  _REGION: us-central1
+  _REPO: opendoor
+  _SITE_ID: opendoor-gcp
+  _SQL_INSTANCE: opendoor-pg
+  _VPC_CONNECTOR: opendoor-connector
+  _TAG: latest
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+  machineType: E2_HIGHCPU_8
+
+steps:
+  - id: build-dashboard
+    name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - -f
+      - apps/dashboard/Dockerfile
+      - --build-arg
+      - NEXT_PUBLIC_APP_URL=https://${_SITE_ID}.web.app
+      - --build-arg
+      - NEXT_PUBLIC_GATEWAY_URL=https://${_SITE_ID}.web.app
+      - -t
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/dashboard:${_TAG}
+      - -t
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/dashboard:latest
+      - .
+
+  - id: build-gateway
+    name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - -f
+      - apps/gateway/Dockerfile
+      - -t
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/gateway:${_TAG}
+      - -t
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/gateway:latest
+      - .
+
+  - id: push-dashboard
+    name: gcr.io/cloud-builders/docker
+    args:
+      - push
+      - --all-tags
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/dashboard
+    waitFor: [build-dashboard]
+
+  - id: push-gateway
+    name: gcr.io/cloud-builders/docker
+    args:
+      - push
+      - --all-tags
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/gateway
+    waitFor: [build-gateway]
+
+  - id: deploy-gateway
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        set -euo pipefail
+        CONN=$$(gcloud sql instances describe ${_SQL_INSTANCE} --format='value(connectionName)')
+        VPC=projects/$PROJECT_ID/locations/${_REGION}/connectors/${_VPC_CONNECTOR}
+        SECRETS=DATABASE_URL=opendoor-database-url:latest,REDIS_URL=opendoor-redis-url:latest,AUTH_SECRET=opendoor-auth-secret:latest,GATEWAY_API_KEY_HASH_SECRET=opendoor-gateway-hash-secret:latest,DB_PASSWORD=opendoor-db-password:latest
+        if gcloud secrets describe opendoor-together-api-key >/dev/null 2>&1; then
+          SECRETS="$${SECRETS},TOGETHER_API_KEY=opendoor-together-api-key:latest"
+        fi
+        if gcloud secrets describe opendoor-stripe-secret-key >/dev/null 2>&1; then
+          SECRETS="$${SECRETS},STRIPE_SECRET_KEY=opendoor-stripe-secret-key:latest"
+        fi
+        if gcloud secrets describe opendoor-workos-api-key >/dev/null 2>&1; then
+          SECRETS="$${SECRETS},WORKOS_API_KEY=opendoor-workos-api-key:latest,WORKOS_CLIENT_ID=opendoor-workos-client-id:latest,WORKOS_COOKIE_PASSWORD=opendoor-workos-cookie-password:latest"
+        fi
+        gcloud run deploy opendoor-gateway \
+          --image=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/gateway:${_TAG} \
+          --region=${_REGION} \
+          --platform=managed \
+          --allow-unauthenticated \
+          --port=3001 \
+          --memory=1Gi \
+          --cpu=1 \
+          --min-instances=1 \
+          --max-instances=20 \
+          --timeout=300 \
+          --add-cloudsql-instances=$$CONN \
+          --vpc-connector=$$VPC \
+          --vpc-egress=private-ranges-only \
+          --set-env-vars=NODE_ENV=production,GCP_PROJECT_ID=$PROJECT_ID,GCP_REGION=${_REGION},GATEWAY_PORT=3001,INSTANCE_CONNECTION_NAME=$$CONN,DB_NAME=opendoor,DB_USER=opendoor \
+          --set-secrets=$$SECRETS
+    waitFor: [push-gateway]
+
+  - id: deploy-dashboard
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        set -euo pipefail
+        CONN=$$(gcloud sql instances describe ${_SQL_INSTANCE} --format='value(connectionName)')
+        VPC=projects/$PROJECT_ID/locations/${_REGION}/connectors/${_VPC_CONNECTOR}
+        SECRETS=DATABASE_URL=opendoor-database-url:latest,REDIS_URL=opendoor-redis-url:latest,AUTH_SECRET=opendoor-auth-secret:latest,GATEWAY_API_KEY_HASH_SECRET=opendoor-gateway-hash-secret:latest,DB_PASSWORD=opendoor-db-password:latest
+        if gcloud secrets describe opendoor-together-api-key >/dev/null 2>&1; then
+          SECRETS="$${SECRETS},TOGETHER_API_KEY=opendoor-together-api-key:latest"
+        fi
+        if gcloud secrets describe opendoor-stripe-secret-key >/dev/null 2>&1; then
+          SECRETS="$${SECRETS},STRIPE_SECRET_KEY=opendoor-stripe-secret-key:latest"
+        fi
+        if gcloud secrets describe opendoor-workos-api-key >/dev/null 2>&1; then
+          SECRETS="$${SECRETS},WORKOS_API_KEY=opendoor-workos-api-key:latest,WORKOS_CLIENT_ID=opendoor-workos-client-id:latest,WORKOS_COOKIE_PASSWORD=opendoor-workos-cookie-password:latest"
+        fi
+        gcloud run deploy opendoor-dashboard \
+          --image=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/dashboard:${_TAG} \
+          --region=${_REGION} \
+          --platform=managed \
+          --allow-unauthenticated \
+          --port=3000 \
+          --memory=1Gi \
+          --cpu=1 \
+          --min-instances=0 \
+          --max-instances=20 \
+          --timeout=300 \
+          --add-cloudsql-instances=$$CONN \
+          --vpc-connector=$$VPC \
+          --vpc-egress=private-ranges-only \
+          --set-env-vars=NODE_ENV=production,GCP_PROJECT_ID=$PROJECT_ID,GCP_REGION=${_REGION},NEXT_PUBLIC_APP_URL=https://${_SITE_ID}.web.app,NEXT_PUBLIC_GATEWAY_URL=https://${_SITE_ID}.web.app,HOSTNAME=0.0.0.0,INSTANCE_CONNECTION_NAME=$$CONN,DB_NAME=opendoor,DB_USER=opendoor \
+          --set-secrets=$$SECRETS
+    waitFor: [push-dashboard]
+
+images:
+  - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/dashboard:${_TAG}
+  - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/gateway:${_TAG}
+
+timeout: 1800s

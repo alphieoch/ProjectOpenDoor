@@ -1,6 +1,6 @@
 ---
 title: "Run locally"
-description: "Start the gateway and dashboard, preview docs.page, and make a real chat call."
+description: "Start the gateway and dashboard, open /docs, and make a real chat call."
 ---
 
 # Run locally
@@ -14,11 +14,8 @@ bun --filter @opendoor/gateway dev
 # Terminal 2 — dashboard
 bun --filter @opendoor/dashboard dev
 
-# Terminal 3 — these docs (optional)
-bun run docs:dev
+# Docs are at http://localhost:3010/docs while the dashboard is running
 ```
-
-`docs:dev` runs [`@docs.page/cli preview`](https://use.docs.page/features/local-preview). It opens a preview URL on docs.page that streams this repo’s `docs/` over a local WebSocket. After you push to the public GitHub repo, anyone can read [docs.page/alphieoch/ProjectOpenDoor](https://docs.page/alphieoch/ProjectOpenDoor) without running a docs container.
 
 ## Access points
 
@@ -29,7 +26,7 @@ bun run docs:dev
 | Gateway health | http://localhost:3001/health | Probe |
 | Gateway status | http://localhost:3001/status | Postgres, Redis, providers |
 | Site status | http://localhost:3010/status | Same checks in the UI |
-| Docs (published) | https://docs.page/alphieoch/ProjectOpenDoor | This site |
+| Docs | http://localhost:3010/docs | Guides and API reference |
 
 ## First call
 

@@ -15,7 +15,10 @@ import {
   ResponsiveContainer,
   Legend,
 } from "recharts";
+import Link from "next/link";
 import { formatCurrency, formatNumber } from "@/lib/utils";
+import { PageHeader } from "@/components/ui/page-header";
+import { MetricCard } from "@/components/ui/metric-card";
 
 interface DailyUsage {
   date: string;
@@ -201,66 +204,64 @@ export default function UsagePage() {
 
   return (
     <div>
-      {/* Header */}
-      <div className="mb-6 flex items-start justify-between">
-        <div>
-          <h1 className="page-title">Usage</h1>
-          <p className="page-desc">Track your LLM consumption and costs</p>
-        </div>
-        <select
-          value={days}
-          onChange={(e) => setDays(Number(e.target.value))}
-          className="input w-auto"
-          aria-label="Select time range"
-        >
-          <option value={7}>Last 7 days</option>
-          <option value={30}>Last 30 days</option>
-          <option value={90}>Last 90 days</option>
-        </select>
-      </div>
+      <PageHeader
+        eyebrow="Observability"
+        title="Usage explorer"
+        description="Request volume, tokens, and spend across this billing window."
+        actions={
+          <>
+            <Link href="/dashboard/logs" className="btn-secondary">
+              Request logs
+            </Link>
+            <select
+              value={days}
+              onChange={(e) => setDays(Number(e.target.value))}
+              className="input w-auto"
+              aria-label="Select time range"
+            >
+              <option value={7}>Last 7 days</option>
+              <option value={30}>Last 30 days</option>
+              <option value={90}>Last 90 days</option>
+            </select>
+          </>
+        }
+      />
 
-      {/* Stat cards */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-        <StatCard label="Total Requests" value={formatNumber(totals.requests)} />
-        <StatCard
-          label="Prompt Tokens"
-          value={formatNumber(totals.promptTokens)}
-          sub="input"
-          accent="var(--blue)"
+      <div className="od-metric-grid" style={{ marginBottom: 22, gridTemplateColumns: "repeat(3, minmax(0, 1fr))" }}>
+        <MetricCard
+          label="Requests"
+          value={formatNumber(totals.requests)}
+          series={daily.map((d) => d.requests)}
         />
-        <StatCard
-          label="Completion Tokens"
-          value={formatNumber(totals.completionTokens)}
-          sub="output"
-          accent="var(--green)"
+        <MetricCard
+          label="Total cost"
+          value={formatCurrency(totals.cost)}
+          series={daily.map((d) => d.costUsd)}
+          featured
         />
-        <StatCard label="Total Cost" value={formatCurrency(totals.cost)} />
-        <StatCard label="p50 Latency" value={p50} sub="median response" />
+        <MetricCard
+          label="p50 latency"
+          value={p50}
+        />
+      </div>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3" style={{ marginBottom: 8 }}>
+        <StatCard label="Prompt tokens" value={formatNumber(totals.promptTokens)} sub="input" accent="var(--blue)" />
+        <StatCard label="Completion tokens" value={formatNumber(totals.completionTokens)} sub="output" accent="var(--green)" />
         <StatCard
-          label="Error Rate"
+          label="Error rate"
           value={errorRate}
           accent={totals.hasStatus && totals.errors > 0 ? "var(--red)" : undefined}
         />
       </div>
 
-      {/* Tabs */}
       <div className="mt-6">
-        <div
-          className="flex gap-1 border-b"
-          style={{ borderColor: "var(--line-soft)" }}
-        >
+        <div className="od-seg mb-5">
           {tabs.map((t) => (
             <button
               key={t.id}
+              type="button"
+              data-active={tab === t.id}
               onClick={() => setTab(t.id)}
-              className="px-4 py-2 text-sm font-medium transition-colors"
-              style={{
-                color: tab === t.id ? "var(--ink)" : "var(--ink-4)",
-                borderBottom: tab === t.id ? "2px solid var(--ink)" : "2px solid transparent",
-                marginBottom: "-1px",
-                background: "transparent",
-                cursor: "pointer",
-              }}
             >
               {t.label}
             </button>

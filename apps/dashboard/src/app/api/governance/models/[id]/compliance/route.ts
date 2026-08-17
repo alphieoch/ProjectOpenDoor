@@ -2,54 +2,64 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { modelComplianceMappings, complianceControls } from "@opendoor/database";
 import { eq, and } from "drizzle-orm";
-import { requireAuth } from "@/lib/auth";
 import { logAuditEvent } from "@/lib/audit";
+import { orgActorId } from "@/lib/governance/actor";
+import { routeId } from "@/lib/governance/route-id";
+import { emptyOnMissingTable, governanceSession, unauthorized } from "@/lib/governance/http";
 
 export async function GET(
   _req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> },
 ) {
-  await requireAuth();
-  const db = getDb();
+  const session = await governanceSession();
+  if (!session) return unauthorized();
+  const id = await routeId(params);
 
-  const items = await db
-    .select({
-      mappingId: modelComplianceMappings.id,
-      controlId: complianceControls.id,
-      framework: complianceControls.framework,
-      controlCode: complianceControls.controlCode,
-      controlName: complianceControls.controlName,
-      requirementLevel: complianceControls.requirementLevel,
-      status: modelComplianceMappings.status,
-      evidence: modelComplianceMappings.evidence,
-      assessedAt: modelComplianceMappings.assessedAt,
-    })
-    .from(modelComplianceMappings)
-    .innerJoin(complianceControls, eq(modelComplianceMappings.controlId, complianceControls.id))
-    .where(eq(modelComplianceMappings.modelGovernanceId, params.id));
+  try {
+    const db = getDb();
+    const items = await db
+      .select({
+        mappingId: modelComplianceMappings.id,
+        controlId: complianceControls.id,
+        framework: complianceControls.framework,
+        controlCode: complianceControls.controlCode,
+        controlName: complianceControls.controlName,
+        requirementLevel: complianceControls.requirementLevel,
+        status: modelComplianceMappings.status,
+        evidence: modelComplianceMappings.evidence,
+        assessedAt: modelComplianceMappings.assessedAt,
+      })
+      .from(modelComplianceMappings)
+      .innerJoin(complianceControls, eq(modelComplianceMappings.controlId, complianceControls.id))
+      .where(eq(modelComplianceMappings.modelGovernanceId, id));
 
-  return NextResponse.json({ compliance: items });
+    return NextResponse.json({ compliance: items });
+  } catch (err) {
+    return NextResponse.json(emptyOnMissingTable({ compliance: [] }, err));
+  }
 }
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> },
 ) {
-  const session = await requireAuth();
-  const orgId = session.orgId as string;
+  const session = await governanceSession();
+  if (!session) return unauthorized();
+  const orgId = session.orgId;
+  const id = await routeId(params);
   const body = await req.json();
+  const actorId = await orgActorId(session);
 
   const db = getDb();
 
-  // Upsert: check for existing mapping first
   const existing = await db
     .select({ id: modelComplianceMappings.id })
     .from(modelComplianceMappings)
     .where(
       and(
-        eq(modelComplianceMappings.modelGovernanceId, params.id),
-        eq(modelComplianceMappings.controlId, body.controlId)
-      )
+        eq(modelComplianceMappings.modelGovernanceId, id),
+        eq(modelComplianceMappings.controlId, body.controlId),
+      ),
     )
     .limit(1);
 
@@ -60,8 +70,9 @@ export async function POST(
       .set({
         status: body.status || "not_assessed",
         evidence: body.evidence,
-        assessedBy: session.sub as string,
+        assessedBy: actorId ?? undefined,
         assessedAt: new Date(),
+        updatedAt: new Date(),
       })
       .where(eq(modelComplianceMappings.id, existing[0].id))
       .returning();
@@ -70,11 +81,11 @@ export async function POST(
     const [inserted] = await db
       .insert(modelComplianceMappings)
       .values({
-        modelGovernanceId: params.id,
+        modelGovernanceId: id,
         controlId: body.controlId,
         status: body.status || "not_assessed",
         evidence: body.evidence,
-        assessedBy: session.sub as string,
+        assessedBy: actorId ?? undefined,
         assessedAt: new Date(),
       })
       .returning();
@@ -83,11 +94,11 @@ export async function POST(
 
   await logAuditEvent({
     organizationId: orgId,
-    userId: session.sub as string,
+    userId: actorId ?? undefined,
     action: "governance.compliance.updated",
     entityType: "model_compliance_mapping",
     entityId: item.id,
-    metadata: { modelGovernanceId: params.id, controlId: body.controlId, status: body.status },
+    metadata: { modelGovernanceId: id, controlId: body.controlId, status: body.status },
   });
 
   return NextResponse.json({ mapping: item });

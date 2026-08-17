@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { Key, Copy, Trash2, Check, Shield, ShieldCheck } from "lucide-react";
 import posthog from "posthog-js";
+import { PageHeader } from "@/components/ui/page-header";
 
 interface ApiKeyItem {
   id: string;
@@ -13,28 +15,7 @@ interface ApiKeyItem {
   allowedModels: string[] | null;
 }
 
-const ALL_MODELS = [
-  { id: "gpt-4o", name: "GPT-4o", provider: "OpenAI" },
-  { id: "gpt-4o-mini", name: "GPT-4o Mini", provider: "OpenAI" },
-  { id: "gpt-4-turbo", name: "GPT-4 Turbo", provider: "OpenAI" },
-  { id: "gpt-4", name: "GPT-4", provider: "OpenAI" },
-  { id: "gpt-3.5-turbo", name: "GPT-3.5 Turbo", provider: "OpenAI" },
-  { id: "claude-3-5-sonnet-20241022", name: "Claude 3.5 Sonnet", provider: "Anthropic" },
-  { id: "claude-3-opus-20240229", name: "Claude 3 Opus", provider: "Anthropic" },
-  { id: "claude-3-haiku-20240307", name: "Claude 3 Haiku", provider: "Anthropic" },
-  { id: "gemini-1.5-pro", name: "Gemini 1.5 Pro", provider: "Google" },
-  { id: "gemini-1.5-flash", name: "Gemini 1.5 Flash", provider: "Google" },
-  { id: "command-r-plus", name: "Command R+", provider: "Cohere" },
-  { id: "command-r", name: "Command R", provider: "Cohere" },
-  { id: "mistral-large-latest", name: "Mistral Large", provider: "Mistral" },
-  { id: "mistral-medium-latest", name: "Mistral Medium", provider: "Mistral" },
-  { id: "mistral-small-latest", name: "Mistral Small", provider: "Mistral" },
-  { id: "deepseek-chat", name: "DeepSeek Chat", provider: "DeepSeek" },
-  { id: "deepseek-coder", name: "DeepSeek Coder", provider: "DeepSeek" },
-  { id: "qwen-max", name: "Qwen Max", provider: "Qwen" },
-  { id: "qwen-plus", name: "Qwen Plus", provider: "Qwen" },
-  { id: "qwen-turbo", name: "Qwen Turbo", provider: "Qwen" },
-];
+type CatalogOption = { id: string; name: string; provider: string };
 
 export default function ApiKeysPage() {
   const [keys, setKeys] = useState<ApiKeyItem[]>([]);
@@ -44,6 +25,7 @@ export default function ApiKeysPage() {
   const [loading, setLoading] = useState(false);
   const [fullAccess, setFullAccess] = useState(true);
   const [selectedModels, setSelectedModels] = useState<string[]>([]);
+  const [catalog, setCatalog] = useState<CatalogOption[]>([]);
 
   async function fetchKeys() {
     const res = await fetch("/api/keys");
@@ -53,7 +35,21 @@ export default function ApiKeysPage() {
     }
   }
 
-  useEffect(() => { fetchKeys(); }, []);
+  useEffect(() => {
+    fetchKeys();
+    fetch("/api/models/available", { credentials: "include" })
+      .then((r) => (r.ok ? r.json() : { models: [] }))
+      .then((data) => {
+        setCatalog(
+          (data.models || []).map((m: { id: string; label: string; provider: string }) => ({
+            id: m.id,
+            name: m.label,
+            provider: m.provider,
+          }))
+        );
+      })
+      .catch(() => {});
+  }, []);
 
   async function createKey(e: React.FormEvent) {
     e.preventDefault();
@@ -67,6 +63,7 @@ export default function ApiKeysPage() {
     if (res.ok) {
       const data = await res.json();
       setNewKeyValue(data.key);
+      if (data.key) localStorage.setItem("od_playground_api_key", data.key);
       setNewKeyName("");
       setSelectedModels([]);
       setFullAccess(true);
@@ -98,12 +95,11 @@ export default function ApiKeysPage() {
 
   return (
     <div>
-      <div className="mb-8">
-        <h1 className="page-title">API Keys</h1>
-        <p className="page-desc">
-          Manage API keys for the OpenDoor gateway. Each key can have full access or be restricted to specific models.
-        </p>
-      </div>
+      <PageHeader
+        eyebrow="Access"
+        title="API Keys"
+        description="Manage API keys for the OpenDoor gateway. Each key can have full access or be restricted to specific models."
+      />
 
       {newKeyValue && (
         <div className="mb-6 alert-success flex items-start justify-between gap-4">
@@ -111,8 +107,11 @@ export default function ApiKeysPage() {
             <p className="font-medium">New API key created</p>
             <p className="mt-1 font-mono text-sm">{newKeyValue}</p>
             <p className="mt-1.5 text-xs" style={{ opacity: 0.9 }}>
-              Copy this key now — you won&apos;t be able to see it again.
+              Copy this key now — you won&apos;t be able to see it again. It is also stored for this browser&apos;s playground.
             </p>
+            <Link href="/dashboard/playground" className="mt-2 inline-block text-xs font-medium underline">
+              Open playground with this key
+            </Link>
           </div>
           <button
             onClick={copyKey}
@@ -183,7 +182,12 @@ export default function ApiKeysPage() {
                   Select which models this key can access:
                 </p>
                 <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
-                  {ALL_MODELS.map((m) => (
+                  {catalog.length === 0 && (
+                    <p className="col-span-2 text-xs" style={{ color: "var(--ink-4)" }}>
+                      No catalog models yet. Seed the database or ingest open models.
+                    </p>
+                  )}
+                  {catalog.map((m) => (
                     <label
                       key={m.id}
                       className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 hover:bg-[var(--paper-3)]"

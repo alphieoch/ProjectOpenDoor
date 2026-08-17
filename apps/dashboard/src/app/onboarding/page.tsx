@@ -118,7 +118,7 @@ export default async function OnboardingPage() {
                 title="Workspace created"
                 description={`${org?.name || "Your organization"} is on the ${
                   org?.plan || "free"
-                } plan with starter credits applied.`}
+                } plan. Top up $20 or more to get $5 of open-weight credit.`}
                 href="/dashboard/settings"
                 cta="Review settings"
               />

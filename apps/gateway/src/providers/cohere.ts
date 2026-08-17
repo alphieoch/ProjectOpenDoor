@@ -4,9 +4,13 @@ import type {
   ChatCompletionResponse,
   ChatCompletionChunk,
   ModelInfo,
+  RerankRequest,
+  RerankResult,
 } from "@opendoor/shared";
+import { flattenMessageText } from "@opendoor/shared";
 import type { ProviderAdapter } from "./base.js";
 import { generateId } from "./base.js";
+import { documentText } from "./content.js";
 
 export class CohereProvider implements ProviderAdapter {
   name = "Cohere";
@@ -15,8 +19,14 @@ export class CohereProvider implements ProviderAdapter {
 
   constructor() {
     const apiKey = process.env.COHERE_API_KEY;
-    if (!apiKey) throw new Error("COHERE_API_KEY not set");
-    this.client = new CohereClient({ token: apiKey });
+    this.client = apiKey ? new CohereClient({ token: apiKey }) : (null as any);
+  }
+
+  private requireClient() {
+    if (!this.client) {
+      throw new Error("Rerank requires COHERE_API_KEY");
+    }
+    return this.client;
   }
 
   async chatCompletion(
@@ -24,10 +34,10 @@ export class CohereProvider implements ProviderAdapter {
   ): Promise<ChatCompletionResponse> {
     const messages = request.messages.map((m) => ({
       role: m.role === "assistant" ? "CHATBOT" : "USER",
-      message: m.content,
+      message: flattenMessageText(m.content),
     }));
 
-    const response = await this.client.chat({
+    const response = await this.requireClient().chat({
       model: request.model,
       message: messages[messages.length - 1].message,
       chatHistory: messages.slice(0, -1).map((m) => ({
@@ -67,10 +77,10 @@ export class CohereProvider implements ProviderAdapter {
   ): AsyncGenerator<ChatCompletionChunk, void, unknown> {
     const messages = request.messages.map((m) => ({
       role: m.role === "assistant" ? "CHATBOT" : "USER",
-      message: m.content,
+      message: flattenMessageText(m.content),
     }));
 
-    const stream = await this.client.chatStream({
+    const stream = await this.requireClient().chatStream({
       model: request.model,
       message: messages[messages.length - 1].message,
       chatHistory: messages.slice(0, -1).map((m) => ({
@@ -148,6 +158,39 @@ export class CohereProvider implements ProviderAdapter {
         provider: this.slug,
         display_name: "Command",
       },
+      {
+        id: "rerank-v3.5",
+        object: "model",
+        created: 0,
+        owned_by: "cohere",
+        provider: this.slug,
+        display_name: "Rerank v3.5",
+        supports_rerank: true,
+      },
+      {
+        id: "rerank-english-v3.0",
+        object: "model",
+        created: 0,
+        owned_by: "cohere",
+        provider: this.slug,
+        display_name: "Rerank English v3.0",
+        supports_rerank: true,
+      },
     ];
+  }
+
+  async createRerank(request: RerankRequest): Promise<RerankResult> {
+    const response = await this.requireClient().rerank({
+      model: request.model,
+      query: request.query,
+      documents: request.documents.map(documentText),
+      topN: request.top_n,
+    });
+    return {
+      results: (response.results || []).map((r) => ({
+        index: r.index,
+        relevance_score: r.relevanceScore,
+      })),
+    };
   }
 }

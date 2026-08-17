@@ -15,6 +15,7 @@ const PROVIDER_LABELS: Record<string, string> = {
   deepseek: "DeepSeek",
   qwen: "Qwen",
   custom: "Custom deployment",
+  ollama: "Local GPU (Ollama)",
 };
 
 const PROVIDER_ORDER = [
@@ -27,6 +28,7 @@ const PROVIDER_ORDER = [
   "deepseek",
   "qwen",
   "custom",
+  "ollama",
 ] as const;
 
 export async function getStatusData() {

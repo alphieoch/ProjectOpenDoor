@@ -1,40 +1,66 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { modelGovernance, modelEvaluations, modelComplianceMappings, complianceControls } from "@opendoor/database";
-import { eq, desc, sql } from "drizzle-orm";
-import { requireAuth } from "@/lib/auth";
+import { eq, desc, inArray } from "drizzle-orm";
 import { logAuditEvent } from "@/lib/audit";
+import { orgActorId } from "@/lib/governance/actor";
+import { badRequest, emptyOnMissingTable, governanceSession, unauthorized } from "@/lib/governance/http";
 
-export async function GET() {
-  const session = await requireAuth();
-  const orgId = session.orgId as string;
+export async function GET(req: NextRequest) {
+  const session = await governanceSession();
+  if (!session) return unauthorized();
 
-  const db = getDb();
-  const items = await db.query.modelGovernance.findMany({
-    orderBy: [desc(modelGovernance.updatedAt)],
-  });
+  try {
+    const lite = new URL(req.url).searchParams.get("lite") === "1";
+    const db = getDb();
+    const items = await db.query.modelGovernance.findMany({
+      orderBy: [desc(modelGovernance.updatedAt)],
+    });
 
-  // Enrich with latest evaluation scores and compliance status
-  const enriched = await Promise.all(
-    items.map(async (item) => {
-      const evals = await db
+    if (items.length === 0) {
+      return NextResponse.json({ models: [] });
+    }
+
+    if (lite) {
+      return NextResponse.json({ models: items });
+    }
+
+    const ids = items.map((item) => item.id);
+    const [evals, compliance] = await Promise.all([
+      db
         .select()
         .from(modelEvaluations)
-        .where(eq(modelEvaluations.modelGovernanceId, item.id))
-        .orderBy(desc(modelEvaluations.evaluatedAt))
-        .limit(3);
-
-      const compliance = await db
+        .where(inArray(modelEvaluations.modelGovernanceId, ids))
+        .orderBy(desc(modelEvaluations.evaluatedAt)),
+      db
         .select({
+          modelGovernanceId: modelComplianceMappings.modelGovernanceId,
           framework: complianceControls.framework,
           controlCode: complianceControls.controlCode,
           status: modelComplianceMappings.status,
         })
         .from(modelComplianceMappings)
         .innerJoin(complianceControls, eq(modelComplianceMappings.controlId, complianceControls.id))
-        .where(eq(modelComplianceMappings.modelGovernanceId, item.id));
+        .where(inArray(modelComplianceMappings.modelGovernanceId, ids)),
+    ]);
 
-      const complianceSummary = compliance.reduce((acc, c) => {
+    const evalsByModel = new Map<string, typeof evals>();
+    for (const row of evals) {
+      const list = evalsByModel.get(row.modelGovernanceId) ?? [];
+      if (list.length < 3) list.push(row);
+      evalsByModel.set(row.modelGovernanceId, list);
+    }
+
+    const complianceByModel = new Map<string, typeof compliance>();
+    for (const row of compliance) {
+      const list = complianceByModel.get(row.modelGovernanceId) ?? [];
+      list.push(row);
+      complianceByModel.set(row.modelGovernanceId, list);
+    }
+
+    const enriched = items.map((item) => {
+      const rows = complianceByModel.get(item.id) ?? [];
+      const complianceSummary = rows.reduce((acc, c) => {
         acc[c.framework] = acc[c.framework] || { total: 0, compliant: 0 };
         acc[c.framework].total++;
         if (c.status === "compliant") acc[c.framework].compliant++;
@@ -43,19 +69,23 @@ export async function GET() {
 
       return {
         ...item,
-        latestEvaluations: evals,
+        latestEvaluations: evalsByModel.get(item.id) ?? [],
         complianceSummary,
       };
-    })
-  );
+    });
 
-  return NextResponse.json({ models: enriched });
+    return NextResponse.json({ models: enriched });
+  } catch (err) {
+    return NextResponse.json(emptyOnMissingTable({ models: [] }, err));
+  }
 }
 
 export async function POST(req: NextRequest) {
-  const session = await requireAuth();
-  const orgId = session.orgId as string;
+  const session = await governanceSession();
+  if (!session) return unauthorized();
+  const orgId = session.orgId;
   const body = await req.json();
+  const actorId = await orgActorId(session);
 
   const {
     modelId,
@@ -84,10 +114,7 @@ export async function POST(req: NextRequest) {
   } = body;
 
   if (!modelId || !displayName) {
-    return NextResponse.json(
-      { error: "modelId and displayName are required" },
-      400
-    );
+    return badRequest("modelId and displayName are required");
   }
 
   const db = getDb();
@@ -122,7 +149,7 @@ export async function POST(req: NextRequest) {
 
   await logAuditEvent({
     organizationId: orgId,
-    userId: session.sub as string,
+    userId: actorId ?? undefined,
     action: "governance.model.created",
     entityType: "model_governance",
     entityId: item.id,

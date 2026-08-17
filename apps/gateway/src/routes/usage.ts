@@ -4,6 +4,7 @@ import { db, requests } from "@opendoor/database";
 import { eq, and, gte, sql } from "drizzle-orm";
 import { DuckDBAnalyticsClient, getUsageDaily, getUsageTotals } from "@opendoor/analytics";
 import Redis from "ioredis";
+import { resolveRateLimits } from "../lib/spend-tiers.js";
 
 const redis = new (Redis as any)(process.env.REDIS_URL || "redis://localhost:6379");
 
@@ -90,9 +91,24 @@ usageRouter.get("/", async (c) => {
 
 usageRouter.get("/rate-limits", async (c) => {
   const apiKey = c.get("apiKey");
+  const organization = c.get("organization");
   const keyPrefix = apiKey.keyPrefix;
-  const rpm = apiKey.rateLimitRpm || 60;
-  const tpm = apiKey.rateLimitTpm || 100000;
+  const limits = resolveRateLimits({
+    spendUsedUsdCents: Number((apiKey as any).spendUsedUsdCents || 0),
+    plan: organization?.plan || "free",
+    keyTpm: apiKey.rateLimitTpm,
+    keyRpm: apiKey.rateLimitRpm,
+    serviceTier: "standard",
+  });
+  const priority = resolveRateLimits({
+    spendUsedUsdCents: Number((apiKey as any).spendUsedUsdCents || 0),
+    plan: organization?.plan || "free",
+    keyTpm: apiKey.rateLimitTpm,
+    keyRpm: apiKey.rateLimitRpm,
+    serviceTier: "priority",
+  });
+  const rpm = limits.rpm;
+  const tpm = limits.tpm;
 
   const minuteKey = `ratelimit:${keyPrefix}:minute`;
   const tokenKey = `ratelimit:${keyPrefix}:tokens`;
@@ -114,6 +130,9 @@ usageRouter.get("/rate-limits", async (c) => {
       used: usedTpm,
       remaining: Math.max(0, tpm - usedTpm),
     },
+    priority: { rpm: priority.rpm, tpm: priority.tpm },
+    spendUnlockTierCents: limits.unlockTierCents,
+    spendUsedUsdCents: Number((apiKey as any).spendUsedUsdCents || 0),
     resetAt: new Date(Date.now() + Math.max(ttlMinute, ttlTokens, 60) * 1000).toISOString(),
   });
 });

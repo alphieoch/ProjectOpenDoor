@@ -26,6 +26,8 @@ export const requestTypeEnum = pgEnum("request_type", [
   "chat",
   "embedding",
   "image",
+  "rerank",
+  "completion",
 ]);
 
 export const deploymentStatusEnum = pgEnum("deployment_status", [
@@ -112,6 +114,10 @@ export const organizations = pgTable("organizations", {
   monthlyTokenBudget:  bigint("monthly_token_budget", { mode: "number" }),
   budgetAlertThresholdPercent: integer("budget_alert_threshold_percent").default(80),
   creditsUsdCents: bigint("credits_usd_cents", { mode: "number" }).notNull().default(0),
+  welcomeCreditsUsdCents: bigint("welcome_credits_usd_cents", { mode: "number" })
+    .notNull()
+    .default(0),
+  welcomeExpiresAt: timestamp("welcome_expires_at", { withTimezone: true }),
   signupCreditGranted: boolean("signup_credit_granted").notNull().default(false),
   autoRechargeEnabled: boolean("auto_recharge_enabled").default(false),
   autoRechargeThresholdCents: bigint("auto_recharge_threshold_cents", {
@@ -123,6 +129,8 @@ export const organizations = pgTable("organizations", {
   stripeSubscriptionId: varchar("stripe_subscription_id", { length: 255 }),
   stripePriceId: varchar("stripe_price_id", { length: 255 }),
   subscriptionStatus: varchar("subscription_status", { length: 50 }).default("inactive"),
+  agentsAddonStatus: varchar("agents_addon_status", { length: 50 }).notNull().default("inactive"),
+  stripeAgentsSubscriptionId: varchar("stripe_agents_subscription_id", { length: 255 }),
   workosOrganizationId: varchar("workos_organization_id", { length: 255 }),
   workosConnectionId: varchar("workos_connection_id", { length: 255 }),
   ssoEnabled: boolean("sso_enabled").default(false),
@@ -221,8 +229,16 @@ export const models = pgTable(
     supportsTools: boolean("supports_tools").default(false),
     supportsJsonMode: boolean("supports_json_mode").default(false),
     enabled: boolean("enabled").notNull().default(true),
-    deploymentStatus: varchar("deployment_status", { length: 30 }).default("available_on_request"),
+    // live | warming | dedicated | available_on_request | coming_soon
+    deploymentStatus: varchar("deployment_status", { length: 30 }).default("live"),
     family: varchar("family", { length: 20 }).notNull().default("closed"),
+    /** True = callable with no deploy step (wholesale or warm pool) */
+    serverless: boolean("serverless").notNull().default(false),
+    origin: varchar("origin", { length: 20 }).default("global"), // cn | us | eu | global | ke | africa
+    source: varchar("source", { length: 30 }).default("provider_api"), // ollama | huggingface | provider_api
+    huggingFaceRepo: varchar("hf_repo", { length: 255 }),
+    ollamaTag: varchar("ollama_tag", { length: 100 }),
+    listedAt: timestamp("listed_at", { withTimezone: true }).defaultNow(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -255,6 +271,11 @@ export const pricingRules = pgTable(
       precision: 12,
       scale: 8,
     }).notNull(),
+    /** Cached prompt tokens — defaults to same as input until prompt cache ships */
+    cachedInputCostPer1K: numeric("cached_input_cost_per_1k", {
+      precision: 12,
+      scale: 8,
+    }),
     markupPercent: numeric("markup_percent", {
       precision: 5,
       scale: 2,
@@ -267,6 +288,15 @@ export const pricingRules = pgTable(
       precision: 12,
       scale: 8,
     }).notNull(),
+    finalCachedInputCostPer1K: numeric("final_cached_input_cost_per_1k", {
+      precision: 12,
+      scale: 8,
+    }),
+    batchMultiplier: numeric("batch_multiplier", {
+      precision: 4,
+      scale: 2,
+    }).default("0.50"),
+    modality: varchar("modality", { length: 20 }).notNull().default("chat"), // chat | embedding
     effectiveFrom: timestamp("effective_from", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -283,6 +313,18 @@ export const pricingRules = pgTable(
     ),
   })
 );
+
+/** On-demand GPU SKUs (Fireworks-style hourly table; billed per second in practice) */
+export const gpuSkus = pgTable("gpu_skus", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  sku: varchar("sku", { length: 50 }).notNull().unique(), // nvidia-l4 | nvidia-a100 | nvidia-h100
+  displayName: varchar("display_name", { length: 100 }).notNull(),
+  hourlyUsd: numeric("hourly_usd", { precision: 10, scale: 4 }).notNull(),
+  regionMultiplier: numeric("region_multiplier", { precision: 4, scale: 2 }).default("1.00"),
+  enabled: boolean("enabled").notNull().default(true),
+  sortOrder: integer("sort_order").notNull().default(0),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
 
 export const creditTransactions = pgTable(
   "credit_transactions",
@@ -380,6 +422,35 @@ export const auditLogs = pgTable(
   })
 );
 
+/** GDPR Art. 6(1)(a) consent before we read this machine's GPU / memory / local models. */
+export const deviceInventoryConsents = pgTable(
+  "device_inventory_consents",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: uuid("organization_id")
+      .references(() => organizations.id)
+      .notNull(),
+    userId: uuid("user_id")
+      .references(() => users.id)
+      .notNull(),
+    granted: boolean("granted").notNull().default(false),
+    purpose: text("purpose").notNull(),
+    version: varchar("version", { length: 50 }).notNull(),
+    grantedAt: timestamp("granted_at", { withTimezone: true }),
+    withdrawnAt: timestamp("withdrawn_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    userIdx: uniqueIndex("device_inventory_consents_user_idx").on(table.userId),
+    orgIdx: index("device_inventory_consents_org_idx").on(table.organizationId),
+  })
+);
+
 export const invitations = pgTable(
   "invitations",
   {
@@ -417,15 +488,29 @@ export const deployments = pgTable(
     cpu: numeric("cpu", { precision: 4, scale: 2 }).notNull().default("0.5"),
     memoryGb: numeric("memory_gb", { precision: 4, scale: 1 }).notNull().default("1.0"),
     replicas: integer("replicas").notNull().default(1),
+    target: varchar("target", { length: 20 }).notNull().default("local"), // local | gcp | azure
+    gpuType: varchar("gpu_type", { length: 50 }).notNull().default("none"), // none | metal | nvidia-l4 | nvidia-t4 | nvidia-a100
+    gpuCount: integer("gpu_count").notNull().default(0),
+    localRuntime: varchar("local_runtime", { length: 50 }), // ollama | vllm
+    runtimeModel: varchar("runtime_model", { length: 255 }),
     containerAppName: varchar("container_app_name", { length: 100 }),
     fqdn: text("fqdn"),
     azureResourceId: text("azure_resource_id"),
+    gcpResourceId: text("gcp_resource_id"),
     status: deploymentStatusEnum("status").notNull().default("pending"),
     statusMessage: text("status_message"),
     startedAt: timestamp("started_at", { withTimezone: true }),
     stoppedAt: timestamp("stopped_at", { withTimezone: true }),
     computeHoursBilled: numeric("compute_hours_billed", { precision: 12, scale: 4 }).default("0"),
     computeCostUsd: numeric("compute_cost_usd", { precision: 12, scale: 4 }).default("0"),
+    minReplicas: integer("min_replicas").notNull().default(0),
+    maxReplicas: integer("max_replicas").notNull().default(1),
+    scaleToZero: boolean("scale_to_zero").notNull().default(true),
+    autoscalingEnabled: boolean("autoscaling_enabled").notNull().default(true),
+    precision: varchar("precision", { length: 20 }).default("fp16"),
+    weightsUri: text("weights_uri"),
+    regionLocked: boolean("region_locked").notNull().default(false),
+    reserved: boolean("reserved").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -439,6 +524,230 @@ export const deployments = pgTable(
   })
 );
 
+/** LoRA adapters loaded onto a dedicated deployment */
+export const deploymentLoras = pgTable(
+  "deployment_loras",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    deploymentId: uuid("deployment_id")
+      .references(() => deployments.id, { onDelete: "cascade" })
+      .notNull(),
+    name: varchar("name", { length: 100 }).notNull(),
+    adapterUri: text("adapter_uri").notNull(),
+    status: varchar("status", { length: 30 }).notNull().default("pending"),
+    loadedAt: timestamp("loaded_at", { withTimezone: true }),
+    metadata: jsonb("metadata"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    deploymentIdx: index("deployment_loras_deployment_idx").on(table.deploymentId),
+  })
+);
+
+export const deploymentRouters = pgTable(
+  "deployment_routers",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: uuid("organization_id")
+      .references(() => organizations.id, { onDelete: "cascade" })
+      .notNull(),
+    name: varchar("name", { length: 100 }).notNull(),
+    slug: varchar("slug", { length: 100 }).notNull(),
+    status: varchar("status", { length: 30 }).notNull().default("active"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    orgSlugIdx: uniqueIndex("deployment_routers_org_slug_idx").on(
+      table.organizationId,
+      table.slug
+    ),
+  })
+);
+
+export const deploymentRouterTargets = pgTable(
+  "deployment_router_targets",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    routerId: uuid("router_id")
+      .references(() => deploymentRouters.id, { onDelete: "cascade" })
+      .notNull(),
+    deploymentId: uuid("deployment_id")
+      .references(() => deployments.id, { onDelete: "cascade" })
+      .notNull(),
+    weight: integer("weight").notNull().default(100),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    routerIdx: index("deployment_router_targets_router_idx").on(table.routerId),
+  })
+);
+
+/** Wave 4 — org datasets for SFT / DPO / eval */
+export const trainingDatasets = pgTable(
+  "training_datasets",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: uuid("organization_id")
+      .references(() => organizations.id, { onDelete: "cascade" })
+      .notNull(),
+    name: varchar("name", { length: 200 }).notNull(),
+    slug: varchar("slug", { length: 100 }).notNull(),
+    format: varchar("format", { length: 40 }).notNull().default("jsonl"),
+    purpose: varchar("purpose", { length: 40 }).notNull().default("sft"),
+    storageUri: text("storage_uri"),
+    rowCount: integer("row_count").notNull().default(0),
+    byteSize: bigint("byte_size", { mode: "number" }).notNull().default(0),
+    status: varchar("status", { length: 30 }).notNull().default("ready"),
+    sample: jsonb("sample"),
+    metadata: jsonb("metadata"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    orgSlugIdx: uniqueIndex("training_datasets_org_slug_idx").on(
+      table.organizationId,
+      table.slug
+    ),
+    orgIdx: index("training_datasets_org_idx").on(table.organizationId),
+  })
+);
+
+export const trainingJobs = pgTable(
+  "training_jobs",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: uuid("organization_id")
+      .references(() => organizations.id, { onDelete: "cascade" })
+      .notNull(),
+    datasetId: uuid("dataset_id").references(() => trainingDatasets.id, {
+      onDelete: "set null",
+    }),
+    name: varchar("name", { length: 200 }).notNull(),
+    method: varchar("method", { length: 40 }).notNull().default("sft"),
+    baseModelId: varchar("base_model_id", { length: 150 }).notNull(),
+    outputModelId: varchar("output_model_id", { length: 150 }),
+    hyperparameters: jsonb("hyperparameters").notNull().default({}),
+    status: varchar("status", { length: 30 }).notNull().default("queued"),
+    progressPercent: integer("progress_percent").notNull().default(0),
+    statusMessage: text("status_message"),
+    providerJobId: varchar("provider_job_id", { length: 255 }),
+    providerSlug: varchar("provider_slug", { length: 50 }).default("together"),
+    costUsd: numeric("cost_usd", { precision: 12, scale: 4 }).default("0"),
+    startedAt: timestamp("started_at", { withTimezone: true }),
+    finishedAt: timestamp("finished_at", { withTimezone: true }),
+    result: jsonb("result"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    orgIdx: index("training_jobs_org_idx").on(table.organizationId),
+    statusIdx: index("training_jobs_status_idx").on(table.status),
+  })
+);
+
+export const fineTunedModels = pgTable(
+  "fine_tuned_models",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: uuid("organization_id")
+      .references(() => organizations.id, { onDelete: "cascade" })
+      .notNull(),
+    trainingJobId: uuid("training_job_id").references(() => trainingJobs.id, {
+      onDelete: "set null",
+    }),
+    modelId: varchar("model_id", { length: 150 }).notNull(),
+    displayName: varchar("display_name", { length: 200 }).notNull(),
+    baseModelId: varchar("base_model_id", { length: 150 }).notNull(),
+    providerSlug: varchar("provider_slug", { length: 50 }).notNull().default("together"),
+    status: varchar("status", { length: 30 }).notNull().default("active"),
+    billAsBase: boolean("bill_as_base").notNull().default(true),
+    adapterUri: text("adapter_uri"),
+    metadata: jsonb("metadata"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    orgModelIdx: uniqueIndex("fine_tuned_models_org_model_idx").on(
+      table.organizationId,
+      table.modelId
+    ),
+    orgIdx: index("fine_tuned_models_org_idx").on(table.organizationId),
+    baseIdx: index("fine_tuned_models_base_idx").on(table.baseModelId),
+  })
+);
+
+export const trainingEvaluators = pgTable("training_evaluators", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  organizationId: uuid("organization_id")
+    .references(() => organizations.id, { onDelete: "cascade" })
+    .notNull(),
+  name: varchar("name", { length: 200 }).notNull(),
+  kind: varchar("kind", { length: 40 }).notNull().default("llm_judge"),
+  config: jsonb("config").notNull().default({}),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+export const trainingEvalJobs = pgTable(
+  "training_eval_jobs",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: uuid("organization_id")
+      .references(() => organizations.id, { onDelete: "cascade" })
+      .notNull(),
+    evaluatorId: uuid("evaluator_id").references(() => trainingEvaluators.id, {
+      onDelete: "set null",
+    }),
+    datasetId: uuid("dataset_id").references(() => trainingDatasets.id, {
+      onDelete: "set null",
+    }),
+    modelId: varchar("model_id", { length: 150 }).notNull(),
+    status: varchar("status", { length: 30 }).notNull().default("queued"),
+    score: numeric("score", { precision: 8, scale: 4 }),
+    metrics: jsonb("metrics"),
+    statusMessage: text("status_message"),
+    startedAt: timestamp("started_at", { withTimezone: true }),
+    finishedAt: timestamp("finished_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    orgIdx: index("training_eval_jobs_org_idx").on(table.organizationId),
+  })
+);
+
 export const modelCatalog = pgTable(
   "model_catalog",
   {
@@ -447,9 +756,16 @@ export const modelCatalog = pgTable(
     displayName: varchar("display_name", { length: 255 }).notNull(),
     description: text("description"),
     huggingFaceRepo: varchar("hf_repo", { length: 255 }),
+    ollamaTag: varchar("ollama_tag", { length: 100 }),
     inferenceEngine: varchar("inference_engine", { length: 50 }).notNull().default("vllm"),
     defaultCpu: numeric("default_cpu", { precision: 4, scale: 2 }).notNull().default("1.0"),
     defaultMemoryGb: numeric("default_memory_gb", { precision: 4, scale: 1 }).notNull().default("2.0"),
+    minGpuMemoryGb: numeric("min_gpu_memory_gb", { precision: 4, scale: 1 }),
+    origin: varchar("origin", { length: 20 }).notNull().default("global"),
+    source: varchar("source", { length: 30 }).notNull().default("huggingface"),
+    deploymentStatus: varchar("deployment_status", { length: 30 }).notNull().default("warming"),
+    serverless: boolean("serverless").notNull().default(false),
+    listedAt: timestamp("listed_at", { withTimezone: true }).defaultNow(),
     enabled: boolean("enabled").notNull().default(true),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
@@ -777,6 +1093,91 @@ export const guardrailOutcomes = pgTable(
   })
 );
 
+/* ─────────────────────────────────────────────────────────────────
+   Workspace agents (OpenClaw / Hermes / NemoClaw)
+───────────────────────────────────────────────────────────────── */
+export const workspaceAgents = pgTable(
+  "workspace_agents",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    createdBy: uuid("created_by").references(() => users.id),
+    name: varchar("name", { length: 200 }).notNull(),
+    slug: varchar("slug", { length: 100 }).notNull(),
+    runtime: varchar("runtime", { length: 40 }).notNull(),
+    modelId: varchar("model_id", { length: 150 }).notNull(),
+    systemPrompt: text("system_prompt"),
+    status: varchar("status", { length: 30 }).notNull().default("pending"),
+    statusMessage: text("status_message"),
+    apiKeyId: uuid("api_key_id").references(() => apiKeys.id, { onDelete: "set null" }),
+    keyPrefix: varchar("key_prefix", { length: 16 }),
+    secretCiphertext: text("secret_ciphertext"),
+    secretIv: text("secret_iv"),
+    secretTag: text("secret_tag"),
+    config: jsonb("config").$type<Record<string, unknown>>().default({}),
+    lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+    startedAt: timestamp("started_at", { withTimezone: true }),
+    stoppedAt: timestamp("stopped_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    orgIdx: index("workspace_agents_org_idx").on(table.organizationId),
+    orgSlugIdx: uniqueIndex("workspace_agents_org_slug_idx").on(
+      table.organizationId,
+      table.slug
+    ),
+    statusIdx: index("workspace_agents_status_idx").on(table.status),
+  })
+);
+
+export const workspaceAgentMessages = pgTable(
+  "workspace_agent_messages",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    agentId: uuid("agent_id")
+      .notNull()
+      .references(() => workspaceAgents.id, { onDelete: "cascade" }),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    role: varchar("role", { length: 20 }).notNull(),
+    content: text("content").notNull().default(""),
+    toolName: varchar("tool_name", { length: 80 }),
+    metadata: jsonb("metadata").$type<Record<string, unknown>>().default({}),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    agentIdx: index("workspace_agent_messages_agent_idx").on(table.agentId),
+    orgIdx: index("workspace_agent_messages_org_idx").on(table.organizationId),
+  })
+);
+
+export const workspaceAgentsRelations = relations(workspaceAgents, ({ one, many }) => ({
+  organization: one(organizations, {
+    fields: [workspaceAgents.organizationId],
+    references: [organizations.id],
+  }),
+  creator: one(users, {
+    fields: [workspaceAgents.createdBy],
+    references: [users.id],
+  }),
+  apiKey: one(apiKeys, {
+    fields: [workspaceAgents.apiKeyId],
+    references: [apiKeys.id],
+  }),
+  messages: many(workspaceAgentMessages),
+}));
+
+export const workspaceAgentMessagesRelations = relations(workspaceAgentMessages, ({ one }) => ({
+  agent: one(workspaceAgents, {
+    fields: [workspaceAgentMessages.agentId],
+    references: [workspaceAgents.id],
+  }),
+}));
+
 // ─────────────────────────────────────────────────────────────────────────────
 // DRIZZLE RELATIONS
 // ─────────────────────────────────────────────────────────────────────────────
@@ -787,10 +1188,12 @@ export const organizationsRelations = relations(organizations, ({ many }) => ({
   creditTransactions: many(creditTransactions),
   requests: many(requests),
   auditLogs: many(auditLogs),
+  deviceInventoryConsents: many(deviceInventoryConsents),
   invitations: many(invitations),
   deployments: many(deployments),
   usageDaily: many(usageDaily),
   agentRuns: many(agentRuns),
+  workspaceAgents: many(workspaceAgents),
   guardrailOutcomes: many(guardrailOutcomes),
   modelApprovals: many(modelApprovals),
   modelEvaluations: many(modelEvaluations),
@@ -798,10 +1201,22 @@ export const organizationsRelations = relations(organizations, ({ many }) => ({
   policyViolations: many(policyViolations),
 }));
 
-export const usersRelations = relations(users, ({ one }) => ({
+export const usersRelations = relations(users, ({ one, many }) => ({
   organization: one(organizations, {
     fields: [users.organizationId],
     references: [organizations.id],
+  }),
+  deviceInventoryConsents: many(deviceInventoryConsents),
+}));
+
+export const deviceInventoryConsentsRelations = relations(deviceInventoryConsents, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [deviceInventoryConsents.organizationId],
+    references: [organizations.id],
+  }),
+  user: one(users, {
+    fields: [deviceInventoryConsents.userId],
+    references: [users.id],
   }),
 }));
 
@@ -869,12 +1284,42 @@ export const invitationsRelations = relations(invitations, ({ one }) => ({
   }),
 }));
 
-export const deploymentsRelations = relations(deployments, ({ one }) => ({
+export const deploymentsRelations = relations(deployments, ({ one, many }) => ({
   organization: one(organizations, {
     fields: [deployments.organizationId],
     references: [organizations.id],
   }),
+  loras: many(deploymentLoras),
 }));
+
+export const deploymentLorasRelations = relations(deploymentLoras, ({ one }) => ({
+  deployment: one(deployments, {
+    fields: [deploymentLoras.deploymentId],
+    references: [deployments.id],
+  }),
+}));
+
+export const deploymentRoutersRelations = relations(deploymentRouters, ({ one, many }) => ({
+  organization: one(organizations, {
+    fields: [deploymentRouters.organizationId],
+    references: [organizations.id],
+  }),
+  targets: many(deploymentRouterTargets),
+}));
+
+export const deploymentRouterTargetsRelations = relations(
+  deploymentRouterTargets,
+  ({ one }) => ({
+    router: one(deploymentRouters, {
+      fields: [deploymentRouterTargets.routerId],
+      references: [deploymentRouters.id],
+    }),
+    deployment: one(deployments, {
+      fields: [deploymentRouterTargets.deploymentId],
+      references: [deployments.id],
+    }),
+  })
+);
 
 export const modelGovernanceRelations = relations(modelGovernance, ({ one, many }) => ({
   provider: one(providers, {
@@ -1296,6 +1741,54 @@ export const workflows = pgTable("workflows", {
 export const workflowsRelations = relations(workflows, ({ one }) => ({
   organization: one(organizations, { fields: [workflows.organizationId], references: [organizations.id] }),
   createdByUser: one(users, { fields: [workflows.createdBy], references: [users.id] }),
+}));
+
+export const batchJobs = pgTable(
+  "batch_jobs",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: uuid("organization_id")
+      .references(() => organizations.id)
+      .notNull(),
+    apiKeyId: uuid("api_key_id")
+      .references(() => apiKeys.id)
+      .notNull(),
+    endpoint: varchar("endpoint", { length: 100 })
+      .notNull()
+      .default("/v1/chat/completions"),
+    modelId: varchar("model_id", { length: 100 }),
+    status: varchar("status", { length: 30 }).notNull().default("pending"),
+    input: jsonb("input").notNull().default([]),
+    output: jsonb("output"),
+    error: text("error"),
+    totalCount: integer("total_count").notNull().default(0),
+    completedCount: integer("completed_count").notNull().default(0),
+    failedCount: integer("failed_count").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    startedAt: timestamp("started_at", { withTimezone: true }),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+  },
+  (table) => ({
+    orgIdx: index("batch_jobs_org_idx").on(table.organizationId),
+    statusIdx: index("batch_jobs_status_idx").on(table.status),
+    orgCreatedIdx: index("batch_jobs_org_created_idx").on(
+      table.organizationId,
+      table.createdAt
+    ),
+  })
+);
+
+export const batchJobsRelations = relations(batchJobs, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [batchJobs.organizationId],
+    references: [organizations.id],
+  }),
+  apiKey: one(apiKeys, {
+    fields: [batchJobs.apiKeyId],
+    references: [apiKeys.id],
+  }),
 }));
 
 export const assistantPurchasesRelations = relations(assistantPurchases, ({ one }) => ({

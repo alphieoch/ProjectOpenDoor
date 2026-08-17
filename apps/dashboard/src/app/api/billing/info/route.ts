@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
-import { organizations } from "@opendoor/database";
-import { eq } from "drizzle-orm";
+import { organizations, users } from "@opendoor/database";
+import { eq, sql } from "drizzle-orm";
 import { requireAuth } from "@/lib/auth";
+import { checkoutPlanConfigured } from "@/lib/stripe";
+import { loadAgentsEntitlement } from "@/lib/agents/entitlement";
 
 export async function GET() {
   try {
@@ -28,7 +30,23 @@ export async function GET() {
       return NextResponse.json({ error: "Organization not found" }, { status: 404 });
     }
 
-    return NextResponse.json({ org });
+    const [seatRow] = await db
+      .select({ n: sql<number>`count(*)` })
+      .from(users)
+      .where(eq(users.organizationId, orgId));
+
+    const addon = await loadAgentsEntitlement(orgId, session);
+
+    return NextResponse.json({
+      org,
+      seatCount: Math.max(1, Number(seatRow?.n || 1)),
+      checkout: {
+        pro: checkoutPlanConfigured("pro"),
+        team: checkoutPlanConfigured("team"),
+        agents: addon.configured,
+      },
+      addon,
+    });
   } catch (error: any) {
     console.error("Billing info error:", error);
     return NextResponse.json(

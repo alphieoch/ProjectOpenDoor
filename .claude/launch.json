@@ -6,7 +6,7 @@
       "runtimeExecutable": "bun",
       "runtimeArgs": ["next", "dev"],
       "cwd": "apps/dashboard",
-      "port": 3000,
+      "port": 3010,
       "autoPort": false
     },
     {
@@ -18,10 +18,9 @@
     },
     {
       "name": "Docs",
-      "runtimeExecutable": "bun",
-      "runtimeArgs": ["run", "start", "--port", "3002"],
-      "cwd": "apps/docs",
-      "port": 3002
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["@docs.page/cli", "preview"],
+      "cwd": "."
     }
   ]
 }

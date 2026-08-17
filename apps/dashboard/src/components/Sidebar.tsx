@@ -6,7 +6,8 @@ import {
   LayoutDashboard, Key, BarChart3, CreditCard, Play, Settings,
   ClipboardList, Users, LogOut, Zap, Server, Calculator,
   ShieldCheck, Gavel, AlertTriangle, FileCheck, BookOpen,
-  Building2, UserCog, Coins, ShieldAlert, GitBranch, List,
+  Building2, UserCog, Coins, ShieldAlert, GitBranch, List, FlaskConical,
+  ScrollText, Cpu,
 } from "lucide-react";
 import posthog from "posthog-js";
 
@@ -14,8 +15,11 @@ const navItems = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
   { href: "/dashboard/api-keys", label: "API Keys", icon: Key },
   { href: "/dashboard/usage", label: "Usage", icon: BarChart3 },
+  { href: "/dashboard/logs", label: "Logs", icon: ScrollText },
   { href: "/dashboard/pricing", label: "Pricing", icon: Calculator },
   { href: "/dashboard/deployments", label: "Deployments", icon: Server },
+  { href: "/dashboard/devices", label: "Devices", icon: Cpu },
+  { href: "/dashboard/training", label: "Training", icon: FlaskConical },
   { href: "/dashboard/billing", label: "Billing", icon: CreditCard },
   { href: "/dashboard/playground", label: "Playground", icon: Play },
   { href: "/dashboard/workflow", label: "Workflow", icon: GitBranch },

@@ -7,6 +7,7 @@ import type {
 } from "@opendoor/shared";
 import type { ProviderAdapter } from "./base.js";
 import { generateId } from "./base.js";
+import { toGeminiParts } from "./content.js";
 
 export class GoogleProvider implements ProviderAdapter {
   name = "Google";
@@ -25,14 +26,14 @@ export class GoogleProvider implements ProviderAdapter {
     const model = this.client.getGenerativeModel({ model: request.model });
     const history = request.messages.slice(0, -1).map((m) => ({
       role: m.role === "assistant" ? "model" : "user",
-      parts: [{ text: m.content }],
+      parts: toGeminiParts(m.content),
     }));
 
     const lastMessage = request.messages[request.messages.length - 1];
     const result = await model.generateContent({
       contents: [
         ...history,
-        { role: "user", parts: [{ text: lastMessage.content }] },
+        { role: "user", parts: toGeminiParts(lastMessage.content) },
       ],
       generationConfig: {
         temperature: request.temperature,
@@ -74,14 +75,14 @@ export class GoogleProvider implements ProviderAdapter {
     const model = this.client.getGenerativeModel({ model: request.model });
     const history = request.messages.slice(0, -1).map((m) => ({
       role: m.role === "assistant" ? "model" : "user",
-      parts: [{ text: m.content }],
+      parts: toGeminiParts(m.content),
     }));
     const lastMessage = request.messages[request.messages.length - 1];
 
     const result = await model.generateContentStream({
       contents: [
         ...history,
-        { role: "user", parts: [{ text: lastMessage.content }] },
+        { role: "user", parts: toGeminiParts(lastMessage.content) },
       ],
       generationConfig: {
         temperature: request.temperature,

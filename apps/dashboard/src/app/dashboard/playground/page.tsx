@@ -1,62 +1,123 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { Suspense, useState, useEffect, useRef, useCallback, useMemo } from "react";
 import {
   Send, Loader2, Sparkles, ImagePlus, X, Copy, Check,
-  ChevronDown, ChevronRight, Settings2, RotateCcw, Download,
-  Cpu, Eye, Code2, Zap, Paperclip, SquareTerminal, MessageSquare,
-  SlidersHorizontal, Plus, Trash2,
+  ChevronDown, RotateCcw,
+  Cpu, Eye, Code2, Zap,   Paperclip, SquareTerminal, MessageSquare,
+  SlidersHorizontal, Plus,
 } from "lucide-react";
+import { useSearchParams } from "next/navigation";
+import Link from "next/link";
 import posthog from "posthog-js";
+import { gatewayBaseUrl } from "@/lib/public-urls";
+import { ProviderLogo } from "@/components/ui/provider-logo";
+import {
+  formatGatewayError,
+  inferModelModality,
+  isChatModality,
+  type ModelModality,
+} from "@/lib/models/modality";
 
-// ─── Model registry ──────────────────────────────────────────────────────────
-
-const MODELS = [
-  // OpenAI
-  { id: "gpt-4o",          name: "GPT-4o",           provider: "OpenAI",     vision: true,  code: false, context: "128K" },
-  { id: "gpt-4o-mini",     name: "GPT-4o Mini",       provider: "OpenAI",     vision: true,  code: false, context: "128K" },
-  { id: "gpt-4-turbo",     name: "GPT-4 Turbo",       provider: "OpenAI",     vision: true,  code: false, context: "128K" },
-  { id: "gpt-4",           name: "GPT-4",             provider: "OpenAI",     vision: false, code: false, context: "8K"   },
-  { id: "gpt-3.5-turbo",   name: "GPT-3.5 Turbo",     provider: "OpenAI",     vision: false, code: false, context: "16K"  },
-  // Anthropic
-  { id: "claude-3-5-sonnet-20241022", name: "Claude 3.5 Sonnet", provider: "Anthropic", vision: true,  code: false, context: "200K" },
-  { id: "claude-3-opus-20240229",     name: "Claude 3 Opus",     provider: "Anthropic", vision: true,  code: false, context: "200K" },
-  { id: "claude-3-haiku-20240307",    name: "Claude 3 Haiku",    provider: "Anthropic", vision: true,  code: false, context: "200K" },
-  // Google
-  { id: "gemini-1.5-pro",   name: "Gemini 1.5 Pro",   provider: "Google",     vision: true,  code: false, context: "1M"   },
-  { id: "gemini-1.5-flash", name: "Gemini 1.5 Flash",  provider: "Google",     vision: true,  code: false, context: "1M"   },
-  // Cohere
-  { id: "command-r-plus",   name: "Command R+",        provider: "Cohere",     vision: false, code: false, context: "128K" },
-  { id: "command-r",        name: "Command R",         provider: "Cohere",     vision: false, code: false, context: "128K" },
-  // Mistral
-  { id: "mistral-large-latest",  name: "Mistral Large",   provider: "Mistral",  vision: false, code: false, context: "128K" },
-  { id: "mistral-medium-latest", name: "Mistral Medium",  provider: "Mistral",  vision: false, code: false, context: "32K"  },
-  { id: "mistral-small-latest",  name: "Mistral Small",   provider: "Mistral",  vision: false, code: false, context: "32K"  },
-  { id: "codestral-latest",      name: "Codestral",       provider: "Mistral",  vision: false, code: true,  context: "32K"  },
-  // DeepSeek
-  { id: "deepseek-chat",    name: "DeepSeek Chat",     provider: "DeepSeek",   vision: false, code: false, context: "64K"  },
-  { id: "deepseek-coder",   name: "DeepSeek Coder",    provider: "DeepSeek",   vision: false, code: true,  context: "64K"  },
-  // Qwen
-  { id: "qwen-max",         name: "Qwen Max",          provider: "Alibaba",    vision: false, code: false, context: "32K"  },
-  { id: "qwen-plus",        name: "Qwen Plus",         provider: "Alibaba",    vision: false, code: false, context: "32K"  },
-  { id: "qwen-turbo",       name: "Qwen Turbo",        provider: "Alibaba",    vision: false, code: false, context: "32K"  },
-  // Microsoft / Azure
-  { id: "phi-4",                         name: "Phi-4",              provider: "Microsoft", vision: false, code: true,  context: "16K"  },
-  { id: "phi-3-medium-128k-instruct",    name: "Phi-3 Medium",       provider: "Microsoft", vision: false, code: true,  context: "128K" },
-  { id: "phi-3-mini-128k-instruct",      name: "Phi-3 Mini",         provider: "Microsoft", vision: false, code: true,  context: "128K" },
-  // Meta / Llama
-  { id: "llama-3-3-70b-instruct",        name: "Llama 3.3 70B",      provider: "Meta",      vision: false, code: false, context: "128K" },
-  { id: "llama-3-2-90b-vision-instruct", name: "Llama 3.2 90B Vision", provider: "Meta",    vision: true,  code: false, context: "128K" },
-  { id: "llama-3-2-11b-vision-instruct", name: "Llama 3.2 11B Vision", provider: "Meta",    vision: true,  code: false, context: "128K" },
-  { id: "llama-3-1-405b-instruct",       name: "Llama 3.1 405B",     provider: "Meta",      vision: false, code: false, context: "128K" },
-  { id: "llama-3-1-70b-instruct",        name: "Llama 3.1 70B",      provider: "Meta",      vision: false, code: false, context: "128K" },
-];
-
-const PROVIDER_COLORS: Record<string, string> = {
-  OpenAI:    "#10A37F", Anthropic: "#D97706", Google: "#4285F4",
-  Mistral:   "#7C5CFF", DeepSeek:  "#1A73E8", Cohere: "#39AA56",
-  Alibaba:   "#FF6A00", Microsoft: "#0078D4", Meta:   "#0866FF",
+type CatalogModel = {
+  id: string;
+  name: string;
+  provider: string;
+  vision: boolean;
+  code: boolean;
+  context: string;
+  modality: ModelModality;
+  family?: string;
+  ready?: boolean;
+  mine?: boolean;
 };
+
+const PLAYGROUND_KEY = "od_playground_api_key";
+const PLAYGROUND_MODEL_KEY = "od_playground_model";
+
+const MY_LLMS_KEY = "od_my_llms";
+
+function toCatalog(row: {
+  id: string;
+  label: string;
+  provider: string;
+  vision?: boolean;
+  context?: string;
+  mine?: boolean;
+  modality?: ModelModality;
+  family?: string;
+  ready?: boolean;
+}): CatalogModel {
+  const id = row.id.toLowerCase();
+  const mine =
+    Boolean(row.mine) ||
+    row.provider === "Local GPU" ||
+    row.provider === "My LLM" ||
+    row.id.startsWith("custom:");
+  return {
+    id: row.id,
+    name: row.label,
+    provider: mine ? "My LLM" : row.provider,
+    vision: Boolean(row.vision) || /vision|gpt-4o|claude|gemini/.test(id),
+    code: /coder|codestral|phi-/.test(id),
+    context: row.context || "—",
+    modality: row.modality || inferModelModality(row.id, row.label),
+    family: row.family,
+    ready: row.ready !== false || mine,
+    mine,
+  };
+}
+
+function pickDefaultChatModel(
+  rows: CatalogModel[],
+  requested?: string | null,
+  current?: string,
+): string {
+  const chat = rows.filter((m) => isChatModality(m.modality));
+  const ready = chat.filter((m) => m.ready !== false);
+  const pool = ready.length ? ready : chat.length ? chat : rows;
+  const inPool = (id?: string | null) => Boolean(id && pool.some((m) => m.id === id));
+  if (inPool(requested)) return requested as string;
+  if (typeof window !== "undefined") {
+    const stored = localStorage.getItem(PLAYGROUND_MODEL_KEY);
+    if (inPool(stored)) return stored as string;
+  }
+  if (inPool(current)) return current as string;
+  const mine = pool.find((m) => m.mine);
+  if (mine) return mine.id;
+  const preferred = pool.find((m) =>
+    /llama3|llama-3|gpt-4o-mini|qwen2/.test(m.id.toLowerCase()),
+  );
+  return preferred?.id || pool[0]?.id || "";
+}
+
+function loadMyLlms(): CatalogModel[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = JSON.parse(localStorage.getItem(MY_LLMS_KEY) || "[]") as Array<{ id: string; name?: string }>;
+    return raw
+      .filter((r) => r.id)
+      .map((r) => ({
+        id: r.id,
+        name: r.name || r.id,
+        provider: "My LLM",
+        vision: false,
+        code: false,
+        context: "—",
+        modality: inferModelModality(r.id, r.name || r.id),
+        ready: true,
+        mine: true,
+      }));
+  } catch {
+    return [];
+  }
+}
+
+function saveMyLlm(id: string) {
+  const next = loadMyLlms().filter((m) => m.id !== id);
+  next.unshift({ id, name: id, provider: "My LLM", vision: false, code: false, context: "—", modality: inferModelModality(id), ready: true, mine: true });
+  localStorage.setItem(MY_LLMS_KEY, JSON.stringify(next.map((m) => ({ id: m.id, name: m.name }))));
+}
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -92,7 +153,7 @@ const NATIVE_DOC_MODEL_IDS = new Set([
 ]);
 
 /** Optional one-line blurbs for hover; unknown ids use `modelHoverBlurb`. */
-const MODEL_SUMMARIES: Partial<Record<(typeof MODELS)[number]["id"], string>> = {
+const MODEL_SUMMARIES: Partial<Record<string, string>> = {
   "gpt-4o": "OpenAI flagship multimodal model—strong general reasoning, vision, and tool-style tasks.",
   "gpt-4o-mini": "Fast, lower-cost GPT-4 class model with vision and a large context window.",
   "gpt-4-turbo": "Capable GPT-4 variant tuned for quality on complex prompts and longer chats.",
@@ -106,14 +167,20 @@ const MODEL_SUMMARIES: Partial<Record<(typeof MODELS)[number]["id"], string>> = 
   "deepseek-coder": "DeepSeek model focused on code completion, debugging, and technical Q&A.",
 };
 
-function modelHoverBlurb(m: (typeof MODELS)[number]): string {
+function modelHoverBlurb(m: CatalogModel): string {
+  if (m.ready === false) {
+    return `${m.name} is listed but its provider is not configured on this machine. Use a local model, or add the provider API key.`;
+  }
+  if (m.mine || m.provider === "My LLM") {
+    return `${m.name} is one of your models — a local pull, a GPU deployment, or an id you added. Calls go through the OpenDoor gateway.`;
+  }
   return (
     MODEL_SUMMARIES[m.id] ??
     `${m.name} (${m.provider}). ${m.vision ? "Accepts image inputs with text." : "Text-first."} ${m.code ? "Strong for code and technical writing." : "General-purpose chat and analysis."}`
   );
 }
 
-function modelCapabilityLine(m: (typeof MODELS)[number]): string {
+function modelCapabilityLine(m: CatalogModel): string {
   const bits: string[] = [`${m.context} context`];
   bits.push(m.vision ? "Vision" : "No vision");
   bits.push(m.code ? "Code-leaning" : "General");
@@ -177,13 +244,41 @@ function RenderContent({ text, mode }: { text: string; mode: CanvasMode }) {
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-function ModelPicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+function ModelPicker({
+  value, onChange, models,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  models: CatalogModel[];
+}) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [hoverId, setHoverId] = useState<string | null>(null);
+  const [adding, setAdding] = useState(false);
+  const [customId, setCustomId] = useState("");
+  const [savedMine, setSavedMine] = useState<CatalogModel[]>([]);
   const ref = useRef<HTMLDivElement>(null);
-  const model = MODELS.find(m => m.id === value) || MODELS[0];
-  const previewModel = MODELS.find((m) => m.id === (hoverId ?? value)) ?? model;
+  const allModels = useMemo(() => {
+    const seen = new Set<string>();
+    const merged: CatalogModel[] = [];
+    for (const m of [...savedMine, ...models]) {
+      if (seen.has(m.id)) continue;
+      seen.add(m.id);
+      merged.push(m);
+    }
+    return merged;
+  }, [models, savedMine]);
+  const model = allModels.find(m => m.id === value) || allModels[0] || {
+    id: "",
+    name: "My LLM",
+    provider: "My LLM",
+    vision: false,
+    code: false,
+    context: "—",
+    modality: "chat" as const,
+    mine: true,
+  };
+  const previewModel = allModels.find((m) => m.id === (hoverId ?? value)) ?? model;
 
   useEffect(() => {
     const handler = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
@@ -196,15 +291,37 @@ function ModelPicker({ value, onChange }: { value: string; onChange: (v: string)
     else setHoverId(value);
   }, [open, value]);
 
-  const filtered = MODELS.filter(m =>
+  useEffect(() => {
+    setSavedMine(loadMyLlms());
+  }, []);
+
+  const filtered = allModels.filter(m =>
     m.name.toLowerCase().includes(search.toLowerCase()) ||
-    m.provider.toLowerCase().includes(search.toLowerCase())
+    m.provider.toLowerCase().includes(search.toLowerCase()) ||
+    m.id.toLowerCase().includes(search.toLowerCase())
   );
 
-  const grouped = filtered.reduce((acc, m) => {
-    (acc[m.provider] ||= []).push(m);
-    return acc;
-  }, {} as Record<string, typeof MODELS>);
+  const mine = filtered.filter((m) => m.mine || m.provider === "My LLM");
+  const grouped = filtered
+    .filter((m) => !m.mine && m.provider !== "My LLM" && isChatModality(m.modality))
+    .reduce((acc, m) => {
+      (acc[m.provider] ||= []).push(m);
+      return acc;
+    }, {} as Record<string, CatalogModel[]>);
+  const embeddings = filtered.filter((m) => !isChatModality(m.modality) && !m.mine);
+
+  function useCustom(e: React.FormEvent) {
+    e.preventDefault();
+    const id = customId.trim();
+    if (!id) return;
+    saveMyLlm(id);
+    setSavedMine(loadMyLlms());
+    onChange(id);
+    setCustomId("");
+    setAdding(false);
+    setOpen(false);
+    setSearch("");
+  }
 
   return (
     <div ref={ref} style={{ position: "relative" }}>
@@ -218,7 +335,7 @@ function ModelPicker({ value, onChange }: { value: string; onChange: (v: string)
         }}
         className="hover:border-[var(--ink-4)]"
       >
-        <span style={{ width: 8, height: 8, borderRadius: 999, background: PROVIDER_COLORS[model.provider] || "var(--brand)", flexShrink: 0 }} />
+        <ProviderLogo provider={model.provider} modelId={model.id} size={16} />
         {model.name}
         {model.vision && <span className="od-tag od-tag-blue" style={{ padding: "0 5px", fontSize: 9 }}>Vision</span>}
         {model.code && <span className="od-tag od-tag-green" style={{ padding: "0 5px", fontSize: 9 }}>Code</span>}
@@ -228,7 +345,7 @@ function ModelPicker({ value, onChange }: { value: string; onChange: (v: string)
       {open && (
         <div style={{
           position: "absolute", top: "calc(100% + 8px)", left: 0,
-          width: 320, background: "var(--paper-2)", border: "1px solid var(--line)",
+          width: 360, background: "var(--paper-2)", border: "1px solid var(--line)",
           borderRadius: 12, boxShadow: "0 16px 48px rgba(26,26,46,0.14)", zIndex: 100,
           overflow: "hidden", display: "flex", flexDirection: "column",
         }}>
@@ -241,11 +358,94 @@ function ModelPicker({ value, onChange }: { value: string; onChange: (v: string)
               style={{ width: "100%", border: "none", outline: "none", fontSize: 13, color: "var(--ink)", background: "transparent", fontFamily: "inherit" }}
             />
           </div>
-          <div style={{ maxHeight: 280, overflowY: "auto", flex: 1, minHeight: 0 }}>
+          <div style={{ maxHeight: 320, overflowY: "auto", flex: 1, minHeight: 0 }}>
+            <div>
+              <div style={{ padding: "8px 14px 4px", fontSize: 10, fontFamily: "var(--font-mono)", textTransform: "uppercase", letterSpacing: "0.12em", color: "var(--ink-4)", display: "flex", alignItems: "center", gap: 7 }}>
+                <ProviderLogo provider="My LLM" size={14} />
+                My LLM
+              </div>
+              {mine.map((m) => (
+                <button
+                  key={m.id}
+                  type="button"
+                  onMouseEnter={() => setHoverId(m.id)}
+                  onClick={() => { onChange(m.id); setOpen(false); setSearch(""); }}
+                  title={`${modelHoverBlurb(m)} — ${modelCapabilityLine(m)}`}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 8, width: "100%",
+                    padding: "8px 14px", background: m.id === value ? "var(--brand-soft)" : "transparent",
+                    border: "none", cursor: "pointer", fontSize: 13, color: m.id === value ? "var(--brand-deep)" : "var(--ink)",
+                    fontFamily: "inherit", textAlign: "left", transition: "background 0.1s",
+                  }}
+                  className={m.id !== value ? "hover:bg-[var(--paper)]" : ""}
+                >
+                  <ProviderLogo provider={m.provider} modelId={m.id} size={18} />
+                  <span style={{ flex: 1 }}>{m.name}</span>
+                  <span style={{ fontSize: 10, fontFamily: "var(--font-mono)", color: "var(--ink-4)" }}>{m.ready === false ? "needs key" : m.context}</span>
+                </button>
+              ))}
+              {adding ? (
+                <form onSubmit={useCustom} style={{ padding: "6px 14px 10px", display: "flex", gap: 6 }}>
+                  <input
+                    autoFocus
+                    value={customId}
+                    onChange={(e) => setCustomId(e.target.value)}
+                    placeholder="qwen2.5:7b or hf.co/org/repo"
+                    style={{ flex: 1, border: "1px solid var(--line)", borderRadius: 8, padding: "6px 8px", fontSize: 12, fontFamily: "var(--font-mono)", color: "var(--ink)", background: "var(--paper)" }}
+                  />
+                  <button type="submit" className="btn-primary" style={{ padding: "6px 10px", fontSize: 12 }}>Use</button>
+                </form>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setAdding(true)}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 8, width: "100%",
+                    padding: "8px 14px", background: "transparent", border: "none",
+                    cursor: "pointer", fontSize: 13, color: "var(--ink-2)", fontFamily: "inherit", textAlign: "left",
+                  }}
+                  className="hover:bg-[var(--paper)]"
+                >
+                  <Plus style={{ width: 14, height: 14 }} />
+                  Add my model
+                </button>
+              )}
+              <div style={{ padding: "0 14px 10px", display: "flex", gap: 10 }}>
+                <Link href="/dashboard/models" style={{ fontSize: 11, color: "var(--brand)", textDecoration: "none" }}>Import weights</Link>
+                <Link href="/dashboard/deployments/new" style={{ fontSize: 11, color: "var(--brand)", textDecoration: "none" }}>Request GPU</Link>
+              </div>
+            </div>
+            {embeddings.length > 0 && (
+              <div>
+                <div style={{ padding: "8px 14px 4px", fontSize: 10, fontFamily: "var(--font-mono)", textTransform: "uppercase", letterSpacing: "0.12em", color: "var(--ink-4)" }}>
+                  Embeddings — not for chat
+                </div>
+                {embeddings.map((m) => (
+                  <button
+                    key={m.id}
+                    type="button"
+                    onMouseEnter={() => setHoverId(m.id)}
+                    onClick={() => { onChange(m.id); setOpen(false); setSearch(""); }}
+                    title={`${m.name} is an ${m.modality} model. Chat needs a completion model.`}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 8, width: "100%",
+                      padding: "8px 14px", background: m.id === value ? "var(--brand-soft)" : "transparent",
+                      border: "none", cursor: "pointer", fontSize: 13, color: m.id === value ? "var(--brand-deep)" : "var(--ink-3)",
+                      fontFamily: "inherit", textAlign: "left",
+                    }}
+                    className={m.id !== value ? "hover:bg-[var(--paper)]" : ""}
+                  >
+                    <ProviderLogo provider={m.provider} modelId={m.id} size={18} />
+                    <span style={{ flex: 1 }}>{m.name}</span>
+                    <span style={{ fontSize: 10, fontFamily: "var(--font-mono)", color: "var(--ink-4)" }}>{m.modality}</span>
+                  </button>
+                ))}
+              </div>
+            )}
             {Object.entries(grouped).map(([provider, models]) => (
               <div key={provider}>
-                <div style={{ padding: "8px 14px 4px", fontSize: 10, fontFamily: "var(--font-mono)", textTransform: "uppercase", letterSpacing: "0.12em", color: "var(--ink-4)", display: "flex", alignItems: "center", gap: 6 }}>
-                  <span style={{ width: 6, height: 6, borderRadius: 999, background: PROVIDER_COLORS[provider] }} />
+                <div style={{ padding: "8px 14px 4px", fontSize: 10, fontFamily: "var(--font-mono)", textTransform: "uppercase", letterSpacing: "0.12em", color: "var(--ink-4)", display: "flex", alignItems: "center", gap: 7 }}>
+                  <ProviderLogo provider={provider} size={14} />
                   {provider}
                 </div>
                 {models.map(m => (
@@ -263,8 +463,9 @@ function ModelPicker({ value, onChange }: { value: string; onChange: (v: string)
                     }}
                     className={m.id !== value ? "hover:bg-[var(--paper)]" : ""}
                   >
-                    <span style={{ flex: 1 }}>{m.name}</span>
-                    <span style={{ fontSize: 10, fontFamily: "var(--font-mono)", color: "var(--ink-4)" }}>{m.context}</span>
+                    <ProviderLogo provider={m.provider} modelId={m.id} size={18} />
+                    <span style={{ flex: 1, opacity: m.ready === false ? 0.7 : 1 }}>{m.name}</span>
+                    <span style={{ fontSize: 10, fontFamily: "var(--font-mono)", color: "var(--ink-4)" }}>{m.ready === false ? "needs key" : m.context}</span>
                     {m.vision && <Eye style={{ width: 12, height: 12, color: "#4285F4" }} />}
                     {m.code && <Code2 style={{ width: 12, height: 12, color: "#2E7D5B" }} />}
                   </button>
@@ -284,7 +485,10 @@ function ModelPicker({ value, onChange }: { value: string; onChange: (v: string)
               color: "var(--ink-3)",
             }}
           >
-            <div style={{ fontWeight: 600, color: "var(--ink)", marginBottom: 4 }}>{previewModel.name}</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 600, color: "var(--ink)", marginBottom: 4 }}>
+              <ProviderLogo provider={previewModel.provider} modelId={previewModel.id} size={18} />
+              {previewModel.name}
+            </div>
             <div style={{ marginBottom: 6 }}>{modelHoverBlurb(previewModel)}</div>
             <div style={{ fontSize: 11, fontFamily: "var(--font-mono)", color: "var(--ink-4)" }}>
               {modelCapabilityLine(previewModel)}
@@ -298,13 +502,29 @@ function ModelPicker({ value, onChange }: { value: string; onChange: (v: string)
 
 function ParamsPanel({
   temperature, setTemperature, maxTokens, setMaxTokens, topP, setTopP,
+  dataClass, setDataClass,
 }: {
   temperature: number; setTemperature: (v: number) => void;
   maxTokens: number; setMaxTokens: (v: number) => void;
   topP: number; setTopP: (v: number) => void;
+  dataClass: string; setDataClass: (v: string) => void;
 }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+      <div>
+        <label style={{ fontSize: 12, color: "var(--ink-3)", fontFamily: "var(--font-mono)", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 500 }}>Data class</label>
+        <p style={{ fontSize: 11, color: "var(--ink-4)", margin: "4px 0 8px" }}>Sent as X-Data-Class. Policies evaluate this before the model runs.</p>
+        <select
+          value={dataClass}
+          onChange={(e) => setDataClass(e.target.value)}
+          className="input w-full text-sm"
+        >
+          <option value="public">Public</option>
+          <option value="internal">Internal</option>
+          <option value="confidential">Confidential — may need approval</option>
+          <option value="restricted">Restricted — usually blocked</option>
+        </select>
+      </div>
       {[
         { label: "Temperature", value: temperature, setter: setTemperature, min: 0, max: 2, step: 0.05, fmt: (v: number) => v.toFixed(2) },
         { label: "Max tokens", value: maxTokens, setter: setMaxTokens, min: 256, max: 8192, step: 256, fmt: (v: number) => v.toLocaleString() },
@@ -352,7 +572,7 @@ function ChatBubble({ msg, isStreaming }: { msg: Message; isStreaming?: boolean 
           </div>
         )}
         {/* Bubble */}
-        {msg.content && (
+        {(msg.content || isStreaming) && (
           <div style={{
             padding: "10px 14px",
             borderRadius: isUser ? "16px 4px 16px 16px" : "4px 16px 16px 16px",
@@ -361,7 +581,12 @@ function ChatBubble({ msg, isStreaming }: { msg: Message; isStreaming?: boolean 
             border: isUser ? "none" : "1px solid var(--line)",
             fontSize: 13.5, lineHeight: 1.65,
           }}>
-            {isStreaming ? (
+            {isStreaming && !msg.content ? (
+              <span style={{ color: "var(--ink-3)", display: "inline-flex", alignItems: "center", gap: 8 }}>
+                <Loader2 style={{ width: 13, height: 13 }} className="animate-spin" />
+                Connecting to model…
+              </span>
+            ) : isStreaming ? (
               <span style={{ whiteSpace: "pre-wrap" }}>
                 {msg.content}
                 <span style={{ display: "inline-block", width: 2, height: 14, background: "var(--brand)", marginLeft: 2, animation: "od-pulse 1s ease-out infinite", borderRadius: 1 }} />
@@ -381,28 +606,40 @@ function ChatBubble({ msg, isStreaming }: { msg: Message; isStreaming?: boolean 
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 
-export default function PlaygroundPage() {
+function PlaygroundPage() {
+  const searchParams = useSearchParams();
+  const [catalog, setCatalog] = useState<CatalogModel[]>([]);
+  const [catalogLoading, setCatalogLoading] = useState(true);
   const [apiKey, setApiKey] = useState("");
-  const [gatewayUrl] = useState(process.env.NEXT_PUBLIC_GATEWAY_URL || "https://api.opendoor.ai");
-  const [modelId, setModelId] = useState("gpt-4o");
+  const [gatewayUrl] = useState(gatewayBaseUrl());
+  const [modelId, setModelId] = useState(searchParams.get("model") || "");
   const [messages, setMessages] = useState<Message[]>([]);
   const [draft, setDraft] = useState("");
   const [images, setImages] = useState<string[]>([]);
   const [documents, setDocuments] = useState<AttachedDocument[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [showParams, setShowParams] = useState(false);
-  const [showSystemPrompt, setShowSystemPrompt] = useState(false);
+  const [showParams, setShowParams] = useState(true);
+  const [showCode, setShowCode] = useState(false);
   const [systemPrompt, setSystemPrompt] = useState("You are a helpful, concise assistant.");
   const [temperature, setTemperature] = useState(0.7);
   const [maxTokens, setMaxTokens] = useState(2048);
   const [topP, setTopP] = useState(0.95);
+  const [dataClass, setDataClass] = useState("internal");
   const [canvasMode, setCanvasMode] = useState<CanvasMode>("markdown");
   const [copiedCanvas, setCopiedCanvas] = useState(false);
-  const [splitPct, setSplitPct] = useState(38);
+  const [splitPct, setSplitPct] = useState(54);
   const [isDragging, setIsDragging] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [playgroundBeta, setPlaygroundBeta] = useState(false);
+  const remintedKey = useRef(false);
+  const [routeModelId, setRouteModelId] = useState("");
+  const [gcpJob, setGcpJob] = useState<{ id: string; status: string; message: string } | null>(null);
+  const [connection, setConnection] = useState<{
+    phase: "loading" | "connected" | "offline" | "bad_key" | "idle" | "deploying";
+    latencyMs: number | null;
+    detail: string;
+  }>({ phase: "loading", latencyMs: null, detail: "Loading connection…" });
 
   const chatEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -410,7 +647,237 @@ export default function PlaygroundPage() {
   const containerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const model = useMemo(() => MODELS.find(m => m.id === modelId) || MODELS[0], [modelId]);
+  const model = useMemo(
+    () => catalog.find(m => m.id === modelId) || catalog.find(m => isChatModality(m.modality)) || catalog[0] || {
+      id: "", name: "—", provider: "—", vision: false, code: false, context: "—", modality: "chat" as const,
+    },
+    [catalog, modelId]
+  );
+  const modelIsChat = isChatModality(model.modality);
+  const runsOnGcp = Boolean(
+    model.id &&
+    !model.id.startsWith("custom:") &&
+    modelIsChat &&
+    model.family !== "closed" &&
+    !/^(gpt-|claude-|gemini-|command-r)/i.test(model.id),
+  );
+
+  const ensureGcpFor = useCallback(async (id: string) => {
+    setConnection({
+      phase: "deploying",
+      latencyMs: null,
+      detail: "Starting this model on Google Cloud…",
+    });
+    const res = await fetch("/api/playground/gcp", {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ modelId: id }),
+    });
+    const data = (await res.json().catch(() => ({}))) as {
+      error?: string;
+      model?: string;
+      deploymentId?: string;
+      status?: string;
+      statusMessage?: string | null;
+      hfRepo?: string;
+    };
+    if (!res.ok) {
+      setGcpJob(null);
+      setRouteModelId("");
+      setConnection({ phase: "offline", latencyMs: null, detail: data.error || "Google Cloud deploy failed" });
+      setError(data.error || "Google Cloud deploy failed");
+      return null;
+    }
+    setRouteModelId(data.model || "");
+    setGcpJob({
+      id: data.deploymentId || "",
+      status: data.status || "pending",
+      message: data.statusMessage || `Provisioning ${data.hfRepo || id} on Cloud Run GPU`,
+    });
+    if (data.status === "running") {
+      setConnection({
+        phase: "connected",
+        latencyMs: null,
+        detail: `Connected · Google Cloud GPU · ${data.hfRepo || id}`,
+      });
+    } else {
+      setConnection({
+        phase: "deploying",
+        latencyMs: null,
+        detail: data.statusMessage || "Deploying to Google Cloud…",
+      });
+    }
+    return data;
+  }, []);
+
+  useEffect(() => {
+    if (!gcpJob?.id || gcpJob.status === "running" || gcpJob.status === "failed") return;
+    let cancelled = false;
+    const tick = async () => {
+      const res = await fetch(`/api/playground/gcp?deploymentId=${encodeURIComponent(gcpJob.id)}`, {
+        credentials: "include",
+        cache: "no-store",
+      });
+      const data = (await res.json().catch(() => ({}))) as {
+        status?: string;
+        statusMessage?: string | null;
+        model?: string;
+      };
+      if (cancelled || !res.ok) return;
+      setGcpJob((prev) => prev ? { ...prev, status: data.status || prev.status, message: data.statusMessage || prev.message } : prev);
+      if (data.model) setRouteModelId(data.model);
+      if (data.status === "running") {
+        setConnection({ phase: "connected", latencyMs: null, detail: data.statusMessage || "Connected · Google Cloud GPU" });
+      } else if (data.status === "failed") {
+        setConnection({ phase: "offline", latencyMs: null, detail: data.statusMessage || "Google Cloud deploy failed" });
+        setError(data.statusMessage || "Google Cloud deploy failed");
+      } else {
+        setConnection({ phase: "deploying", latencyMs: null, detail: data.statusMessage || "Deploying to Google Cloud…" });
+      }
+    };
+    const timer = window.setInterval(() => { void tick(); }, 4000);
+    void tick();
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [gcpJob?.id, gcpJob?.status]);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function boot() {
+      try {
+        const stored = typeof window !== "undefined" ? localStorage.getItem(PLAYGROUND_KEY) : "";
+        if (stored) setApiKey(stored);
+        else {
+          const created = await fetch("/api/keys", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({ name: "Playground" }),
+          });
+          if (created.ok) {
+            const data = (await created.json()) as { key?: string };
+            if (data.key && !cancelled) {
+              localStorage.setItem(PLAYGROUND_KEY, data.key);
+              setApiKey(data.key);
+            }
+          }
+        }
+
+        const mRes = await fetch("/api/models/available", { credentials: "include" });
+        if (!mRes.ok) return;
+        const mJson = (await mRes.json()) as { models?: Array<{ id: string; label: string; provider: string; vision?: boolean; context?: string; mine?: boolean; modality?: ModelModality; family?: string; ready?: boolean }> };
+        const rows = (mJson.models || []).map(toCatalog);
+        if (cancelled) return;
+        setCatalog(rows);
+        const requested = searchParams.get("model");
+        setModelId((current) => {
+          const next = pickDefaultChatModel(rows, requested, current);
+          if (next && typeof window !== "undefined") localStorage.setItem(PLAYGROUND_MODEL_KEY, next);
+          return next;
+        });
+      } finally {
+        if (!cancelled) setCatalogLoading(false);
+      }
+    }
+    void boot();
+    return () => { cancelled = true; };
+  }, [searchParams]);
+
+  const probeConnection = useCallback(async (key: string) => {
+    setConnection((prev) => ({
+      ...prev,
+      phase: prev.phase === "connected" ? "connected" : "loading",
+      detail: key ? "Checking gateway…" : "Issuing playground key…",
+    }));
+    try {
+      const headers: Record<string, string> = {};
+      if (key) headers["x-playground-key"] = key;
+      const res = await fetch("/api/playground/connection", {
+        credentials: "include",
+        headers,
+        cache: "no-store",
+      });
+      const data = (await res.json().catch(() => ({}))) as {
+        status?: string;
+        key?: string;
+        providers?: string[];
+        gateway?: { status?: string; latencyMs?: number | null; url?: string; error?: string | null };
+      };
+      if (data.status === "connected") {
+        const live = (data.providers || []).slice(0, 3).join(", ");
+        const host = data.gateway?.url?.replace(/^https?:\/\//, "") || "gateway";
+        setConnection({
+          phase: "connected",
+          latencyMs: data.gateway?.latencyMs ?? null,
+          detail: live ? `Connected to ${host} · ${live}` : `Connected to ${host}`,
+        });
+        return;
+      }
+      if (data.status === "offline") {
+        setConnection({
+          phase: "offline",
+          latencyMs: data.gateway?.latencyMs ?? null,
+          detail: data.gateway?.error || `Gateway offline at ${data.gateway?.url || gatewayUrl}`,
+        });
+        return;
+      }
+      if (data.status === "bad_key" || data.key === "invalid") {
+        setConnection({
+          phase: "bad_key",
+          latencyMs: data.gateway?.latencyMs ?? null,
+          detail: remintedKey.current
+            ? "Playground key was rejected. Paste a valid key from API Keys."
+            : "Playground key was rejected. Minting a new one…",
+        });
+        if (remintedKey.current) return;
+        remintedKey.current = true;
+        localStorage.removeItem(PLAYGROUND_KEY);
+        const created = await fetch("/api/keys", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ name: "Playground" }),
+        });
+        if (created.ok) {
+          const minted = (await created.json()) as { key?: string };
+          if (minted.key) {
+            localStorage.setItem(PLAYGROUND_KEY, minted.key);
+            setApiKey(minted.key);
+          }
+        }
+        return;
+      }
+      setConnection({
+        phase: "loading",
+        latencyMs: data.gateway?.latencyMs ?? null,
+        detail: "Loading connection…",
+      });
+    } catch (err) {
+      setConnection({
+        phase: "offline",
+        latencyMs: null,
+        detail: err instanceof Error ? err.message : "Could not check the gateway",
+      });
+    }
+  }, [gatewayUrl]);
+
+  useEffect(() => {
+    if (catalogLoading) {
+      setConnection({ phase: "loading", latencyMs: null, detail: "Loading connection…" });
+      return;
+    }
+    if (gcpJob && gcpJob.status !== "failed") return;
+    void probeConnection(apiKey);
+  }, [apiKey, catalogLoading, probeConnection, gcpJob]);
+
+  useEffect(() => {
+    if (modelId && isChatModality(model.modality) && model.ready !== false) {
+      localStorage.setItem(PLAYGROUND_MODEL_KEY, modelId);
+    }
+  }, [modelId, model.modality, model.ready]);
   const modelSupportsDocs = useMemo(() => model.context !== "8K", [model.context]);
   const modelHasNativeDocs = useMemo(() => NATIVE_DOC_MODEL_IDS.has(model.id), [model.id]);
   const lastAssistant = useMemo(() => [...messages].reverse().find(m => m.role === "assistant"), [messages]);
@@ -556,8 +1023,42 @@ export default function PlaygroundPage() {
     ];
   }
 
+  function handleSelectModel(id: string) {
+    setModelId(id);
+    setRouteModelId("");
+    setGcpJob(null);
+    setError("");
+    const next = catalog.find((m) => m.id === id);
+    const useGcp =
+      Boolean(next) &&
+      isChatModality(next!.modality) &&
+      next!.family !== "closed" &&
+      !id.startsWith("custom:") &&
+      !/^(gpt-|claude-|gemini-|command-r)/i.test(id);
+    if (useGcp) void ensureGcpFor(id);
+  }
+
   async function sendMessage() {
-    if (!apiKey || !draft.trim()) return;
+    if (!apiKey || !draft.trim() || !modelId) return;
+    if (!modelIsChat) {
+      setError(`${model.name} is an ${model.modality} model. Switch to a chat model to send messages.`);
+      return;
+    }
+    if (runsOnGcp && gcpJob?.status && gcpJob.status !== "running") {
+      setError(gcpJob.message || "Google Cloud is still starting this model. Wait for Connected, then send.");
+      return;
+    }
+    if (runsOnGcp && !routeModelId.startsWith("custom:")) {
+      const started = await ensureGcpFor(modelId);
+      if (!started || started.status !== "running") {
+        setError("Google Cloud is starting this model. Wait for the connection pill, then send.");
+        return;
+      }
+    }
+    if (connection.phase === "offline") {
+      setError(connection.detail || "Gateway is offline.");
+      return;
+    }
     setLoading(true);
     setError("");
 
@@ -580,22 +1081,24 @@ export default function PlaygroundPage() {
     try {
       posthog.capture("playground_request_started", { model: modelId, has_images: images.length > 0 });
 
-      const res = await fetch(`${gatewayUrl}/v1/chat/completions`, {
+      const res = await fetch("/api/playground/chat", {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
         body: JSON.stringify({
-          model: modelId,
+          model: routeModelId || modelId,
           messages: buildApiMessages(),
           stream: true,
           temperature,
           max_tokens: maxTokens,
           top_p: topP,
+          data_class: dataClass,
         }),
       });
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error((data as any).error || `Request failed: ${res.status}`);
+        throw new Error(formatGatewayError(data, `Request failed: ${res.status}`));
       }
 
       const reader = res.body?.getReader();
@@ -628,6 +1131,9 @@ export default function PlaygroundPage() {
             } catch { /* ignore */ }
           }
         }
+      }
+      if (chars === 0) {
+        throw new Error("Model returned no text. If this is an embedding or rerank model, switch to a chat model.");
       }
       posthog.capture("playground_request_completed", { model: modelId, response_length: chars });
       await fetch("/api/onboarding", {
@@ -667,21 +1173,48 @@ export default function PlaygroundPage() {
     setDocuments([]);
   }
 
+  const gcpReady = !runsOnGcp || gcpJob?.status === "running";
+  const canRun = Boolean(
+    apiKey &&
+    draft.trim() &&
+    modelId &&
+    modelIsChat &&
+    gcpReady &&
+    connection.phase !== "offline" &&
+    connection.phase !== "deploying" &&
+    !loading,
+  );
+  const connectionColor =
+    connection.phase === "connected" ? "var(--green)" :
+    connection.phase === "offline" || connection.phase === "bad_key" ? "var(--red)" :
+    "var(--brand)";
+
   // ─── Render ──────────────────────────────────────────────────────────────
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 64px)", margin: "-40px -56px -80px", overflow: "hidden" }}>
+    <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0, minWidth: 0, width: "100%", height: "100%", overflow: "hidden", position: "relative" }}>
 
       {/* ── Toolbar ── */}
       <div style={{
-        height: 56, borderBottom: "1px solid var(--line)",
+        minHeight: 56, borderBottom: "1px solid var(--line)",
         background: "var(--paper-2)", display: "flex", alignItems: "center",
-        paddingInline: 20, gap: 10, flexShrink: 0, zIndex: 10,
+        flexWrap: "wrap", padding: "8px 16px", gap: 8, flexShrink: 0, zIndex: 10,
       }}>
         <div className="od-eyebrow" style={{ marginRight: 4 }}>Playground</div>
         <div style={{ width: 1, height: 20, background: "var(--line)" }} />
 
-        <ModelPicker value={modelId} onChange={setModelId} />
+        {catalogLoading ? (
+          <span className="od-mono" style={{ fontSize: 12, color: "var(--ink-4)", display: "inline-flex", alignItems: "center", gap: 6 }}>
+            <Loader2 style={{ width: 12, height: 12 }} className="animate-spin" /> Loading catalog…
+          </span>
+        ) : (
+          <ModelPicker value={modelId} onChange={handleSelectModel} models={catalog} />
+        )}
+        {!modelIsChat && model.id && (
+          <div style={{ display: "flex", alignItems: "center", gap: 4, padding: "3px 8px", borderRadius: 6, background: "var(--red-soft)", color: "var(--red)", fontSize: 11, fontFamily: "var(--font-mono)", fontWeight: 500 }}>
+            {model.modality} — pick a chat model
+          </div>
+        )}
 
         {/* Capability badges */}
         {model.vision && (
@@ -708,33 +1241,76 @@ export default function PlaygroundPage() {
           <Zap style={{ width: 11, height: 11 }} /> {model.context}
         </div>
 
-        <div style={{ flex: 1 }} />
+        <div style={{ flex: "1 1 12px", minWidth: 8 }} />
 
-        {/* API Key input */}
+        <button
+          type="button"
+          onClick={() => void probeConnection(apiKey)}
+          title={connection.detail}
+          style={{
+            display: "flex", alignItems: "center", gap: 7,
+            padding: "5px 12px", borderRadius: 999, border: "1px solid var(--line)",
+            background: "var(--paper)", fontSize: 12, color: "var(--ink-2)", cursor: "pointer",
+            maxWidth: 280,
+          }}
+        >
+          {connection.phase === "loading" ? (
+            <Loader2 style={{ width: 12, height: 12, color: connectionColor }} className="animate-spin" />
+          ) : (
+            <span style={{ width: 8, height: 8, borderRadius: 999, background: connectionColor, flexShrink: 0 }} />
+          )}
+          <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {connection.phase === "connected"
+              ? `Connected${connection.latencyMs != null ? ` · ${connection.latencyMs}ms` : ""}${runsOnGcp ? " · GCP" : ""}`
+              : connection.phase === "offline"
+                ? "Gateway offline"
+                : connection.phase === "bad_key"
+                  ? "Refreshing key…"
+                  : connection.phase === "deploying"
+                    ? "Starting on Google Cloud…"
+                    : "Loading connection…"}
+          </span>
+        </button>
         <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 12px", borderRadius: 8, border: "1px solid var(--line)", background: "var(--paper)", fontSize: 12 }}>
           <Cpu style={{ width: 12, height: 12, color: "var(--ink-3)" }} />
           <input
             type="password"
             value={apiKey}
-            onChange={e => setApiKey(e.target.value)}
+            onChange={e => {
+              setApiKey(e.target.value);
+              if (e.target.value) localStorage.setItem(PLAYGROUND_KEY, e.target.value);
+            }}
             placeholder="API key…"
+            title={apiKey ? "Playground key stored in this browser" : "Creating a Playground key…"}
             style={{ border: "none", outline: "none", background: "transparent", fontSize: 12, color: "var(--ink)", fontFamily: "var(--font-mono)", width: 140 }}
           />
         </div>
 
-        {/* Params toggle */}
         <button
           onClick={() => setShowParams(o => !o)}
           style={{
             display: "flex", alignItems: "center", gap: 6,
-            padding: "6px 12px", borderRadius: 8,
+            padding: "6px 12px", borderRadius: 999,
             border: `1px solid ${showParams ? "var(--brand)" : "var(--line)"}`,
             background: showParams ? "var(--brand-soft)" : "var(--paper-2)",
             color: showParams ? "var(--brand-deep)" : "var(--ink-2)",
-            fontSize: 12, fontWeight: 500, cursor: "pointer", transition: "all 0.15s",
+            fontSize: 12, fontWeight: 500, cursor: "pointer", transition: "all 0.18s",
           }}
         >
           <SlidersHorizontal style={{ width: 13, height: 13 }} /> Params
+        </button>
+        <button
+          onClick={() => setShowCode(o => !o)}
+          style={{
+            display: "flex", alignItems: "center", gap: 6,
+            padding: "6px 12px", borderRadius: 999,
+            border: `1px solid ${showCode ? "var(--brand)" : "var(--line)"}`,
+            background: showCode ? "var(--brand-soft)" : "var(--paper-2)",
+            color: showCode ? "var(--brand-deep)" : "var(--ink-2)",
+            fontSize: 12, fontWeight: 500, cursor: "pointer",
+          }}
+        >
+          <Code2 style={{ width: 13, height: 13 }} /> View code
         </button>
 
         {/* Clear */}
@@ -750,72 +1326,113 @@ export default function PlaygroundPage() {
         {/* Send */}
         <button
           onClick={sendMessage}
-          disabled={loading || !apiKey || !draft.trim()}
+          disabled={!canRun}
           style={{
             display: "flex", alignItems: "center", gap: 6,
             padding: "7px 16px", borderRadius: 999,
-            background: loading || !apiKey || !draft.trim() ? "var(--paper-3)" : "var(--brand)",
-            color: loading || !apiKey || !draft.trim() ? "var(--ink-4)" : "white",
-            border: "none", fontSize: 13, fontWeight: 500, cursor: loading || !apiKey || !draft.trim() ? "not-allowed" : "pointer",
+            background: canRun ? "var(--brand)" : "var(--paper-3)",
+            color: canRun ? "white" : "var(--ink-4)",
+            border: "none", fontSize: 13, fontWeight: 500, cursor: canRun ? "pointer" : "not-allowed",
             transition: "all 0.15s",
           }}
         >
           {loading ? <Loader2 style={{ width: 14, height: 14 }} className="animate-spin" /> : <Send style={{ width: 14, height: 14 }} />}
-          {loading ? "Running…" : "Run"}
+          {loading ? "Connecting…" : "Run"}
           {!loading && <span style={{ fontSize: 10, fontFamily: "var(--font-mono)", opacity: 0.7 }}>⌘↵</span>}
         </button>
       </div>
 
-      {/* ── Params panel (slide-down) ── */}
-      {showParams && (
+      {(connection.phase === "loading" || connection.phase === "offline" || connection.phase === "bad_key" || connection.phase === "deploying" || !modelIsChat) && (
         <div style={{
-          borderBottom: "1px solid var(--line)", background: "var(--paper-2)",
-          padding: "20px 24px", display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 32,
-          flexShrink: 0, zIndex: 9,
+          padding: "10px 20px", borderBottom: "1px solid var(--line)", fontSize: 13,
+          background: connection.phase === "offline" || !modelIsChat ? "var(--red-soft)" : "var(--paper)",
+          color: connection.phase === "offline" || !modelIsChat ? "var(--red)" : "var(--ink-2)",
+          display: "flex", alignItems: "center", gap: 8,
         }}>
-          <ParamsPanel temperature={temperature} setTemperature={setTemperature}
-            maxTokens={maxTokens} setMaxTokens={setMaxTokens}
-            topP={topP} setTopP={setTopP} />
+          {(connection.phase === "loading" || connection.phase === "deploying") && <Loader2 style={{ width: 13, height: 13 }} className="animate-spin" />}
+          {connection.phase === "loading" && (connection.detail || "Loading connection — checking the gateway, preparing your key, and selecting a chat model.")}
+          {connection.phase === "deploying" && (
+            <span>
+              {gcpJob?.message || connection.detail || "Starting this model on Google Cloud (Cloud Run GPU). Chat unlocks when the service is up."}
+            </span>
+          )}
+          {connection.phase === "offline" && (
+            <span>
+              {connection.detail}
+            </span>
+          )}
+          {connection.phase === "bad_key" && (connection.detail || "Refreshing the playground key…")}
+          {connection.phase !== "loading" && connection.phase !== "offline" && connection.phase !== "bad_key" && connection.phase !== "deploying" && !modelIsChat && (
+            <span>{model.name} cannot chat. Choose a completion model from the picker.</span>
+          )}
+        </div>
+      )}
+      {!catalogLoading && catalog.length === 0 && (
+        <div style={{ padding: "10px 20px", background: "var(--paper)", borderBottom: "1px solid var(--line)", fontSize: 13, color: "var(--ink-2)" }}>
+          No live models in the catalog.{" "}
+          <Link href="/dashboard/models" style={{ color: "var(--brand)", fontWeight: 500 }}>Open models</Link>
+          {" "}to see what is seeded, or ingest open-weight models.
         </div>
       )}
 
       {/* ── Main split ── */}
       <div
-        ref={containerRef}
-        style={{ flex: 1, display: "flex", overflow: "hidden", userSelect: isDragging ? "none" : "auto" }}
+        style={{ flex: 1, minHeight: 0, minWidth: 0, display: "flex", overflow: "hidden", userSelect: isDragging ? "none" : "auto" }}
       >
-        {/* Left: chat panel */}
-        <div style={{ width: `${splitPct}%`, display: "flex", flexDirection: "column", borderRight: "1px solid var(--line)", overflow: "hidden" }}>
-
-          {/* System prompt */}
-          <div style={{ borderBottom: "1px solid var(--line-soft)", flexShrink: 0 }}>
-            <button
-              onClick={() => setShowSystemPrompt(o => !o)}
-              style={{
-                display: "flex", alignItems: "center", gap: 6, width: "100%",
-                padding: "10px 16px", background: "none", border: "none",
-                cursor: "pointer", fontSize: 12, color: "var(--ink-3)", fontFamily: "var(--font-mono)",
-              }}
-            >
-              {showSystemPrompt ? <ChevronDown style={{ width: 12, height: 12 }} /> : <ChevronRight style={{ width: 12, height: 12 }} />}
-              System prompt
-              {systemPrompt && <span style={{ marginLeft: "auto", width: 6, height: 6, borderRadius: 999, background: "var(--brand)" }} />}
-            </button>
-            {showSystemPrompt && (
+        {showParams && (
+          <aside
+            style={{
+              width: 240,
+              minWidth: 220,
+              maxWidth: 260,
+              flexShrink: 0,
+              borderRight: "1px solid var(--line)",
+              background: "var(--paper-2)",
+              overflowY: "auto",
+              overflowX: "hidden",
+              padding: "18px 16px 24px",
+              display: "flex",
+              flexDirection: "column",
+              gap: 22,
+              boxSizing: "border-box",
+            }}
+          >
+            <div>
+              <div className="od-eyebrow" style={{ marginBottom: 8 }}>System prompt</div>
               <textarea
                 value={systemPrompt}
                 onChange={e => setSystemPrompt(e.target.value)}
-                rows={3}
+                rows={5}
                 style={{
-                  width: "100%", padding: "8px 16px 12px", border: "none", outline: "none",
+                  width: "100%", maxWidth: "100%", boxSizing: "border-box", padding: 12, border: "1px solid var(--line)", outline: "none",
                   background: "var(--paper)", fontFamily: "var(--font-mono)", fontSize: 12,
-                  color: "var(--ink-2)", resize: "none", lineHeight: 1.6,
-                  borderBottom: "1px solid var(--line-soft)",
+                  color: "var(--ink-2)", resize: "vertical", lineHeight: 1.6, borderRadius: 12,
                 }}
-                placeholder="System instructions…"
+                placeholder="How the model should behave…"
               />
-            )}
-          </div>
+            </div>
+            <div>
+              <div className="od-eyebrow" style={{ marginBottom: 12 }}>Parameters</div>
+              <ParamsPanel temperature={temperature} setTemperature={setTemperature}
+                maxTokens={maxTokens} setMaxTokens={setMaxTokens}
+                topP={topP} setTopP={setTopP}
+                dataClass={dataClass} setDataClass={setDataClass} />
+            </div>
+            <div>
+              <div className="od-eyebrow" style={{ marginBottom: 8 }}>Response format</div>
+              <div style={{ padding: "8px 12px", borderRadius: 10, border: "1px solid var(--line)", fontSize: 13, color: "var(--ink-2)" }}>
+                Text
+              </div>
+            </div>
+          </aside>
+        )}
+
+        <div
+          ref={containerRef}
+          style={{ flex: 1, minWidth: 0, minHeight: 0, display: "flex", overflow: "hidden" }}
+        >
+        {/* Left: chat panel */}
+        <div style={{ width: `${splitPct}%`, minWidth: 280, display: "flex", flexDirection: "column", borderRight: "1px solid var(--line)", overflow: "hidden" }}>
 
           {/* Messages */}
           <div style={{ flex: 1, overflowY: "auto", padding: "20px 16px", display: "flex", flexDirection: "column", gap: 20 }}>
@@ -825,8 +1442,14 @@ export default function PlaygroundPage() {
                   <MessageSquare style={{ width: 22, height: 22, color: "var(--brand)" }} />
                 </div>
                 <div style={{ fontSize: 14, fontWeight: 600, color: "var(--ink-3)" }}>Start a conversation</div>
-                <div style={{ fontSize: 12, color: "var(--ink-4)", maxWidth: 200 }}>
-                  {model.vision ? "You can attach images to your messages." : "Type a message and press ⌘↵ to send."}
+                <div style={{ fontSize: 12, color: "var(--ink-4)", maxWidth: 240 }}>
+                  {connection.phase === "loading"
+                    ? "Loading connection to the gateway…"
+                    : connection.phase === "offline"
+                      ? "Gateway is offline — chat will work once it is up."
+                      : !modelIsChat
+                        ? "This model is embeddings-only. Pick a chat model above."
+                        : model.vision ? "You can attach images to your messages." : "Type a message and press ⌘↵ to send."}
                 </div>
               </div>
             )}
@@ -907,7 +1530,7 @@ export default function PlaygroundPage() {
                 </div>
               </div>
             )}
-            <div style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
+            <div className="od-composer">
               <input
                 ref={docInputRef}
                 type="file"
@@ -919,8 +1542,8 @@ export default function PlaygroundPage() {
               <button
                 onClick={() => docInputRef.current?.click()}
                 title="Attach document"
-                style={{ width: 34, height: 34, display: "grid", placeItems: "center", borderRadius: 8, border: "1px solid var(--line)", background: "var(--paper)", color: "var(--ink-3)", cursor: "pointer", flexShrink: 0, transition: "all 0.12s" }}
-                className="hover:border-[var(--brand)] hover:text-[var(--brand)] hover:bg-[var(--brand-soft)]"
+                style={{ width: 34, height: 34, display: "grid", placeItems: "center", borderRadius: 999, border: "none", background: "transparent", color: "var(--ink-3)", cursor: "pointer", flexShrink: 0 }}
+                className="hover:text-[var(--brand)]"
               >
                 <Paperclip style={{ width: 15, height: 15 }} />
               </button>
@@ -930,8 +1553,8 @@ export default function PlaygroundPage() {
                   <button
                     onClick={() => fileInputRef.current?.click()}
                     title="Attach image"
-                    style={{ width: 34, height: 34, display: "grid", placeItems: "center", borderRadius: 8, border: "1px solid var(--line)", background: "var(--paper)", color: "var(--ink-3)", cursor: "pointer", flexShrink: 0, transition: "all 0.12s" }}
-                    className="hover:border-[var(--brand)] hover:text-[var(--brand)] hover:bg-[var(--brand-soft)]"
+                    style={{ width: 34, height: 34, display: "grid", placeItems: "center", borderRadius: 999, border: "none", background: "transparent", color: "var(--ink-3)", cursor: "pointer", flexShrink: 0 }}
+                    className="hover:text-[var(--brand)]"
                   >
                     <ImagePlus style={{ width: 15, height: 15 }} />
                   </button>
@@ -943,28 +1566,19 @@ export default function PlaygroundPage() {
                 onChange={handleDraftChange}
                 onKeyDown={handleKeyDown}
                 rows={1}
-                placeholder={model.vision ? "Message (attach docs/images)…" : "Message (attach docs)…"}
+                placeholder="Send a message…"
                 style={{
-                  flex: 1, border: "1px solid var(--line)", borderRadius: 10,
-                  padding: "8px 12px", resize: "none", outline: "none",
-                  fontSize: 13.5, lineHeight: 1.55, fontFamily: "inherit",
-                  color: "var(--ink)", background: "var(--paper)", maxHeight: 160,
-                  transition: "border 0.15s",
+                  flex: 1, border: "none",
+                  padding: "8px 4px", resize: "none", outline: "none",
+                  fontSize: 14, lineHeight: 1.55, fontFamily: "inherit",
+                  color: "var(--ink)", background: "transparent", maxHeight: 160,
                   overflowY: "auto",
                 }}
-                className="focus:border-[var(--brand)]"
               />
               <button
+                className="od-send"
                 onClick={sendMessage}
-                disabled={loading || !apiKey || !draft.trim()}
-                style={{
-                  width: 34, height: 34, borderRadius: 8, flexShrink: 0,
-                  background: loading || !apiKey || !draft.trim() ? "var(--paper-3)" : "var(--brand)",
-                  color: loading || !apiKey || !draft.trim() ? "var(--ink-4)" : "white",
-                  border: "none", display: "grid", placeItems: "center",
-                  cursor: loading || !apiKey || !draft.trim() ? "not-allowed" : "pointer",
-                  transition: "all 0.15s",
-                }}
+                disabled={!canRun}
               >
                 {loading
                   ? <Loader2 style={{ width: 14, height: 14 }} className="animate-spin" />
@@ -991,7 +1605,7 @@ export default function PlaygroundPage() {
         />
 
         {/* Right: canvas panel */}
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", background: "var(--paper)" }}>
+        <div style={{ flex: 1, minWidth: 240, display: "flex", flexDirection: "column", overflow: "hidden", background: "var(--paper)" }}>
           {/* Canvas toolbar */}
           <div style={{
             height: 44, borderBottom: "1px solid var(--line)", background: "var(--paper-2)",
@@ -1025,8 +1639,26 @@ export default function PlaygroundPage() {
           </div>
 
           {/* Canvas content */}
-          <div style={{ flex: 1, overflowY: "auto", padding: canvasMode === "code" ? 0 : 32 }}>
-            {!canvasText && (
+          <div style={{ flex: 1, overflowY: "auto", padding: canvasMode === "code" || showCode ? 0 : 32 }}>
+            {showCode && (
+              <pre className="od-code" style={{ margin: 0, height: "100%", borderRadius: 0 }}>
+{`curl ${gatewayUrl}/v1/chat/completions \\
+  -H "Authorization: Bearer $OPENDOOR_API_KEY" \\
+  -H "Content-Type: application/json" \\
+  -H "X-Data-Class: ${dataClass}" \\
+  -d '{
+    "model": "${modelId}",
+    "temperature": ${temperature},
+    "max_tokens": ${maxTokens},
+    "top_p": ${topP},
+    "messages": [
+      {"role": "system", "content": ${JSON.stringify(systemPrompt)}},
+      {"role": "user", "content": "Hello"}
+    ]
+  }'`}
+              </pre>
+            )}
+            {!showCode && !canvasText && (
               <div style={{ height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16, color: "var(--ink-4)" }}>
                 <div style={{ width: 56, height: 56, borderRadius: 999, background: "var(--paper-3)", display: "grid", placeItems: "center" }}>
                   <SquareTerminal style={{ width: 24, height: 24, color: "var(--ink-4)" }} />
@@ -1060,11 +1692,11 @@ export default function PlaygroundPage() {
               </div>
             )}
 
-            {canvasText && <RenderContent text={canvasText} mode={canvasMode} />}
+            {!showCode && canvasText && <RenderContent text={canvasText} mode={canvasMode} />}
           </div>
 
           {/* Canvas footer: token count */}
-          {canvasText && (
+          {!showCode && canvasText && (
             <div style={{ borderTop: "1px solid var(--line-soft)", padding: "8px 16px", display: "flex", alignItems: "center", gap: 16, background: "var(--paper-2)", flexShrink: 0 }}>
               <span style={{ fontSize: 11, fontFamily: "var(--font-mono)", color: "var(--ink-4)" }}>
                 ~{Math.ceil(canvasText.length / 4).toLocaleString()} tokens out
@@ -1081,6 +1713,7 @@ export default function PlaygroundPage() {
             </div>
           )}
         </div>
+        </div>
       </div>
 
       {/* PostHog beta banner */}
@@ -1096,5 +1729,13 @@ export default function PlaygroundPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function PlaygroundRoute() {
+  return (
+    <Suspense fallback={<div style={{ padding: 32, color: "var(--ink-3)" }}>Loading playground…</div>}>
+      <PlaygroundPage />
+    </Suspense>
   );
 }

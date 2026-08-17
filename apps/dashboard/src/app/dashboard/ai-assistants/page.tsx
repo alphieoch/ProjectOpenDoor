@@ -1,18 +1,21 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import Link from "next/link";
 import {
   Bot, Plus, Copy, Check, Globe, Lock, Users, Shield,
   Pencil, Trash2, Radio, Loader2, ExternalLink,
   Upload, FileText, X, Search, LinkIcon, Info, Eye,
   Server, FileCheck, AlertTriangle, Plug, Zap, ChevronDown, ChevronUp,
-  Brain, Microscope, Code, Image,
+  Brain, Microscope, Code, Image, Wallet,
 } from "lucide-react";
+import { formatUsd } from "@opendoor/shared";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
+import { PageHeader } from "@/components/ui/page-header";
 
 /* ── Types ── */
 interface AIAssistant {
@@ -108,23 +111,14 @@ interface ApiConnection {
 }
 
 /* ── Constants ── */
-const FALLBACK_MODELS = [
-  { id: "gpt-4o",                     label: "GPT-4o",            provider: "OpenAI"    },
-  { id: "gpt-4o-mini",                label: "GPT-4o Mini",       provider: "OpenAI"    },
-  { id: "claude-3-5-sonnet-20241022", label: "Claude 3.5 Sonnet", provider: "Anthropic" },
-  { id: "claude-3-haiku-20240307",    label: "Claude 3 Haiku",    provider: "Anthropic" },
-  { id: "gemini-1.5-pro",             label: "Gemini 1.5 Pro",    provider: "Google"    },
-  { id: "gemini-1.5-flash",           label: "Gemini 1.5 Flash",  provider: "Google"    },
-  { id: "mistral-large-latest",       label: "Mistral Large",     provider: "Mistral"   },
-  { id: "command-r-plus",             label: "Command R+",        provider: "Cohere"    },
-];
+type CatalogOption = { id: string; label: string; provider: string };
 
 const COLORS = ["#1A73E8", "#7C3AED", "#059669", "#DC2626", "#D97706", "#0891B2", "#374151"];
 
 const defaultForm = {
   name: "", slug: "", description: "",
   avatarLetter: "", logoUrl: "", primaryColor: "#1A73E8",
-  modelId: "gpt-4o", systemPrompt: "", welcomeMessage: "",
+  modelId: "", systemPrompt: "", welcomeMessage: "",
   maxMessages: "100", visibility: "private",
   monetization: "free", priceCents: "", sellerEarningsCents: "",
   usageMode: "included" as "included" | "metered",
@@ -228,7 +222,7 @@ export default function AIAssistantsPage() {
   const [termsCheckbox, setTermsCheckbox] = useState(false);
 
   // Available models (fetched from API)
-  const [availableModels, setAvailableModels] = useState<{ id: string; label: string; provider: string }[]>(FALLBACK_MODELS);
+  const [availableModels, setAvailableModels] = useState<CatalogOption[]>([]);
   const [modelsLoading, setModelsLoading] = useState(false);
 
   // Pricing preview for monetization
@@ -241,8 +235,17 @@ export default function AIAssistantsPage() {
     buyerTotalCents: number;
     aiCostCents: number;
     profitCents: number;
+    pricingFound?: boolean;
   } | null>(null);
   const [pricingLoading, setPricingLoading] = useState(false);
+
+  const [billing, setBilling] = useState<{
+    includedQuotaCents: number;
+    prepaidCreditsUsdCents: number;
+    includedMonthlyCents: number;
+    cutOff: boolean;
+    welcomeCreditsUsdCents: number;
+  } | null>(null);
 
   // Logo upload
   const logoInputRef  = useRef<HTMLInputElement>(null);
@@ -279,7 +282,7 @@ export default function AIAssistantsPage() {
     apiKey: "", apiKeyHeader: "", docsUrl: "",
   });
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); loadModels(); loadBilling(); }, []);
   useEffect(() => { return () => { if (pollRef) clearInterval(pollRef); }; }, [pollRef]);
 
   async function load() {
@@ -287,6 +290,23 @@ export default function AIAssistantsPage() {
     const data = await fetch("/api/ai-assistants").then((r) => r.json());
     setAssistants(data.assistants ?? []);
     setLoading(false);
+  }
+
+  async function loadBilling() {
+    try {
+      const res = await fetch("/api/billing/balance", { credentials: "include" });
+      if (!res.ok) return;
+      const data = await res.json();
+      setBilling({
+        includedQuotaCents: Number(data.includedQuotaCents || 0),
+        prepaidCreditsUsdCents: Number(data.prepaidCreditsUsdCents || 0),
+        includedMonthlyCents: Number(data.includedMonthlyCents || 0),
+        cutOff: Boolean(data.cutOff),
+        welcomeCreditsUsdCents: Number(data.welcomeCreditsUsdCents || 0),
+      });
+    } catch {
+      /* billing strip is optional */
+    }
   }
 
   async function loadDocuments(assistantId: string) {
@@ -493,18 +513,23 @@ export default function AIAssistantsPage() {
     setConnections((prev) => prev.filter((c) => c.appSlug !== appSlug));
   }
 
-  async function loadModels() {
+  async function loadModels(preferredId?: string) {
     setModelsLoading(true);
     try {
       const res = await fetch("/api/models/available");
-      if (res.ok) {
-        const data = await res.json();
-        if (data.models?.length > 0) {
-          setAvailableModels(data.models);
+      const data = res.ok ? await res.json() : { models: [] };
+      const rows = (data.models || []) as CatalogOption[];
+      setAvailableModels(rows);
+      setForm((prev) => {
+        if (preferredId && rows.some((m) => m.id === preferredId)) {
+          return { ...prev, modelId: preferredId };
         }
-      }
+        if (rows.some((m) => m.id === prev.modelId)) return prev;
+        return { ...prev, modelId: rows[0]?.id || "" };
+      });
     } catch (err) {
       console.error("Failed to load models:", err);
+      setAvailableModels([]);
     }
     setModelsLoading(false);
   }
@@ -528,7 +553,7 @@ export default function AIAssistantsPage() {
       name: a.name, slug: a.slug, description: a.description ?? "",
       avatarLetter: a.avatarLetter ?? "", logoUrl: a.logoUrl ?? "",
       primaryColor: a.primaryColor ?? "#1A73E8",
-      modelId: a.modelId ?? "gpt-4o", systemPrompt: a.systemPrompt ?? "",
+      modelId: a.modelId ?? "", systemPrompt: a.systemPrompt ?? "",
       welcomeMessage: a.welcomeMessage ?? "", maxMessages: a.maxMessages?.toString() ?? "",
       visibility: a.visibility ?? "private", monetization: a.monetization ?? "free",
       priceCents: a.priceCents ? (a.priceCents / 100).toString() : "",
@@ -560,6 +585,7 @@ export default function AIAssistantsPage() {
     loadConnections(a.id);
     loadApiConnections(a.id);
     loadApps();
+    loadModels(a.modelId ?? undefined);
     setDialogOpen(true);
   }
 
@@ -623,7 +649,7 @@ export default function AIAssistantsPage() {
   }
 
   async function save() {
-    if (!form.name || !form.slug) return;
+    if (!form.name || !form.slug || !form.modelId) return;
     if (form.monetization !== "free" && !termsAccepted) {
       setTermsCheckbox(false);
       setShowTermsDialog(true);
@@ -720,16 +746,63 @@ export default function AIAssistantsPage() {
 
   return (
     <div>
-      {/* Page header */}
-      <div className="mb-8 flex items-start justify-between gap-4">
-        <div>
-          <h1 className="page-title">AI Assistants</h1>
-          <p className="page-desc">Create, brand, and publish AI assistants powered by OpenDoor's gateway.</p>
+      <PageHeader
+        eyebrow="Build"
+        title="AI Assistants"
+        description="Create, brand, and publish AI assistants. Chats use included credit first, then prepaid, and stop at $0."
+        actions={
+          <button onClick={openCreate} className="btn-primary shrink-0">
+            <Plus className="h-4 w-4" /> Create assistant
+          </button>
+        }
+      />
+
+      {billing && (
+        <div
+          className="mb-6 flex flex-col gap-3 rounded-xl border px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+          style={{
+            borderColor: billing.cutOff ? "var(--red)" : "var(--line)",
+            background: billing.cutOff ? "var(--red-soft)" : "var(--paper-2)",
+          }}
+        >
+          <div className="flex items-start gap-3 min-w-0">
+            <Wallet className="mt-0.5 h-4 w-4 shrink-0" style={{ color: billing.cutOff ? "var(--red)" : "var(--ink-3)" }} />
+            <div className="min-w-0">
+              <p className="text-sm font-medium" style={{ color: billing.cutOff ? "var(--red)" : "var(--ink)" }}>
+                {billing.cutOff
+                  ? billing.welcomeCreditsUsdCents > 0
+                    ? "Included credit and prepaid are used up"
+                    : "Assistants are paused — included credit and prepaid are used up"
+                  : "Every chat bills this workspace"}
+              </p>
+              <p className="mt-0.5 text-xs leading-relaxed" style={{ color: billing.cutOff ? "var(--red)" : "var(--ink-3)" }}>
+                {billing.cutOff
+                  ? billing.welcomeCreditsUsdCents > 0
+                    ? `Closed models are cut off. ${formatUsd(billing.welcomeCreditsUsdCents)} open-weight bonus can still run until it expires.`
+                    : "Users are cut off until you top up prepaid credit on Billing."
+                  : `Uses your ${formatUsd(billing.includedMonthlyCents)} included monthly credit first. Overflow draws prepaid. Requests stop when both hit $0.`}
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
+            <span
+              className="rounded-md px-2 py-1 text-xs font-medium tabular-nums"
+              style={{ background: "var(--paper-3)", color: "var(--ink-2)" }}
+            >
+              Included {formatUsd(billing.includedQuotaCents)}
+            </span>
+            <span
+              className="rounded-md px-2 py-1 text-xs font-medium tabular-nums"
+              style={{ background: "var(--paper-3)", color: "var(--ink-2)" }}
+            >
+              Prepaid {formatUsd(billing.prepaidCreditsUsdCents)}
+            </span>
+            <Link href="/dashboard/billing" className="btn-secondary btn-sm">
+              {billing.cutOff ? "Top up to resume" : "Billing"}
+            </Link>
+          </div>
         </div>
-        <button onClick={openCreate} className="btn-primary shrink-0">
-          <Plus className="h-4 w-4" /> Create assistant
-        </button>
-      </div>
+      )}
 
       {/* List / empty state */}
       {loading ? (
@@ -838,7 +911,7 @@ export default function AIAssistantsPage() {
                   {live && (
                     <>
                       <a
-                        href={`http://localhost:3002/ai/${a.slug}`}
+                        href={`/ai/${a.slug}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="btn-ghost btn-sm"
@@ -899,7 +972,7 @@ export default function AIAssistantsPage() {
               </div>
               {editing && (
                 <a
-                  href={`http://localhost:3002/ai/${editing.slug}`}
+                  href={`/ai/${editing.slug}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1.5 text-xs font-medium hover:underline"
@@ -1050,7 +1123,7 @@ export default function AIAssistantsPage() {
               <div className="space-y-4">
                 <div>
                   <Label hint="LLM that powers responses. You can switch later — the system prompt and chat history stay the same.">Model</Label>
-                  <Select value={f.modelId} onValueChange={(v) => {
+                  <Select value={f.modelId || undefined} onValueChange={(v) => {
                     set("modelId", v);
                     if (f.monetization !== "free" && f.sellerEarningsCents) {
                       clearTimeout((window as any).__pricingTimeout);
@@ -1058,9 +1131,14 @@ export default function AIAssistantsPage() {
                     }
                   }}>
                     <SelectTrigger className="w-full">
-                      <SelectValue />
+                      <SelectValue placeholder={modelsLoading ? "Loading catalog…" : "Select a catalog model"} />
                     </SelectTrigger>
                     <SelectContent>
+                      {availableModels.length === 0 && !modelsLoading && (
+                        <SelectItem value="__empty__" disabled>
+                          No catalog models — seed the database
+                        </SelectItem>
+                      )}
                       {availableModels.map((m) => (
                         <SelectItem key={m.id} value={m.id}>
                           <span>{m.label}</span>
@@ -1077,6 +1155,9 @@ export default function AIAssistantsPage() {
                       )}
                     </SelectContent>
                   </Select>
+                  <p className="mt-1.5 text-xs" style={{ color: "var(--ink-3)" }}>
+                    Inference draws included credit first, then prepaid. The assistant is cut off at $0.
+                  </p>
                 </div>
 
                 <div>
@@ -1129,32 +1210,24 @@ export default function AIAssistantsPage() {
                   <Label hint="Who can open this assistant. Private = only you, Team = everyone in your org, Public = anyone with the link.">Visibility</Label>
                   <div className="grid grid-cols-3 gap-3 mt-1.5">
                     {[
-                      { value: "private", icon: Lock,  label: "Private", desc: "Only you",             disabled: false },
-                      { value: "team",    icon: Users,  label: "Team",    desc: "Your org members",     disabled: false },
-                      { value: "public",  icon: Globe,  label: "Public",  desc: "Anyone with the link", disabled: false  },
-                    ].map(({ value, icon: Icon, label, desc, disabled }) => (
+                      { value: "private", icon: Lock,  label: "Private", desc: "Only you" },
+                      { value: "team",    icon: Users,  label: "Team",    desc: "Your org members" },
+                      { value: "public",  icon: Globe,  label: "Public",  desc: "Anyone with the link" },
+                    ].map(({ value, icon: Icon, label, desc }) => (
                       <button
                         key={value}
                         type="button"
-                        disabled={disabled}
-                        onClick={() => !disabled && set("visibility", value)}
+                        onClick={() => set("visibility", value)}
                         className={cn(
                           "relative flex flex-col items-center gap-1.5 rounded-xl border p-3.5 text-sm transition-all",
-                          disabled
-                            ? "cursor-not-allowed opacity-50 border-[var(--line)]"
-                            : f.visibility === value
-                              ? "border-[var(--brand)] bg-[var(--brand-container)]"
-                              : "border-[var(--line)] hover:bg-[var(--paper-3)]",
+                          f.visibility === value
+                            ? "border-[var(--brand)] bg-[var(--brand-container)]"
+                            : "border-[var(--line)] hover:bg-[var(--paper-3)]",
                         )}
                       >
-                        <Icon className="h-4 w-4" style={{ color: !disabled && f.visibility === value ? "var(--brand)" : "var(--ink-3)" }} />
+                        <Icon className="h-4 w-4" style={{ color: f.visibility === value ? "var(--brand)" : "var(--ink-3)" }} />
                         <span className="font-semibold text-xs" style={{ color: "var(--ink)" }}>{label}</span>
                         <span className="text-xs leading-tight text-center" style={{ color: "var(--ink-3)" }}>{desc}</span>
-                        {disabled && (
-                          <span className="absolute -top-2 left-1/2 -translate-x-1/2 rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ background: "var(--yellow-soft)", color: "var(--yellow)" }}>
-                            Coming soon
-                          </span>
-                        )}
                       </button>
                     ))}
                   </div>
@@ -1509,6 +1582,11 @@ export default function AIAssistantsPage() {
                               {pricingPreview.profitCents < 0 && (
                                 <p className="text-xs font-medium" style={{ color: "var(--red)" }}>
                                   ⚠ You would lose money at this price. Increase your earnings, lower max messages, or switch to a cheaper model.
+                                </p>
+                              )}
+                              {pricingPreview.pricingFound === false && (
+                                <p className="text-xs mt-1" style={{ color: "var(--ink-3)" }}>
+                                  No catalog price for this model yet — AI cost is omitted until pricing is seeded.
                                 </p>
                               )}
                               {pricingPreview.profitCents >= 0 && pricingPreview.aiCostCents > 0 && (
@@ -2188,7 +2266,7 @@ export default function AIAssistantsPage() {
             <button
               type="button"
               onClick={save}
-              disabled={saving || !f.name || !f.slug || (f.monetization !== "free" && !termsAccepted)}
+              disabled={saving || !f.name || !f.slug || !f.modelId || (f.monetization !== "free" && !termsAccepted)}
               className="btn-primary"
             >
               {saving && <Loader2 className="h-4 w-4 animate-spin" />}

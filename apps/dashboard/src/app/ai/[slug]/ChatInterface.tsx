@@ -88,15 +88,23 @@ export function ChatInterface({
     }
   }
 
-  const errorMessage = error
+  const parsedError = error
     ? (() => {
         try {
-          const parsed = JSON.parse(error.message);
-          return parsed.error ?? parsed.message ?? error.message;
+          return JSON.parse(error.message) as {
+            error?: string;
+            detail?: string;
+            reason?: string;
+            topupUrl?: string;
+          };
         } catch {
-          return error.message ?? "Something went wrong. Please try again.";
+          return { error: error.message };
         }
       })()
+    : null;
+  const cutOff = parsedError?.reason === "org_limit" || /insufficient balance/i.test(parsedError?.error || "");
+  const errorMessage = parsedError
+    ? parsedError.detail || parsedError.error || "Something went wrong. Please try again."
     : null;
 
   return (
@@ -166,14 +174,20 @@ export function ChatInterface({
           {errorMessage && (
             <ChatError
               message={errorMessage}
-              onRetry={() => {
-                const lastUserMsg = [...messages]
-                  .reverse()
-                  .find((m) => m.role === "user");
-                if (lastUserMsg?.content) {
-                  submitMessage(lastUserMsg.content);
-                }
-              }}
+              href={cutOff ? (parsedError?.topupUrl || "/dashboard/billing") : undefined}
+              hrefLabel="Top up prepaid credit"
+              onRetry={
+                cutOff
+                  ? undefined
+                  : () => {
+                      const lastUserMsg = [...messages]
+                        .reverse()
+                        .find((m) => m.role === "user");
+                      if (lastUserMsg?.content) {
+                        submitMessage(lastUserMsg.content);
+                      }
+                    }
+              }
             />
           )}
 
@@ -184,7 +198,13 @@ export function ChatInterface({
       {/* Input */}
       <div className="flex-shrink-0 px-4 pb-4 pt-2">
         <div className="max-w-3xl mx-auto">
-          {limitReached ? (
+          {cutOff ? (
+            <div className="text-center py-4">
+              <p className="text-sm" style={{ color: "var(--ink-3)" }}>
+                This assistant is paused until the owner tops up prepaid credit.
+              </p>
+            </div>
+          ) : limitReached ? (
             <div className="text-center py-4">
               <p className="text-sm" style={{ color: "var(--ink-3)" }}>
                 Message limit reached for this session.

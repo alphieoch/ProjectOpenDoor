@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { ClipboardList, Loader2 } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
 
 interface AuditLog {
   id: string;
@@ -62,10 +63,11 @@ export default function AuditLogsPage() {
 
   return (
     <div>
-      <div className="mb-8">
-        <h1 className="page-title">Audit Logs</h1>
-        <p className="page-desc">Track all administrative actions across your organization</p>
-      </div>
+      <PageHeader
+        eyebrow="Workspace"
+        title="Audit Logs"
+        description="Track all administrative actions across your organization."
+      />
 
       <div className="card overflow-hidden">
         <table className="min-w-full">

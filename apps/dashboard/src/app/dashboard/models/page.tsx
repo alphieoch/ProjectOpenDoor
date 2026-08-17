@@ -1,9 +1,101 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Copy, Check, Loader2, List } from "lucide-react";
+import Link from "next/link";
+import { AnimatePresence, motion } from "framer-motion";
+import { Check, Cloud, Copy, Cpu, LayoutGrid, List, Loader2, Play, X } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
+import { ModelMark } from "@/components/ui/model-mark";
+import { ImportWeightsDialog } from "@/components/import-weights-dialog";
+import { DeviceSupportPanel } from "@/components/device-support-panel";
+import { DeviceInventoryConsent } from "@/components/device-inventory-consent";
 
-type ModelRow = { id: string; label: string; provider: string };
+type ModelLocation = "here" | "cloud";
+
+type ModelRow = {
+  id: string;
+  label: string;
+  provider: string;
+  family?: string;
+  status?: string;
+  origin?: string;
+  source?: string;
+  location?: ModelLocation;
+  isNew?: boolean;
+  mine?: boolean;
+  pricePer1MInputUsd?: number | null;
+  pricePer1MOutputUsd?: number | null;
+};
+
+type DedicatedMetals = {
+  present: boolean;
+  available: boolean;
+  reason: string;
+  label: string;
+  usableMemoryGb: number | null;
+  usedMemoryGb: number;
+  remainingMemoryGb: number | null;
+  usedPercent: number | null;
+  slotsUsed: number;
+  slotsMax: number;
+  slotsRemaining: number;
+  runningLocal: number;
+};
+
+type GpuStatus = {
+  local: {
+    appleSilicon: boolean;
+    ollamaInstalled: boolean;
+    ollamaRunning: boolean;
+    models: string[];
+    hardware?: { chip?: string | null; memoryGb?: number | null; usableMemoryGb?: number | null };
+  };
+  dedicated?: DedicatedMetals;
+};
+
+function modelLocation(m: ModelRow): ModelLocation {
+  if (m.location === "here" || m.location === "cloud") return m.location;
+  const provider = (m.provider || "").toLowerCase();
+  const label = (m.label || "").toLowerCase();
+  if (provider.includes("local") || label.includes("this mac")) return "here";
+  if (m.mine && m.source === "ollama") return "here";
+  return "cloud";
+}
+
+function locationLabel(loc: ModelLocation) {
+  return loc === "here" ? "Your metals" : "Ochieng & Co cloud";
+}
+
+function statusLabel(status?: string) {
+  switch (status) {
+    case "live":
+      return "Healthy";
+    case "warming":
+      return "Warming";
+    case "dedicated":
+      return "Needs GPU";
+    case "available_on_request":
+      return "On request";
+    default:
+      return status || "—";
+  }
+}
+
+function formatPer1M(n: number | null | undefined) {
+  if (n == null || Number.isNaN(n)) return "—";
+  if (n < 0.01) return `$${n.toFixed(4)}`;
+  return `$${n.toFixed(2)}`;
+}
+
+function modelBlurb(m: ModelRow) {
+  if (modelLocation(m) === "here") {
+    return `On your dedicated metals. Weights stay on this machine.`;
+  }
+  if (m.family === "open_weight") {
+    return `Open-weight ${m.provider} model, native on Ochieng & Co cloud services.`;
+  }
+  return `${m.provider} model, native on Ochieng & Co cloud services.`;
+}
 
 export default function ModelsPage() {
   const [models, setModels] = useState<ModelRow[]>([]);
@@ -12,7 +104,13 @@ export default function ModelsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState<"all" | "open" | "live" | "new">("open");
+  const [where, setWhere] = useState<"all" | ModelLocation>("all");
+  const [view, setView] = useState<"grid" | "table">("grid");
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [selected, setSelected] = useState<ModelRow | null>(null);
+  const [gpuStatus, setGpuStatus] = useState<GpuStatus | null>(null);
+  const [deviceConsent, setDeviceConsent] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -34,7 +132,9 @@ export default function ModelsPage() {
         let p: string | null = null;
         let sub: string | null = null;
         if (bRes.ok) {
-          const bJson = (await bRes.json()) as { org?: { plan?: string; subscriptionStatus?: string | null } };
+          const bJson = (await bRes.json()) as {
+            org?: { plan?: string; subscriptionStatus?: string | null };
+          };
           p = bJson.org?.plan ?? null;
           sub = bJson.org?.subscriptionStatus ?? null;
         }
@@ -56,16 +156,65 @@ export default function ModelsPage() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!deviceConsent) {
+      setGpuStatus(null);
+      return;
+    }
+    let cancelled = false;
+    fetch("/api/gpu/status", { credentials: "include" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!cancelled && data) setGpuStatus(data as GpuStatus);
+      })
+      .catch(() => {
+        if (!cancelled) setGpuStatus(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [deviceConsent]);
+
+  useEffect(() => {
+    if (where === "here" && (!deviceConsent || (gpuStatus?.dedicated && !gpuStatus.dedicated.available))) {
+      setWhere("all");
+    }
+  }, [where, gpuStatus, deviceConsent]);
+
   const filtered = useMemo(() => {
+    let rows = models;
+    if (filter === "open") rows = rows.filter((m) => m.family === "open_weight");
+    if (filter === "live") rows = rows.filter((m) => m.status === "live");
+    if (filter === "new") rows = rows.filter((m) => m.isNew);
+    if (where !== "all") rows = rows.filter((m) => modelLocation(m) === where);
     const q = query.trim().toLowerCase();
-    if (!q) return models;
-    return models.filter(
+    if (!q) return rows;
+    return rows.filter(
       (m) =>
         m.id.toLowerCase().includes(q) ||
         m.label.toLowerCase().includes(q) ||
-        m.provider.toLowerCase().includes(q)
+        m.provider.toLowerCase().includes(q) ||
+        (m.origin || "").toLowerCase().includes(q)
     );
-  }, [models, query]);
+  }, [models, query, filter, where]);
+
+  const newCount = useMemo(() => models.filter((m) => m.isNew).length, [models]);
+  const liveOpenCount = useMemo(
+    () => models.filter((m) => m.family === "open_weight" && m.status === "live").length,
+    [models]
+  );
+  const hereCount = useMemo(() => models.filter((m) => modelLocation(m) === "here").length, [models]);
+  const cloudCount = useMemo(() => models.filter((m) => modelLocation(m) === "cloud").length, [models]);
+  const metals = gpuStatus?.dedicated ?? null;
+  const metalsKnown = metals != null;
+  const metalsValid = Boolean(metals?.available);
+
+  const whereHint =
+    where === "here"
+      ? "Showing models on your dedicated metals. Import a Hugging Face repo to run here while capacity remains."
+      : where === "cloud"
+        ? "Showing models native on Ochieng & Co cloud services."
+        : "Run native on Ochieng & Co cloud services. Dedicated metals stay off until you allow a device read.";
 
   function copyId(id: string) {
     void navigator.clipboard.writeText(id);
@@ -74,39 +223,157 @@ export default function ModelsPage() {
   }
 
   return (
-    <div>
-      <div className="mb-8">
-        <h1 className="page-title">Models</h1>
-        <p className="page-desc">
-          Models your organization can use on the gateway (enabled catalog plus your running custom deployments).
-          Your subscription and plan affect pricing and allowances—see Billing. API keys can further restrict which
-          models a key may call.
+    <div className="od-page">
+      <PageHeader
+        eyebrow="Catalog"
+        title="Models"
+        description="Add and manage the models your org can call. Native on Ochieng & Co cloud services. Dedicated metals only after you allow a device read."
+        actions={
+          <>
+            <ImportWeightsDialog
+              defaultTarget={where === "here" && deviceConsent && metalsValid ? "local" : where === "cloud" ? "gcp" : undefined}
+              metalsAvailable={deviceConsent && (!metalsKnown || metalsValid)}
+              metalsReason={
+                !deviceConsent
+                  ? "Allow a device read first. Dedicated metals stay off until you do."
+                  : metalsKnown
+                    ? metals?.reason
+                    : "Checking dedicated metals…"
+              }
+              onImported={() => {
+                void fetch("/api/models/available", { credentials: "include" })
+                  .then((r) => (r.ok ? r.json() : { models: [] }))
+                  .then((data) => setModels(Array.isArray(data.models) ? data.models : []));
+              }}
+            />
+            <Link href="/dashboard/playground" className="btn-primary">
+              <Play className="h-4 w-4" />
+              Try in playground
+            </Link>
+          </>
+        }
+      />
+
+      <div className="od-card od-fade-up-1 mb-6" style={{ padding: "18px 22px" }}>
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <div style={{ fontFamily: "var(--font-serif)", fontSize: 22, color: "var(--ink)" }}>
+              Configure models for your org
+            </div>
+            <p className="mt-1 text-sm" style={{ color: "var(--ink-3)" }}>
+              Plan <strong style={{ color: "var(--ink)" }}>{plan ?? "—"}</strong>
+              {subscriptionStatus ? ` · ${subscriptionStatus}` : ""}. {liveOpenCount} live open-weight models.
+            </p>
+          </div>
+          <Link href="/dashboard/api-keys" className="md-btn-tonal">
+            Configure API keys
+          </Link>
+        </div>
+
+        <div className="mt-4 grid gap-3 md:grid-cols-2">
+          <button
+            type="button"
+            className="od-model-card"
+            data-active={where === "cloud"}
+            onClick={() => setWhere(where === "cloud" ? "all" : "cloud")}
+            style={{ padding: 16 }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <Cloud className="h-4 w-4" style={{ color: "var(--ink-2)" }} />
+              <span style={{ fontWeight: 600, color: "var(--ink)" }}>Ochieng & Co cloud services</span>
+              <span className="od-tag od-tag-green">Native</span>
+            </div>
+            <p style={{ marginTop: 8, fontSize: 13, lineHeight: 1.5, color: "var(--ink-3)", textAlign: "left" }}>
+              Native path. {cloudCount} models through Ochieng & Co cloud services. Always a valid option.
+            </p>
+          </button>
+          <div
+            className="od-model-card"
+            data-active={where === "here"}
+            style={{ padding: 16, cursor: deviceConsent && metalsValid ? "pointer" : "default" }}
+            onClick={() => {
+              if (!deviceConsent || !metalsValid) return;
+              setWhere(where === "here" ? "all" : "here");
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+              <Cpu className="h-4 w-4" style={{ color: "var(--ink-2)" }} />
+              <span style={{ fontWeight: 600, color: "var(--ink)" }}>Your dedicated metals</span>
+              <span className={deviceConsent && metalsValid ? "od-tag od-tag-brand" : "od-tag od-tag-neutral"}>
+                {!deviceConsent ? "Permission required" : metalsValid ? `${hereCount} here` : metalsKnown ? "Not a valid option" : "Checking"}
+              </span>
+            </div>
+            {!deviceConsent ? (
+              <div className="mt-3" onClick={(e) => e.stopPropagation()}>
+                <DeviceInventoryConsent onChange={setDeviceConsent} />
+              </div>
+            ) : (
+              <>
+                <p style={{ marginTop: 8, fontSize: 13, lineHeight: 1.5, color: "var(--ink-3)", textAlign: "left" }}>
+                  {metals?.reason || "Your own Metal or GPU, when this machine has enough free capacity."}
+                </p>
+                {metals?.usableMemoryGb != null ? (
+                  <div style={{ marginTop: 12 }}>
+                    <div className="od-progress">
+                      <div
+                        className="od-progress__fill"
+                        style={{
+                          width: `${Math.min(100, metals.usedPercent ?? 0)}%`,
+                          background: metalsValid ? "var(--md-primary)" : "var(--md-on-surface-variant)",
+                        }}
+                      />
+                    </div>
+                    <p className="mt-2 text-xs" style={{ color: "var(--ink-4)", textAlign: "left" }}>
+                      {metals.remainingMemoryGb ?? 0} GB free of {metals.usableMemoryGb} GB
+                      {" · "}
+                      {metals.slotsUsed} of {metals.slotsMax} dedicated slots in use
+                    </p>
+                  </div>
+                ) : null}
+                <div className="mt-3" onClick={(e) => e.stopPropagation()}>
+                  <DeviceInventoryConsent onChange={setDeviceConsent} />
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+
+        <p className="mt-3 text-sm" style={{ color: "var(--ink-3)" }}>
+          {whereHint}
         </p>
       </div>
 
-      <div className="mb-4 flex flex-wrap items-center gap-3">
-        <div
-          className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm"
-          style={{ borderColor: "var(--line)", background: "var(--paper-2)" }}
-        >
-          <span style={{ color: "var(--ink-3)" }}>Plan</span>
-          <span className="font-medium capitalize" style={{ color: "var(--ink)" }}>
-            {plan ?? "—"}
-          </span>
-          {subscriptionStatus && (
-            <span className="rounded-full px-2 py-0.5 text-xs font-medium" style={{ background: "var(--paper-3)", color: "var(--ink-3)" }}>
-              {subscriptionStatus}
-            </span>
-          )}
+      <div className="mb-5 flex flex-wrap items-center gap-3">
+        <div className="od-seg">
+          {(
+            [
+              ["open", "Open weight"],
+              ["live", `Live (${liveOpenCount})`],
+              ["new", `New (${newCount})`],
+              ["all", "All"],
+            ] as const
+          ).map(([key, label]) => (
+            <button key={key} type="button" data-active={filter === key} onClick={() => setFilter(key)}>
+              {label}
+            </button>
+          ))}
         </div>
         <input
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Filter by id, name, or provider…"
+          placeholder="Filter by id, name, provider…"
           className="input max-w-md flex-1 min-w-[200px]"
           aria-label="Filter models"
         />
+        <div className="od-seg ml-auto">
+          <button type="button" data-active={view === "grid"} onClick={() => setView("grid")} aria-label="Grid">
+            <LayoutGrid className="h-3.5 w-3.5" />
+          </button>
+          <button type="button" data-active={view === "table"} onClick={() => setView("table")} aria-label="Table">
+            <List className="h-3.5 w-3.5" />
+          </button>
+        </div>
       </div>
 
       {error && (
@@ -115,41 +382,99 @@ export default function ModelsPage() {
         </div>
       )}
 
-      <div className="card overflow-hidden">
-        {loading ? (
-          <div className="flex h-48 items-center justify-center gap-2" style={{ color: "var(--ink-3)" }}>
-            <Loader2 className="h-5 w-5 animate-spin" />
-            <span className="text-sm">Loading models…</span>
-          </div>
-        ) : (
+      {loading ? (
+        <div className="flex h-48 items-center justify-center gap-2" style={{ color: "var(--ink-3)" }}>
+          <Loader2 className="h-5 w-5 animate-spin" />
+          <span className="text-sm">Loading models…</span>
+        </div>
+      ) : view === "grid" ? (
+        <div className="od-model-grid od-stagger">
+          {filtered.map((m) => (
+            <button
+              key={m.id}
+              type="button"
+              className="od-model-card"
+              data-active={selected?.id === m.id}
+              onClick={() => setSelected(m)}
+            >
+              <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+                <ModelMark name={m.label || m.id} provider={m.provider} modelId={m.id} />
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <div style={{ fontWeight: 600, color: "var(--ink)", fontSize: 15 }}>{m.label}</div>
+                    {m.isNew && <span className="od-tag od-tag-brand">New</span>}
+                  </div>
+                  <div className="od-mono" style={{ fontSize: 11, color: "var(--ink-4)", marginTop: 2 }}>
+                    {m.id}
+                  </div>
+                </div>
+              </div>
+              <p style={{ marginTop: 12, fontSize: 13, lineHeight: 1.5, color: "var(--ink-3)" }}>
+                {modelBlurb(m)}
+              </p>
+              <div style={{ marginTop: 14, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                <span className={m.status === "live" ? "od-tag od-tag-green" : "od-tag od-tag-neutral"}>
+                  {m.status === "live" && <span className="od-pulse-dot" style={{ width: 6, height: 6 }} />}
+                  {statusLabel(m.status)}
+                </span>
+                <span className={modelLocation(m) === "here" ? "od-tag od-tag-brand" : "od-tag od-tag-neutral"}>
+                  {locationLabel(modelLocation(m))}
+                </span>
+                <span className="od-tag od-tag-neutral">{m.provider}</span>
+                <span style={{ marginLeft: "auto", fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--ink-3)" }}>
+                  {formatPer1M(m.pricePer1MInputUsd)} / {formatPer1M(m.pricePer1MOutputUsd)}
+                </span>
+              </div>
+            </button>
+          ))}
+          {filtered.length === 0 && (
+            <div className="od-card" style={{ gridColumn: "1 / -1", padding: 40, textAlign: "center", color: "var(--ink-4)" }}>
+              No models match your filter.
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="od-card overflow-hidden">
           <table className="min-w-full">
             <thead>
               <tr className="border-b border-[var(--line)]">
                 <th className="table-header-cell">Model ID</th>
-                <th className="table-header-cell">Display name</th>
-                <th className="table-header-cell">Provider</th>
+                <th className="table-header-cell">Name</th>
+                <th className="table-header-cell">Where</th>
+                <th className="table-header-cell">Status</th>
+                <th className="table-header-cell">$/1M in</th>
+                <th className="table-header-cell">$/1M out</th>
                 <th className="table-header-cell text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
               {filtered.map((m) => (
-                <tr key={m.id} className="table-row">
+                <tr key={m.id} className="table-row" onClick={() => setSelected(m)} style={{ cursor: "pointer" }}>
                   <td className="table-cell font-mono text-sm" style={{ color: "var(--ink)" }}>
                     {m.id}
+                    {m.isNew && (
+                      <span className="ml-2 rounded-full px-1.5 py-0.5 text-[10px] font-semibold uppercase" style={{ background: "var(--paper-3)", color: "var(--brand)" }}>
+                        New
+                      </span>
+                    )}
                   </td>
                   <td className="table-cell" style={{ color: "var(--ink-2)" }}>
-                    {m.label}
+                    <div>{m.label}</div>
+                    <div className="text-xs" style={{ color: "var(--ink-4)" }}>
+                      {m.provider}
+                      {m.family === "open_weight" ? " · open weight" : ""}
+                    </div>
                   </td>
-                  <td className="table-cell" style={{ color: "var(--ink-3)" }}>
-                    {m.provider}
-                  </td>
+                  <td className="table-cell" style={{ color: "var(--ink-3)" }}>{locationLabel(modelLocation(m))}</td>
+                  <td className="table-cell" style={{ color: "var(--ink-3)" }}>{statusLabel(m.status)}</td>
+                  <td className="table-cell font-mono text-xs">{formatPer1M(m.pricePer1MInputUsd)}</td>
+                  <td className="table-cell font-mono text-xs">{formatPer1M(m.pricePer1MOutputUsd)}</td>
                   <td className="table-cell text-right">
                     <button
                       type="button"
-                      onClick={() => copyId(m.id)}
-                      className="inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-medium transition-colors hover:bg-[var(--paper-3)]"
+                      onClick={(e) => { e.stopPropagation(); copyId(m.id); }}
+                      className="inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-medium"
                       style={{ borderColor: "var(--line)", color: "var(--ink-2)" }}
-                      aria-label={`Copy model id ${m.id}`}
                     >
                       {copiedId === m.id ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
                       {copiedId === m.id ? "Copied" : "Copy ID"}
@@ -157,24 +482,107 @@ export default function ModelsPage() {
                   </td>
                 </tr>
               ))}
-              {filtered.length === 0 && (
-                <tr>
-                  <td colSpan={4} className="px-4 py-10 text-center text-sm" style={{ color: "var(--ink-4)" }}>
-                    No models match your filter.
-                  </td>
-                </tr>
-              )}
             </tbody>
           </table>
-        )}
-      </div>
+        </div>
+      )}
 
       {!loading && models.length > 0 && (
-        <p className="mt-4 flex items-center gap-2 text-sm" style={{ color: "var(--ink-3)" }}>
-          <List className="h-4 w-4 shrink-0" />
+        <p className="mt-5 text-sm" style={{ color: "var(--ink-3)" }}>
           Showing {filtered.length} of {models.length} models.
         </p>
       )}
+
+      <AnimatePresence>
+        {selected && (
+          <>
+            <motion.div
+              className="od-drawer-scrim"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setSelected(null)}
+            />
+            <motion.aside
+              className="od-drawer"
+              initial={{ x: 28, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={{ x: 20, opacity: 0 }}
+              transition={{ type: "spring", stiffness: 380, damping: 34 }}
+            >
+              <div style={{ padding: "22px 22px 16px", display: "flex", gap: 12, alignItems: "flex-start", borderBottom: "1px solid var(--line)" }}>
+                <ModelMark name={selected.label || selected.id} provider={selected.provider} modelId={selected.id} size={44} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontFamily: "var(--font-serif)", fontSize: 24, color: "var(--ink)" }}>{selected.label}</div>
+                  <div className="od-mono" style={{ fontSize: 12, color: "var(--ink-4)" }}>{selected.id}</div>
+                </div>
+                <button type="button" className="md-icon-btn" onClick={() => setSelected(null)} aria-label="Close">
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <div style={{ padding: 22, display: "flex", flexDirection: "column", gap: 18, overflowY: "auto" }}>
+                <div>
+                  <div className="od-eyebrow">Health</div>
+                  <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 8 }}>
+                    <span className={selected.status === "live" ? "od-tag od-tag-green" : "od-tag od-tag-neutral"}>
+                      {selected.status === "live" && <span className="od-pulse-dot" style={{ width: 6, height: 6 }} />}
+                      {statusLabel(selected.status)}
+                    </span>
+                    <span className={modelLocation(selected) === "here" ? "od-tag od-tag-brand" : "od-tag od-tag-neutral"}>
+                      {locationLabel(modelLocation(selected))}
+                    </span>
+                    <span style={{ fontSize: 12, color: "var(--ink-4)" }}>{selected.origin || "catalog"}</span>
+                  </div>
+                </div>
+                <p style={{ fontSize: 14, lineHeight: 1.6, color: "var(--ink-2)" }}>{modelBlurb(selected)}</p>
+                <div>
+                  <div className="od-eyebrow">Rates · $ / 1M tokens</div>
+                  <div style={{ marginTop: 10, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                    <div className="od-card" style={{ padding: 14 }}>
+                      <div className="od-eyebrow">Input</div>
+                      <div style={{ fontFamily: "var(--font-serif)", fontSize: 26, marginTop: 4 }}>{formatPer1M(selected.pricePer1MInputUsd)}</div>
+                    </div>
+                    <div className="od-card" style={{ padding: 14 }}>
+                      <div className="od-eyebrow">Output</div>
+                      <div style={{ fontFamily: "var(--font-serif)", fontSize: 26, marginTop: 4 }}>{formatPer1M(selected.pricePer1MOutputUsd)}</div>
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <div className="od-eyebrow">Where it runs</div>
+                  <div style={{ marginTop: 8, padding: "10px 12px", borderRadius: 10, background: "var(--paper)", color: "var(--ink-2)", fontSize: 14 }}>
+                    {modelLocation(selected) === "here"
+                      ? "Your dedicated metals — weights stay on this machine."
+                      : "Native on Ochieng & Co cloud services."}
+                  </div>
+                </div>
+                <div>
+                  <div className="od-eyebrow">Provider</div>
+                  <div style={{ marginTop: 8, padding: "10px 12px", borderRadius: 10, background: "var(--paper)", color: "var(--ink-2)", fontSize: 14 }}>
+                    {selected.provider}{selected.family === "open_weight" ? " · open weight" : ""}
+                  </div>
+                </div>
+                <DeviceSupportPanel key={selected.id} modelId={selected.id} />
+              </div>
+              <div style={{ marginTop: "auto", padding: 18, borderTop: "1px solid var(--line)", display: "flex", gap: 8 }}>
+                <button type="button" className="btn-secondary" onClick={() => copyId(selected.id)} style={{ flex: 1 }}>
+                  {copiedId === selected.id ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                  {copiedId === selected.id ? "Copied" : "Copy ID"}
+                </button>
+                {(selected.status === "dedicated" || selected.status === "warming") ? (
+                  <Link href="/dashboard/deployments/new" className="btn-primary" style={{ flex: 1, justifyContent: "center" }}>
+                    Download & run
+                  </Link>
+                ) : (
+                  <Link href={`/dashboard/playground?model=${encodeURIComponent(selected.id)}`} className="btn-primary" style={{ flex: 1, justifyContent: "center" }}>
+                    <Play className="h-4 w-4" /> Try
+                  </Link>
+                )}
+              </div>
+            </motion.aside>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

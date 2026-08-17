@@ -2,6 +2,9 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/page-header";
+import { GovernancePath } from "@/components/governance-path";
+import { loadGovernanceData } from "@/lib/governance/ensure-client";
 import {
   ShieldCheck,
   CheckCircle2,
@@ -107,13 +110,29 @@ export default function TrustCenterPage() {
   const [view, setView] = useState<"card" | "compact">("card");
 
   useEffect(() => {
-    fetch("/api/governance/trust-center")
-      .then((r) => r.json())
-      .then((data) => {
-        setModels(data.models || []);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await loadGovernanceData(
+          () => fetch("/api/governance/trust-center").then((r) => r.json()),
+          {
+            isEmpty: (d) => !(d.models || []).length,
+            onFirst: (d) => {
+              if (!cancelled) {
+                setModels(d.models || []);
+                setLoading(false);
+              }
+            },
+          },
+        );
+        if (!cancelled) setModels(data.models || []);
+      } catch {
+        /* keep empty */
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
   }, []);
 
   function toggleStatus(s: string) {
@@ -172,17 +191,13 @@ export default function TrustCenterPage() {
 
   return (
     <div className="space-y-6 od-stagger">
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl"
-          style={{ background: "var(--md-primary-container)", color: "var(--md-on-primary-container)" }}>
-          <Shield className="h-5 w-5" />
-        </div>
-        <div>
-          <h1 className="page-title">Trust Center</h1>
-          <p className="page-desc">Govern how your business uses AI models — approvals, risk, compliance, and policy in one place.</p>
-        </div>
-      </div>
+      <PageHeader
+        eyebrow="Governance"
+        title="Trust Center"
+        description="The inventory of models this workspace is allowed to call. Approving a model here unblocks it on the live gateway — the same path your API keys use."
+      />
+
+      <GovernancePath />
 
       {/* Stat cards — clickable filters */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -330,7 +345,17 @@ export default function TrustCenterPage() {
 
       {/* Model list */}
       <div className={view === "card" ? "space-y-3" : "od-card overflow-hidden"}>
-        {filtered.length === 0 && (
+        {models.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-16 text-center od-card">
+            <Shield className="h-10 w-10 mb-3" style={{ color: "var(--md-outline)" }} />
+            <p className="text-sm font-medium" style={{ color: "var(--md-on-surface-variant)" }}>No models in the Trust Center yet</p>
+            <p className="mt-1 max-w-sm text-xs" style={{ color: "var(--md-on-surface-variant)" }}>
+              Refresh this page after signing in — the workspace registry loads automatically.
+            </p>
+          </div>
+        )}
+
+        {models.length > 0 && filtered.length === 0 && (
           <div className="flex flex-col items-center justify-center py-16 text-center od-card">
             <Shield className="h-10 w-10 mb-3" style={{ color: "var(--md-outline)" }} />
             <p className="text-sm font-medium" style={{ color: "var(--md-on-surface-variant)" }}>No models match your filters</p>

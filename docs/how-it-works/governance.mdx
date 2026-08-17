@@ -1,33 +1,51 @@
 ---
 title: "Governance"
-description: "Policies, approvals, and violations are org rows the inbox and sidebar badges count."
+description: "The gateway intercepts completions, then the Trust Center records what happened."
 showPageTitle: true
 ---
 
-Governance is for teams that need a control plane in front of every model call — not a brochure.
+OpenDoor is the inline proxy. A completion does not go to a provider until the gateway has checked guardrails, the model registry, and your org policies.
+
+That is the product — not a bundle of LiteLLM + OPA + a separate GRC dashboard.
+
+## Live path
+
+1. **Request** — `POST /v1/chat/completions` with an API key. Optional `X-Data-Class`: `public`, `internal`, `confidential`, or `restricted` (default `internal`).
+2. **Guardrails** — injection blocks the call. PII and secrets are flagged and redacted.
+3. **Registry** — a model marked pending, rejected, or deprecated is held. Data classes the model is not approved for are denied.
+4. **Policies** — org rules match model glob, role, and data class. Actions: allow, deny, require approval, or route to a fallback model.
+5. **Record** — denies and holds write `policy_violations`. Guardrail hits write `guardrail_outcomes`. Both show in **Violations**.
+
+The Playground uses the same path. Set the data class in Parameters to see a policy fire.
 
 ## Trust Center
 
-**Dashboard → Governance** is the Trust Center: models under review, open violations, pending approvals. Search filters those lists.
+**Dashboard → Governance** is the model inventory. Approving a model here updates `model_governance` and unblocks that id on the next request.
 
 ## Policies
 
-**Policies** are stored rules (model glob, roles, action). They run on the gateway. Seed defaults from the page when your org has none.
+Rules stored per organisation. Patterns: `*` (all models), `gpt-*`, or `deepseek-*|qwen-*`. Lower priority number is evaluated first.
 
 ## Approvals
 
-A model can sit in `pending` until someone approves it. The sidebar badge and inbox both read pending `model_approvals`.
+A pending model returns **403** with `human_approval_required` until someone approves it. There is no separate workflow engine — the hold is the gateway response.
 
 ## Violations
 
-Failed policy checks write `policy_violations`. Unresolved rows show in the inbox. Resolve them from **Violations**.
+Live blocks from the path above. Resolve a row when the team has handled it. The sidebar badge counts unresolved rows.
 
-## Compliance & sector packs
+## Compliance
 
-Compliance controls and sector templates (finance, health, public sector) apply packs of policies you can attach to the org. Evidence notes are stored on the control rows.
+Control mappings and automated reports against GDPR, EU AI Act, ICO UK, and NIST. Evidence and scores live here. They do not replace gateway enforcement.
 
-## Audit
+## Sector packs
 
-**Audit logs** (workspace and site-admin) record key, billing, and impersonation actions. The inbox also surfaces the latest org audit lines.
+An industry bundle. **Apply** writes gateway policies for that data class (human-approval holds and banned-use denies). Recommended models still need Trust Center approval.
 
-None of these pages ship with “5 open items” hardcoded. If the badge is empty, you have zero open rows.
+## Headers
+
+| Header | Effect |
+| --- | --- |
+| `X-Data-Class` | `public` \| `internal` \| `confidential` \| `restricted` |
+| `X-Business-Unit` | Logged on the check |
+| `X-Client-Id` | Logged on the check |

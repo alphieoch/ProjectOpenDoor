@@ -183,19 +183,47 @@ async function getModelGovernance(modelId: string): Promise<ModelGovernanceInfo 
   };
 }
 
+export function matchModelPattern(pattern: string | null | undefined, modelId: string): boolean {
+  if (!pattern || pattern === "*" || pattern === "%" || pattern === ".*") return true;
+  const parts = pattern.split("|").map((p) => p.trim()).filter(Boolean);
+  return parts.some((part) => {
+    const glob = part.replace(/%/g, "*");
+    const escaped = glob.replace(/[.+?^${}()[\]\\]/g, "\\$&").replace(/\*/g, ".*");
+    return new RegExp(`^${escaped}$`, "i").test(modelId);
+  });
+}
+
+function promptHitsBannedUse(prompt: string, bannedUse: string): boolean {
+  const needles = bannedUse
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter((w) => w.length >= 5);
+  if (needles.length === 0) return prompt.toLowerCase().includes(bannedUse.toLowerCase());
+  const hay = prompt.toLowerCase();
+  return needles.some((n) => hay.includes(n));
+}
+
+type PolicyDecision = {
+  action: PolicyAction;
+  reason: string;
+  fallbackModelId?: string;
+  requireHumanApproval?: boolean;
+  policyId?: string;
+};
+
 // ── Policy evaluation ────────────────────────────────────────────────────────
 
 async function evaluatePolicies(
   req: PolicyCheckRequest,
   governance: ModelGovernanceInfo | undefined
-): Promise<{ action: PolicyAction; reason: string; fallbackModelId?: string; requireHumanApproval?: boolean }> {
+): Promise<PolicyDecision> {
   // 1. Check if model is in governance registry and approved
   if (governance) {
     if (governance.approvalStatus === "rejected" || governance.approvalStatus === "deprecated") {
       return { action: "deny", reason: `Model ${req.modelId} is ${governance.approvalStatus} and cannot be used.` };
     }
     if (governance.approvalStatus === "pending" || governance.approvalStatus === "in_review") {
-      return { action: "require_approval", reason: `Model ${req.modelId} is pending approval.`, requireHumanApproval: true };
+      return { action: "require_approval", reason: `Model ${req.modelId} is pending approval. Approve it in the Trust Center first.`, requireHumanApproval: true };
     }
   }
 
@@ -215,23 +243,17 @@ async function evaluatePolicies(
   const dataClass = req.dataClass || "internal";
 
   for (const policy of policies) {
-    // Check if policy applies to this model
     let modelMatches = false;
     if (policy.modelGovernanceId) {
-      const govMatch = governance && governance.id === policy.modelGovernanceId;
-      modelMatches = govMatch;
+      modelMatches = !!(governance && governance.id === policy.modelGovernanceId);
     } else if (policy.modelIdPattern) {
-      // Simple wildcard matching
-      const pattern = policy.modelIdPattern.replace(/\*/g, ".*");
-      const regex = new RegExp(`^${pattern}$`, "i");
-      modelMatches = regex.test(req.modelId);
+      modelMatches = matchModelPattern(policy.modelIdPattern, req.modelId);
     } else {
-      modelMatches = true; // applies to all models
+      modelMatches = true;
     }
 
     if (!modelMatches) continue;
 
-    // Check user role
     if (policy.userRolePattern) {
       const roleRegex = new RegExp(policy.userRolePattern, "i");
       if (!req.userRole || !roleRegex.test(req.userRole)) {
@@ -239,24 +261,29 @@ async function evaluatePolicies(
       }
     }
 
-    // Check data class
     if (policy.dataClass && policy.dataClass !== dataClass) {
       continue;
     }
 
-    // Policy matches — apply action
+    const bannedUse = (policy.metadata as { bannedUse?: string } | null)?.bannedUse;
+    if (bannedUse) {
+      if (!req.prompt || !promptHitsBannedUse(req.prompt, bannedUse)) continue;
+    }
+
     if (policy.action === "deny") {
       return {
         action: "deny",
         reason: `Policy '${policy.name}' denies this request: dataClass=${dataClass}, model=${req.modelId}`,
+        policyId: policy.id,
       };
     }
 
-    if (policy.action === "require_approval") {
+    if (policy.action === "require_approval" || policy.requireHumanApproval) {
       return {
         action: "require_approval",
         reason: `Policy '${policy.name}' requires human approval for this request.`,
         requireHumanApproval: true,
+        policyId: policy.id,
       };
     }
 
@@ -265,10 +292,9 @@ async function evaluatePolicies(
         action: "route_fallback",
         reason: `Policy '${policy.name}' requires fallback routing.`,
         fallbackModelId: policy.fallbackModelId || undefined,
+        policyId: policy.id,
       };
     }
-
-    // action === "allow" — continue to check other policies
   }
 
   // 4. Default governance check: data class allowed?
@@ -288,20 +314,27 @@ async function evaluatePolicies(
 
 async function logViolation(
   req: PolicyCheckRequest,
-  policyResult: { action: PolicyAction; reason: string },
+  policyResult: { action: PolicyAction; reason: string; policyId?: string },
   severity: RiskLevel
 ): Promise<string> {
+  const violationType =
+    policyResult.action === "require_approval"
+      ? "unapproved_model"
+      : policyResult.reason.toLowerCase().includes("data class")
+        ? "data_class_mismatch"
+        : "unapproved_model";
   const rows = await db
     .insert(policyViolations)
     .values({
       organizationId: req.organizationId,
       apiKeyId: req.apiKeyId,
+      policyId: policyResult.policyId,
       modelId: req.modelId,
       dataClass: req.dataClass || "internal",
-      violationType: policyResult.action === "deny" ? "unapproved_model" : "data_class_mismatch",
+      violationType,
       severity,
       actionTaken: policyResult.action === "deny" ? "blocked" : policyResult.action === "route_fallback" ? "routed_fallback" : "flagged",
-      details: { reason: policyResult.reason, metadata: req.metadata },
+      details: { reason: policyResult.reason, metadata: req.metadata, live: true },
     })
     .returning({ id: policyViolations.id });
 

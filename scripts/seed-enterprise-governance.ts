@@ -1,11 +1,11 @@
-import { db } from "@opendoor/database";
+import { db } from "../packages/database/src/index.ts";
 import {
   modelGovernance,
   complianceControls,
   sectorTemplates,
   modelEvaluations,
   modelComplianceMappings,
-} from "@opendoor/database";
+} from "../packages/database/src/index.ts";
 import { eq } from "drizzle-orm";
 
 async function seed() {

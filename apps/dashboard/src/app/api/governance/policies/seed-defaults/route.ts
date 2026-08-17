@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { modelPolicies } from "@opendoor/database";
 import { eq, count } from "drizzle-orm";
-import { requireAuth } from "@/lib/auth";
 import { logAuditEvent } from "@/lib/audit";
+import { orgActorId } from "@/lib/governance/actor";
+import { governanceSession, unauthorized } from "@/lib/governance/http";
 
 const DEFAULTS = [
   {
@@ -11,7 +12,7 @@ const DEFAULTS = [
     description: "Prevents all models from processing restricted-classification data. Hardest guardrail — no exceptions without a more specific allow policy at higher priority.",
     dataClass: "restricted" as const,
     action: "deny" as const,
-    modelIdPattern: "%",
+    modelIdPattern: "*",
     priority: 10,
     requireHumanApproval: false,
   },
@@ -29,7 +30,7 @@ const DEFAULTS = [
     description: "All requests involving confidential-classification data must be reviewed by a human before proceeding. Applies across all models.",
     dataClass: "confidential" as const,
     action: "require_approval" as const,
-    modelIdPattern: "%",
+    modelIdPattern: "*",
     priority: 20,
     requireHumanApproval: true,
   },
@@ -47,15 +48,16 @@ const DEFAULTS = [
     description: "Permits any model to process publicly available data. Lowest risk; no approval required.",
     dataClass: "public" as const,
     action: "allow" as const,
-    modelIdPattern: "%",
+    modelIdPattern: "*",
     priority: 100,
     requireHumanApproval: false,
   },
 ] as const;
 
 export async function POST() {
-  const session = await requireAuth();
-  const orgId = session.orgId as string;
+  const session = await governanceSession();
+  if (!session) return unauthorized();
+  const orgId = session.orgId;
 
   const db = getDb();
 
@@ -89,9 +91,10 @@ export async function POST() {
     created.push(policy.id);
   }
 
+  const actorId = await orgActorId(session);
   await logAuditEvent({
     organizationId: orgId,
-    userId: session.sub as string,
+    userId: actorId ?? undefined,
     action: "governance.policy.created",
     entityType: "model_policy",
     entityId: orgId,

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Server, Plus, Loader2, ExternalLink, Trash2, Pause, Play } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
 
 interface Deployment {
   id: string;
@@ -10,9 +11,13 @@ interface Deployment {
   sourceType: string;
   sourceValue: string;
   status: string;
+  statusMessage?: string | null;
   cpu: string;
   memoryGb: string;
   replicas: number;
+  target?: string;
+  gpuType?: string;
+  runtimeModel?: string | null;
   fqdn: string | null;
   createdAt: string;
 }
@@ -63,16 +68,22 @@ export default function DeploymentsPage() {
 
   return (
     <div>
-      <div className="mb-8 flex items-start justify-between">
-        <div>
-          <h1 className="page-title">Deployments</h1>
-          <p className="page-desc">Manage your self-hosted model containers</p>
-        </div>
-        <Link href="/dashboard/deployments/new" className="btn-primary">
-          <Plus className="h-4 w-4" />
-          New Deployment
-        </Link>
-      </div>
+      <PageHeader
+        eyebrow="Dedicated"
+        title="Deployments"
+        description="Request a GPU here or on GCP and run open models end to end. Separate from serverless."
+        actions={
+          <div className="flex gap-2">
+            <Link href="/dashboard/deployments/routers" className="btn-ghost">
+              Routers
+            </Link>
+            <Link href="/dashboard/deployments/new" className="btn-primary">
+              <Plus className="h-4 w-4" />
+              Request GPU
+            </Link>
+          </div>
+        }
+      />
 
       {loading ? (
         <div className="flex h-64 items-center justify-center">
@@ -83,31 +94,41 @@ export default function DeploymentsPage() {
           <Server className="mx-auto h-10 w-10" style={{ color: "var(--ink-4)" }} />
           <h3 className="mt-4 font-medium" style={{ color: "var(--ink)" }}>No deployments yet</h3>
           <p className="mt-1 text-sm" style={{ color: "var(--ink-3)" }}>
-            Deploy your own models or bring a custom container image.
+            Request a GPU on this Mac or GCP and run a catalog model.
           </p>
           <Link href="/dashboard/deployments/new" className="btn-primary mt-5 inline-flex">
             <Plus className="h-4 w-4" />
-            Create your first deployment
+            Request your first GPU
           </Link>
         </div>
       ) : (
         <div className="grid gap-4">
           {deployments.map((d) => (
-            <div key={d.id} className="card p-6">
+            <div key={d.id} className="od-card od-lift p-6">
               <div className="flex items-start justify-between">
                 <div>
                   <div className="flex items-center gap-3">
-                    <h3 className="font-semibold" style={{ color: "var(--ink)" }}>{d.name}</h3>
+                    <Link
+                      href={`/dashboard/deployments/${d.id}`}
+                      className="font-semibold hover:underline"
+                      style={{ color: "var(--ink)" }}
+                    >
+                      {d.name}
+                    </Link>
                     <span className={statusBadge(d.status)}>{d.status}</span>
                   </div>
                   <p className="mt-1 text-sm" style={{ color: "var(--ink-3)" }}>
                     {d.sourceType === "image" ? `Image: ${d.sourceValue}` : `Catalog: ${d.sourceValue}`}
                   </p>
-                  <div className="mt-2 flex gap-4 text-sm" style={{ color: "var(--ink-3)" }}>
-                    <span>{d.cpu} CPU</span>
-                    <span>{d.memoryGb} GB RAM</span>
+                  <div className="mt-2 flex flex-wrap gap-4 text-sm" style={{ color: "var(--ink-3)" }}>
+                    <span>{d.target === "local" ? "This Mac" : d.target === "gcp" ? "GCP" : "Azure"}</span>
+                    <span>{d.gpuType && d.gpuType !== "none" ? `GPU: ${d.gpuType}` : `${d.cpu} CPU`}</span>
+                    {d.runtimeModel && <span>{d.runtimeModel}</span>}
                     <span>{d.replicas} replica{d.replicas !== 1 ? "s" : ""}</span>
                   </div>
+                  {d.statusMessage && (
+                    <p className="mt-2 text-xs" style={{ color: "var(--ink-3)" }}>{d.statusMessage}</p>
+                  )}
                 </div>
                 <div className="flex items-center gap-1">
                   {d.fqdn && d.status === "running" && (

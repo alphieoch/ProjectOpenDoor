@@ -74,18 +74,6 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Build and push Docs
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ./apps/docs/Dockerfile
-          push: true
-          tags: |
-            ${{ secrets.AZURE_REGISTRY_NAME }}.azurecr.io/opendoor-docs:${{ github.sha }}
-            ${{ secrets.AZURE_REGISTRY_NAME }}.azurecr.io/opendoor-docs:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
   deploy:
     needs: build
     runs-on: ubuntu-latest
@@ -112,6 +100,7 @@ jobs:
               "stripeWebhookSecret": "${{ secrets.STRIPE_WEBHOOK_SECRET }}",
               "stripeProPriceId": "${{ secrets.STRIPE_PRO_PRICE_ID }}",
               "stripeEnterprisePriceId": "${{ secrets.STRIPE_ENTERPRISE_PRICE_ID }}",
+              "stripeAgentsAddonPriceId": "${{ secrets.STRIPE_AGENTS_ADDON_PRICE_ID }}",
               "appUrl": "https://${{ secrets.AZURE_DASHBOARD_DOMAIN || secrets.AZURE_FRONTDOOR_HOST }}",
               "workosApiKey": "${{ secrets.WORKOS_API_KEY }}",
               "workosClientId": "${{ secrets.WORKOS_CLIENT_ID }}",
@@ -143,19 +132,5 @@ jobs:
         run: |
           az containerapp revision restart \
             --name opendoor-primary-cachet \
-            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
-            --subscription ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-
-      - name: Restart Docs (Primary)
-        run: |
-          az containerapp revision restart \
-            --name opendoor-primary-docs \
-            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
-            --subscription ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-
-      - name: Restart Docs (Secondary)
-        run: |
-          az containerapp revision restart \
-            --name opendoor-secondary-docs \
             --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
             --subscription ${{ secrets.AZURE_SUBSCRIPTION_ID }}

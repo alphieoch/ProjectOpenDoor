@@ -3,13 +3,73 @@ import type { Context, Next } from "hono";
 import { db } from "@opendoor/database";
 import { apiKeys, organizations, models, providers } from "@opendoor/database";
 import { eq, and, isNull } from "drizzle-orm";
-import { createHash } from "crypto";
+import { createHash, randomBytes } from "crypto";
+import {
+  flattenMessageText,
+  spendableCents,
+  welcomeAllowedForFamily,
+  SYSTEM_ASSISTANT_KEY_NAME,
+} from "@opendoor/shared";
 import { estimateTokens } from "../utils/streaming.js";
 import { calculateCost } from "../utils/pricing.js";
-import { shouldUsePlanBudget, usdToCents } from "../utils/billing.js";
+import { expireWelcomeCredits, shouldUsePlanBudget, usdToCents } from "../utils/billing.js";
 
-function normalizePlan(plan: string): "free" | "pro" | "enterprise" {
-  if (plan === "pro" || plan === "enterprise") return plan;
+function internalGatewaySecret() {
+  return process.env.INTERNAL_API_KEY || process.env.GATEWAY_INTERNAL_KEY || "";
+}
+
+function isInternalGatewayKey(apiKey: string) {
+  const secret = internalGatewaySecret();
+  return Boolean(secret) && apiKey === secret;
+}
+
+async function ensureSystemAssistantKey(orgId: string) {
+  const existing = await db.query.apiKeys.findFirst({
+    where: and(
+      eq(apiKeys.organizationId, orgId),
+      eq(apiKeys.name, SYSTEM_ASSISTANT_KEY_NAME),
+      isNull(apiKeys.revokedAt)
+    ),
+  });
+  if (existing) return existing;
+
+  const compact = orgId.replace(/-/g, "");
+  const prefix = `opd_s${compact.slice(0, 11)}`;
+  const byPrefix = await db.query.apiKeys.findFirst({
+    where: eq(apiKeys.keyPrefix, prefix),
+  });
+  if (byPrefix && byPrefix.organizationId === orgId && !byPrefix.revokedAt) {
+    return byPrefix;
+  }
+
+  const rawKey = `opd_${randomBytes(32).toString("hex")}`;
+  const hash = createHash("sha256").update(rawKey).digest("hex");
+  try {
+    const [created] = await db
+      .insert(apiKeys)
+      .values({
+        name: SYSTEM_ASSISTANT_KEY_NAME,
+        keyHash: hash,
+        keyPrefix: prefix,
+        organizationId: orgId,
+      })
+      .returning();
+    return created;
+  } catch {
+    const raced = await db.query.apiKeys.findFirst({
+      where: and(
+        eq(apiKeys.organizationId, orgId),
+        eq(apiKeys.name, SYSTEM_ASSISTANT_KEY_NAME),
+        isNull(apiKeys.revokedAt)
+      ),
+    });
+    if (raced) return raced;
+    throw new Error("Failed to create assistant billing key");
+  }
+}
+
+function normalizePlan(plan: string): "free" | "pro" | "team" | "enterprise" {
+  if (plan === "pro" || plan === "team" || plan === "enterprise") return plan;
   return "free";
 }
 
@@ -21,7 +81,10 @@ function inferFamilyFromModel(modelId: string, providerSlug?: string): "closed" 
     provider === "qwen" ||
     provider === "mistral" ||
     provider === "custom" ||
+    provider === "ollama" ||
     model.startsWith("custom:") ||
+    model.startsWith("ollama:") ||
+    model.includes("llama") ||
     model.includes("deepseek") ||
     model.includes("qwen") ||
     model.includes("mistral")
@@ -44,19 +107,41 @@ export async function authMiddleware(c: Context, next: Next) {
     return c.json({ error: "Invalid API key format" }, 401);
   }
 
-  const prefix = apiKey.slice(0, 16);
-  const hash = createHash("sha256").update(apiKey).digest("hex");
+  let keyRecord;
 
-  const keyRecord = await db.query.apiKeys.findFirst({
-    where: and(
-      eq(apiKeys.keyPrefix, prefix),
-      eq(apiKeys.keyHash, hash),
-      isNull(apiKeys.revokedAt)
-    ),
-  });
+  if (isInternalGatewayKey(apiKey)) {
+    const orgId = c.req.header("X-OpenDoor-Organization-Id") || "";
+    if (!orgId) {
+      return c.json(
+        { error: "Internal gateway calls must include X-OpenDoor-Organization-Id" },
+        401
+      );
+    }
+    const orgForInternal = await db.query.organizations.findFirst({
+      where: eq(organizations.id, orgId),
+    });
+    if (!orgForInternal) {
+      return c.json({ error: "Organization not found" }, 401);
+    }
+    keyRecord = await ensureSystemAssistantKey(orgId);
+    if (!keyRecord) {
+      return c.json({ error: "Failed to bind assistant billing key" }, 500);
+    }
+  } else {
+    const prefix = apiKey.slice(0, 16);
+    const hash = createHash("sha256").update(apiKey).digest("hex");
 
-  if (!keyRecord) {
-    return c.json({ error: "Invalid API key" }, 401);
+    keyRecord = await db.query.apiKeys.findFirst({
+      where: and(
+        eq(apiKeys.keyPrefix, prefix),
+        eq(apiKeys.keyHash, hash),
+        isNull(apiKeys.revokedAt)
+      ),
+    });
+
+    if (!keyRecord) {
+      return c.json({ error: "Invalid API key" }, 401);
+    }
   }
 
   await db
@@ -104,11 +189,14 @@ export async function authMiddleware(c: Context, next: Next) {
           (modelRow[0]?.family as "closed" | "open_weight" | undefined) ||
           inferFamilyFromModel(modelId, providerSlug);
 
-        const promptTokens = body.messages.reduce((sum: number, m: any) => {
-          const content =
-            typeof m?.content === "string" ? m.content : JSON.stringify(m?.content ?? "");
-          return sum + estimateTokens(content);
-        }, 0);
+        const promptTokens =
+          Array.isArray(body.messages) && body.messages.length > 0
+            ? body.messages.reduce(
+                (sum: number, m: any) =>
+                  sum + estimateTokens(flattenMessageText(m?.content)),
+                0
+              )
+            : estimateTokens(flattenMessageText(body.prompt));
         const estimatedCompletionTokens =
           typeof body.max_tokens === "number" && body.max_tokens > 0
             ? body.max_tokens
@@ -127,7 +215,9 @@ export async function authMiddleware(c: Context, next: Next) {
 
           const estimatedCostCents = usdToCents(estimatedCost.totalCost);
           const canUsePlan = await shouldUsePlanBudget(org.id, plan, estimatedCostCents);
-          const credits = Number(org.creditsUsdCents || 0);
+          const buckets = await expireWelcomeCredits(org);
+          const allowWelcome = welcomeAllowedForFamily(family);
+          const credits = spendableCents(buckets, allowWelcome);
           const canUseCredits = credits >= estimatedCostCents;
 
           // Check per-key spend cap
@@ -152,13 +242,18 @@ export async function authMiddleware(c: Context, next: Next) {
             const topupUrl = `${
               process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
             }/dashboard/billing`;
+            const welcomeBlocked =
+              !allowWelcome && buckets.welcomeCents > 0 && buckets.paidCents < estimatedCostCents;
             return c.json(
               {
                 error: "Insufficient balance",
-                detail:
-                  "Your current 4-hour plan allowance and prepaid credits cannot cover this request estimate.",
+                detail: welcomeBlocked
+                  ? "Welcome credit is for open-weight models only. Add prepaid credit or upgrade to use closed models."
+                  : "Prepaid credits cannot cover this request. Add credit on the billing page. Paid plans include a monthly stipend; tokens after that and GPU-seconds are pay-as-you-go.",
                 estimatedCostUsd: estimatedCost.totalCost,
-                creditsUsdCents: credits,
+                creditsUsdCents: buckets.totalCents,
+                paidCreditsUsdCents: buckets.paidCents,
+                welcomeCreditsUsdCents: buckets.welcomeCents,
                 topupUrl,
               },
               402

@@ -9,6 +9,8 @@ declare module "hono" {
       organizationId: string;
       rateLimitRpm: number | null;
       rateLimitTpm: number | null;
+      spendUsedUsdCents?: number | null;
+      allowedModels?: unknown;
     };
     organization: {
       id: string;
@@ -19,17 +21,24 @@ declare module "hono" {
     };
     chatRequestBody?: {
       model?: string;
-      messages?: Array<{ content?: string }>;
+      messages?: Array<{ content?: unknown }>;
       max_tokens?: number;
       stream?: boolean;
+      prompt?: string | string[];
+      response_format?: unknown;
+      service_tier?: "standard" | "priority";
+      prompt_cache_key?: string;
+      user?: string;
     };
     billingContext?: {
-      plan: "free" | "pro" | "enterprise";
+      plan: "free" | "pro" | "team" | "enterprise";
       family: "closed" | "open_weight";
       providerSlug: string;
       useFromPlan: boolean;
       useFromCredits: boolean;
       estimatedCostUsd?: number;
     };
+    serviceTier?: "standard" | "priority";
+    effectiveRateLimits?: { tpm: number; rpm: number };
   }
 }
