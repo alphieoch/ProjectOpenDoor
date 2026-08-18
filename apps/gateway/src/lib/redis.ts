@@ -9,9 +9,10 @@ export function createRedis() {
   const client = new (Redis as any)(url, {
     maxRetriesPerRequest: 1,
     enableOfflineQueue: false,
-    connectTimeout: 1500,
-    commandTimeout: 1500,
+    connectTimeout: 5000,
+    commandTimeout: 5000,
     lazyConnect: true,
+    family: 4,
   });
   client.on("error", () => undefined);
   void client.connect().catch(() => undefined);

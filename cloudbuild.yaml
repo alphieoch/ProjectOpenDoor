@@ -75,14 +75,12 @@ steps:
         # shellcheck disable=SC1091
         source infra/gcp/cloud-run-env.sh
         SECRETS=DATABASE_URL=opendoor-database-url:latest,REDIS_URL=opendoor-redis-url:latest,AUTH_SECRET=opendoor-auth-secret:latest,GATEWAY_API_KEY_HASH_SECRET=opendoor-gateway-hash-secret:latest,DB_PASSWORD=opendoor-db-password:latest
+        # Always bind login + billing. Do not gate on `gcloud secrets describe` —
+        # Cloud Build SA often cannot GET secrets, which dropped WorkOS/Stripe
+        # from the running dashboard revision.
+        SECRETS="$${SECRETS},WORKOS_API_KEY=opendoor-workos-api-key:latest,WORKOS_CLIENT_ID=opendoor-workos-client-id:latest,WORKOS_COOKIE_PASSWORD=opendoor-workos-cookie-password:latest,STRIPE_SECRET_KEY=opendoor-stripe-secret-key:latest"
         if gcloud secrets describe opendoor-together-api-key >/dev/null 2>&1; then
           SECRETS="$${SECRETS},TOGETHER_API_KEY=opendoor-together-api-key:latest"
-        fi
-        if gcloud secrets describe opendoor-stripe-secret-key >/dev/null 2>&1; then
-          SECRETS="$${SECRETS},STRIPE_SECRET_KEY=opendoor-stripe-secret-key:latest"
-        fi
-        if gcloud secrets describe opendoor-workos-api-key >/dev/null 2>&1; then
-          SECRETS="$${SECRETS},WORKOS_API_KEY=opendoor-workos-api-key:latest,WORKOS_CLIENT_ID=opendoor-workos-client-id:latest,WORKOS_COOKIE_PASSWORD=opendoor-workos-cookie-password:latest"
         fi
         if gcloud secrets describe opendoor-qwen-api-key >/dev/null 2>&1; then
           SECRETS="$${SECRETS},QWEN_API_KEY=opendoor-qwen-api-key:latest"
@@ -100,8 +98,10 @@ steps:
           --max-instances=20 \
           --timeout=300 \
           --add-cloudsql-instances=$$CONN \
-          --vpc-connector=$$VPC \
+          --network=default \
+          --subnet=default \
           --vpc-egress=private-ranges-only \
+          --clear-vpc-connector \
           --set-env-vars="$$(opendoor_gateway_env $PROJECT_ID ${_REGION} $$CONN)" \
           --set-secrets=$$SECRETS
     waitFor: [push-gateway]
@@ -121,14 +121,10 @@ steps:
         # shellcheck disable=SC1091
         source infra/gcp/cloud-run-env.sh
         SECRETS=DATABASE_URL=opendoor-database-url:latest,REDIS_URL=opendoor-redis-url:latest,AUTH_SECRET=opendoor-auth-secret:latest,GATEWAY_API_KEY_HASH_SECRET=opendoor-gateway-hash-secret:latest,DB_PASSWORD=opendoor-db-password:latest
+        # Always bind login + billing. Cloud Build SA often cannot GET secrets.
+        SECRETS="$${SECRETS},WORKOS_API_KEY=opendoor-workos-api-key:latest,WORKOS_CLIENT_ID=opendoor-workos-client-id:latest,WORKOS_COOKIE_PASSWORD=opendoor-workos-cookie-password:latest,STRIPE_SECRET_KEY=opendoor-stripe-secret-key:latest"
         if gcloud secrets describe opendoor-together-api-key >/dev/null 2>&1; then
           SECRETS="$${SECRETS},TOGETHER_API_KEY=opendoor-together-api-key:latest"
-        fi
-        if gcloud secrets describe opendoor-stripe-secret-key >/dev/null 2>&1; then
-          SECRETS="$${SECRETS},STRIPE_SECRET_KEY=opendoor-stripe-secret-key:latest"
-        fi
-        if gcloud secrets describe opendoor-workos-api-key >/dev/null 2>&1; then
-          SECRETS="$${SECRETS},WORKOS_API_KEY=opendoor-workos-api-key:latest,WORKOS_CLIENT_ID=opendoor-workos-client-id:latest,WORKOS_COOKIE_PASSWORD=opendoor-workos-cookie-password:latest"
         fi
         if gcloud secrets describe opendoor-code-sandbox-token >/dev/null 2>&1; then
           SECRETS="$${SECRETS},CODE_SANDBOX_TOKEN=opendoor-code-sandbox-token:latest"
@@ -149,8 +145,10 @@ steps:
           --max-instances=20 \
           --timeout=300 \
           --add-cloudsql-instances=$$CONN \
-          --vpc-connector=$$VPC \
+          --network=default \
+          --subnet=default \
           --vpc-egress=private-ranges-only \
+          --clear-vpc-connector \
           --set-env-vars="$$(opendoor_dashboard_env $PROJECT_ID ${_REGION} $$CONN https://${_SITE_ID}.web.app)" \
           --set-secrets=$$SECRETS
     waitFor: [push-dashboard]

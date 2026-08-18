@@ -91,7 +91,23 @@ if ! gcloud compute networks vpc-access connectors describe "$VPC_CONNECTOR" --r
     --project="$PROJECT"
 fi
 
+echo "==> Private Service Access (required for Cloud Run → Memorystore)"
+if ! gcloud compute addresses describe google-managed-services-default --global --project="$PROJECT" >/dev/null 2>&1; then
+  gcloud compute addresses create google-managed-services-default \
+    --global \
+    --purpose=VPC_PEERING \
+    --prefix-length=16 \
+    --network="projects/${PROJECT}/global/networks/default" \
+    --project="$PROJECT"
+fi
+gcloud services vpc-peerings connect \
+  --service=servicenetworking.googleapis.com \
+  --ranges=google-managed-services-default \
+  --network=default \
+  --project="$PROJECT" >/dev/null || true
+
 echo "==> Memorystore Redis"
+# DIRECT_PEERING is unreachable from Cloud Run (connector + Direct VPC). PSA is required.
 if ! gcloud redis instances describe "$REDIS_INSTANCE" --region="$REGION" --project="$PROJECT" >/dev/null 2>&1; then
   gcloud redis instances create "$REDIS_INSTANCE" \
     --size=1 \
@@ -99,6 +115,7 @@ if ! gcloud redis instances describe "$REDIS_INSTANCE" --region="$REGION" --proj
     --redis-version=redis_7_0 \
     --tier=basic \
     --network=default \
+    --connect-mode=PRIVATE_SERVICE_ACCESS \
     --project="$PROJECT"
 fi
 

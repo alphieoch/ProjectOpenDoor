@@ -62,7 +62,17 @@ export async function getStatusData() {
   const rStart = Date.now();
   let client: InstanceType<typeof Redis> | null = null;
   try {
-    client = new Redis(redisUrl, { maxRetriesPerRequest: 1, enableOfflineQueue: false });
+    // lazyConnect + connect() so ping is not rejected before the TCP session exists
+    // (enableOfflineQueue:false otherwise fails in milliseconds on a cold client).
+    client = new Redis(redisUrl, {
+      maxRetriesPerRequest: 1,
+      enableOfflineQueue: false,
+      connectTimeout: 5000,
+      commandTimeout: 5000,
+      lazyConnect: true,
+      family: 4,
+    });
+    await client.connect();
     await client.ping();
     redis = { status: "up", latencyMs: Date.now() - rStart };
   } catch {

@@ -66,8 +66,10 @@ steps:
           --min-instances=1 \
           --max-instances=20 \
           --add-cloudsql-instances=$$CONN \
-          --vpc-connector=$$VPC \
+          --network=default \
+          --subnet=default \
           --vpc-egress=private-ranges-only \
+          --clear-vpc-connector \
           --set-env-vars="$$(opendoor_gateway_env $PROJECT_ID ${_REGION} $$CONN)" \
           --set-secrets=$$SECRETS
 

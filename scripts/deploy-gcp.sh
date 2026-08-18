@@ -75,8 +75,10 @@ deploy_run_services() {
     --max-instances=20 \
     --timeout=300 \
     --add-cloudsql-instances="$connection_name" \
-    --vpc-connector="$vpc_path" \
+    --network=default \
+    --subnet=default \
     --vpc-egress=private-ranges-only \
+    --clear-vpc-connector \
     --set-env-vars="$(opendoor_gateway_env "$PROJECT" "$REGION" "$connection_name")" \
     --set-secrets="${secrets}" \
     --project="$PROJECT"
@@ -94,8 +96,10 @@ deploy_run_services() {
     --max-instances=20 \
     --timeout=300 \
     --add-cloudsql-instances="$connection_name" \
-    --vpc-connector="$vpc_path" \
+    --network=default \
+    --subnet=default \
     --vpc-egress=private-ranges-only \
+    --clear-vpc-connector \
     --set-env-vars="$(opendoor_dashboard_env "$PROJECT" "$REGION" "$connection_name" "$PUBLIC_URL")" \
     --set-secrets="${secrets}" \
     --project="$PROJECT"
