@@ -59,17 +59,9 @@ curl http://localhost:3001/v1/files \
 
 `runWebSearch(query)` lives in `apps/gateway/src/lib/web-search.ts` (also re-exported from `routes/plugins.ts`). Import it from chat later; do not fake results if it throws `WebSearchNotConfiguredError`.
 
-## Docs sidebar (optional)
+## Docs sidebar
 
-`docs.json` — add under the "Chat & more" group:
-
-```json
-{ "title": "Responses", "href": "/api-reference/responses" },
-{ "title": "Files", "href": "/api-reference/files" },
-{ "title": "Web search", "href": "/api-reference/web-search" }
-```
-
-Pages already exist at `docs/api-reference/responses.mdx`, `files.mdx`, `web-search.mdx`.
+Responses, Files, and Web search are in `docs.json` under Chat & more.
 
 ## Skipped
 

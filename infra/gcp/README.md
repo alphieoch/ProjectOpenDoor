@@ -4,7 +4,7 @@ All production traffic is Google-managed:
 
 | Piece | Resource |
 |-------|----------|
-| Edge | Firebase Hosting site `opendoor-f39a4` (rewrites to Cloud Run) |
+| Edge | Firebase Hosting site `opendoor-gcp` (rewrites to Cloud Run) |
 | App | Cloud Run `opendoor-dashboard` |
 | API | Cloud Run `opendoor-gateway` |
 | Code jail | Cloud Run `opendoor-sandbox` (gVisor, no egress) |
@@ -48,11 +48,11 @@ Creates Artifact Registry, Cloud SQL, Memorystore, VPC connector, and Secret Man
 https://console.firebase.google.com/ → select this GCP project → accept Firebase terms once. Then:
 
 ```bash
-firebase hosting:sites:create opendoor-f39a4 --project project-800192c2-3ecc-4889-8f7
+firebase hosting:sites:create opendoor-gcp --project project-800192c2-3ecc-4889-8f7
 firebase deploy --only hosting --project project-800192c2-3ecc-4889-8f7
 ```
 
-(`opendoor` / `opendoor-app` site IDs are globally reserved — use `opendoor-f39a4`.)
+(`opendoor` / `opendoor-app` / `opendoor-f39a4` site IDs are reserved elsewhere — this repo uses `opendoor-gcp`.)
 
 ## Persistable Cloud Run env
 
@@ -130,7 +130,7 @@ bun run seed:serverless
 
 - Dashboard `/pricing` shows serverless `$ / 1M` rows
 - Gateway `/health` → `{"status":"ok"}`
-- After Firebase: `https://opendoor-f39a4.web.app/pricing` and `/v1/...`
+- After Firebase: `https://opendoor-gcp.web.app/pricing` and `/v1/...`
 - Edge LB (no Firebase): `./scripts/setup-edge-lb.sh` then `http://<EDGE_IP>/pricing`
 - Ops one-shot: `TOGETHER_API_KEY=... ./scripts/finish-ops.sh`
 - Training: `/dashboard/training` after migration `0028`

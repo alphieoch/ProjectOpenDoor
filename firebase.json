@@ -23,6 +23,13 @@
         }
       },
       {
+        "source": "/gateway/status",
+        "run": {
+          "serviceId": "opendoor-gateway",
+          "region": "us-central1"
+        }
+      },
+      {
         "source": "**",
         "run": {
           "serviceId": "opendoor-dashboard",

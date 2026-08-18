@@ -10,6 +10,7 @@ import {
   workosErrorMessage,
 } from "@/lib/workos-password-auth";
 import { sessionCookieOptions } from "@/lib/workos-sync";
+import { enforceAuthRateLimit } from "@/lib/auth-rate-limit";
 
 export async function POST(req: NextRequest) {
   const { email, password } = await req.json();
@@ -22,6 +23,8 @@ export async function POST(req: NextRequest) {
   }
 
   const normalized = String(email).toLowerCase().trim();
+  const limited = enforceAuthRateLimit("login", req, normalized);
+  if (limited) return limited;
 
   // Prefer WorkOS User Management when configured (custom UI, no hosted AuthKit).
   if (process.env.WORKOS_API_KEY && process.env.WORKOS_CLIENT_ID) {

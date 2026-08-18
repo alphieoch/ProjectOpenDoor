@@ -12,6 +12,7 @@ import {
   workosErrorMessage,
 } from "@/lib/workos-password-auth";
 import { sessionCookieOptions, syncWorkOSUserToSession } from "@/lib/workos-sync";
+import { enforceAuthRateLimit } from "@/lib/auth-rate-limit";
 
 export async function POST(req: NextRequest) {
   const { email, password, name, orgName, segment } = await req.json();
@@ -34,6 +35,8 @@ export async function POST(req: NextRequest) {
     ? segment
     : "standard";
   const normalized = String(email).toLowerCase().trim();
+  const limited = enforceAuthRateLimit("signup", req, normalized);
+  if (limited) return limited;
 
   // WorkOS-backed signup (custom UI)
   if (process.env.WORKOS_API_KEY && process.env.WORKOS_CLIENT_ID) {

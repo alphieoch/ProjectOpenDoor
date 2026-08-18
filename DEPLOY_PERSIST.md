@@ -61,6 +61,6 @@ No Together secret created. Vertex is replacing it. Optional `opendoor-together-
 
 ## Still blocked
 
-- OpenDoor **live** Stripe Web Search price (wrong MCP account)
-- Firebase Hosting ToS / site `opendoor-f39a4` (use Cloud Run URLs)
+- OpenDoor **live** Stripe Web Search price (wrong MCP account / test price is live on Cloud Run)
 - Together API key (intentionally skipped)
+- Firebase Hosting is **live** at https://opendoor-gcp.web.app (`opendoor-f39a4` is a sibling project)

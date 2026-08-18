@@ -55,6 +55,8 @@ app.get("/health", (c) => {
 
 /** Public status: Postgres, Redis, and which LLM providers loaded (real env configuration). */
 app.get("/status", (c) => statusHandler(c));
+/** Same JSON when Firebase Hosting `/status` is the dashboard marketing page. */
+app.get("/gateway/status", (c) => statusHandler(c));
 
 /** Push health data to Cachet status page. */
 app.post("/internal/cachet-sync", (c) => cachetSyncHandler(c));

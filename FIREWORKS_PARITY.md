@@ -61,7 +61,7 @@ Request inspector + consistent dashboard chrome now that AuthKit login works.
 | Cloud SQL + Memorystore + VPC | **done** | |
 | HTTPS edge Load Balancer | **done** | `scripts/setup-edge-lb.sh` → `opendoor-edge` |
 | Together Secret Manager | **optional** | Overflow only. Do not create a Together secret unless you want those leftover ids. |
-| Firebase Hosting `opendoor-f39a4` | **blocked** | Org ToS — accept in Firebase console, then `firebase deploy --only hosting` |
+| Firebase Hosting `opendoor-gcp` | **done** | https://opendoor-gcp.web.app — `opendoor-f39a4` is a different GCP project |
 
 ## Explicitly later / never this year
 

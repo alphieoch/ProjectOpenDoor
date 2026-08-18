@@ -1,0 +1,26 @@
+{
+  "name": "OpenDoor",
+  "user": "root",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": "."
+  },
+  "install": "./scripts/cloud-agent-install.sh",
+  "start": "./scripts/cloud-agent-start.sh",
+  "terminals": [
+    {
+      "name": "Gateway",
+      "command": "bun --filter @opendoor/gateway dev",
+      "description": "OpenAI-compatible API on :3001"
+    },
+    {
+      "name": "Dashboard",
+      "command": "bun --filter @opendoor/dashboard dev",
+      "description": "Console and docs on :3010"
+    }
+  ],
+  "ports": [
+    { "name": "Dashboard", "port": 3010 },
+    { "name": "Gateway", "port": 3001 }
+  ]
+}
