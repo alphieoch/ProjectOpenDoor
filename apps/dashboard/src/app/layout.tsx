@@ -1,25 +1,25 @@
 import type { Metadata } from "next";
-import { Instrument_Serif, Roboto, Roboto_Mono } from "next/font/google";
+import { EB_Garamond, Inter, Roboto_Mono } from "next/font/google";
 import { AuthKitProvider } from "@workos-inc/authkit-nextjs/components";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 
-const roboto = Roboto({
-  variable: "--font-roboto",
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
-  weight: ["300", "400", "500", "700"],
+  display: "swap",
+});
+const ebGaramond = EB_Garamond({
+  variable: "--font-garamond",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800"],
+  style: ["normal", "italic"],
   display: "swap",
 });
 const robotoMono = Roboto_Mono({
   variable: "--font-roboto-mono",
   subsets: ["latin"],
   weight: ["400", "500", "600"],
-  display: "swap",
-});
-const instrumentSerif = Instrument_Serif({
-  variable: "--font-instrument-serif",
-  subsets: ["latin"],
-  weight: "400",
   display: "swap",
 });
 
@@ -32,10 +32,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html
       lang="en"
-      className={`${roboto.variable} ${robotoMono.variable} ${instrumentSerif.variable}`}
+      className={`${inter.variable} ${ebGaramond.variable} ${robotoMono.variable}`}
       suppressHydrationWarning
     >
-      <body className="min-h-screen font-sans antialiased">
+      <body className="min-h-screen font-inter antialiased">
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} disableTransitionOnChange>
           <AuthKitProvider>{children}</AuthKitProvider>
         </ThemeProvider>

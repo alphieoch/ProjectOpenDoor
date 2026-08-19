@@ -141,8 +141,8 @@ export default function NewDeploymentPage() {
       {gpuStatus && (
         <div className="mt-4 grid gap-3 md:grid-cols-2">
           <div className="card p-4 text-sm">
-            <p className="font-medium" style={{ color: "var(--ink)" }}>Your dedicated metals</p>
-            <p style={{ color: "var(--ink-3)" }}>
+            <p className="font-medium" style={{ color: "hsl(var(--foreground))" }}>Your dedicated metals</p>
+            <p style={{ color: "hsl(var(--muted-foreground))" }}>
               {gpuStatus.local.appleSilicon ? "Apple Silicon · Metal" : gpuStatus.local.hardware?.gpuName || "No dedicated metals"}
               {" · "}
               Ollama {gpuStatus.local.ollamaInstalled ? "installed" : "missing"}
@@ -150,8 +150,8 @@ export default function NewDeploymentPage() {
             </p>
           </div>
           <div className="card p-4 text-sm">
-            <p className="font-medium" style={{ color: "var(--ink)" }}>Ochieng & Co cloud services</p>
-            <p style={{ color: "var(--ink-3)" }}>
+            <p className="font-medium" style={{ color: "hsl(var(--foreground))" }}>Ochieng & Co cloud services</p>
+            <p style={{ color: "hsl(var(--muted-foreground))" }}>
               Native path. Location is not shown here.
             </p>
           </div>
@@ -160,7 +160,7 @@ export default function NewDeploymentPage() {
 
       <form onSubmit={handleSubmit} className="mt-6 max-w-2xl space-y-6">
         <div>
-          <label className="block text-sm font-medium" style={{ color: "var(--ink-2)" }}>
+          <label className="block text-sm font-medium" style={{ color: "hsl(var(--muted-foreground))" }}>
             Where should the GPU run?
           </label>
           <div className="mt-2 grid grid-cols-2 gap-3">

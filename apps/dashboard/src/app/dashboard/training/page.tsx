@@ -190,7 +190,7 @@ export default function TrainingPage() {
 
       {loading ? (
         <div className="flex h-40 items-center justify-center">
-          <Loader2 className="h-6 w-6 animate-spin" style={{ color: "var(--ink-4)" }} />
+          <Loader2 className="h-6 w-6 animate-spin" style={{ color: "hsl(var(--muted-foreground))" }} />
         </div>
       ) : (
         <div className="mt-6">

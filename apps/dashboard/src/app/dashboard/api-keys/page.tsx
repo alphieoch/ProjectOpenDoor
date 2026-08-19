@@ -132,7 +132,7 @@ export default function ApiKeysPage() {
         <h2 className="section-title mb-4">Create new key</h2>
         <form onSubmit={createKey} className="space-y-4">
           <div>
-            <label className="mb-1.5 block text-sm font-medium" style={{ color: "var(--ink-2)" }}>
+            <label className="mb-1.5 block text-sm font-medium" style={{ color: "hsl(var(--muted-foreground))" }}>
               Key Name
             </label>
             <input
@@ -146,7 +146,7 @@ export default function ApiKeysPage() {
           </div>
 
           <div>
-            <label className="mb-2 block text-sm font-medium" style={{ color: "var(--ink-2)" }}>
+            <label className="mb-2 block text-sm font-medium" style={{ color: "hsl(var(--muted-foreground))" }}>
               Model Access
             </label>
             <div className="flex items-center gap-5">
@@ -155,9 +155,9 @@ export default function ApiKeysPage() {
                   type="radio"
                   checked={fullAccess}
                   onChange={() => setFullAccess(true)}
-                  className="h-4 w-4 accent-[var(--brand)]"
+                  className="h-4 w-4 accent-[hsl(var(--primary))]"
                 />
-                <span className="flex items-center gap-1.5 text-sm" style={{ color: "var(--ink-2)" }}>
+                <span className="flex items-center gap-1.5 text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
                   <ShieldCheck className="h-4 w-4" style={{ color: "var(--green)" }} />
                   Full Access
                 </span>
@@ -167,9 +167,9 @@ export default function ApiKeysPage() {
                   type="radio"
                   checked={!fullAccess}
                   onChange={() => setFullAccess(false)}
-                  className="h-4 w-4 accent-[var(--brand)]"
+                  className="h-4 w-4 accent-[hsl(var(--primary))]"
                 />
-                <span className="flex items-center gap-1.5 text-sm" style={{ color: "var(--ink-2)" }}>
+                <span className="flex items-center gap-1.5 text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
                   <Shield className="h-4 w-4" style={{ color: "var(--yellow)" }} />
                   Restricted
                 </span>
@@ -177,31 +177,31 @@ export default function ApiKeysPage() {
             </div>
 
             {!fullAccess && (
-              <div className="mt-3 rounded-lg border p-4" style={{ borderColor: "var(--line)", background: "var(--paper)" }}>
-                <p className="mb-3 text-xs" style={{ color: "var(--ink-3)" }}>
+              <div className="mt-3 rounded-lg border p-4" style={{ borderColor: "hsl(var(--border))", background: "hsl(var(--background))" }}>
+                <p className="mb-3 text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
                   Select which models this key can access:
                 </p>
                 <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
                   {catalog.length === 0 && (
-                    <p className="col-span-2 text-xs" style={{ color: "var(--ink-4)" }}>
+                    <p className="col-span-2 text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
                       No catalog models yet. Seed the database or ingest open models.
                     </p>
                   )}
                   {catalog.map((m) => (
                     <label
                       key={m.id}
-                      className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 hover:bg-[var(--paper-3)]"
+                      className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 hover:bg-accent"
                     >
                       <input
                         type="checkbox"
                         checked={selectedModels.includes(m.id)}
                         onChange={() => toggleModel(m.id)}
-                        className="h-4 w-4 rounded accent-[var(--brand)]"
+                        className="h-4 w-4 rounded accent-[hsl(var(--primary))]"
                       />
-                      <span className="text-sm" style={{ color: "var(--ink-2)" }}>
+                      <span className="text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
                         {m.name}
                       </span>
-                      <span className="ml-auto text-xs" style={{ color: "var(--ink-4)" }}>
+                      <span className="ml-auto text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
                         {m.provider}
                       </span>
                     </label>
@@ -225,7 +225,7 @@ export default function ApiKeysPage() {
       <div className="mt-6 card overflow-hidden">
         <table className="min-w-full">
           <thead>
-            <tr className="border-b border-[var(--line)]">
+            <tr className="border-b border-border">
               <th className="table-header-cell">Name</th>
               <th className="table-header-cell">Key</th>
               <th className="table-header-cell">Access</th>
@@ -237,10 +237,10 @@ export default function ApiKeysPage() {
           <tbody>
             {keys.map((key) => (
               <tr key={key.id} className="table-row">
-                <td className="table-cell font-medium" style={{ color: "var(--ink)" }}>
+                <td className="table-cell font-medium" style={{ color: "hsl(var(--foreground))" }}>
                   {key.name}
                 </td>
-                <td className="table-cell font-mono" style={{ color: "var(--ink-3)" }}>
+                <td className="table-cell font-mono" style={{ color: "hsl(var(--muted-foreground))" }}>
                   {key.keyPrefix}••••••••
                 </td>
                 <td className="table-cell">
@@ -256,10 +256,10 @@ export default function ApiKeysPage() {
                     </span>
                   )}
                 </td>
-                <td className="table-cell" style={{ color: "var(--ink-3)" }}>
+                <td className="table-cell" style={{ color: "hsl(var(--muted-foreground))" }}>
                   {new Date(key.createdAt).toLocaleDateString()}
                 </td>
-                <td className="table-cell" style={{ color: "var(--ink-3)" }}>
+                <td className="table-cell" style={{ color: "hsl(var(--muted-foreground))" }}>
                   {key.lastUsedAt ? new Date(key.lastUsedAt).toLocaleDateString() : "Never"}
                 </td>
                 <td className="table-cell text-right">
@@ -277,7 +277,7 @@ export default function ApiKeysPage() {
             ))}
             {keys.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-4 py-10 text-center text-sm" style={{ color: "var(--ink-4)" }}>
+                <td colSpan={6} className="px-4 py-10 text-center text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
                   No API keys yet. Create one above.
                 </td>
               </tr>
@@ -364,7 +364,7 @@ function ByokSection() {
   return (
     <div className="mt-8 card p-6">
       <h2 className="section-title mb-1">Bring your own key</h2>
-      <p className="mb-4 text-sm" style={{ color: "var(--ink-3)" }}>
+      <p className="mb-4 text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
         Encrypted at rest. The gateway uses this key for that provider before the platform env key. The secret is never shown again.
       </p>
       {error && (
@@ -374,7 +374,7 @@ function ByokSection() {
       )}
       <form onSubmit={addKey} className="mb-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
         <label className="text-sm">
-          <span className="mb-1.5 block font-medium" style={{ color: "var(--ink-2)" }}>
+          <span className="mb-1.5 block font-medium" style={{ color: "hsl(var(--muted-foreground))" }}>
             Provider
           </span>
           <select
@@ -390,7 +390,7 @@ function ByokSection() {
           </select>
         </label>
         <label className="text-sm sm:min-w-[16rem] sm:flex-1">
-          <span className="mb-1.5 block font-medium" style={{ color: "var(--ink-2)" }}>
+          <span className="mb-1.5 block font-medium" style={{ color: "hsl(var(--muted-foreground))" }}>
             API key
           </span>
           <input
@@ -403,7 +403,7 @@ function ByokSection() {
           />
         </label>
         <label className="text-sm">
-          <span className="mb-1.5 block font-medium" style={{ color: "var(--ink-2)" }}>
+          <span className="mb-1.5 block font-medium" style={{ color: "hsl(var(--muted-foreground))" }}>
             Label
           </span>
           <input
@@ -414,12 +414,12 @@ function ByokSection() {
             placeholder="Prod Together"
           />
         </label>
-        <label className="flex items-center gap-2 text-sm" style={{ color: "var(--ink-2)" }}>
+        <label className="flex items-center gap-2 text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
           <input
             type="checkbox"
             checked={alwaysUse}
             onChange={(e) => setAlwaysUse(e.target.checked)}
-            className="h-4 w-4 accent-[var(--brand)]"
+            className="h-4 w-4 accent-[hsl(var(--primary))]"
           />
           Always use
         </label>
@@ -429,7 +429,7 @@ function ByokSection() {
       </form>
       <table className="min-w-full">
         <thead>
-          <tr className="border-b border-[var(--line)]">
+          <tr className="border-b border-border">
             <th className="table-header-cell">Provider</th>
             <th className="table-header-cell">Prefix</th>
             <th className="table-header-cell">Label</th>
@@ -441,10 +441,10 @@ function ByokSection() {
           {keys.map((k) => (
             <tr key={k.id} className="table-row">
               <td className="table-cell font-medium">{k.providerSlug}</td>
-              <td className="table-cell font-mono" style={{ color: "var(--ink-3)" }}>
+              <td className="table-cell font-mono" style={{ color: "hsl(var(--muted-foreground))" }}>
                 {k.keyPrefix}
               </td>
-              <td className="table-cell" style={{ color: "var(--ink-3)" }}>
+              <td className="table-cell" style={{ color: "hsl(var(--muted-foreground))" }}>
                 {k.label || "—"}
               </td>
               <td className="table-cell">{k.alwaysUse ? "Yes" : "No"}</td>
@@ -457,7 +457,7 @@ function ByokSection() {
           ))}
           {keys.length === 0 && (
             <tr>
-              <td colSpan={5} className="px-4 py-8 text-center text-sm" style={{ color: "var(--ink-4)" }}>
+              <td colSpan={5} className="px-4 py-8 text-center text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
                 No provider keys yet.
               </td>
             </tr>

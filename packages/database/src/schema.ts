@@ -14,7 +14,7 @@ import {
   unique,
   pgEnum,
 } from "drizzle-orm/pg-core";
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 
 export const requestStatusEnum = pgEnum("request_status", [
   "success",
@@ -145,6 +145,7 @@ export const organizations = pgTable("organizations", {
   metadata: jsonb("metadata"),
   sector: sectorEnum("sector").notNull().default("general"),
   dataResidency: varchar("data_residency", { length: 50 }).default("uk"),
+  currency: varchar("currency", { length: 8 }).notNull().default("USD"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -162,6 +163,11 @@ export const users = pgTable("users", {
   role: varchar("role", { length: 50 }).notNull().default("member"),
   isSiteAdmin: boolean("is_site_admin").notNull().default(false),
   protectedChild: boolean("protected_child").notNull().default(false),
+  monthlyCreditSubCapCents: integer("monthly_credit_sub_cap_cents"),
+  allowedChatModes: text("allowed_chat_modes")
+    .array()
+    .notNull()
+    .default(sql`ARRAY['flash','auto','thinking','max','max_fast']::text[]`),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -328,6 +334,53 @@ export const gpuSkus = pgTable("gpu_skus", {
   sortOrder: integer("sort_order").notNull().default(0),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+export const creditLedgerBuckets = pgTable(
+  "credit_ledger_buckets",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: uuid("organization_id")
+      .references(() => organizations.id, { onDelete: "cascade" })
+      .notNull(),
+    initialAmountCents: integer("initial_amount_cents").notNull(),
+    remainingAmountCents: integer("remaining_amount_cents").notNull(),
+    currency: text("currency").notNull().default("USD"),
+    bucketType: varchar("bucket_type", { length: 32 }).notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    orgExpiresIdx: index("credit_ledger_buckets_org_expires_idx").on(
+      table.organizationId,
+      table.expiresAt
+    ),
+    remainingIdx: index("credit_ledger_buckets_remaining_idx").on(
+      table.organizationId,
+      table.remainingAmountCents
+    ),
+  })
+);
+
+export const chatRateLimits = pgTable(
+  "chat_rate_limits",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: uuid("organization_id")
+      .references(() => organizations.id, { onDelete: "cascade" })
+      .notNull(),
+    userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }),
+    windowStartTime: timestamp("window_start_time", { withTimezone: true }).notNull().defaultNow(),
+    windowExpiresAt: timestamp("window_expires_at", { withTimezone: true }).notNull(),
+    messageCount: integer("message_count").notNull().default(0),
+    scope: varchar("scope", { length: 16 }).notNull().default("user"),
+  },
+  (table) => ({
+    orgExpiresIdx: index("chat_rate_limits_org_expires_idx").on(
+      table.organizationId,
+      table.windowExpiresAt
+    ),
+  })
+);
 
 export const creditTransactions = pgTable(
   "credit_transactions",
@@ -1189,6 +1242,8 @@ export const organizationsRelations = relations(organizations, ({ many }) => ({
   users: many(users),
   apiKeys: many(apiKeys),
   creditTransactions: many(creditTransactions),
+  creditLedgerBuckets: many(creditLedgerBuckets),
+  chatRateLimits: many(chatRateLimits),
   requests: many(requests),
   auditLogs: many(auditLogs),
   deviceInventoryConsents: many(deviceInventoryConsents),
@@ -1210,6 +1265,25 @@ export const usersRelations = relations(users, ({ one, many }) => ({
     references: [organizations.id],
   }),
   deviceInventoryConsents: many(deviceInventoryConsents),
+  chatRateLimits: many(chatRateLimits),
+}));
+
+export const creditLedgerBucketsRelations = relations(creditLedgerBuckets, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [creditLedgerBuckets.organizationId],
+    references: [organizations.id],
+  }),
+}));
+
+export const chatRateLimitsRelations = relations(chatRateLimits, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [chatRateLimits.organizationId],
+    references: [organizations.id],
+  }),
+  user: one(users, {
+    fields: [chatRateLimits.userId],
+    references: [users.id],
+  }),
 }));
 
 export const deviceInventoryConsentsRelations = relations(deviceInventoryConsents, ({ one }) => ({

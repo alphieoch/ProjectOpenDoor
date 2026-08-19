@@ -20,6 +20,7 @@ export function ThemeToggle() {
       type="button"
       variant="ghost"
       size="icon"
+      aria-label="Toggle theme"
       onClick={() => setTheme(isDark ? "light" : "dark")}
       className="relative h-9 w-9"
     >

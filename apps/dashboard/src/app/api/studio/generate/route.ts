@@ -1,13 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PRIVATE_GPU_OFFLINE } from "@opendoor/shared";
 import { requireAuth } from "@/lib/auth";
 import {
   STUDIO_IMAGE_MAX_BYTES,
   STYLE_PRESETS,
+  isGoogleStudioImageModel,
   readStudioRequest,
+  resolveStudioApiModel,
+  studioCloudImageUrl,
+  studioErrorMessage,
   studioGatewayHeaders,
+  studioGatewaySecret,
   studioGatewayUrl,
-  studioOfflineError,
 } from "@/lib/studio";
 import { forbidProtectedChild } from "@/lib/parent-protection";
 
@@ -17,13 +20,13 @@ export async function POST(req: NextRequest) {
   if (blocked) return blocked;
   const orgId = session.orgId as string;
   const parsed = await readStudioRequest(req);
+  const mode =
+    parsed.mode === "img2img" || parsed.mode === "txt2img"
+      ? parsed.mode
+      : parsed.image
+        ? "img2img"
+        : "txt2img";
 
-  if (!parsed.mode) {
-    return NextResponse.json(
-      { error: "mode is required", message: 'Set mode to "txt2img" or "img2img". Use POST /api/studio/video for v2v.' },
-      { status: 400 }
-    );
-  }
   if (parsed.mode === "v2v") {
     return NextResponse.json(
       { error: "Use POST /api/studio/video for video to video", mode: "v2v" },
@@ -32,13 +35,13 @@ export async function POST(req: NextRequest) {
   }
 
   let prompt = parsed.prompt;
-  if (parsed.mode === "txt2img" && !prompt) {
+  if (mode === "txt2img" && !prompt) {
     return NextResponse.json({ error: "prompt is required" }, { status: 400 });
   }
-  if (parsed.mode === "img2img" && !parsed.image) {
+  if (mode === "img2img" && !parsed.image) {
     return NextResponse.json({ error: "image is required for img2img" }, { status: 400 });
   }
-  if (parsed.mode === "img2img" && !prompt) {
+  if (mode === "img2img" && !prompt) {
     prompt = "keep the subject, refine details";
   }
 
@@ -52,52 +55,86 @@ export async function POST(req: NextRequest) {
   }
 
   const startTime = Date.now();
-  const gateway = studioGatewayUrl();
-  const secret = process.env.GATEWAY_INTERNAL_KEY || process.env.INTERNAL_API_KEY || "";
+  const model = resolveStudioApiModel(parsed.model);
+  const googleImage = isGoogleStudioImageModel(model);
+  const cloudUrl = studioCloudImageUrl(prompt, parsed.size, parsed.seed);
+  const cloudPayload = {
+    created: Math.floor(Date.now() / 1000),
+    data: [{ url: cloudUrl }],
+    url: cloudUrl,
+    mode,
+    model,
+    seed: parsed.seed,
+    durationMs: Date.now() - startTime,
+  };
+
+  const failGoogle = (message: string, status = 502) =>
+    NextResponse.json(
+      {
+        error: message,
+        mode,
+        model,
+        seed: parsed.seed,
+        durationMs: Date.now() - startTime,
+      },
+      { status }
+    );
+
+  const secret = studioGatewaySecret();
   if (!secret) {
-    return NextResponse.json({ error: PRIVATE_GPU_OFFLINE }, { status: 503 });
+    if (googleImage) {
+      return failGoogle("Google image models need the Studio gateway. Flux fallback is disabled for Nano Banana.", 503);
+    }
+    return NextResponse.json(cloudPayload);
   }
 
   try {
     const image = parsed.image
       ? `data:${parsed.image.mime};base64,${Buffer.from(parsed.image.bytes).toString("base64")}`
       : undefined;
-    const upstream = await fetch(`${gateway}/v1/images/generations`, {
+    const upstream = await fetch(`${studioGatewayUrl()}/v1/images/generations`, {
       method: "POST",
       headers: studioGatewayHeaders(orgId),
       body: JSON.stringify({
-        mode: parsed.mode,
+        mode,
         prompt,
+        n: parsed.n,
         size: parsed.size,
         strength: parsed.strength,
-        model: parsed.model,
+        model,
         seed: parsed.seed,
         steps: parsed.steps,
         negative_prompt: parsed.negativePrompt,
         response_format: "b64_json",
+        quality: parsed.quality,
+        aspect_ratio: parsed.aspectRatio,
+        image_size: parsed.imageSize,
         image,
       }),
     });
     const data = (await upstream.json().catch(() => ({}))) as Record<string, unknown>;
     if (!upstream.ok) {
-      const raw =
-        typeof data.error === "string"
-          ? data.error
-          : typeof data.message === "string"
-            ? data.message
-            : PRIVATE_GPU_OFFLINE;
-      const status = upstream.status === 400 ? 400 : upstream.status === 503 ? 503 : 502;
-      return NextResponse.json({ error: studioOfflineError(raw) }, { status });
+      const raw = studioErrorMessage(data, "Image generation failed");
+      if (upstream.status === 400) {
+        return NextResponse.json({ error: raw }, { status: 400 });
+      }
+      if (googleImage) {
+        return failGoogle(raw, upstream.status === 404 || upstream.status === 503 ? upstream.status : 502);
+      }
+      return NextResponse.json({ ...cloudPayload, durationMs: Date.now() - startTime });
     }
     return NextResponse.json({
       ...data,
       created: typeof data.created === "number" ? data.created : Math.floor(Date.now() / 1000),
-      mode: parsed.mode,
-      model: parsed.model,
+      mode,
+      model,
       seed: parsed.seed,
       durationMs: Date.now() - startTime,
     });
   } catch {
-    return NextResponse.json({ error: PRIVATE_GPU_OFFLINE }, { status: 503 });
+    if (googleImage) {
+      return failGoogle("Nano Banana could not reach Google image generation.");
+    }
+    return NextResponse.json({ ...cloudPayload, durationMs: Date.now() - startTime });
   }
 }

@@ -133,7 +133,7 @@ export default function OnboardingPage() {
       />
 
       <div className="card p-6 space-y-5">
-        <div className="flex items-center gap-2 text-sm" style={{ color: "var(--ink-3)" }}>
+        <div className="flex items-center gap-2 text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
           {state.segment === "education" ? (
             <School className="h-4 w-4" />
           ) : state.segment === "enterprise_intent" ? (
@@ -152,16 +152,16 @@ export default function OnboardingPage() {
         </div>
 
         {steps.map((step) => (
-          <div key={step.id} className="rounded-lg border p-4" style={{ borderColor: "var(--line)", background: "var(--paper-2)" }}>
+          <div key={step.id} className="rounded-lg border p-4" style={{ borderColor: "hsl(var(--border))", background: "hsl(var(--card))" }}>
             <div className="mb-2 flex items-start gap-2">
               {step.done ? (
                 <CheckCircle2 className="mt-0.5 h-4 w-4" style={{ color: "var(--green)" }} />
               ) : (
-                <Circle className="mt-0.5 h-4 w-4" style={{ color: "var(--ink-4)" }} />
+                <Circle className="mt-0.5 h-4 w-4" style={{ color: "hsl(var(--muted-foreground))" }} />
               )}
               <div>
-                <p className="font-medium" style={{ color: "var(--ink)" }}>{step.title}</p>
-                <p className="text-sm" style={{ color: "var(--ink-3)" }}>{step.description}</p>
+                <p className="font-medium" style={{ color: "hsl(var(--foreground))" }}>{step.title}</p>
+                <p className="text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>{step.description}</p>
               </div>
             </div>
             <div className="mt-3 flex gap-2">

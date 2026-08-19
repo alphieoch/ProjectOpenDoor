@@ -309,6 +309,7 @@ chatRouter.post("/completions", async (c) => {
         | "pro"
         | "enterprise",
       family: requestFamily,
+      serviceTier: body.service_tier === "priority" ? "priority" : "standard",
     });
     const estimatedCostCents = usdToCents(estimatedCost.totalCost);
     const canUsePlan = await shouldUsePlanBudget(
@@ -359,7 +360,7 @@ chatRouter.post("/completions", async (c) => {
   );
 
   // House chat skips Redis-backed ranking — go straight to the resolved provider.
-  const houseChat = Boolean(c.get("skipBilling"));
+  const houseChat = Boolean(c.get("houseChat"));
   const ranked = houseChat
     ? [
         {
@@ -560,6 +561,7 @@ chatRouter.post("/completions", async (c) => {
                     | "pro"
                     | "enterprise",
                   family: requestFamily,
+                  serviceTier: body.service_tier === "priority" ? "priority" : "standard",
                 });
                 costUsd = cost.totalCost;
               } catch {
@@ -720,6 +722,7 @@ chatRouter.post("/completions", async (c) => {
               | "pro"
               | "enterprise",
             family: requestFamily,
+            serviceTier: body.service_tier === "priority" ? "priority" : "standard",
           });
           costUsd = cost.totalCost;
         } catch {

@@ -41,14 +41,16 @@ declare module "hono" {
       user?: string;
     };
     billingContext?: {
-      plan: "free" | "pro" | "team" | "enterprise";
+      plan: string;
       family: "closed" | "open_weight";
       providerSlug: string;
       useFromPlan: boolean;
       useFromCredits: boolean;
       estimatedCostUsd?: number;
+      userId?: string | null;
     };
-    serviceTier?: "standard" | "priority";
+    skipBilling?: boolean;
+    houseChat?: boolean;
     effectiveRateLimits?: { tpm: number; rpm: number };
     appAttribution?: { httpReferer?: string; xTitle?: string };
   }

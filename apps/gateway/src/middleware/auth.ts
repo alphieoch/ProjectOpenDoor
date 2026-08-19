@@ -1,14 +1,18 @@
 // @ts-nocheck
 import type { Context, Next } from "hono";
 import { db } from "@opendoor/database";
-import { apiKeys, organizations, models, providers } from "@opendoor/database";
-import { eq, and, isNull } from "drizzle-orm";
+import { apiKeys, organizations, models, providers, users, creditTransactions } from "@opendoor/database";
+import { eq, and, isNull, gte, sql } from "drizzle-orm";
 import { createHash, randomBytes } from "crypto";
 import {
   flattenMessageText,
+  getPlan,
   spendableCents,
   welcomeAllowedForFamily,
   SYSTEM_ASSISTANT_KEY_NAME,
+  chatModeAllowed,
+  isHouseChatFreeTasteMode,
+  type PlanId,
 } from "@opendoor/shared";
 import { estimateTokens } from "../utils/streaming.js";
 import { calculateCost } from "../utils/pricing.js";
@@ -69,9 +73,8 @@ async function ensureSystemAssistantKey(orgId: string) {
   }
 }
 
-function normalizePlan(plan: string): "free" | "pro" | "team" | "enterprise" {
-  if (plan === "pro" || plan === "team" || plan === "enterprise") return plan;
-  return "free";
+function normalizePlan(plan: string): PlanId {
+  return getPlan(plan).id;
 }
 
 function inferFamilyFromModel(modelId: string, providerSlug?: string): "closed" | "open_weight" {
@@ -111,7 +114,12 @@ export async function authMiddleware(c: Context, next: Next) {
 
   const houseChat =
     isInternalGatewayKey(apiKey) && c.req.header("X-OpenDoor-House-Chat") === "1";
-  if (houseChat) c.set("skipBilling", true);
+  const houseChatMode = c.req.header("X-OpenDoor-House-Chat-Mode") || "auto";
+  const houseChatUserId = c.req.header("X-OpenDoor-User-Id") || "";
+  c.set("houseChat", houseChat);
+  if (houseChat) {
+    c.set("skipBilling", isHouseChatFreeTasteMode(houseChatMode));
+  }
 
   let keyRecord;
 
@@ -171,7 +179,52 @@ export async function authMiddleware(c: Context, next: Next) {
     useFromPlan: false,
     useFromCredits: true,
     estimatedCostUsd: 0,
+    userId: houseChatUserId || null,
   });
+
+  if (houseChat && houseChatUserId) {
+    const member = await db.query.users.findFirst({
+      where: and(eq(users.id, houseChatUserId), eq(users.organizationId, org.id)),
+      columns: { allowedChatModes: true, monthlyCreditSubCapCents: true },
+    });
+    if (member && !chatModeAllowed(member.allowedChatModes, houseChatMode)) {
+      return c.json({ error: "This chat mode is disabled for your seat.", mode: houseChatMode }, 403);
+    }
+    const cap = member?.monthlyCreditSubCapCents;
+    if (!c.get("skipBilling") && cap != null && cap >= 0) {
+      const monthStart = new Date();
+      monthStart.setUTCDate(1);
+      monthStart.setUTCHours(0, 0, 0, 0);
+      try {
+        const spent = await db
+          .select({
+            total: sql<number>`COALESCE(SUM(ABS(${creditTransactions.amountCents})), 0)`,
+          })
+          .from(creditTransactions)
+          .where(
+            and(
+              eq(creditTransactions.organizationId, org.id),
+              eq(creditTransactions.kind, "usage"),
+              gte(creditTransactions.createdAt, monthStart),
+              sql`${creditTransactions.metadata}->>'userId' = ${houseChatUserId}`
+            )
+          );
+        const used = Number(spent[0]?.total || 0);
+        if (used >= cap) {
+          return c.json(
+            {
+              error: "Monthly seat credit cap reached",
+              monthlyCreditSubCapCents: cap,
+              usedCents: used,
+            },
+            402
+          );
+        }
+      } catch {
+        /* metadata filter may fail on older rows */
+      }
+    }
+  }
 
   if (c.req.method === "POST" && c.req.path.endsWith("/chat/completions") && !c.get("skipBilling")) {
     try {
@@ -276,6 +329,7 @@ export async function authMiddleware(c: Context, next: Next) {
             useFromPlan: canUsePlan,
             useFromCredits: !canUsePlan,
             estimatedCostUsd: estimatedCost.totalCost,
+            userId: houseChatUserId || null,
           });
         } catch {
           // Pricing may be missing for new models; fallback to allowing request.
@@ -286,6 +340,7 @@ export async function authMiddleware(c: Context, next: Next) {
             useFromPlan: false,
             useFromCredits: true,
             estimatedCostUsd: 0,
+            userId: houseChatUserId || null,
           });
         }
       }

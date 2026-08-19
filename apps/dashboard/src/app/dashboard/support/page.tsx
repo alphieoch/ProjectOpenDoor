@@ -100,7 +100,7 @@ export default function SupportPage() {
       {!configured && (
         <div className="mb-6 alert-error">
           <p className="font-medium">configure LINEAR_API_KEY</p>
-          <p className="mt-1 text-sm" style={{ color: "var(--ink-3)" }}>
+          <p className="mt-1 text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
             {configMessage || "Set LINEAR_API_KEY and LINEAR_SUPPORT_TEAM_ID, then reload."}
           </p>
         </div>
@@ -116,7 +116,7 @@ export default function SupportPage() {
         <h2 className="section-title mb-4">New ticket</h2>
         <form onSubmit={submit} className="space-y-4">
           <div>
-            <label className="mb-1.5 block text-sm font-medium" style={{ color: "var(--ink-2)" }}>
+            <label className="mb-1.5 block text-sm font-medium" style={{ color: "hsl(var(--muted-foreground))" }}>
               Subject
             </label>
             <input
@@ -129,7 +129,7 @@ export default function SupportPage() {
             />
           </div>
           <div>
-            <label className="mb-1.5 block text-sm font-medium" style={{ color: "var(--ink-2)" }}>
+            <label className="mb-1.5 block text-sm font-medium" style={{ color: "hsl(var(--muted-foreground))" }}>
               Details
             </label>
             <textarea
@@ -141,7 +141,7 @@ export default function SupportPage() {
             />
           </div>
           <div>
-            <label className="mb-1.5 block text-sm font-medium" style={{ color: "var(--ink-2)" }}>
+            <label className="mb-1.5 block text-sm font-medium" style={{ color: "hsl(var(--muted-foreground))" }}>
               Severity
             </label>
             <select
@@ -175,7 +175,7 @@ export default function SupportPage() {
                 <a href={t.url} target="_blank" rel="noreferrer" className="font-medium underline">
                   {t.identifier} · {t.title}
                 </a>
-                <span className="text-sm" style={{ color: "var(--ink-3)" }}>
+                <span className="text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
                   {t.state} · {new Date(t.createdAt).toLocaleString()}
                 </span>
               </li>

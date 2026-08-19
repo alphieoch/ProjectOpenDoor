@@ -1,6 +1,7 @@
-import { PLANS, formatUsd } from "@opendoor/shared";
+import { formatPlanPriceUsd, formatUsd, getPlan } from "@opendoor/shared";
 
-export type AccountPlanId = "pro" | "team" | "enterprise";
+export type AccountPlanId = "student" | "pro" | "ultra" | "family" | "family_max" | "team" | "enterprise";
+export type PricingAudienceId = "single" | "family" | "enterprise";
 
 export type AccountPlan = {
   id: AccountPlanId;
@@ -19,16 +20,36 @@ export type AccountPlan = {
   features: string[];
 };
 
-const pro = PLANS.pro;
-const team = PLANS.team;
-const enterprise = PLANS.enterprise;
+const student = getPlan("student");
+const pro = getPlan("pro");
+const team = getPlan("team");
+const enterprise = getPlan("enterprise");
 
 export const ACCOUNT_PLANS: AccountPlan[] = [
+  {
+    id: "student",
+    name: "Student",
+    subtitle: "Student",
+    tagline: "Warehouse membership for school. Same inference path as Pro — including open-weight — with a small stipend so the seat still profits.",
+    price: student.amountUsd,
+    priceSuffix: "/month",
+    included: `${formatUsd(student.includedCreditsCents)} inference credit each month`,
+    cta: "Get Student",
+    href: "/login?signup=1&plan=student&segment=education",
+    badge: "Best value",
+    features: [
+      `${formatUsd(student.includedCreditsCents)} included inference credit every month, then pay-as-you-go`,
+      "Open-weight and closed models on the same stipend",
+      `${student.rateLimitMultiplier}× API rate limits`,
+      `${student.maxApiKeys} API keys`,
+      `${student.maxActiveDeployments} dedicated deployment`,
+    ],
+  },
   {
     id: "pro",
     name: "PRO",
     subtitle: "PRO Account",
-    tagline: "No free tier. $12 vs Perplexity Pro at $20. Tokens and GPUs stay pay-as-you-go.",
+    tagline: `Membership at ${formatPlanPriceUsd(pro.amountUsd)} vs Perplexity Pro at $20. Tokens stay warehouse-priced after a small monthly taste.`,
     price: pro.amountUsd,
     priceSuffix: "/month",
     included: `${formatUsd(pro.includedCreditsCents)} inference credit each month`,
@@ -90,3 +111,38 @@ export const ACCOUNT_PLANS: AccountPlan[] = [
     ],
   },
 ];
+
+export const PRICING_AUDIENCES: {
+  id: PricingAudienceId;
+  label: string;
+  headline: string;
+  blurb: string;
+}[] = [
+  {
+    id: "single",
+    label: "Single user",
+    headline: "Plans for one person",
+    blurb:
+      "Student $9.99 and Pro $12 are the membership. A small inference taste is included; the rest is warehouse-rate tokens and GPUs — open-weight included.",
+  },
+  {
+    id: "family",
+    label: "Family",
+    headline: "A shared pool for your household",
+    blurb:
+      "Cheaper than four Pro seats, and the house gets a bigger shared pool. Family Max is $99 for five seats and a $75 pool (more than 5× Pro tastes), with Agents included. Unused credit rolls four months.",
+  },
+  {
+    id: "enterprise",
+    label: "Enterprise",
+    headline: "Plans for teams and orgs",
+    blurb: "SSO, residency, and a dedicated path. Team is self-serve; Enterprise is talk to sales. Same gateway as Student and Pro.",
+  },
+];
+
+export function planSignupHref(id: AccountPlanId) {
+  if (id === "enterprise") {
+    return "mailto:sales@opendoor.ai?subject=OpenDoor%20Enterprise";
+  }
+  return `/login?signup=1&plan=${id}`;
+}

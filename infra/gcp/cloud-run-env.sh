@@ -12,6 +12,11 @@ OPENDOOR_FILES_BUCKET="${OPENDOOR_FILES_BUCKET:-opendoor-files-800192c2}"
 # Retired Comfy service may still exist (cost). Do not point apps at it.
 OPENDOOR_COMFY_MODELS_BUCKET="${OPENDOOR_COMFY_MODELS_BUCKET:-opendoor-comfy-models}"
 VERTEX_LOCATION="${VERTEX_LOCATION:-global}"
+VERTEX_IMAGE_LOCATION="${VERTEX_IMAGE_LOCATION:-global}"
+VERTEX_IMAGEN_LOCATION="${VERTEX_IMAGEN_LOCATION:-us-central1}"
+VERTEX_VEO_LOCATION="${VERTEX_VEO_LOCATION:-us-central1}"
+VERTEX_IMAGE_MODEL="${VERTEX_IMAGE_MODEL:-gemini-3.1-flash-image}"
+VERTEX_VEO_MODEL="${VERTEX_VEO_MODEL:-veo-3.1-fast-generate-001}"
 OPENDOOR_RUNTIME_SA="${OPENDOOR_RUNTIME_SA:-930761303874-compute@developer.gserviceaccount.com}"
 # International DashScope (Singapore). Beijing keys should set QWEN_BASE_URL to
 # https://dashscope.aliyuncs.com/compatible-mode/v1
@@ -49,7 +54,7 @@ opendoor_optional_support_env() {
 # Usage: opendoor_gateway_env PROJECT REGION INSTANCE_CONNECTION_NAME
 opendoor_gateway_env() {
   local project="$1" region="$2" conn="$3"
-  printf '%s' "NODE_ENV=production,GCP_PROJECT_ID=${project},GCP_PROJECT=${project},GOOGLE_CLOUD_PROJECT=${project},GCP_REGION=${region},VERTEX_LOCATION=${VERTEX_LOCATION},OPENDOOR_FILES_BUCKET=${OPENDOOR_FILES_BUCKET},QWEN_BASE_URL=${QWEN_BASE_URL},GATEWAY_PORT=3001,INSTANCE_CONNECTION_NAME=${conn},DB_NAME=opendoor,DB_USER=opendoor$(opendoor_private_image_env "$project" "$region")$(opendoor_optional_support_env)"
+  printf '%s' "NODE_ENV=production,GCP_PROJECT_ID=${project},GCP_PROJECT=${project},GOOGLE_CLOUD_PROJECT=${project},GCP_REGION=${region},VERTEX_LOCATION=${VERTEX_LOCATION},VERTEX_IMAGE_LOCATION=${VERTEX_IMAGE_LOCATION},VERTEX_IMAGEN_LOCATION=${VERTEX_IMAGEN_LOCATION},VERTEX_VEO_LOCATION=${VERTEX_VEO_LOCATION},VERTEX_IMAGE_MODEL=${VERTEX_IMAGE_MODEL},VERTEX_VEO_MODEL=${VERTEX_VEO_MODEL},OPENDOOR_FILES_BUCKET=${OPENDOOR_FILES_BUCKET},QWEN_BASE_URL=${QWEN_BASE_URL},GATEWAY_PORT=3001,INSTANCE_CONNECTION_NAME=${conn},DB_NAME=opendoor,DB_USER=opendoor$(opendoor_private_image_env "$project" "$region")$(opendoor_optional_support_env)"
 }
 
 # Cloud Run URL of opendoor-sandbox (gVisor jail). Empty if the service is not deployed.
@@ -115,7 +120,7 @@ opendoor_dashboard_env() {
   if [[ -n "$gateway_url" ]]; then
     extra="${extra},GATEWAY_URL=${gateway_url}"
   fi
-  printf '%s' "NODE_ENV=production,GCP_PROJECT_ID=${project},GCP_PROJECT=${project},GOOGLE_CLOUD_PROJECT=${project},GCP_REGION=${region},VERTEX_LOCATION=${VERTEX_LOCATION},NEXT_PUBLIC_APP_URL=${public_url},NEXT_PUBLIC_GATEWAY_URL=${public_url},NEXT_PUBLIC_WORKOS_REDIRECT_URI=${public_url}/callback,HOSTNAME=0.0.0.0,INSTANCE_CONNECTION_NAME=${conn},DB_NAME=opendoor,DB_USER=opendoor,$(opendoor_stripe_env)${extra}$(opendoor_private_image_env "$project" "$region")$(opendoor_optional_support_env)"
+  printf '%s' "NODE_ENV=production,GCP_PROJECT_ID=${project},GCP_PROJECT=${project},GOOGLE_CLOUD_PROJECT=${project},GCP_REGION=${region},VERTEX_LOCATION=${VERTEX_LOCATION},VERTEX_IMAGE_LOCATION=${VERTEX_IMAGE_LOCATION},VERTEX_IMAGE_MODEL=${VERTEX_IMAGE_MODEL},NEXT_PUBLIC_APP_URL=${public_url},NEXT_PUBLIC_GATEWAY_URL=${public_url},NEXT_PUBLIC_WORKOS_REDIRECT_URI=${public_url}/callback,HOSTNAME=0.0.0.0,INSTANCE_CONNECTION_NAME=${conn},DB_NAME=opendoor,DB_USER=opendoor,$(opendoor_stripe_env)${extra}$(opendoor_private_image_env "$project" "$region")$(opendoor_optional_support_env)"
 }
 
 # Idempotent: create the files bucket and grant the Cloud Run runtime SA objectAdmin.

@@ -115,16 +115,16 @@ export default function DeploymentRoutersPage() {
 
       {loading ? (
         <div className="flex h-40 items-center justify-center">
-          <Loader2 className="h-6 w-6 animate-spin" style={{ color: "var(--ink-4)" }} />
+          <Loader2 className="h-6 w-6 animate-spin" style={{ color: "hsl(var(--muted-foreground))" }} />
         </div>
       ) : (
         <>
           <form onSubmit={createRouter} className="card mt-6 max-w-xl space-y-3 p-4">
-            <p className="font-medium text-sm" style={{ color: "var(--ink)" }}>
+            <p className="font-medium text-sm" style={{ color: "hsl(var(--foreground))" }}>
               New A/B router
             </p>
             {deployments.length < 2 ? (
-              <p className="text-sm" style={{ color: "var(--ink-3)" }}>
+              <p className="text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
                 Need at least two running deployments.{" "}
                 <Link href="/dashboard/deployments/new" className="underline">
                   Request GPU
@@ -204,8 +204,8 @@ export default function DeploymentRoutersPage() {
           <div className="mt-8 grid gap-3">
             {routers.length === 0 ? (
               <div className="card p-10 text-center">
-                <GitBranch className="mx-auto h-8 w-8" style={{ color: "var(--ink-4)" }} />
-                <p className="mt-3 text-sm" style={{ color: "var(--ink-3)" }}>
+                <GitBranch className="mx-auto h-8 w-8" style={{ color: "hsl(var(--muted-foreground))" }} />
+                <p className="mt-3 text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
                   No routers yet.
                 </p>
               </div>
@@ -213,13 +213,13 @@ export default function DeploymentRoutersPage() {
               routers.map((r) => (
                 <div key={r.id} className="card p-4 flex justify-between gap-4">
                   <div>
-                    <p className="font-medium" style={{ color: "var(--ink)" }}>
+                    <p className="font-medium" style={{ color: "hsl(var(--foreground))" }}>
                       {r.name}
                     </p>
-                    <code className="text-xs" style={{ color: "var(--ink-3)" }}>
+                    <code className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
                       {r.modelId}
                     </code>
-                    <ul className="mt-2 text-sm space-y-1" style={{ color: "var(--ink-3)" }}>
+                    <ul className="mt-2 text-sm space-y-1" style={{ color: "hsl(var(--muted-foreground))" }}>
                       {r.targets.map((t) => (
                         <li key={t.id}>
                           weight {t.weight} → {t.deployment?.name || t.deploymentId} (

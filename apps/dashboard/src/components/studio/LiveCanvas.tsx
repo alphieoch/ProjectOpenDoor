@@ -146,7 +146,7 @@ export function LiveCanvas({
             className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-[13px] font-medium text-white backdrop-blur-md"
             style={{ background: "rgba(12, 14, 24, 0.75)" }}
           >
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 animate-bounce">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-info/20 text-info border border-info/40 animate-bounce">
               ↓
             </div>
             <span>Drop to use as reference</span>

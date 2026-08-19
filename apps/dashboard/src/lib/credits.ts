@@ -1,4 +1,5 @@
 import { creditTransactions, organizations } from "@opendoor/database";
+import { spendFifoCredits } from "@/lib/credit-ledger";
 import {
   creditWaterfall,
   splitCreditBuckets,
@@ -157,78 +158,15 @@ export async function debitOrgUsage(
   orgId: string,
   amountCents: number,
   requestId?: string,
-  options?: { allowWelcome?: boolean; source?: string }
+  options?: { allowWelcome?: boolean; source?: string; userId?: string | null }
 ) {
   if (amountCents <= 0) return 0;
-  const allowWelcome = Boolean(options?.allowWelcome);
-  const db = getDb();
-
-  return db.transaction(async (tx) => {
-    const org = await tx.query.organizations.findFirst({
-      where: eq(organizations.id, orgId),
-      columns: {
-        creditsUsdCents: true,
-        welcomeCreditsUsdCents: true,
-        welcomeExpiresAt: true,
-      },
-    });
-    if (!org) throw new Error("Organization not found");
-
-    let buckets = splitCreditBuckets(org);
-    if (buckets.expired && buckets.clawbackCents > 0) {
-      const nextTotal = Math.max(0, buckets.totalCents - buckets.clawbackCents);
-      await tx
-        .update(organizations)
-        .set({ creditsUsdCents: nextTotal, welcomeCreditsUsdCents: 0 })
-        .where(eq(organizations.id, orgId));
-      await tx.insert(creditTransactions).values({
-        organizationId: orgId,
-        kind: "welcome_expire",
-        amountCents: -buckets.clawbackCents,
-        balanceAfterCents: nextTotal,
-        metadata: { source: "welcome_expiry" },
-      });
-      buckets = splitCreditBuckets({
-        creditsUsdCents: nextTotal,
-        welcomeCreditsUsdCents: 0,
-        welcomeExpiresAt: org.welcomeExpiresAt,
-      });
-    }
-
-    const spendable = spendableCents(buckets, allowWelcome);
-    if (spendable < amountCents) {
-      throw new Error(
-        allowWelcome
-          ? "Insufficient prepaid balance"
-          : "Welcome credit cannot cover this charge. Add prepaid credit."
-      );
-    }
-
-    const fromWelcome = allowWelcome ? Math.min(buckets.welcomeCents, amountCents) : 0;
-    const newBalance = buckets.totalCents - amountCents;
-    const newWelcome = buckets.welcomeCents - fromWelcome;
-
-    await tx
-      .update(organizations)
-      .set({
-        creditsUsdCents: newBalance,
-        welcomeCreditsUsdCents: newWelcome,
-      })
-      .where(eq(organizations.id, orgId));
-
-    await tx.insert(creditTransactions).values({
-      organizationId: orgId,
-      kind: "usage",
-      amountCents: -amountCents,
-      balanceAfterCents: newBalance,
-      requestId: requestId || null,
-      metadata: {
-        source: options?.source || "ai_assistant",
-        from_welcome_cents: fromWelcome,
-        from_paid_cents: amountCents - fromWelcome,
-      },
-    });
-
-    return newBalance;
+  return spendFifoCredits({
+    organizationId: orgId,
+    amountCents,
+    requestId: requestId || null,
+    allowBonus: Boolean(options?.allowWelcome),
+    source: options?.source || "ai_assistant",
+    userId: options?.userId || null,
   });
 }

@@ -4,7 +4,7 @@ import { getDb } from "@/lib/db";
 import { requests, apiKeys, organizations } from "@opendoor/database";
 import { eq, sql, gte, and } from "drizzle-orm";
 import { requireAuth } from "@/lib/auth";
-import { formatCurrency, formatNumber } from "@/lib/utils";
+import { cn, formatCurrency, formatNumber } from "@/lib/utils";
 import Link from "next/link";
 import { redirect, unstable_rethrow } from "next/navigation";
 import {
@@ -13,13 +13,15 @@ import {
   parseOnboardingChecklist,
 } from "@/lib/onboarding";
 import {
-  Activity, CreditCard, Key, TrendingUp, Globe, Sparkles, ArrowRight,
+  Activity, CreditCard, Key, TrendingUp, Globe, ArrowRight,
 } from "lucide-react";
 import { MetricCard } from "@/components/ui/metric-card";
 import { CopyButton } from "@/components/ui/copy-button";
 import { fillDailySeries, deltaLabel } from "@/lib/series";
 import { gatewayBaseUrl } from "@/lib/public-urls";
 import { models as modelsTable, providers } from "@opendoor/database";
+import { buttonVariants } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default async function DashboardPage() {
   try {
@@ -28,13 +30,10 @@ export default async function DashboardPage() {
     unstable_rethrow(err);
     console.error("[dashboard] overview unavailable", err);
     return (
-      <div className="od-page">
-        <div
-          className="od-fade-up"
-          style={{ marginBottom: 32, paddingBottom: 24, borderBottom: "1px solid var(--line)" }}
-        >
-          <h1 className="od-h1">Welcome back.</h1>
-          <p className="page-desc" style={{ marginTop: 8 }}>
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Welcome back.</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
             Workspace stats could not be loaded. Open Studio or another page to keep working.
           </p>
         </div>
@@ -121,122 +120,137 @@ r = client.chat.completions.create(
 )`;
 
   return (
-    <div className="od-page">
-      <div className="od-fade-up" style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", marginBottom: 32, paddingBottom: 24, borderBottom: "1px solid var(--line)" }}>
-        <div>
-          <div className="od-eyebrow">{today}</div>
-          <h1 className="od-h1" style={{ marginTop: 12 }}>Welcome back.</h1>
-          <h1 className="od-h1-grad" style={{ marginTop: 4, display: "block" }}>How can I help you today?</h1>
-        </div>
-        <div className="od-fade-up-2" style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <Link href="/dashboard/playground" className="od-btn-pulse" style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "8px 18px", borderRadius: 999, background: "var(--brand)", color: "white", border: "1px solid var(--brand)", fontSize: 13, fontWeight: 500, textDecoration: "none" }}>
-            <Sparkles style={{ width: 14, height: 14 }} /> Open playground
+    <div className="space-y-6">
+      <section className="rounded-2xl bg-gradient-to-br from-blue-950 to-blue-900 p-4 text-white sm:p-6">
+        <p className="text-xs font-medium uppercase tracking-[0.12em] text-white/70">{today}</p>
+        <h1 className="mt-2 text-xl font-bold sm:text-2xl">Welcome back.</h1>
+        <p className="mt-1 text-sm text-white/80">How can I help you today?</p>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <Link
+            href="/dashboard/playground"
+            className={cn(buttonVariants({ size: "sm" }), "bg-white text-blue-950 hover:bg-white/90")}
+          >
+            Open playground
           </Link>
-          <Link href="/dashboard/usage" style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "8px 18px", borderRadius: 999, background: "var(--paper-2)", color: "var(--ink-2)", border: "1px solid var(--line)", fontSize: 13, fontWeight: 500, textDecoration: "none" }} className="od-lift">
+          <Link
+            href="/dashboard/usage"
+            className={cn(
+              buttonVariants({ size: "sm", variant: "outline" }),
+              "border-white/30 bg-transparent text-white hover:bg-white/10 hover:text-white",
+            )}
+          >
             Usage
           </Link>
-          <Link href="/dashboard/api-keys" style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "8px 18px", borderRadius: 999, background: "var(--paper-2)", color: "var(--ink-2)", border: "1px solid var(--line)", fontSize: 13, fontWeight: 500, textDecoration: "none" }} className="od-lift">
-            <Key style={{ width: 13, height: 13 }} /> Create API key
+          <Link
+            href="/dashboard/api-keys"
+            className={cn(
+              buttonVariants({ size: "sm", variant: "outline" }),
+              "border-white/30 bg-transparent text-white hover:bg-white/10 hover:text-white",
+            )}
+          >
+            <Key className="h-3.5 w-3.5" /> Create API key
           </Link>
         </div>
-      </div>
+      </section>
 
-      <div className="od-metric-grid" style={{ marginBottom: 24 }}>
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <MetricCard
           label="Requests"
-          icon={<Activity style={{ width: 12, height: 12 }} />}
+          icon={<Activity className="h-3 w-3" />}
           value={formatNumber(totalRequests)}
           delta={`${reqDelta.text} vs prior 15d`}
           deltaUp={reqDelta.up}
           series={requestSeries}
-          className="od-fade-up-1"
         />
         <MetricCard
           label="Tokens"
-          icon={<TrendingUp style={{ width: 12, height: 12 }} />}
+          icon={<TrendingUp className="h-3 w-3" />}
           value={formatNumber(totalTokens)}
           delta={`${tokDelta.text} vs prior 15d`}
           deltaUp={tokDelta.up}
           series={tokenSeries}
-          className="od-fade-up-2"
         />
         <MetricCard
           label="Spend"
-          icon={<CreditCard style={{ width: 12, height: 12 }} />}
+          icon={<CreditCard className="h-3 w-3" />}
           value={formatCurrency(totalCost)}
           delta={`${costDelta.text} vs prior 15d`}
           deltaUp={costDelta.up}
           series={costSeries}
           featured
-          className="od-fade-up-3"
         />
         <MetricCard
           label="P50 Latency"
-          icon={<Globe style={{ width: 12, height: 12 }} />}
+          icon={<Globe className="h-3 w-3" />}
           value={avgLatency > 0 ? `${Math.round(avgLatency)}ms` : "—"}
           delta={`${latDelta.text} vs prior 15d`}
           deltaUp={latDelta.up}
           series={latencySeries}
-          className="od-fade-up-4"
         />
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 24 }}>
-        <div className="od-card od-fade-up-3">
-          <div style={{ padding: "20px 24px", borderBottom: "1px solid var(--line)" }}>
-            <div className="od-eyebrow">Access</div>
-            <h2 className="od-h2" style={{ marginTop: 4 }}>API Keys</h2>
-          </div>
-          <div style={{ padding: "20px 24px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <div style={{ display: "flex", flexDirection: "column" }}>
-              <span style={{ fontFamily: "var(--font-serif)", fontSize: 44, lineHeight: 1, color: "var(--ink)", letterSpacing: "-0.02em" }}>{formatNumber(keyCount[0]?.count || 0)}</span>
-              <span style={{ fontSize: 12, color: "var(--ink-3)", marginTop: 4, fontFamily: "var(--font-mono)" }}>active keys</span>
+      <div className="grid gap-4 md:grid-cols-2">
+        <Card>
+          <CardHeader className="pb-3">
+            <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">Access</p>
+            <CardTitle className="font-sans text-lg">API Keys</CardTitle>
+          </CardHeader>
+          <CardContent className="flex items-center justify-between">
+            <div>
+              <p className="text-4xl font-semibold tracking-tight text-foreground">
+                {formatNumber(keyCount[0]?.count || 0)}
+              </p>
+              <p className="mt-1 font-mono text-xs text-muted-foreground">active keys</p>
             </div>
-            <Link href="/dashboard/api-keys" style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 18px", borderRadius: 999, background: "var(--brand)", color: "white", fontSize: 13, fontWeight: 500, textDecoration: "none" }}>
-              <Key style={{ width: 13, height: 13 }} /> Manage <ArrowRight style={{ width: 12, height: 12 }} />
+            <Link href="/dashboard/api-keys" className={buttonVariants({ size: "sm" })}>
+              <Key className="h-3.5 w-3.5" /> Manage <ArrowRight className="h-3 w-3" />
             </Link>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
-        <div className="od-card od-fade-up-4" style={{ padding: "20px 24px" }}>
-          <div className="od-eyebrow" style={{ marginBottom: 14 }}>Quick nav</div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+        <Card>
+          <CardHeader className="pb-3">
+            <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">Quick nav</p>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-0.5">
             {[
-              { href: "/dashboard/models", label: "Model catalog", icon: Sparkles },
+              { href: "/dashboard/models", label: "Model catalog", icon: Activity },
               { href: "/dashboard/playground", label: "Playground", icon: Activity },
               { href: "/dashboard/usage", label: "Usage & costs", icon: TrendingUp },
               { href: "/dashboard/logs", label: "Request logs", icon: Activity },
               { href: "/dashboard/billing", label: "Billing", icon: CreditCard },
             ].map(({ href, label, icon: Icon }) => (
-              <Link key={href} href={href} style={{
-                display: "flex", alignItems: "center", gap: 10,
-                padding: "9px 12px", borderRadius: 10, color: "var(--ink-2)",
-                fontSize: 13.5, fontWeight: 500, textDecoration: "none",
-                transition: "background 0.16s, transform 0.16s",
-              }} className="hover:bg-[var(--paper)] hover:translate-x-0.5">
-                <Icon style={{ width: 14, height: 14, color: "var(--ink-3)" }} />
+              <Link
+                key={href}
+                href={href}
+                className="flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+              >
+                <Icon className="h-3.5 w-3.5" />
                 {label}
-                <ArrowRight style={{ width: 12, height: 12, marginLeft: "auto", color: "var(--ink-4)" }} />
+                <ArrowRight className="ml-auto h-3 w-3 opacity-50" />
               </Link>
             ))}
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       </div>
 
-      <div className="od-banner od-fade-up-5">
-        <div className="od-banner__shape" />
-        <div style={{ position: "relative" }}>
-          <div className="od-eyebrow" style={{ color: "rgba(255,255,255,0.7)" }}>Quick start</div>
-          <h2>Make your first call.</h2>
-          <p>Drop the gateway URL in your existing OpenAI client. No SDK changes — just point and go.</p>
-          <div style={{ marginTop: 16, display: "flex", gap: 8, flexWrap: "wrap" }}>
-            <CopyButton value={snippet} label="Copy snippet" className="od-lift" />
-            <Link href="/dashboard/models" style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 18px", borderRadius: 999, background: "transparent", color: "white", border: "1px solid rgba(255,255,255,0.28)", fontSize: 13, fontWeight: 500, textDecoration: "none" }}>
-              Browse models <ArrowRight style={{ width: 13, height: 13 }} />
+      <Card>
+        <CardHeader>
+          <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">Quick start</p>
+          <CardTitle className="font-sans text-lg">Make your first call.</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">
+            Drop the gateway URL in your existing OpenAI client. No SDK changes — just point and go.
+          </p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <CopyButton value={snippet} label="Copy snippet" />
+            <Link href="/dashboard/models" className={buttonVariants({ variant: "outline", size: "sm" })}>
+              Browse models <ArrowRight className="h-3.5 w-3.5" />
             </Link>
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

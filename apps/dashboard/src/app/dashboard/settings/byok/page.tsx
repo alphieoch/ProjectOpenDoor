@@ -152,7 +152,7 @@ export default function ByokSettingsPage() {
         <h2 className="section-title mb-4">Add a provider key</h2>
         <form onSubmit={createKey} className="space-y-4">
           <div>
-            <label className="mb-1.5 block text-sm font-medium" style={{ color: "var(--ink-2)" }}>
+            <label className="mb-1.5 block text-sm font-medium" style={{ color: "hsl(var(--muted-foreground))" }}>
               Provider
             </label>
             <input
@@ -170,7 +170,7 @@ export default function ByokSettingsPage() {
             </datalist>
           </div>
           <div>
-            <label className="mb-1.5 block text-sm font-medium" style={{ color: "var(--ink-2)" }}>
+            <label className="mb-1.5 block text-sm font-medium" style={{ color: "hsl(var(--muted-foreground))" }}>
               Label
             </label>
             <input
@@ -182,7 +182,7 @@ export default function ByokSettingsPage() {
             />
           </div>
           <div>
-            <label className="mb-1.5 block text-sm font-medium" style={{ color: "var(--ink-2)" }}>
+            <label className="mb-1.5 block text-sm font-medium" style={{ color: "hsl(var(--muted-foreground))" }}>
               Secret
             </label>
             <input
@@ -194,7 +194,7 @@ export default function ByokSettingsPage() {
               autoComplete="off"
               required
             />
-            <p className="mt-1.5 text-xs" style={{ color: "var(--ink-4)" }}>
+            <p className="mt-1.5 text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
               The raw secret is sent once and never returned by the API.
             </p>
           </div>
@@ -203,9 +203,9 @@ export default function ByokSettingsPage() {
               type="checkbox"
               checked={alwaysUse}
               onChange={(e) => setAlwaysUse(e.target.checked)}
-              className="h-4 w-4 rounded accent-[var(--brand)]"
+              className="h-4 w-4 rounded accent-[hsl(var(--primary))]"
             />
-            <span className="text-sm" style={{ color: "var(--ink-2)" }}>
+            <span className="text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
               Always use this key for this provider
             </span>
           </label>
@@ -219,7 +219,7 @@ export default function ByokSettingsPage() {
       <div className="mt-6 card overflow-hidden">
         <table className="min-w-full">
           <thead>
-            <tr className="border-b border-[var(--line)]">
+            <tr className="border-b border-border">
               <th className="table-header-cell">Provider</th>
               <th className="table-header-cell">Label</th>
               <th className="table-header-cell">Key</th>
@@ -233,29 +233,29 @@ export default function ByokSettingsPage() {
             {loading && (
               <tr>
                 <td colSpan={7} className="px-4 py-10 text-center">
-                  <Loader2 className="mx-auto h-5 w-5 animate-spin" style={{ color: "var(--ink-3)" }} />
+                  <Loader2 className="mx-auto h-5 w-5 animate-spin" style={{ color: "hsl(var(--muted-foreground))" }} />
                 </td>
               </tr>
             )}
             {!loading &&
               keys.map((row) => (
                 <tr key={row.id} className="table-row">
-                  <td className="table-cell font-medium" style={{ color: "var(--ink)" }}>
+                  <td className="table-cell font-medium" style={{ color: "hsl(var(--foreground))" }}>
                     {row.providerSlug}
                   </td>
-                  <td className="table-cell" style={{ color: "var(--ink-2)" }}>
+                  <td className="table-cell" style={{ color: "hsl(var(--muted-foreground))" }}>
                     {row.label || "—"}
                   </td>
-                  <td className="table-cell font-mono" style={{ color: "var(--ink-3)" }}>
+                  <td className="table-cell font-mono" style={{ color: "hsl(var(--muted-foreground))" }}>
                     {keyHint(row)}
                   </td>
-                  <td className="table-cell" style={{ color: "var(--ink-3)" }}>
+                  <td className="table-cell" style={{ color: "hsl(var(--muted-foreground))" }}>
                     {row.alwaysUse ? "Yes" : "No"}
                   </td>
-                  <td className="table-cell" style={{ color: "var(--ink-3)" }}>
+                  <td className="table-cell" style={{ color: "hsl(var(--muted-foreground))" }}>
                     {row.lastUsedAt ? new Date(row.lastUsedAt).toLocaleDateString() : "Never"}
                   </td>
-                  <td className="table-cell" style={{ color: "var(--ink-3)" }}>
+                  <td className="table-cell" style={{ color: "hsl(var(--muted-foreground))" }}>
                     {row.createdAt ? new Date(row.createdAt).toLocaleDateString() : "—"}
                   </td>
                   <td className="table-cell text-right">
@@ -273,7 +273,7 @@ export default function ByokSettingsPage() {
               ))}
             {!loading && keys.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-4 py-10 text-center text-sm" style={{ color: "var(--ink-4)" }}>
+                <td colSpan={7} className="px-4 py-10 text-center text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
                   {error
                     ? "No provider keys to show."
                     : "No provider keys yet. Add one above."}

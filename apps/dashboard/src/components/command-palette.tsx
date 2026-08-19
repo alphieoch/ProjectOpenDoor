@@ -65,7 +65,7 @@ export function CommandPalette({
 
   const hits = useMemo(() => {
     const needle = q.trim().toLowerCase();
-    const pages: Hit[] = PAGES.map((p) => ({ ...p, icon: "page" }));
+    const pages: Hit[] = PAGES.map((p) => ({ ...p, icon: "page" as const }));
     const modelHits: Hit[] = models.map((m) => {
       const media = /imagen|dall-e|gpt-image|gemini-[\w.-]*-image|(^|[\s/_-])veo([\s/_-]|$)/i.test(
         `${m.id} ${m.label}`,
@@ -83,7 +83,7 @@ export function CommandPalette({
       href: "/dashboard/api-keys",
       label: k.name,
       hint: `${k.keyPrefix}…`,
-      icon: "key",
+      icon: "key" as const,
     }));
     const all = [...pages, ...modelHits, ...keyHits];
     if (!needle) return all.slice(0, 12);
@@ -105,34 +105,27 @@ export function CommandPalette({
 
   return (
     <div
-      style={{ position: "fixed", inset: 0, zIndex: 80, background: "rgba(18,16,12,0.28)" }}
+      className="fixed inset-0 z-[80] bg-black/50 backdrop-blur-sm"
       onClick={onClose}
     >
       <div
-        className="od-card"
-        style={{
-          width: "min(560px, calc(100vw - 32px))",
-          margin: "12vh auto 0",
-          overflow: "hidden",
-        }}
+        className="mx-auto mt-[12vh] w-[min(560px,calc(100vw-32px))] overflow-hidden rounded-lg border border-border bg-card text-card-foreground shadow-lg"
         onClick={(e) => e.stopPropagation()}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", borderBottom: "1px solid var(--line)" }}>
-          <Search style={{ width: 16, height: 16, color: "var(--ink-3)" }} />
+        <div className="flex items-center gap-2.5 border-b border-border px-3.5 py-3">
+          <Search className="h-4 w-4 text-muted-foreground" />
           <input
             autoFocus
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Search pages, models, keys…"
-            style={{ flex: 1, border: 0, outline: "none", background: "transparent", fontSize: 14, color: "var(--ink)" }}
+            className="flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
           />
-          <kbd className="od-mono" style={{ fontSize: 10, color: "var(--ink-4)" }}>esc</kbd>
+          <kbd className="font-mono text-[10px] text-muted-foreground">esc</kbd>
         </div>
-        <div style={{ maxHeight: 360, overflowY: "auto", padding: 6 }}>
+        <div className="max-h-[360px] overflow-y-auto p-1.5">
           {hits.length === 0 && (
-            <div style={{ padding: 20, textAlign: "center", color: "var(--ink-4)", fontSize: 13 }}>
-              Nothing matches.
-            </div>
+            <div className="px-5 py-5 text-center text-sm text-muted-foreground">Nothing matches.</div>
           )}
           {hits.map((h) => (
             <button
@@ -142,24 +135,17 @@ export function CommandPalette({
                 router.push(h.href);
                 onClose();
               }}
-              style={{
-                width: "100%",
-                display: "flex",
-                alignItems: "center",
-                gap: 10,
-                padding: "9px 10px",
-                border: 0,
-                background: "transparent",
-                borderRadius: 10,
-                cursor: "pointer",
-                textAlign: "left",
-                color: "var(--ink)",
-              }}
-              className="hover:bg-[var(--paper)]"
+              className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-foreground hover:bg-accent"
             >
-              {h.icon === "model" ? <List style={{ width: 14, height: 14, color: "var(--ink-3)" }} /> : h.icon === "key" ? <Key style={{ width: 14, height: 14, color: "var(--ink-3)" }} /> : <Search style={{ width: 14, height: 14, color: "var(--ink-3)" }} />}
-              <span style={{ flex: 1, fontSize: 13.5, fontWeight: 500 }}>{h.label}</span>
-              {h.hint && <span className="od-mono" style={{ fontSize: 11, color: "var(--ink-4)" }}>{h.hint}</span>}
+              {h.icon === "model" ? (
+                <List className="h-3.5 w-3.5 text-muted-foreground" />
+              ) : h.icon === "key" ? (
+                <Key className="h-3.5 w-3.5 text-muted-foreground" />
+              ) : (
+                <Search className="h-3.5 w-3.5 text-muted-foreground" />
+              )}
+              <span className="flex-1 text-sm font-medium">{h.label}</span>
+              {h.hint && <span className="font-mono text-[11px] text-muted-foreground">{h.hint}</span>}
             </button>
           ))}
         </div>

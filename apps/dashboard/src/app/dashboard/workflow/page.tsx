@@ -35,7 +35,7 @@ const CATEGORY_LABELS: Record<string, string> = {
 };
 
 const STATUS_STYLE: Record<string, { bg: string; color: string; label: string }> = {
-  draft:    { bg: "var(--paper-3)",    color: "var(--ink-3)",  label: "Draft"    },
+  draft:    { bg: "hsl(var(--accent))",    color: "hsl(var(--muted-foreground))",  label: "Draft"    },
   active:   { bg: "var(--green-soft)", color: "var(--green)",  label: "Active"   },
   archived: { bg: "#E9EBF2",           color: "#43474E",       label: "Archived" },
 };
@@ -102,24 +102,24 @@ function CreateModal({
       <form onSubmit={submit} className="card w-full max-w-md overflow-hidden"
         onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between border-b px-6 py-4"
-          style={{ borderColor: "var(--line-soft)" }}>
+          style={{ borderColor: "hsl(var(--border))" }}>
           <h2 className="section-title">New Workflow</h2>
         </div>
         <div className="p-6 space-y-4">
           <div>
-            <label className="mb-1.5 block text-sm font-medium" style={{ color: "var(--ink)" }}>
+            <label className="mb-1.5 block text-sm font-medium" style={{ color: "hsl(var(--foreground))" }}>
               Name <span style={{ color: "var(--red)" }}>*</span>
             </label>
             <input required value={name} onChange={(e) => setName(e.target.value)}
               className="input w-full" placeholder="e.g. Document Summarisation" autoFocus />
           </div>
           <div>
-            <label className="mb-1.5 block text-sm font-medium" style={{ color: "var(--ink)" }}>Description</label>
+            <label className="mb-1.5 block text-sm font-medium" style={{ color: "hsl(var(--foreground))" }}>Description</label>
             <textarea value={description} onChange={(e) => setDescription(e.target.value)}
               className="input w-full" rows={2} placeholder="What does this workflow do?" />
           </div>
           <div>
-            <label className="mb-1.5 block text-sm font-medium" style={{ color: "var(--ink)" }}>Category</label>
+            <label className="mb-1.5 block text-sm font-medium" style={{ color: "hsl(var(--foreground))" }}>Category</label>
             <select value={category} onChange={(e) => setCategory(e.target.value)} className="input w-full">
               {CATEGORIES.filter((c) => c !== "all").map((c) => (
                 <option key={c} value={c}>{CATEGORY_LABELS[c]}</option>
@@ -128,7 +128,7 @@ function CreateModal({
           </div>
         </div>
         <div className="flex justify-end gap-2 border-t px-6 py-4"
-          style={{ borderColor: "var(--line-soft)" }}>
+          style={{ borderColor: "hsl(var(--border))" }}>
           <button type="button" onClick={onClose} className="md-btn-outlined px-4 py-2 text-sm">Cancel</button>
           <button type="submit" disabled={saving || !name.trim()}
             className="md-btn-filled flex items-center gap-2 px-4 py-2 text-sm disabled:opacity-50">
@@ -166,7 +166,7 @@ function WorkflowCard({
   const typeCounts = nodeTypes.map((t) => ({ type: t, n: nodeTypeCount(wf.graph, t) })).filter((x) => x.n > 0);
 
   return (
-    <div className="card flex flex-col overflow-hidden od-lift">
+    <div className="card flex flex-col overflow-hidden transition-shadow hover:shadow-lg">
       {/* Header */}
       <div className="flex items-start justify-between gap-2 p-5">
         <div className="flex-1 min-w-0">
@@ -174,11 +174,11 @@ function WorkflowCard({
             <span className="inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium capitalize"
               style={{ background: st.bg, color: st.color }}>{st.label}</span>
             <span className="inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium capitalize"
-              style={{ background: "var(--paper-3)", color: "var(--ink-3)" }}>{CATEGORY_LABELS[wf.category] ?? wf.category}</span>
+              style={{ background: "hsl(var(--accent))", color: "hsl(var(--muted-foreground))" }}>{CATEGORY_LABELS[wf.category] ?? wf.category}</span>
           </div>
-          <h3 className="text-sm font-semibold" style={{ color: "var(--ink)" }}>{wf.name}</h3>
+          <h3 className="text-sm font-semibold" style={{ color: "hsl(var(--foreground))" }}>{wf.name}</h3>
           {wf.description && (
-            <p className="mt-1 text-xs leading-snug line-clamp-2" style={{ color: "var(--ink-4)" }}>
+            <p className="mt-1 text-xs leading-snug line-clamp-2" style={{ color: "hsl(var(--muted-foreground))" }}>
               {wf.description}
             </p>
           )}
@@ -192,15 +192,15 @@ function WorkflowCard({
             <>
               <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
               <div className="absolute right-0 top-8 z-20 rounded-xl border py-1 shadow-lg w-36"
-                style={{ background: "var(--paper-2)", borderColor: "var(--line-soft)" }}>
+                style={{ background: "hsl(var(--card))", borderColor: "hsl(var(--border))" }}>
                 {[
                   { icon: Copy,    label: "Duplicate", fn: onDuplicate },
                   { icon: Archive, label: wf.status === "archived" ? "Unarchive" : "Archive", fn: onArchive },
                   { icon: Trash2,  label: "Delete",    fn: onDelete,   red: true },
                 ].map(({ icon: Icon, label, fn, red }) => (
                   <button key={label} onClick={() => { setMenuOpen(false); fn(); }}
-                    className="flex w-full items-center gap-2 px-3 py-2 text-sm transition-colors hover:bg-[var(--paper-3)]"
-                    style={{ color: red ? "var(--red)" : "var(--ink-2)" }}>
+                    className="flex w-full items-center gap-2 px-3 py-2 text-sm transition-colors hover:bg-accent"
+                    style={{ color: red ? "var(--red)" : "hsl(var(--muted-foreground))" }}>
                     <Icon className="h-3.5 w-3.5" /> {label}
                   </button>
                 ))}
@@ -217,29 +217,29 @@ function WorkflowCard({
             const Icon = NODE_TYPE_ICONS[type] ?? Bot;
             return (
               <span key={type} className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px]"
-                style={{ background: "var(--paper-3)", color: "var(--ink-3)" }}>
+                style={{ background: "hsl(var(--accent))", color: "hsl(var(--muted-foreground))" }}>
                 <Icon className="h-3 w-3" />
                 {n} {type.replace("_", " ")}
               </span>
             );
           })}
           {nodeCount === 0 && (
-            <span className="text-xs" style={{ color: "var(--ink-4)" }}>No nodes yet</span>
+            <span className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>No nodes yet</span>
           )}
         </div>
       </div>
 
       {/* Footer */}
       <div className="mt-auto border-t px-5 py-3 flex items-center justify-between gap-2"
-        style={{ borderColor: "var(--line-soft)" }}>
-        <div className="text-xs" style={{ color: "var(--ink-4)" }}>
+        style={{ borderColor: "hsl(var(--border))" }}>
+        <div className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
           {nodeCount} node{nodeCount !== 1 ? "s" : ""}
           {model && <> · <code className="text-[11px]">{model}</code></>}
           {" · "}{timeAgo(wf.updatedAt)}
         </div>
         <button onClick={onOpen}
           className="inline-flex items-center gap-1.5 text-xs font-medium transition-colors"
-          style={{ color: "var(--ink-2)" }}>
+          style={{ color: "hsl(var(--muted-foreground))" }}>
           Open Editor <ArrowRight className="h-3.5 w-3.5" />
         </button>
       </div>
@@ -308,7 +308,7 @@ export default function WorkflowsPage() {
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center">
-        <Loader2 className="h-5 w-5 animate-spin" style={{ color: "var(--ink-3)" }} />
+        <Loader2 className="h-5 w-5 animate-spin" style={{ color: "hsl(var(--muted-foreground))" }} />
       </div>
     );
   }
@@ -331,13 +331,13 @@ export default function WorkflowsPage() {
       {workflows.length > 0 && (
         <div className="mb-6 grid grid-cols-3 gap-3">
           {[
-            { label: "Total",  value: stats.total,  color: "var(--ink)"   },
+            { label: "Total",  value: stats.total,  color: "hsl(var(--foreground))"   },
             { label: "Active", value: stats.active, color: "var(--green)" },
             { label: "Draft",  value: stats.draft,  color: "var(--yellow)"},
           ].map(({ label, value, color }) => (
             <div key={label} className="card p-4 text-center">
               <p className="text-2xl font-semibold tabular-nums" style={{ color }}>{value}</p>
-              <p className="mt-0.5 text-xs" style={{ color: "var(--ink-4)" }}>{label}</p>
+              <p className="mt-0.5 text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>{label}</p>
             </div>
           ))}
         </div>
@@ -353,14 +353,14 @@ export default function WorkflowsPage() {
               <button key={c} onClick={() => setCategory(c)}
                 className="flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-medium transition-all"
                 style={{
-                  background: category === c ? "var(--ink)" : "var(--paper-3)",
-                  color: category === c ? "#fff" : "var(--ink-2)",
+                  background: category === c ? "hsl(var(--foreground))" : "hsl(var(--accent))",
+                  color: category === c ? "#fff" : "hsl(var(--muted-foreground))",
                 }}>
                 {CATEGORY_LABELS[c]}
                 <span className="rounded-full px-1.5 text-[10px] font-semibold tabular-nums"
                   style={{
-                    background: category === c ? "rgba(255,255,255,0.2)" : "var(--paper-2)",
-                    color: category === c ? "#fff" : "var(--ink-3)",
+                    background: category === c ? "rgba(255,255,255,0.2)" : "hsl(var(--card))",
+                    color: category === c ? "#fff" : "hsl(var(--muted-foreground))",
                   }}>{count}</span>
               </button>
             );
@@ -372,12 +372,12 @@ export default function WorkflowsPage() {
       {workflows.length === 0 ? (
         <div className="card flex flex-col items-center justify-center gap-5 py-20 text-center">
           <div className="grid h-16 w-16 place-items-center rounded-2xl"
-            style={{ background: "var(--paper-3)" }}>
-            <GitBranch className="h-8 w-8" style={{ color: "var(--ink-3)" }} />
+            style={{ background: "hsl(var(--accent))" }}>
+            <GitBranch className="h-8 w-8" style={{ color: "hsl(var(--muted-foreground))" }} />
           </div>
           <div>
-            <p className="text-base font-semibold" style={{ color: "var(--ink)" }}>No workflows yet</p>
-            <p className="mt-1 max-w-sm text-sm" style={{ color: "var(--ink-3)" }}>
+            <p className="text-base font-semibold" style={{ color: "hsl(var(--foreground))" }}>No workflows yet</p>
+            <p className="mt-1 max-w-sm text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
               Build node-based LLM pipelines — chain models, tools, conditions, and human review steps visually.
             </p>
           </div>
@@ -387,7 +387,7 @@ export default function WorkflowsPage() {
           </button>
         </div>
       ) : filtered.length === 0 ? (
-        <div className="card flex h-32 items-center justify-center text-sm" style={{ color: "var(--ink-4)" }}>
+        <div className="card flex h-32 items-center justify-center text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
           No workflows in this category.
         </div>
       ) : (

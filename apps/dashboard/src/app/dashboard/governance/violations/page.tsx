@@ -66,13 +66,13 @@ const ACTION_TAKEN_STYLE: Record<string, { bg: string; color: string; label: str
 const VIOLATION_LABELS: Record<string, { label: string; color: string }> = {
   unapproved_model:    { label: "Unapproved Model",    color: "var(--red)"    },
   data_class_mismatch: { label: "Data Class Mismatch", color: "#D97706"       },
-  rate_limit:          { label: "Rate Limit",          color: "#1A73E8"       },
+  rate_limit:          { label: "Rate Limit",          color: "#0F172A"       },
   cost_limit:          { label: "Cost Limit",          color: "var(--yellow)" },
 };
 
 const DATA_CLASS_STYLE: Record<string, { bg: string; color: string }> = {
   public:       { bg: "#E9EBF2", color: "#43474E" },
-  internal:     { bg: "#D3E4FD", color: "#1A73E8" },
+  internal:     { bg: "hsl(221 83% 97%)", color: "#0F172A" },
   confidential: { bg: "#FFEFC2", color: "#7A5700" },
   restricted:   { bg: "#F9DEDC", color: "#B3261E" },
 };
@@ -103,7 +103,7 @@ function toDateLabel(iso: string) {
 }
 
 function SeverityBadge({ sev }: { sev: string }) {
-  const s = SEVERITY_STYLE[sev] ?? { bg: "var(--paper-3)", color: "var(--ink-2)" };
+  const s = SEVERITY_STYLE[sev] ?? { bg: "hsl(var(--accent))", color: "hsl(var(--muted-foreground))" };
   return (
     <span className="inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium capitalize"
       style={{ background: s.bg, color: s.color }}>{sev}</span>
@@ -111,7 +111,7 @@ function SeverityBadge({ sev }: { sev: string }) {
 }
 
 function ActionBadge({ action }: { action: string }) {
-  const s = ACTION_TAKEN_STYLE[action] ?? { bg: "var(--paper-3)", color: "var(--ink-2)", label: action };
+  const s = ACTION_TAKEN_STYLE[action] ?? { bg: "hsl(var(--accent))", color: "hsl(var(--muted-foreground))", label: action };
   return (
     <span className="inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium"
       style={{ background: s.bg, color: s.color }}>{s.label}</span>
@@ -119,7 +119,7 @@ function ActionBadge({ action }: { action: string }) {
 }
 
 function DataClassBadge({ cls }: { cls: string }) {
-  const s = DATA_CLASS_STYLE[cls] ?? { bg: "var(--paper-3)", color: "var(--ink-2)" };
+  const s = DATA_CLASS_STYLE[cls] ?? { bg: "hsl(var(--accent))", color: "hsl(var(--muted-foreground))" };
   return (
     <span className="inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium capitalize"
       style={{ background: s.bg, color: s.color }}>{cls}</span>
@@ -139,21 +139,21 @@ function ViolationRow({
   onToggle: () => void;
   onResolve: () => void;
 }) {
-  const vt = VIOLATION_LABELS[v.violationType] ?? { label: v.violationType.replace(/_/g, " "), color: "var(--ink-2)" };
+  const vt = VIOLATION_LABELS[v.violationType] ?? { label: v.violationType.replace(/_/g, " "), color: "hsl(var(--muted-foreground))" };
 
   return (
     <>
       <tr
         className="cursor-pointer transition-colors"
         onClick={onToggle}
-        style={{ borderBottom: expanded ? "none" : "1px solid var(--line-soft)" }}
+        style={{ borderBottom: expanded ? "none" : "1px solid hsl(var(--border))" }}
       >
         <td className="table-cell">
           <span className="text-sm font-medium capitalize" style={{ color: vt.color }}>
             {vt.label}
           </span>
           {(v.details?.source === "seed" || v.details?.live === false) && (
-            <span className="ml-2 rounded-full px-1.5 py-0.5 text-[10px] font-medium" style={{ background: "var(--paper-3)", color: "var(--ink-4)" }}>
+            <span className="ml-2 rounded-full px-1.5 py-0.5 text-[10px] font-medium" style={{ background: "hsl(var(--accent))", color: "hsl(var(--muted-foreground))" }}>
               Example
             </span>
           )}
@@ -161,23 +161,23 @@ function ViolationRow({
         <td className="table-cell">
           {v.policyName ? (
             <span className="rounded-full px-2 py-0.5 text-[11px] font-medium"
-              style={{ background: "var(--paper-3)", color: "var(--ink-2)" }}>
+              style={{ background: "hsl(var(--accent))", color: "hsl(var(--muted-foreground))" }}>
               {v.policyName}
             </span>
           ) : (
-            <span style={{ color: "var(--ink-4)" }}>—</span>
+            <span style={{ color: "hsl(var(--muted-foreground))" }}>—</span>
           )}
         </td>
         <td className="table-cell">
           <code className="rounded px-1.5 py-0.5 text-xs"
-            style={{ background: "var(--paper-3)", color: "var(--ink-2)", fontFamily: "monospace" }}>
+            style={{ background: "hsl(var(--accent))", color: "hsl(var(--muted-foreground))", fontFamily: "monospace" }}>
             {v.modelId}
           </code>
         </td>
         <td className="table-cell"><DataClassBadge cls={v.dataClass} /></td>
         <td className="table-cell"><SeverityBadge sev={v.severity} /></td>
         <td className="table-cell"><ActionBadge action={v.actionTaken} /></td>
-        <td className="table-cell text-xs" style={{ color: "var(--ink-4)" }}>{timeAgo(v.createdAt)}</td>
+        <td className="table-cell text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>{timeAgo(v.createdAt)}</td>
         <td className="table-cell text-right">
           <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
             {v.resolvedAt ? (
@@ -188,52 +188,52 @@ function ViolationRow({
               <button
                 onClick={onResolve}
                 className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium transition-colors"
-                style={{ background: "var(--paper-3)", color: "var(--ink-2)" }}
+                style={{ background: "hsl(var(--accent))", color: "hsl(var(--muted-foreground))" }}
               >
                 <Clock className="h-3 w-3" /> Resolve
               </button>
             )}
             {expanded
-              ? <ChevronUp className="h-4 w-4" style={{ color: "var(--ink-4)" }} />
-              : <ChevronDown className="h-4 w-4" style={{ color: "var(--ink-4)" }} />}
+              ? <ChevronUp className="h-4 w-4" style={{ color: "hsl(var(--muted-foreground))" }} />
+              : <ChevronDown className="h-4 w-4" style={{ color: "hsl(var(--muted-foreground))" }} />}
           </div>
         </td>
       </tr>
       {expanded && (
-        <tr style={{ borderBottom: "1px solid var(--line-soft)" }}>
+        <tr style={{ borderBottom: "1px solid hsl(var(--border))" }}>
           <td colSpan={8} className="px-4 pb-4 pt-0">
-            <div className="rounded-xl p-4 space-y-3" style={{ background: "var(--paper-3)" }}>
+            <div className="rounded-xl p-4 space-y-3" style={{ background: "hsl(var(--accent))" }}>
               <div className="flex flex-wrap gap-6 text-xs">
                 {v.apiKeyName && (
                   <div>
-                    <span className="font-medium" style={{ color: "var(--ink-3)" }}>API Key: </span>
-                    <code style={{ color: "var(--ink-2)" }}>{v.apiKeyName}</code>
+                    <span className="font-medium" style={{ color: "hsl(var(--muted-foreground))" }}>API Key: </span>
+                    <code style={{ color: "hsl(var(--muted-foreground))" }}>{v.apiKeyName}</code>
                   </div>
                 )}
                 {v.policyAction && (
                   <div>
-                    <span className="font-medium" style={{ color: "var(--ink-3)" }}>Policy action: </span>
-                    <span className="capitalize" style={{ color: "var(--ink-2)" }}>{v.policyAction.replace(/_/g, " ")}</span>
+                    <span className="font-medium" style={{ color: "hsl(var(--muted-foreground))" }}>Policy action: </span>
+                    <span className="capitalize" style={{ color: "hsl(var(--muted-foreground))" }}>{v.policyAction.replace(/_/g, " ")}</span>
                   </div>
                 )}
                 <div>
-                  <span className="font-medium" style={{ color: "var(--ink-3)" }}>Occurred: </span>
-                  <span style={{ color: "var(--ink-2)" }}>{new Date(v.createdAt).toLocaleString("en-GB")}</span>
+                  <span className="font-medium" style={{ color: "hsl(var(--muted-foreground))" }}>Occurred: </span>
+                  <span style={{ color: "hsl(var(--muted-foreground))" }}>{new Date(v.createdAt).toLocaleString("en-GB")}</span>
                 </div>
                 {v.resolvedAt && (
                   <div>
-                    <span className="font-medium" style={{ color: "var(--ink-3)" }}>Resolved: </span>
+                    <span className="font-medium" style={{ color: "hsl(var(--muted-foreground))" }}>Resolved: </span>
                     <span style={{ color: "var(--green)" }}>{new Date(v.resolvedAt).toLocaleString("en-GB")}</span>
                   </div>
                 )}
               </div>
               {v.details && Object.keys(v.details).length > 0 && (
                 <div>
-                  <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--ink-4)" }}>
+                  <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide" style={{ color: "hsl(var(--muted-foreground))" }}>
                     Details
                   </p>
                   <pre className="overflow-x-auto rounded-lg p-3 text-xs leading-relaxed"
-                    style={{ background: "var(--paper-2)", color: "var(--ink-2)", border: "1px solid var(--line-soft)" }}>
+                    style={{ background: "hsl(var(--card))", color: "hsl(var(--muted-foreground))", border: "1px solid hsl(var(--border))" }}>
                     {JSON.stringify(v.details, null, 2)}
                   </pre>
                 </div>
@@ -263,7 +263,7 @@ function GuardrailRow({
   return (
     <>
       <tr className="cursor-pointer transition-colors" onClick={onToggle}
-        style={{ borderBottom: expanded ? "none" : "1px solid var(--line-soft)" }}>
+        style={{ borderBottom: expanded ? "none" : "1px solid hsl(var(--border))" }}>
         <td className="table-cell">
           <span className="flex items-center gap-2 text-sm font-medium capitalize">
             <Icon className="h-3.5 w-3.5 shrink-0" style={{ color: "var(--red)" }} />
@@ -272,29 +272,29 @@ function GuardrailRow({
         </td>
         <td className="table-cell">
           <code className="rounded px-1.5 py-0.5 text-xs"
-            style={{ background: "var(--paper-3)", color: "var(--ink-2)", fontFamily: "monospace" }}>
+            style={{ background: "hsl(var(--accent))", color: "hsl(var(--muted-foreground))", fontFamily: "monospace" }}>
             {o.modelId}
           </code>
         </td>
         <td className="table-cell"><SeverityBadge sev={o.severity} /></td>
         <td className="table-cell"><ActionBadge action={o.actionTaken} /></td>
-        <td className="table-cell text-xs" style={{ color: "var(--ink-4)" }}>{timeAgo(o.createdAt)}</td>
+        <td className="table-cell text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>{timeAgo(o.createdAt)}</td>
         <td className="table-cell text-right">
           {expanded
-            ? <ChevronUp className="ml-auto h-4 w-4" style={{ color: "var(--ink-4)" }} />
-            : <ChevronDown className="ml-auto h-4 w-4" style={{ color: "var(--ink-4)" }} />}
+            ? <ChevronUp className="ml-auto h-4 w-4" style={{ color: "hsl(var(--muted-foreground))" }} />
+            : <ChevronDown className="ml-auto h-4 w-4" style={{ color: "hsl(var(--muted-foreground))" }} />}
         </td>
       </tr>
       {expanded && (
-        <tr style={{ borderBottom: "1px solid var(--line-soft)" }}>
+        <tr style={{ borderBottom: "1px solid hsl(var(--border))" }}>
           <td colSpan={6} className="px-4 pb-4 pt-0">
-            <div className="rounded-xl p-4 space-y-2" style={{ background: "var(--paper-3)" }}>
-              <p className="text-xs" style={{ color: "var(--ink-3)" }}>
+            <div className="rounded-xl p-4 space-y-2" style={{ background: "hsl(var(--accent))" }}>
+              <p className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
                 Occurred: {new Date(o.createdAt).toLocaleString("en-GB")}
               </p>
               {o.details && Object.keys(o.details).length > 0 && (
                 <pre className="overflow-x-auto rounded-lg p-3 text-xs leading-relaxed"
-                  style={{ background: "var(--paper-2)", color: "var(--ink-2)", border: "1px solid var(--line-soft)" }}>
+                  style={{ background: "hsl(var(--card))", color: "hsl(var(--muted-foreground))", border: "1px solid hsl(var(--border))" }}>
                   {JSON.stringify(o.details, null, 2)}
                 </pre>
               )}
@@ -427,7 +427,7 @@ export default function ViolationsPage() {
 
       {loading ? (
         <div className="flex h-48 items-center justify-center">
-          <Loader2 className="h-5 w-5 animate-spin" style={{ color: "var(--ink-3)" }} />
+          <Loader2 className="h-5 w-5 animate-spin" style={{ color: "hsl(var(--muted-foreground))" }} />
         </div>
       ) : (
         <>
@@ -435,14 +435,14 @@ export default function ViolationsPage() {
       {/* Stats */}
       <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
         {[
-          { label: "Total violations", value: stats.total,    color: "var(--ink)"    },
+          { label: "Total violations", value: stats.total,    color: "hsl(var(--foreground))"    },
           { label: "Critical open",    value: stats.critical, color: "var(--red)"    },
           { label: "High open",        value: stats.high,     color: "#D97706"       },
           { label: "Resolved",         value: stats.resolved, color: "var(--green)"  },
         ].map(({ label, value, color }) => (
           <div key={label} className="card p-4 text-center">
             <p className="text-2xl font-semibold tabular-nums" style={{ color }}>{value}</p>
-            <p className="mt-0.5 text-xs" style={{ color: "var(--ink-4)" }}>{label}</p>
+            <p className="mt-0.5 text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>{label}</p>
           </div>
         ))}
       </div>
@@ -456,7 +456,7 @@ export default function ViolationsPage() {
       )}
 
       {/* Tabs */}
-      <div className="mb-5 flex gap-1 border-b" style={{ borderColor: "var(--line-soft)" }}>
+      <div className="mb-5 flex gap-1 border-b" style={{ borderColor: "hsl(var(--border))" }}>
         {([
           { id: "violations" as Tab, label: "Policy Violations", count: stats.critical + stats.high },
           { id: "guardrails" as Tab, label: "Guardrail Triggers", count: outcomes.length },
@@ -464,8 +464,8 @@ export default function ViolationsPage() {
           <button key={t.id} onClick={() => setTab(t.id)}
             className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium transition-colors"
             style={{
-              color: tab === t.id ? "var(--ink)" : "var(--ink-4)",
-              borderBottom: tab === t.id ? "2px solid var(--ink)" : "2px solid transparent",
+              color: tab === t.id ? "hsl(var(--foreground))" : "hsl(var(--muted-foreground))",
+              borderBottom: tab === t.id ? "2px solid hsl(var(--foreground))" : "2px solid transparent",
               marginBottom: "-1px", background: "transparent", cursor: "pointer",
             }}>
             {t.label}
@@ -497,11 +497,11 @@ export default function ViolationsPage() {
             ))}
             {hasVFilters && (
               <button onClick={() => { setFSeverity("all"); setFResolved("open"); setFDataClass("all"); setFTimeframe("30"); }}
-                className="flex items-center gap-1 text-xs px-2 py-1 rounded" style={{ color: "var(--ink-4)" }}>
+                className="flex items-center gap-1 text-xs px-2 py-1 rounded" style={{ color: "hsl(var(--muted-foreground))" }}>
                 <X className="h-3.5 w-3.5" /> Clear
               </button>
             )}
-            <span className="ml-auto text-xs" style={{ color: "var(--ink-4)" }}>
+            <span className="ml-auto text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
               {filteredViolations.length} of {violations.length}
             </span>
           </div>
@@ -510,14 +510,14 @@ export default function ViolationsPage() {
           <div className="card overflow-hidden">
             {violations.length === 0 ? (
               <div className="flex h-40 flex-col items-center justify-center gap-2 text-center">
-                <ShieldCheck className="h-8 w-8" style={{ color: "var(--ink-4)" }} />
-                <p className="text-sm" style={{ color: "var(--ink-3)" }}>No policy violations recorded.</p>
-                <p className="text-xs" style={{ color: "var(--ink-4)" }}>Violations appear here when the gateway blocks or flags policy-breaching requests.</p>
+                <ShieldCheck className="h-8 w-8" style={{ color: "hsl(var(--muted-foreground))" }} />
+                <p className="text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>No policy violations recorded.</p>
+                <p className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>Violations appear here when the gateway blocks or flags policy-breaching requests.</p>
               </div>
             ) : (
               <table className="w-full">
                 <thead>
-                  <tr style={{ borderBottom: "1px solid var(--line-soft)" }}>
+                  <tr style={{ borderBottom: "1px solid hsl(var(--border))" }}>
                     <th className="table-header-cell text-left">Type</th>
                     <th className="table-header-cell text-left">Policy</th>
                     <th className="table-header-cell text-left">Model</th>
@@ -531,7 +531,7 @@ export default function ViolationsPage() {
                 <tbody>
                   {filteredViolations.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="py-10 text-center text-sm" style={{ color: "var(--ink-4)" }}>
+                      <td colSpan={8} className="py-10 text-center text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
                         No violations match the current filters.
                       </td>
                     </tr>
@@ -556,7 +556,7 @@ export default function ViolationsPage() {
       {/* ── GUARDRAIL TRIGGERS TAB ── */}
       {tab === "guardrails" && !guardrailsReady && (
         <div className="flex h-40 items-center justify-center">
-          <Loader2 className="h-5 w-5 animate-spin" style={{ color: "var(--ink-3)" }} />
+          <Loader2 className="h-5 w-5 animate-spin" style={{ color: "hsl(var(--muted-foreground))" }} />
         </div>
       )}
       {tab === "guardrails" && guardrailsReady && (
@@ -564,10 +564,10 @@ export default function ViolationsPage() {
           {/* Type stats */}
           <div className="flex flex-wrap gap-2">
             <div className="card flex items-center gap-2 px-4 py-2.5">
-              <span className="text-sm font-semibold tabular-nums" style={{ color: "var(--ink)" }}>
+              <span className="text-sm font-semibold tabular-nums" style={{ color: "hsl(var(--foreground))" }}>
                 {outcomes.length}
               </span>
-              <span className="text-xs" style={{ color: "var(--ink-4)" }}>Total triggered</span>
+              <span className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>Total triggered</span>
             </div>
             {guardrailStats.filter((g) => g.count > 0).map((g) => {
               const meta = GUARDRAIL_META[g.type];
@@ -575,10 +575,10 @@ export default function ViolationsPage() {
               return (
                 <div key={g.type} className="card flex items-center gap-2 px-4 py-2.5">
                   <Icon className="h-3.5 w-3.5 shrink-0" style={{ color: "var(--red)" }} />
-                  <span className="text-sm font-semibold tabular-nums" style={{ color: "var(--ink)" }}>
+                  <span className="text-sm font-semibold tabular-nums" style={{ color: "hsl(var(--foreground))" }}>
                     {g.count}
                   </span>
-                  <span className="text-xs" style={{ color: "var(--ink-4)" }}>{g.label}</span>
+                  <span className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>{g.label}</span>
                 </div>
               );
             })}
@@ -598,7 +598,7 @@ export default function ViolationsPage() {
               <option value="90">Last 90 days</option>
               <option value="all">All time</option>
             </select>
-            <span className="self-center ml-auto text-xs" style={{ color: "var(--ink-4)" }}>
+            <span className="self-center ml-auto text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
               {filteredOutcomes.length} of {outcomes.length}
             </span>
           </div>
@@ -607,14 +607,14 @@ export default function ViolationsPage() {
           <div className="card overflow-hidden">
             {outcomes.length === 0 ? (
               <div className="flex h-40 flex-col items-center justify-center gap-2 text-center">
-                <ShieldCheck className="h-8 w-8" style={{ color: "var(--ink-4)" }} />
-                <p className="text-sm" style={{ color: "var(--ink-3)" }}>No guardrail triggers recorded.</p>
-                <p className="text-xs" style={{ color: "var(--ink-4)" }}>Guardrail events appear here when PII, prompt injection, or other guards fire.</p>
+                <ShieldCheck className="h-8 w-8" style={{ color: "hsl(var(--muted-foreground))" }} />
+                <p className="text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>No guardrail triggers recorded.</p>
+                <p className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>Guardrail events appear here when PII, prompt injection, or other guards fire.</p>
               </div>
             ) : (
               <table className="w-full">
                 <thead>
-                  <tr style={{ borderBottom: "1px solid var(--line-soft)" }}>
+                  <tr style={{ borderBottom: "1px solid hsl(var(--border))" }}>
                     <th className="table-header-cell text-left">Guardrail</th>
                     <th className="table-header-cell text-left">Model</th>
                     <th className="table-header-cell text-left">Severity</th>
@@ -626,7 +626,7 @@ export default function ViolationsPage() {
                 <tbody>
                   {filteredOutcomes.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="py-10 text-center text-sm" style={{ color: "var(--ink-4)" }}>
+                      <td colSpan={6} className="py-10 text-center text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
                         No guardrail events match the current filters.
                       </td>
                     </tr>

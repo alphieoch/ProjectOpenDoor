@@ -49,7 +49,7 @@ export default function SecurityPage() {
             </Link>
             <Link
               href="/privacy"
-              className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-6 py-3 text-sm font-semibold text-slate-800 transition hover:bg-slate-50"
+              className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-6 py-3 text-sm font-semibold text-foreground transition hover:bg-slate-50"
             >
               Privacy policy
             </Link>
@@ -60,17 +60,17 @@ export default function SecurityPage() {
       <SecurityControls />
 
       <section className="mx-auto max-w-7xl px-6 pb-16 lg:px-8">
-        <h2 className="text-center text-3xl font-semibold tracking-tight text-slate-950">
+        <h2 className="text-center text-3xl font-semibold tracking-tight text-foreground">
           Features for teams that ship AI
         </h2>
-        <p className="mx-auto mt-3 max-w-2xl text-center text-slate-600">
+        <p className="mx-auto mt-3 max-w-2xl text-center text-muted-foreground">
           These are product controls in the gateway and dashboard — not borrowed certification logos.
         </p>
-        <div className="mt-10 grid grid-cols-2 overflow-hidden rounded-[2rem] border border-slate-200 bg-white md:grid-cols-4">
+        <div className="mt-10 grid grid-cols-2 overflow-hidden rounded-2xl border border-border bg-white md:grid-cols-4">
           {grid.map((item) => (
             <div
               key={item}
-              className="border-b border-r border-slate-100 px-5 py-5 text-sm font-medium text-slate-800 last:border-r-0 [&:nth-child(2n)]:border-r-0 md:[&:nth-child(2n)]:border-r md:[&:nth-child(4n)]:border-r-0"
+              className="border-b border-r border-border px-5 py-5 text-sm font-medium text-foreground last:border-r-0 [&:nth-child(2n)]:border-r-0 md:[&:nth-child(2n)]:border-r md:[&:nth-child(4n)]:border-r-0"
             >
               {item}
             </div>
@@ -79,7 +79,7 @@ export default function SecurityPage() {
       </section>
 
       <section className="mx-auto max-w-7xl px-6 pb-16 lg:px-8">
-        <div className="overflow-hidden rounded-[2.5rem] bg-slate-950 p-8 text-white lg:p-12">
+        <div className="overflow-hidden rounded-2xl bg-slate-950 p-8 text-white lg:p-12">
           <div className="grid gap-10 lg:grid-cols-2 lg:items-center">
             <div>
               <h2 className="text-3xl font-semibold tracking-tight">Security you can inspect</h2>
@@ -118,14 +118,14 @@ export default function SecurityPage() {
       </section>
 
       <section className="mx-auto max-w-7xl px-6 pb-8 lg:px-8">
-        <div className="flex flex-col gap-6 rounded-[2.5rem] border border-slate-200 bg-white p-8 shadow-sm md:flex-row md:items-center md:justify-between lg:p-10">
+        <div className="flex flex-col gap-6 rounded-2xl border border-border bg-white p-8 shadow-sm md:flex-row md:items-center md:justify-between lg:p-10">
           <div className="flex gap-4">
-            <FileLock2 className="h-10 w-10 shrink-0 text-blue-600" />
+            <FileLock2 className="h-10 w-10 shrink-0 text-muted-foreground" />
             <div>
-              <h2 className="text-2xl font-semibold tracking-tight text-slate-950">
+              <h2 className="text-2xl font-semibold tracking-tight text-foreground">
                 Trust center in the product
               </h2>
-              <p className="mt-2 max-w-xl text-slate-600">
+              <p className="mt-2 max-w-xl text-muted-foreground">
                 Policies, approvals, violations, and compliance views live under Dashboard → Trust
                 Center once you are signed in.
               </p>

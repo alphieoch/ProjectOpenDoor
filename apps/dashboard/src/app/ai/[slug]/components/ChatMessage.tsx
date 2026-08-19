@@ -1,6 +1,7 @@
 "use client";
 
 import { User, Wrench, Loader2 } from "lucide-react";
+import { AiCrest } from "@/components/ui/ai-crest";
 import { ChatMessageContent } from "./ChatMessageContent";
 import { ChatMessageActions } from "./ChatMessageActions";
 
@@ -29,8 +30,6 @@ export function ChatMessage({
   role,
   content,
   toolInvocations,
-  primaryColor,
-  avatarLetter,
   logoUrl,
   isDark,
   streaming,
@@ -44,18 +43,13 @@ export function ChatMessage({
     <div className={`group flex gap-3 ${isAssistant ? "flex-row" : "flex-row-reverse"}`}>
       {/* Assistant avatar */}
       {isAssistant && (
-        <div className="flex-shrink-0 w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center text-xs font-bold text-white select-none mt-0.5">
-          <div
-            className="w-full h-full flex items-center justify-center"
-            style={{ background: primaryColor }}
-          >
-            {logoUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={logoUrl} alt="logo" className="w-full h-full object-cover" />
-            ) : (
-              avatarLetter
-            )}
-          </div>
+        <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center select-none mt-0.5">
+          {logoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={logoUrl} alt="" className="w-8 h-8 rounded-lg object-cover" />
+          ) : (
+            <AiCrest mood={streaming ? "thinking" : "ready"} size="sm" />
+          )}
         </div>
       )}
 

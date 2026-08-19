@@ -3,7 +3,9 @@ import { requireAuth } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import { users, organizations, invitations } from "@opendoor/database";
 import { eq, and } from "drizzle-orm";
+import { DEFAULT_ALLOWED_CHAT_MODES, getPlan, includedCreditCents } from "@opendoor/shared";
 import { hashParentPin, isOrgOrganizer, verifyParentPin } from "@/lib/house-chat";
+import { listCreditBuckets } from "@/lib/credit-ledger";
 
 export interface FamilyMember {
   id: string;
@@ -16,6 +18,7 @@ export interface FamilyMember {
   monthlyQuotaCents: number | null; // null = unlimited share of pool
   currentMonthSpentCents: number;
   protectedChild: boolean;
+  allowedChatModes: string[];
 }
 
 export async function GET() {
@@ -49,6 +52,8 @@ export async function GET() {
             role: true,
             createdAt: true,
             protectedChild: true,
+            monthlyCreditSubCapCents: true,
+            allowedChatModes: true,
           },
           orderBy: (users, { asc }) => [asc(users.createdAt)],
         }).catch(() => [])
@@ -56,8 +61,8 @@ export async function GET() {
 
     const meta = (orgRecord?.metadata as Record<string, any>) || {};
     const extraSeatsCount = typeof meta.extraSeatsCount === "number" ? meta.extraSeatsCount : 0;
-    const isFamilyPlan = orgRecord?.plan === "family" || orgRecord?.plan === "family_max" || true;
-    const baseSeats = orgRecord?.plan === "family_max" ? 6 : 4;
+    const isFamilyPlan = orgRecord?.plan === "family" || orgRecord?.plan === "family_max";
+    const baseSeats = getPlan(orgRecord?.plan || "family").maxSeats ?? 4;
     const maxExtraSeats = 5;
     const totalAllowedSeats = baseSeats + extraSeatsCount;
 
@@ -73,9 +78,17 @@ export async function GET() {
         isExtraSeat: index >= baseSeats,
         avatarUrl: null,
         joinedAt: u.createdAt ? new Date(u.createdAt).toISOString() : new Date().toISOString(),
-        monthlyQuotaCents: typeof memberQuotas[u.id] === "number" ? memberQuotas[u.id] : null,
+        monthlyQuotaCents:
+          typeof u.monthlyCreditSubCapCents === "number"
+            ? u.monthlyCreditSubCapCents
+            : typeof memberQuotas[u.id] === "number"
+              ? memberQuotas[u.id]
+              : null,
         currentMonthSpentCents: 0,
         protectedChild: Boolean(u.protectedChild),
+        allowedChatModes: Array.isArray(u.allowedChatModes) && u.allowedChatModes.length
+          ? u.allowedChatModes
+          : [...DEFAULT_ALLOWED_CHAT_MODES],
       };
     });
 
@@ -92,17 +105,36 @@ export async function GET() {
         monthlyQuotaCents: null,
         currentMonthSpentCents: 0,
         protectedChild: false,
+        allowedChatModes: [...DEFAULT_ALLOWED_CHAT_MODES],
       });
     }
 
-    const creditsCents = typeof orgRecord?.creditsUsdCents === "number" ? orgRecord.creditsUsdCents : 25000;
+    const creditsCents =
+      typeof orgRecord?.creditsUsdCents === "number"
+        ? orgRecord.creditsUsdCents
+        : includedCreditCents(orgRecord?.plan || "family");
     const rolledOverCreditsCents = meta.rolledOverCreditsCents ?? Math.min(11500, Math.floor(creditsCents * 0.45));
+    const buckets = orgId ? await listCreditBuckets(orgId).catch(() => []) : [];
+    const now = Date.now();
+    const creditBuckets = buckets.map((b) => ({
+      id: b.id,
+      bucketType: b.bucketType,
+      initialAmountCents: b.initialAmountCents,
+      remainingAmountCents: b.remainingAmountCents,
+      currency: b.currency,
+      expiresAt: b.expiresAt ? b.expiresAt.toISOString() : null,
+      createdAt: b.createdAt.toISOString(),
+      expired: Boolean(b.expiresAt && b.expiresAt.getTime() <= now),
+    }));
 
     return NextResponse.json({
       family: {
         isFamilyPlan,
         planId: orgRecord?.plan || "family",
-        planName: orgRecord?.plan === "family_max" ? "Family Max Plan (6 Seats)" : "Family Plan (4 Seats)",
+        planName:
+          orgRecord?.plan === "family_max"
+            ? `Family Max Plan (${baseSeats} Seats)`
+            : `Family Plan (${baseSeats} Seats)`,
         baseSeats,
         extraSeatsCount,
         maxExtraSeats,
@@ -116,6 +148,7 @@ export async function GET() {
         rolloverMaxMonths: 4,
         hasParentPin: Boolean(meta.parentPinHash),
         members,
+        creditBuckets,
       },
     });
   } catch (err: any) {
@@ -131,7 +164,7 @@ export async function GET() {
         extraSeatPriceUsd: 6.50,
         totalAllowedSeats: 4,
         seatsUsed: 1,
-        totalPoolCreditsCents: 25000,
+        totalPoolCreditsCents: includedCreditCents("family"),
         rolledOverCreditsCents: 11500,
         rolloverMonthsActive: 3,
         rolloverMaxMonths: 4,
@@ -168,7 +201,7 @@ export async function POST(req: NextRequest) {
 
     const meta = (orgRecord?.metadata as Record<string, any>) || {};
     let extraSeatsCount = typeof meta.extraSeatsCount === "number" ? meta.extraSeatsCount : 0;
-    const baseSeats = orgRecord?.plan === "family_max" ? 6 : 4;
+    const baseSeats = getPlan(orgRecord?.plan || "family").maxSeats ?? 4;
     const maxExtraSeats = 5;
 
     const organizer = await isOrgOrganizer({
@@ -303,6 +336,14 @@ export async function POST(req: NextRequest) {
         const memberQuotas = meta.memberQuotas || {};
         const updatedMeta = { ...meta, memberQuotas: { ...memberQuotas, [memberId]: monthlyQuotaCents } };
         await db.update(organizations).set({ metadata: updatedMeta }).where(eq(organizations.id, orgId)).catch(() => {});
+        await db
+          .update(users)
+          .set({
+            monthlyCreditSubCapCents: typeof monthlyQuotaCents === "number" ? monthlyQuotaCents : null,
+            updatedAt: new Date(),
+          })
+          .where(and(eq(users.id, memberId), eq(users.organizationId, orgId)))
+          .catch(() => {});
       }
       return NextResponse.json({ success: true });
     }
@@ -318,5 +359,62 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid action" }, { status: 400 });
   } catch (err: any) {
     return NextResponse.json({ error: err.message || "Failed to process family request" }, { status: 500 });
+  }
+}
+
+export async function PATCH(req: NextRequest) {
+  try {
+    const session = await requireAuth();
+    const orgId = session.orgId as string;
+    const db = getDb();
+    const organizer = await isOrgOrganizer({
+      userId: session.userId,
+      orgId,
+      role: session.role,
+    });
+    if (!organizer) {
+      return NextResponse.json({ error: "Only the organizer can update seat controls" }, { status: 403 });
+    }
+
+    const body = await req.json().catch(() => ({}));
+    const memberId = typeof body.memberId === "string" ? body.memberId : "";
+    if (!memberId) return NextResponse.json({ error: "memberId is required" }, { status: 400 });
+
+    const target = await db.query.users.findFirst({
+      where: and(eq(users.id, memberId), eq(users.organizationId, orgId)),
+      columns: { id: true, allowedChatModes: true, monthlyCreditSubCapCents: true },
+    });
+    if (!target) return NextResponse.json({ error: "Member not found" }, { status: 404 });
+
+    const updates: {
+      monthlyCreditSubCapCents?: number | null;
+      allowedChatModes?: string[];
+      updatedAt: Date;
+    } = { updatedAt: new Date() };
+
+    if ("monthlyCreditSubCapCents" in body || "monthlyQuotaCents" in body) {
+      const raw = body.monthlyCreditSubCapCents ?? body.monthlyQuotaCents;
+      updates.monthlyCreditSubCapCents =
+        raw == null || raw === "" ? null : Math.max(0, Math.round(Number(raw)));
+    }
+    if (Array.isArray(body.allowedChatModes)) {
+      const next = body.allowedChatModes
+        .map((m: unknown) => String(m).toLowerCase())
+        .filter((m: string) => DEFAULT_ALLOWED_CHAT_MODES.includes(m as (typeof DEFAULT_ALLOWED_CHAT_MODES)[number]) || m === "fast");
+      updates.allowedChatModes = next.length ? next : [...DEFAULT_ALLOWED_CHAT_MODES];
+    }
+
+    await db.update(users).set(updates).where(eq(users.id, memberId));
+    const saved = await db.query.users.findFirst({
+      where: eq(users.id, memberId),
+      columns: {
+        id: true,
+        monthlyCreditSubCapCents: true,
+        allowedChatModes: true,
+      },
+    });
+    return NextResponse.json({ success: true, member: saved });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message || "Failed to update seat" }, { status: 500 });
   }
 }

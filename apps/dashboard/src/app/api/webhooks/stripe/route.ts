@@ -3,6 +3,7 @@ import Stripe from "stripe";
 import { getPlanFromPriceId, getStripeInstance, isAgentsAddonPriceId, isWebSearchAddonPriceId } from "@/lib/stripe";
 import {
   includedCreditCents,
+  PLANS,
   qualifiesForTopupBonus,
   TOPUP_BONUS_CENTS,
   welcomeExpiresAt,
@@ -23,6 +24,7 @@ import {
 } from "@/lib/billing-stripe";
 import { ensureWebSearchAddonColumns } from "@/lib/web-search/entitlement";
 import { posthogServerCapture } from "@/lib/posthog-server";
+import { applyLedgerGrant } from "@/lib/credit-ledger";
 
 function parseAmountCents(value: unknown): number {
   const parsed = Number.parseInt(String(value ?? "0"), 10);
@@ -30,7 +32,7 @@ function parseAmountCents(value: unknown): number {
 }
 
 function asPlanId(value: unknown): PlanId {
-  if (value === "pro" || value === "team" || value === "enterprise") return value;
+  if (typeof value === "string" && value in PLANS) return value as PlanId;
   return "free";
 }
 
@@ -127,13 +129,11 @@ async function applyPlanStipend(
   });
   if (!org) return;
 
-  const current = Number(org.creditsUsdCents || 0);
-  const next = current + amountCents;
-
-  await db
-    .update(organizations)
-    .set({ creditsUsdCents: next })
-    .where(eq(organizations.id, orgId));
+  const next = await applyLedgerGrant({
+    organizationId: orgId,
+    amountCents,
+    bucketType: "subscription_grant",
+  });
 
   await db.insert(creditTransactions).values({
     organizationId: orgId,
@@ -175,10 +175,16 @@ async function applyTopupCredit(
 
   if (!existing) {
     current += amountCents;
-    await db
-      .update(organizations)
-      .set({ creditsUsdCents: current })
-      .where(eq(organizations.id, orgId));
+    await applyLedgerGrant({
+      organizationId: orgId,
+      amountCents,
+      bucketType: "top_up_prepaid",
+    });
+    const synced = await db.query.organizations.findFirst({
+      where: eq(organizations.id, orgId),
+      columns: { creditsUsdCents: true },
+    });
+    current = Number(synced?.creditsUsdCents || current);
     await db.insert(creditTransactions).values({
       organizationId: orgId,
       kind: "topup",
@@ -192,14 +198,20 @@ async function applyTopupCredit(
   if (qualifiesForTopupBonus(amountCents, alreadyGranted)) {
     const bonusCents = TOPUP_BONUS_CENTS;
     const expires = welcomeExpiresAt();
-    current += bonusCents;
-    currentWelcome += bonusCents;
+    await applyLedgerGrant({
+      organizationId: orgId,
+      amountCents: bonusCents,
+      bucketType: "bonus",
+    });
+    const synced = await db.query.organizations.findFirst({
+      where: eq(organizations.id, orgId),
+      columns: { creditsUsdCents: true, welcomeCreditsUsdCents: true },
+    });
+    current = Number(synced?.creditsUsdCents || current + bonusCents);
+    currentWelcome = Number(synced?.welcomeCreditsUsdCents || currentWelcome + bonusCents);
     await db
       .update(organizations)
       .set({
-        creditsUsdCents: current,
-        welcomeCreditsUsdCents: currentWelcome,
-        welcomeExpiresAt: expires,
         signupCreditGranted: true,
       })
       .where(eq(organizations.id, orgId));

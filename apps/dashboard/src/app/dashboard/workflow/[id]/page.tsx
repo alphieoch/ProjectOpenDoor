@@ -33,7 +33,7 @@ const NODE_META: Record<string, {
   label: string; color: string; bg: string;
   icon: React.ElementType; description: string;
 }> = {
-  input:        { label: "Input",        color: "#fff", bg: "#1A73E8", icon: ArrowRight, description: "Workflow entry point" },
+  input:        { label: "Input",        color: "#fff", bg: "#0F172A", icon: ArrowRight, description: "Workflow entry point" },
   llm:          { label: "LLM Call",     color: "#fff", bg: "#1E6E4F", icon: Bot,        description: "Call a language model" },
   tool:         { label: "Tool",         color: "#fff", bg: "#7A5700", icon: Wrench,     description: "Invoke an external tool" },
   condition:    { label: "Condition",    color: "#fff", bg: "#4B5FBF", icon: GitBranch,  description: "Branch based on output" },
@@ -157,7 +157,7 @@ function ConfigPanel({
     <div className="flex h-full flex-col overflow-y-auto">
       {/* Panel header */}
       <div className="flex items-center gap-2 border-b px-4 py-3"
-        style={{ borderColor: "var(--line-soft)", background: meta.bg }}>
+        style={{ borderColor: "hsl(var(--border))", background: meta.bg }}>
         <meta.icon size={14} color="#fff" />
         <span className="text-xs font-semibold uppercase tracking-wider text-white">{meta.label}</span>
       </div>
@@ -165,14 +165,14 @@ function ConfigPanel({
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {/* Label */}
         <div>
-          <label className="mb-1 block text-xs font-medium" style={{ color: "var(--ink-3)" }}>Label</label>
+          <label className="mb-1 block text-xs font-medium" style={{ color: "hsl(var(--muted-foreground))" }}>Label</label>
           <input value={data.label ?? ""} onChange={(e) => set("label", e.target.value)}
             className="input w-full text-sm" placeholder="Node label" />
         </div>
 
         {/* Description */}
         <div>
-          <label className="mb-1 block text-xs font-medium" style={{ color: "var(--ink-3)" }}>Description</label>
+          <label className="mb-1 block text-xs font-medium" style={{ color: "hsl(var(--muted-foreground))" }}>Description</label>
           <textarea value={data.description ?? ""} onChange={(e) => set("description", e.target.value)}
             className="input w-full text-sm" rows={2} placeholder="What does this node do?" />
         </div>
@@ -181,7 +181,7 @@ function ConfigPanel({
         {data.nodeType === "llm" && (
           <>
             <div>
-              <label className="mb-1 block text-xs font-medium" style={{ color: "var(--ink-3)" }}>Model</label>
+              <label className="mb-1 block text-xs font-medium" style={{ color: "hsl(var(--muted-foreground))" }}>Model</label>
               <select value={data.modelId ?? ""} onChange={(e) => set("modelId", e.target.value)}
                 className="input w-full text-sm">
                 <option value="">— select model —</option>
@@ -191,23 +191,23 @@ function ConfigPanel({
               </select>
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium" style={{ color: "var(--ink-3)" }}>System Prompt</label>
+              <label className="mb-1 block text-xs font-medium" style={{ color: "hsl(var(--muted-foreground))" }}>System Prompt</label>
               <textarea value={data.systemPrompt ?? ""} onChange={(e) => set("systemPrompt", e.target.value)}
                 className="input w-full text-sm" rows={5} placeholder="You are a helpful assistant…" />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium" style={{ color: "var(--ink-3)" }}>
+              <label className="mb-1 block text-xs font-medium" style={{ color: "hsl(var(--muted-foreground))" }}>
                 Temperature — {(data.temperature ?? 0.7).toFixed(1)}
               </label>
               <input type="range" min={0} max={1} step={0.1} value={data.temperature ?? 0.7}
                 onChange={(e) => set("temperature", parseFloat(e.target.value))}
                 className="w-full accent-indigo-600" />
-              <div className="flex justify-between text-[10px] mt-0.5" style={{ color: "var(--ink-4)" }}>
+              <div className="flex justify-between text-[10px] mt-0.5" style={{ color: "hsl(var(--muted-foreground))" }}>
                 <span>Precise</span><span>Creative</span>
               </div>
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium" style={{ color: "var(--ink-3)" }}>Max Tokens</label>
+              <label className="mb-1 block text-xs font-medium" style={{ color: "hsl(var(--muted-foreground))" }}>Max Tokens</label>
               <input type="number" value={data.maxTokens ?? ""} onChange={(e) => set("maxTokens", parseInt(e.target.value))}
                 className="input w-full text-sm" placeholder="e.g. 2048" min={1} max={128000} />
             </div>
@@ -218,7 +218,7 @@ function ConfigPanel({
         {data.nodeType === "tool" && (
           <>
             <div>
-              <label className="mb-1 block text-xs font-medium" style={{ color: "var(--ink-3)" }}>Tool Type</label>
+              <label className="mb-1 block text-xs font-medium" style={{ color: "hsl(var(--muted-foreground))" }}>Tool Type</label>
               <select value={data.toolType ?? ""} onChange={(e) => set("toolType", e.target.value)}
                 className="input w-full text-sm">
                 <option value="">— select tool —</option>
@@ -230,7 +230,7 @@ function ConfigPanel({
             {data.toolType === "web_search" && (
               <>
                 <div>
-                  <label className="mb-1 block text-xs font-medium" style={{ color: "var(--ink-3)" }}>Query</label>
+                  <label className="mb-1 block text-xs font-medium" style={{ color: "hsl(var(--muted-foreground))" }}>Query</label>
                   <textarea
                     value={data.query ?? ""}
                     onChange={(e) => set("query", e.target.value)}
@@ -240,7 +240,7 @@ function ConfigPanel({
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-medium" style={{ color: "var(--ink-3)" }}>Max results</label>
+                  <label className="mb-1 block text-xs font-medium" style={{ color: "hsl(var(--muted-foreground))" }}>Max results</label>
                   <input
                     type="number"
                     min={1}
@@ -250,10 +250,10 @@ function ConfigPanel({
                     className="input w-full text-sm"
                   />
                 </div>
-                <p className="text-[11px] leading-relaxed" style={{ color: "var(--ink-4)" }}>
+                <p className="text-[11px] leading-relaxed" style={{ color: "hsl(var(--muted-foreground))" }}>
                   Requires the Web Search add-on (or Enterprise). Production uses Vertex AI
                   Google Search grounding on OpenDoor’s GCP project.{" "}
-                  <Link href="/dashboard/billing" className="underline" style={{ color: "var(--ink)" }}>
+                  <Link href="/dashboard/billing" className="underline" style={{ color: "hsl(var(--foreground))" }}>
                     Billing
                   </Link>
                 </p>
@@ -262,7 +262,7 @@ function ConfigPanel({
             {data.toolType === "image_generation" && (
               <>
                 <div>
-                  <label className="mb-1 block text-xs font-medium" style={{ color: "var(--ink-3)" }}>Prompt</label>
+                  <label className="mb-1 block text-xs font-medium" style={{ color: "hsl(var(--muted-foreground))" }}>Prompt</label>
                   <textarea
                     value={data.prompt ?? ""}
                     onChange={(e) => set("prompt", e.target.value)}
@@ -272,7 +272,7 @@ function ConfigPanel({
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-medium" style={{ color: "var(--ink-3)" }}>Model</label>
+                  <label className="mb-1 block text-xs font-medium" style={{ color: "hsl(var(--muted-foreground))" }}>Model</label>
                   <input
                     value={data.model ?? data.modelId ?? "dall-e-3"}
                     onChange={(e) => set("model", e.target.value)}
@@ -281,7 +281,7 @@ function ConfigPanel({
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-medium" style={{ color: "var(--ink-3)" }}>Size</label>
+                  <label className="mb-1 block text-xs font-medium" style={{ color: "hsl(var(--muted-foreground))" }}>Size</label>
                   <select value={data.size ?? "1024x1024"} onChange={(e) => set("size", e.target.value)}
                     className="input w-full text-sm">
                     <option value="1024x1024">1024×1024</option>
@@ -294,7 +294,7 @@ function ConfigPanel({
             {data.toolType === "code_execution" && (
               <>
                 <div>
-                  <label className="mb-1 block text-xs font-medium" style={{ color: "var(--ink-3)" }}>Language</label>
+                  <label className="mb-1 block text-xs font-medium" style={{ color: "hsl(var(--muted-foreground))" }}>Language</label>
                   <select
                     value={data.language === "python" ? "python" : "javascript"}
                     onChange={(e) => set("language", e.target.value)}
@@ -305,7 +305,7 @@ function ConfigPanel({
                   </select>
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-medium" style={{ color: "var(--ink-3)" }}>Code</label>
+                  <label className="mb-1 block text-xs font-medium" style={{ color: "hsl(var(--muted-foreground))" }}>Code</label>
                   <textarea
                     value={data.code ?? ""}
                     onChange={(e) => set("code", e.target.value)}
@@ -314,7 +314,7 @@ function ConfigPanel({
                     placeholder={data.language === "python" ? "print(open('input.txt').read())" : "console.log(require('fs').readFileSync('input.txt','utf8'))"}
                   />
                 </div>
-                <p className="text-[11px] leading-relaxed" style={{ color: "var(--ink-4)" }}>
+                <p className="text-[11px] leading-relaxed" style={{ color: "hsl(var(--muted-foreground))" }}>
                   Constrained subprocess (tmpdir cwd, 5s timeout, no shell) — not Firecracker.
                   Prior step output is stdin and input.txt. JavaScript uses Node&apos;s permission model when available (no network).
                 </p>
@@ -322,7 +322,7 @@ function ConfigPanel({
             )}
             {data.toolType === "document_analysis" && (
               <div>
-                <label className="mb-1 block text-xs font-medium" style={{ color: "var(--ink-3)" }}>File ID</label>
+                <label className="mb-1 block text-xs font-medium" style={{ color: "hsl(var(--muted-foreground))" }}>File ID</label>
                 <input
                   value={data.fileId ?? ""}
                   onChange={(e) => set("fileId", e.target.value)}
@@ -334,7 +334,7 @@ function ConfigPanel({
             {data.toolType === "data_extraction" && (
               <>
                 <div>
-                  <label className="mb-1 block text-xs font-medium" style={{ color: "var(--ink-3)" }}>Text</label>
+                  <label className="mb-1 block text-xs font-medium" style={{ color: "hsl(var(--muted-foreground))" }}>Text</label>
                   <textarea
                     value={data.prompt ?? ""}
                     onChange={(e) => set("prompt", e.target.value)}
@@ -344,7 +344,7 @@ function ConfigPanel({
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-medium" style={{ color: "var(--ink-3)" }}>Embedding model</label>
+                  <label className="mb-1 block text-xs font-medium" style={{ color: "hsl(var(--muted-foreground))" }}>Embedding model</label>
                   <input
                     value={data.model ?? data.modelId ?? "text-embedding-3-small"}
                     onChange={(e) => set("model", e.target.value)}
@@ -360,10 +360,10 @@ function ConfigPanel({
         {/* Condition fields */}
         {data.nodeType === "condition" && (
           <div>
-            <label className="mb-1 block text-xs font-medium" style={{ color: "var(--ink-3)" }}>Condition</label>
+            <label className="mb-1 block text-xs font-medium" style={{ color: "hsl(var(--muted-foreground))" }}>Condition</label>
             <input value={data.condition ?? ""} onChange={(e) => set("condition", e.target.value)}
               className="input w-full text-sm" placeholder='e.g. includes("error")' />
-            <p className="mt-1 text-[11px] leading-relaxed" style={{ color: "var(--ink-4)" }}>
+            <p className="mt-1 text-[11px] leading-relaxed" style={{ color: "hsl(var(--muted-foreground))" }}>
               Safe check against the prior step output — no eval. includes/equals/startsWith/endsWith, length &gt; N, or true/false.
               Connect the True / False handles to branch.
             </p>
@@ -373,10 +373,10 @@ function ConfigPanel({
         {/* Human review fields */}
         {data.nodeType === "human_review" && (
           <div>
-            <label className="mb-1 block text-xs font-medium" style={{ color: "var(--ink-3)" }}>Reviewer Note</label>
+            <label className="mb-1 block text-xs font-medium" style={{ color: "hsl(var(--muted-foreground))" }}>Reviewer Note</label>
             <textarea value={data.reviewNote ?? ""} onChange={(e) => set("reviewNote", e.target.value)}
               className="input w-full text-sm" rows={3} placeholder="Instructions for the human reviewer…" />
-            <p className="mt-1 text-[11px] leading-relaxed" style={{ color: "var(--ink-4)" }}>
+            <p className="mt-1 text-[11px] leading-relaxed" style={{ color: "hsl(var(--muted-foreground))" }}>
               Run pauses here as awaiting_review. Approve or reject from the results panel to resume.
             </p>
           </div>
@@ -385,7 +385,7 @@ function ConfigPanel({
         {/* Output fields */}
         {data.nodeType === "output" && (
           <div>
-            <label className="mb-1 block text-xs font-medium" style={{ color: "var(--ink-3)" }}>Output Format</label>
+            <label className="mb-1 block text-xs font-medium" style={{ color: "hsl(var(--muted-foreground))" }}>Output Format</label>
             <select value={data.outputFormat ?? "text"} onChange={(e) => set("outputFormat", e.target.value)}
               className="input w-full text-sm">
               <option value="text">Plain text</option>
@@ -397,7 +397,7 @@ function ConfigPanel({
       </div>
 
       {/* Delete */}
-      <div className="border-t p-3" style={{ borderColor: "var(--line-soft)" }}>
+      <div className="border-t p-3" style={{ borderColor: "hsl(var(--border))" }}>
         <button type="button" onClick={() => onDelete(node.id)}
           className="md-btn-outlined w-full flex items-center justify-center gap-2 py-2 text-sm"
           style={{ color: "var(--red)", borderColor: "var(--red)" }}>
@@ -718,7 +718,7 @@ export default function WorkflowEditorPage() {
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center">
-        <Loader2 className="h-5 w-5 animate-spin" style={{ color: "var(--ink-3)" }} />
+        <Loader2 className="h-5 w-5 animate-spin" style={{ color: "hsl(var(--muted-foreground))" }} />
       </div>
     );
   }
@@ -734,18 +734,18 @@ export default function WorkflowEditorPage() {
     <div style={{ margin: "-40px -56px -80px", height: "calc(100vh - 56px)", display: "flex", flexDirection: "column" }}>
       {/* Toolbar */}
       <div className="flex items-center gap-3 border-b px-4 py-2.5 shrink-0"
-        style={{ background: "var(--paper-2)", borderColor: "var(--line-soft)", zIndex: 10 }}>
+        style={{ background: "hsl(var(--card))", borderColor: "hsl(var(--border))", zIndex: 10 }}>
         <button type="button" onClick={() => router.push("/dashboard/workflow")}
-          className="md-icon-btn flex items-center gap-1 pr-2 text-sm" style={{ color: "var(--ink-3)" }}>
+          className="md-icon-btn flex items-center gap-1 pr-2 text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
           <ChevronLeft className="h-4 w-4" />
         </button>
-        <div className="h-4 w-px" style={{ background: "var(--line-soft)" }} />
+        <div className="h-4 w-px" style={{ background: "hsl(var(--border))" }} />
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}
           onBlur={handleNameBlur}
           className="min-w-0 flex-1 bg-transparent text-sm font-semibold focus:outline-none"
-          style={{ color: "var(--ink)" }}
+          style={{ color: "hsl(var(--foreground))" }}
         />
         <select value={status} onChange={(e) => handleStatusChange(e.target.value)}
           className="input w-auto text-xs py-1">
@@ -777,9 +777,9 @@ export default function WorkflowEditorPage() {
       <div className="flex flex-1 overflow-hidden">
         {/* Left: Node palette */}
         <div className="shrink-0 overflow-y-auto border-r"
-          style={{ width: 168, background: "var(--paper)", borderColor: "var(--line-soft)" }}>
+          style={{ width: 168, background: "hsl(var(--background))", borderColor: "hsl(var(--border))" }}>
           <div className="px-3 py-3">
-            <p className="mb-2 text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--ink-4)" }}>
+            <p className="mb-2 text-[10px] font-semibold uppercase tracking-widest" style={{ color: "hsl(var(--muted-foreground))" }}>
               Add nodes
             </p>
             <div className="space-y-1.5">
@@ -802,8 +802,8 @@ export default function WorkflowEditorPage() {
               })}
             </div>
           </div>
-          <div className="border-t px-3 py-3" style={{ borderColor: "var(--line-soft)" }}>
-            <p className="text-[10px]" style={{ color: "var(--ink-4)" }}>
+          <div className="border-t px-3 py-3" style={{ borderColor: "hsl(var(--border))" }}>
+            <p className="text-[10px]" style={{ color: "hsl(var(--muted-foreground))" }}>
               Click a node type to add it to the canvas, then drag to position and connect with handles.
             </p>
           </div>
@@ -836,14 +836,14 @@ export default function WorkflowEditorPage() {
                 const nt = (n.data as any)?.nodeType ?? "llm";
                 return NODE_META[nt]?.bg ?? "#888";
               }}
-              style={{ background: "var(--paper-2)" }}
+              style={{ background: "hsl(var(--card))" }}
             />
           </ReactFlow>
         </div>
 
         {/* Right: Config panel */}
         <div className="shrink-0 border-l"
-          style={{ width: 272, background: "var(--paper)", borderColor: "var(--line-soft)" }}>
+          style={{ width: 272, background: "hsl(var(--background))", borderColor: "hsl(var(--border))" }}>
           {selectedNode ? (
             <ConfigPanel
               node={selectedNode}
@@ -854,12 +854,12 @@ export default function WorkflowEditorPage() {
           ) : (
             <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center">
               <div className="grid h-12 w-12 place-items-center rounded-xl"
-                style={{ background: "var(--paper-3)" }}>
-                <GitBranch className="h-6 w-6" style={{ color: "var(--ink-4)" }} />
+                style={{ background: "hsl(var(--accent))" }}>
+                <GitBranch className="h-6 w-6" style={{ color: "hsl(var(--muted-foreground))" }} />
               </div>
               <div>
-                <p className="text-sm font-medium" style={{ color: "var(--ink-2)" }}>No node selected</p>
-                <p className="mt-1 text-xs" style={{ color: "var(--ink-4)" }}>
+                <p className="text-sm font-medium" style={{ color: "hsl(var(--muted-foreground))" }}>No node selected</p>
+                <p className="mt-1 text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
                   Click any node on the canvas to configure it here.
                 </p>
               </div>
@@ -870,14 +870,14 @@ export default function WorkflowEditorPage() {
 
       {(runError || runResult || recentRuns.length > 0) && (
         <div className="shrink-0 border-t px-4 py-3 max-h-72 overflow-y-auto"
-          style={{ background: "var(--paper-2)", borderColor: "var(--line-soft)" }}>
+          style={{ background: "hsl(var(--card))", borderColor: "hsl(var(--border))" }}>
           {runError && (
             <p className="text-xs" style={{ color: "var(--red)" }}>
               {runError}
               {runAddonRequired ? (
                 <>
                   {" "}
-                  <Link href="/dashboard/billing" className="underline" style={{ color: "var(--ink)" }}>
+                  <Link href="/dashboard/billing" className="underline" style={{ color: "hsl(var(--foreground))" }}>
                     Subscribe on Billing
                   </Link>
                 </>
@@ -886,7 +886,7 @@ export default function WorkflowEditorPage() {
           )}
           {pendingReviewId && (
             <div className="mb-3 flex items-center gap-2">
-              <p className="text-[11px]" style={{ color: "var(--ink-3)" }}>Awaiting review</p>
+              <p className="text-[11px]" style={{ color: "hsl(var(--muted-foreground))" }}>Awaiting review</p>
               <button
                 type="button"
                 disabled={reviewing}
@@ -909,35 +909,35 @@ export default function WorkflowEditorPage() {
             <div className="space-y-3">
               {runResult.steps.map((step) => (
                 <div key={step.nodeId}>
-                  <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--ink-4)" }}>
+                  <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "hsl(var(--muted-foreground))" }}>
                     {step.toolType || step.type} · {step.status}
                     {step.provider ? ` · ${step.provider}` : ""}
                     {step.query ? ` · ${step.query}` : ""}
                     {step.passed === true ? " · true" : step.passed === false ? " · false" : ""}
                   </p>
                   {step.error && (
-                    <p className="text-[11px]" style={{ color: step.status === "error" ? "var(--red)" : "var(--ink-3)" }}>
+                    <p className="text-[11px]" style={{ color: step.status === "error" ? "var(--red)" : "hsl(var(--muted-foreground))" }}>
                       {step.error}
                     </p>
                   )}
                   {step.stdout ? (
-                    <p className="text-[11px] whitespace-pre-wrap font-mono" style={{ color: "var(--ink-3)" }}>
+                    <p className="text-[11px] whitespace-pre-wrap font-mono" style={{ color: "hsl(var(--muted-foreground))" }}>
                       {step.stdout.length > 800 ? `${step.stdout.slice(0, 800)}…` : step.stdout}
                     </p>
                   ) : null}
                   {step.stderr ? (
-                    <p className="text-[11px] whitespace-pre-wrap font-mono" style={{ color: "var(--ink-3)" }}>
+                    <p className="text-[11px] whitespace-pre-wrap font-mono" style={{ color: "hsl(var(--muted-foreground))" }}>
                       stderr: {step.stderr.length > 400 ? `${step.stderr.slice(0, 400)}…` : step.stderr}
                     </p>
                   ) : null}
                   {step.results?.map((hit) => (
                     <div key={hit.url}>
                       <a href={hit.url} target="_blank" rel="noreferrer"
-                        className="text-xs font-medium hover:underline" style={{ color: "var(--ink)" }}>
+                        className="text-xs font-medium hover:underline" style={{ color: "hsl(var(--foreground))" }}>
                         {hit.title || hit.url}
                       </a>
                       {hit.snippet && (
-                        <p className="text-[11px]" style={{ color: "var(--ink-3)" }}>{hit.snippet}</p>
+                        <p className="text-[11px]" style={{ color: "hsl(var(--muted-foreground))" }}>{hit.snippet}</p>
                       )}
                     </div>
                   ))}
@@ -946,17 +946,17 @@ export default function WorkflowEditorPage() {
                     if (!src) return null;
                     return (
                       <a key={`${step.nodeId}-img-${i}`} href={src} target="_blank" rel="noreferrer">
-                        <img src={src} alt="" className="mt-1 max-h-28 rounded border" style={{ borderColor: "var(--line-soft)" }} />
+                        <img src={src} alt="" className="mt-1 max-h-28 rounded border" style={{ borderColor: "hsl(var(--border))" }} />
                       </a>
                     );
                   })}
                   {step.embedding && (
-                    <p className="text-[11px]" style={{ color: "var(--ink-3)" }}>
+                    <p className="text-[11px]" style={{ color: "hsl(var(--muted-foreground))" }}>
                       {step.embedding.model} · {step.embedding.dimensions}d embedding
                     </p>
                   )}
                   {step.text && !step.stdout && !step.results?.length && !step.images?.length && (
-                    <p className="text-[11px] whitespace-pre-wrap" style={{ color: "var(--ink-3)" }}>
+                    <p className="text-[11px] whitespace-pre-wrap" style={{ color: "hsl(var(--muted-foreground))" }}>
                       {step.text.length > 800 ? `${step.text.slice(0, 800)}…` : step.text}
                     </p>
                   )}
@@ -965,30 +965,30 @@ export default function WorkflowEditorPage() {
             </div>
           ) : runResult?.results?.length ? (
             <div className="space-y-2">
-              <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--ink-4)" }}>
+              <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "hsl(var(--muted-foreground))" }}>
                 {runResult.provider} · {runResult.query}
               </p>
               {runResult.results.map((hit) => (
                 <div key={hit.url}>
                   <a href={hit.url} target="_blank" rel="noreferrer"
-                    className="text-xs font-medium hover:underline" style={{ color: "var(--ink)" }}>
+                    className="text-xs font-medium hover:underline" style={{ color: "hsl(var(--foreground))" }}>
                     {hit.title || hit.url}
                   </a>
                   {hit.snippet && (
-                    <p className="text-[11px]" style={{ color: "var(--ink-3)" }}>{hit.snippet}</p>
+                    <p className="text-[11px]" style={{ color: "hsl(var(--muted-foreground))" }}>{hit.snippet}</p>
                   )}
                 </div>
               ))}
             </div>
           ) : null}
           {recentRuns.length > 0 && (
-            <div className="mt-3 pt-2 border-t" style={{ borderColor: "var(--line-soft)" }}>
-              <p className="mb-1 text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--ink-4)" }}>
+            <div className="mt-3 pt-2 border-t" style={{ borderColor: "hsl(var(--border))" }}>
+              <p className="mb-1 text-[10px] font-semibold uppercase tracking-widest" style={{ color: "hsl(var(--muted-foreground))" }}>
                 Recent runs
               </p>
               <div className="space-y-1">
                 {recentRuns.slice(0, 8).map((run) => (
-                  <p key={run.id} className="text-[11px]" style={{ color: "var(--ink-3)" }}>
+                  <p key={run.id} className="text-[11px]" style={{ color: "hsl(var(--muted-foreground))" }}>
                     {run.status}
                     {run.createdAt ? ` · ${new Date(run.createdAt).toLocaleString()}` : ""}
                     {run.error ? ` · ${run.error}` : ""}

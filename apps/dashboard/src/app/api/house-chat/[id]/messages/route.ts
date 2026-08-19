@@ -2,12 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { and, asc, eq } from "drizzle-orm";
 import {
   HOUSE_CHAT_CHILD_SAFETY_PROMPT,
+  chatModeAllowed,
   houseChatModeToThinking,
   houseChatModelForMode,
+  isHouseChatBillableMode,
 } from "@opendoor/shared";
 import { getDb } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
-import { houseChatMessages, houseChats } from "@opendoor/database";
+import { houseChatMessages, houseChats, users } from "@opendoor/database";
 import {
   assistantGatewayHeaders,
   assistantGatewaySecret,
@@ -96,23 +98,49 @@ export async function POST(
     );
   }
 
+  const member = await db.query.users.findFirst({
+    where: eq(users.id, session.userId),
+    columns: { allowedChatModes: true, monthlyCreditSubCapCents: true },
+  });
+  if (!chatModeAllowed(member?.allowedChatModes, mode)) {
+    return NextResponse.json(
+      { error: "This chat mode is disabled for your seat.", mode },
+      { status: 403 }
+    );
+  }
+
   await ensureHouseChatSeat({
     userId: session.userId,
     orgId,
     email: session.email,
   });
-  const allowance = await getHouseChatAllowance(session.userId, orgId, undefined, {
-    unlimited: Boolean(session.isSiteAdmin),
-  });
-  if (!allowance.allowed) {
-    return NextResponse.json(
-      {
-        error: allowance.refillLabel || "Message allowance exhausted",
-        reason: allowance.reason,
-        allowance,
-      },
-      { status: 429 }
-    );
+  if (!session.isSiteAdmin) {
+    try {
+      await incrementHouseChatUsage(session.userId, orgId);
+    } catch (err) {
+      const retryAfterSeconds =
+        err && typeof err === "object" && "retryAfterSeconds" in err
+          ? Number((err as { retryAfterSeconds?: number }).retryAfterSeconds || 0)
+          : 0;
+      const allowance = await getHouseChatAllowance(session.userId, orgId, undefined, {
+        unlimited: false,
+      });
+      return NextResponse.json(
+        {
+          error: allowance.refillLabel || "Message allowance exhausted",
+          reason: allowance.reason,
+          allowance,
+          retryAfterSeconds: retryAfterSeconds || allowance.retryAfterSeconds || 0,
+        },
+        {
+          status: 429,
+          headers:
+            retryAfterSeconds || allowance.retryAfterSeconds
+              ? { "Retry-After": String(retryAfterSeconds || allowance.retryAfterSeconds) }
+              : undefined,
+        }
+      );
+    }
   }
 
   const secret = assistantGatewaySecret();
@@ -186,18 +214,25 @@ export async function POST(
   const model = houseChatModelForMode(mode);
   const thinking = model.includes("thinking") ? {} : houseChatModeToThinking(mode);
   const gatewayUrl = assistantGatewayUrl();
-  const maxTokens = mode === "thinking" || mode === "max" ? 8192 : 2048;
+  const maxTokens = mode === "thinking" || mode === "max" || mode === "max_fast" ? 8192 : 2048;
+  const billable = isHouseChatBillableMode(mode);
+  const houseHeaders = assistantGatewayHeaders(orgId, {
+    "X-OpenDoor-House-Chat": "1",
+    "X-OpenDoor-House-Chat-Mode": mode,
+    "X-OpenDoor-User-Id": session.userId,
+  });
 
   let upstream: Response;
   try {
     upstream = await fetch(`${gatewayUrl}/v1/chat/completions`, {
       method: "POST",
-      headers: assistantGatewayHeaders(orgId, { "X-OpenDoor-House-Chat": "1" }),
+      headers: houseHeaders,
       body: JSON.stringify({
         model,
         messages,
         stream: true,
         max_tokens: maxTokens,
+        ...(billable && mode === "max_fast" ? { service_tier: "priority" } : {}),
         ...thinking,
       }),
       signal: AbortSignal.timeout(180_000),
@@ -303,12 +338,13 @@ export async function POST(
         if (!assistantText.trim()) {
           const retry = await fetch(`${gatewayUrl}/v1/chat/completions`, {
             method: "POST",
-            headers: assistantGatewayHeaders(orgId, { "X-OpenDoor-House-Chat": "1" }),
+            headers: houseHeaders,
             body: JSON.stringify({
               model,
               messages,
               stream: true,
               max_tokens: maxTokens,
+              ...(billable && mode === "max_fast" ? { service_tier: "priority" } : {}),
             }),
             signal: AbortSignal.timeout(180_000),
           });
@@ -326,10 +362,6 @@ export async function POST(
             error: "Qwen is busy on Vertex. Wait a few seconds and send again.",
           });
           return;
-        }
-
-        if (!session.isSiteAdmin) {
-          await incrementHouseChatUsage(session.userId, orgId);
         }
 
         const [saved] = await db

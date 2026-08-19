@@ -79,7 +79,7 @@ export default function LogsPage() {
           <option value="error">Error</option>
           <option value="cached">Cached</option>
         </select>
-        <span className="text-xs" style={{ color: "var(--ink-4)" }}>
+        <span className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
           {formatNumber(total)} requests
         </span>
       </div>
@@ -87,7 +87,7 @@ export default function LogsPage() {
       <div className="card overflow-hidden">
         <table className="min-w-full">
           <thead>
-            <tr className="border-b border-[var(--line)]">
+            <tr className="border-b border-border">
               <th className="table-header-cell">Time</th>
               <th className="table-header-cell">Model</th>
               <th className="table-header-cell">Type</th>
@@ -102,14 +102,14 @@ export default function LogsPage() {
             {loading ? (
               <tr>
                 <td colSpan={8} className="px-4 py-10 text-center">
-                  <Loader2 className="mx-auto h-5 w-5 animate-spin" style={{ color: "var(--ink-4)" }} />
+                  <Loader2 className="mx-auto h-5 w-5 animate-spin" style={{ color: "hsl(var(--muted-foreground))" }} />
                 </td>
               </tr>
             ) : rows.length === 0 ? (
               <tr>
                 <td colSpan={8} className="px-4 py-12 text-center">
-                  <ScrollText className="mx-auto mb-3 h-8 w-8" style={{ color: "var(--ink-4)" }} />
-                  <p className="text-sm" style={{ color: "var(--ink-4)" }}>
+                  <ScrollText className="mx-auto mb-3 h-8 w-8" style={{ color: "hsl(var(--muted-foreground))" }} />
+                  <p className="text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
                     No requests yet. Make a playground or API call and it will show up here.
                   </p>
                 </td>
@@ -117,14 +117,14 @@ export default function LogsPage() {
             ) : (
               rows.map((row) => (
                 <tr key={row.id} className="table-row">
-                  <td className="table-cell whitespace-nowrap" style={{ color: "var(--ink-3)" }}>
+                  <td className="table-cell whitespace-nowrap" style={{ color: "hsl(var(--muted-foreground))" }}>
                     {new Date(row.createdAt).toLocaleString()}
                   </td>
                   <td className="table-cell">
-                    <div className="font-medium" style={{ color: "var(--ink)" }}>
+                    <div className="font-medium" style={{ color: "hsl(var(--foreground))" }}>
                       {row.modelId}
                     </div>
-                    <div className="text-xs" style={{ color: "var(--ink-4)" }}>
+                    <div className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
                       {row.provider || "—"} · {row.region}
                     </div>
                   </td>
@@ -142,14 +142,14 @@ export default function LogsPage() {
                       {row.status}
                     </span>
                     {row.errorMessage ? (
-                      <div className="mt-1 max-w-xs truncate text-xs" style={{ color: "var(--ink-4)" }}>
+                      <div className="mt-1 max-w-xs truncate text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
                         {row.errorMessage}
                       </div>
                     ) : null}
                   </td>
                   <td className="table-cell tabular-nums">
                     {formatNumber(row.totalTokens)}
-                    <div className="text-xs" style={{ color: "var(--ink-4)" }}>
+                    <div className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
                       {formatNumber(row.promptTokens)} in / {formatNumber(row.completionTokens)} out
                     </div>
                   </td>
@@ -157,7 +157,7 @@ export default function LogsPage() {
                     {row.latencyMs > 0 ? `${row.latencyMs}ms` : "—"}
                   </td>
                   <td className="table-cell tabular-nums">{formatCurrency(row.costUsd)}</td>
-                  <td className="table-cell font-mono text-xs" style={{ color: "var(--ink-3)" }}>
+                  <td className="table-cell font-mono text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
                     {row.apiKeyPrefix ? `${row.apiKeyPrefix}…` : row.apiKeyName || "—"}
                   </td>
                 </tr>

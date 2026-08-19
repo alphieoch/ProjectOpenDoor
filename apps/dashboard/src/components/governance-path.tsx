@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Card } from "@/components/ui/card";
 
 const STEPS = [
   { n: "01", title: "Request", body: "App or playground sends a completion with a data class.", href: "/dashboard/playground" },
@@ -9,32 +10,29 @@ const STEPS = [
 
 export function GovernancePath() {
   return (
-    <div className="od-card p-4">
+    <Card className="p-4">
       <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
         <div>
-          <div className="od-eyebrow">Live intercept</div>
-          <p className="mt-1 text-sm font-medium" style={{ color: "var(--ink)" }}>
+          <div className="text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">Live intercept</div>
+          <p className="mt-1 text-sm font-medium text-foreground">
             Policy runs on the gateway, on the request, before a model is called.
           </p>
         </div>
-        <p className="text-xs" style={{ color: "var(--ink-4)" }}>
-          Not an after-the-fact log review.
-        </p>
+        <p className="text-xs text-muted-foreground">Not an after-the-fact log review.</p>
       </div>
       <div className="grid gap-2 sm:grid-cols-4">
         {STEPS.map((step) => (
           <Link
             key={step.n}
             href={step.href}
-            className="rounded-xl px-3 py-2.5 transition-colors"
-            style={{ background: "var(--paper-3)" }}
+            className="rounded-xl bg-accent px-3 py-2.5 transition-colors hover:bg-accent/80"
           >
-            <div className="od-eyebrow">{step.n}</div>
-            <div className="mt-1 text-sm font-semibold" style={{ color: "var(--ink)" }}>{step.title}</div>
-            <p className="mt-1 text-xs leading-snug" style={{ color: "var(--ink-3)" }}>{step.body}</p>
+            <div className="text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">{step.n}</div>
+            <div className="mt-1 text-sm font-semibold text-foreground">{step.title}</div>
+            <p className="mt-1 text-xs leading-snug text-muted-foreground">{step.body}</p>
           </Link>
         ))}
       </div>
-    </div>
+    </Card>
   );
 }

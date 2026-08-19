@@ -49,13 +49,13 @@ interface OverviewData {
 
 type Tab = "overview" | "tokens" | "models" | "latency";
 
-const axisTick = { fontSize: 11, fill: "var(--ink-4)" } as const;
+const axisTick = { fontSize: 11, fill: "hsl(var(--muted-foreground))" } as const;
 const tooltipStyle = {
   borderRadius: "8px",
-  border: "1px solid var(--line)",
+  border: "1px solid hsl(var(--border))",
   fontSize: "12px",
-  background: "var(--paper-2)",
-  color: "var(--ink)",
+  background: "hsl(var(--card))",
+  color: "hsl(var(--foreground))",
 } as const;
 
 function StatCard({
@@ -71,17 +71,17 @@ function StatCard({
 }) {
   return (
     <div className="card p-5">
-      <p className="text-xs font-medium uppercase tracking-wide" style={{ color: "var(--ink-4)" }}>
+      <p className="text-xs font-medium uppercase tracking-wide" style={{ color: "hsl(var(--muted-foreground))" }}>
         {label}
       </p>
       <p
         className="mt-2 text-2xl font-semibold tabular-nums"
-        style={{ color: accent ?? "var(--ink)" }}
+        style={{ color: accent ?? "hsl(var(--foreground))" }}
       >
         {value}
       </p>
       {sub && (
-        <p className="mt-0.5 text-xs" style={{ color: "var(--ink-4)" }}>
+        <p className="mt-0.5 text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
           {sub}
         </p>
       )}
@@ -92,7 +92,7 @@ function StatCard({
 function EmptyChart() {
   return (
     <div className="flex h-64 items-center justify-center">
-      <p className="text-sm" style={{ color: "var(--ink-4)" }}>
+      <p className="text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
         No usage data yet
       </p>
     </div>
@@ -102,7 +102,7 @@ function EmptyChart() {
 function LoadingChart() {
   return (
     <div className="flex h-64 items-center justify-center">
-      <p className="text-sm" style={{ color: "var(--ink-4)" }}>
+      <p className="text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
         Loading…
       </p>
     </div>
@@ -227,7 +227,7 @@ export default function UsagePage() {
         }
       />
 
-      <div className="od-metric-grid" style={{ marginBottom: 22, gridTemplateColumns: "repeat(3, minmax(0, 1fr))" }}>
+      <div className="mb-6 grid gap-3 sm:grid-cols-3">
         <MetricCard
           label="Requests"
           value={formatNumber(totals.requests)}
@@ -255,7 +255,7 @@ export default function UsagePage() {
       </div>
 
       <div className="mt-6">
-        <div className="od-seg mb-5">
+        <div className="inline-flex rounded-lg border border-border bg-muted p-0.5 mb-5">
           {tabs.map((t) => (
             <button
               key={t.id}
@@ -280,10 +280,10 @@ export default function UsagePage() {
               ) : (
                 <ResponsiveContainer width="100%" height={280}>
                   <BarChart data={daily} barSize={16}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="var(--line-soft)" vertical={false} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
                     <XAxis dataKey="date" tick={axisTick} axisLine={false} tickLine={false} />
                     <YAxis tick={axisTick} axisLine={false} tickLine={false} width={40} />
-                    <Tooltip contentStyle={tooltipStyle} cursor={{ fill: "var(--paper-3)" }} />
+                    <Tooltip contentStyle={tooltipStyle} cursor={{ fill: "hsl(var(--accent))" }} />
                     <Legend wrapperStyle={{ fontSize: 12 }} />
                     {daily[0]?.successCount != null ? (
                       <>
@@ -292,7 +292,7 @@ export default function UsagePage() {
                         <Bar dataKey="errorCount" name="Error" stackId="a" fill="var(--red)" radius={[4, 4, 0, 0]} />
                       </>
                     ) : (
-                      <Bar dataKey="requests" name="Requests" fill="var(--ink)" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="requests" name="Requests" fill="hsl(var(--foreground))" radius={[4, 4, 0, 0]} />
                     )}
                   </BarChart>
                 </ResponsiveContainer>
@@ -308,7 +308,7 @@ export default function UsagePage() {
               ) : (
                 <ResponsiveContainer width="100%" height={240}>
                   <LineChart data={daily}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="var(--line-soft)" vertical={false} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
                     <XAxis dataKey="date" tick={axisTick} axisLine={false} tickLine={false} />
                     <YAxis
                       tick={axisTick}
@@ -320,7 +320,7 @@ export default function UsagePage() {
                     <Tooltip
                       contentStyle={tooltipStyle}
                       formatter={(v: number) => [formatCurrency(v), "Cost"]}
-                      cursor={{ stroke: "var(--line)" }}
+                      cursor={{ stroke: "hsl(var(--border))" }}
                     />
                     <Line
                       type="monotone"
@@ -344,14 +344,14 @@ export default function UsagePage() {
             {/* Token ratio callout */}
             <div className="card p-5 flex items-center gap-6">
               <div>
-                <p className="text-xs font-medium uppercase tracking-wide" style={{ color: "var(--ink-4)" }}>
+                <p className="text-xs font-medium uppercase tracking-wide" style={{ color: "hsl(var(--muted-foreground))" }}>
                   Input / Output Split
                 </p>
-                <p className="mt-1 text-lg font-semibold" style={{ color: "var(--ink)" }}>
+                <p className="mt-1 text-lg font-semibold" style={{ color: "hsl(var(--foreground))" }}>
                   {promptPct}% input · {completionPct}% output
                 </p>
               </div>
-              <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: "var(--paper-3)" }}>
+              <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: "hsl(var(--accent))" }}>
                 <div
                   className="h-full rounded-full"
                   style={{
@@ -361,8 +361,8 @@ export default function UsagePage() {
                 />
               </div>
               <div className="text-right">
-                <p className="text-xs" style={{ color: "var(--ink-4)" }}>Total</p>
-                <p className="text-sm font-semibold" style={{ color: "var(--ink)" }}>
+                <p className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>Total</p>
+                <p className="text-sm font-semibold" style={{ color: "hsl(var(--foreground))" }}>
                   {formatNumber(tokenTotal)}
                 </p>
               </div>
@@ -387,7 +387,7 @@ export default function UsagePage() {
                         <stop offset="95%" stopColor="var(--green)" stopOpacity={0.02} />
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="var(--line-soft)" vertical={false} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
                     <XAxis dataKey="date" tick={axisTick} axisLine={false} tickLine={false} />
                     <YAxis
                       tick={axisTick}
@@ -430,10 +430,10 @@ export default function UsagePage() {
         {tab === "models" && (
           <div className="mt-5">
             <div className="card overflow-hidden">
-              <div className="flex items-center justify-between px-6 py-4 border-b" style={{ borderColor: "var(--line-soft)" }}>
+              <div className="flex items-center justify-between px-6 py-4 border-b" style={{ borderColor: "hsl(var(--border))" }}>
                 <h2 className="section-title">Top Models</h2>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs" style={{ color: "var(--ink-4)" }}>Sort by</span>
+                  <span className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>Sort by</span>
                   <select
                     value={modelSort}
                     onChange={(e) => setModelSort(e.target.value as keyof ModelBreakdownRow)}
@@ -450,21 +450,21 @@ export default function UsagePage() {
 
               {loading ? (
                 <div className="flex h-40 items-center justify-center">
-                  <p className="text-sm" style={{ color: "var(--ink-4)" }}>Loading…</p>
+                  <p className="text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>Loading…</p>
                 </div>
               ) : !overview ? (
                 <div className="flex h-40 flex-col items-center justify-center gap-2">
-                  <p className="text-sm font-medium" style={{ color: "var(--ink-3)" }}>Analytics engine unavailable</p>
-                  <p className="text-xs" style={{ color: "var(--ink-4)" }}>Enable DuckDB analytics to view model breakdowns</p>
+                  <p className="text-sm font-medium" style={{ color: "hsl(var(--muted-foreground))" }}>Analytics engine unavailable</p>
+                  <p className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>Enable DuckDB analytics to view model breakdowns</p>
                 </div>
               ) : sortedModels.length === 0 ? (
                 <div className="flex h-40 items-center justify-center">
-                  <p className="text-sm" style={{ color: "var(--ink-4)" }}>No model data yet</p>
+                  <p className="text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>No model data yet</p>
                 </div>
               ) : (
                 <table className="w-full">
                   <thead>
-                    <tr style={{ borderBottom: "1px solid var(--line-soft)" }}>
+                    <tr style={{ borderBottom: "1px solid hsl(var(--border))" }}>
                       <th className="table-header-cell text-left">Model</th>
                       <th className="table-header-cell text-left">Provider</th>
                       <th className="table-header-cell text-right">Requests</th>
@@ -478,10 +478,10 @@ export default function UsagePage() {
                     {sortedModels.map((m, i) => (
                       <tr
                         key={m.modelId + i}
-                        style={{ borderBottom: "1px solid var(--line-soft)" }}
+                        style={{ borderBottom: "1px solid hsl(var(--border))" }}
                       >
                         <td className="table-cell font-mono text-xs">{m.modelId}</td>
-                        <td className="table-cell" style={{ color: "var(--ink-3)" }}>
+                        <td className="table-cell" style={{ color: "hsl(var(--muted-foreground))" }}>
                           {m.providerName}
                         </td>
                         <td className="table-cell text-right tabular-nums">{formatNumber(m.requests)}</td>
@@ -494,7 +494,7 @@ export default function UsagePage() {
                         <td className="table-cell text-right tabular-nums font-medium">
                           {formatCurrency(Number(m.costUsd))}
                         </td>
-                        <td className="table-cell text-right tabular-nums" style={{ color: "var(--ink-3)" }}>
+                        <td className="table-cell text-right tabular-nums" style={{ color: "hsl(var(--muted-foreground))" }}>
                           {m.avgLatencyMs ? `${Math.round(Number(m.avgLatencyMs))}ms` : "—"}
                         </td>
                       </tr>
@@ -515,20 +515,20 @@ export default function UsagePage() {
                 <div key={pct} className="card p-6 text-center">
                   <p
                     className="text-xs font-semibold uppercase tracking-widest"
-                    style={{ color: "var(--ink-4)" }}
+                    style={{ color: "hsl(var(--muted-foreground))" }}
                   >
                     {pct.toUpperCase()}
                   </p>
                   <p
                     className="mt-3 text-4xl font-semibold tabular-nums"
-                    style={{ color: "var(--ink)" }}
+                    style={{ color: "hsl(var(--foreground))" }}
                   >
                     {overview?.percentiles?.[pct]
                       ? Math.round(overview.percentiles[pct])
                       : "—"}
                   </p>
                   {overview?.percentiles?.[pct] && (
-                    <p className="mt-1 text-sm" style={{ color: "var(--ink-4)" }}>
+                    <p className="mt-1 text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
                       ms
                     </p>
                   )}
@@ -539,7 +539,7 @@ export default function UsagePage() {
             {!overview && (
               <div
                 className="card p-5 text-center text-sm"
-                style={{ color: "var(--ink-4)", background: "var(--paper)" }}
+                style={{ color: "hsl(var(--muted-foreground))", background: "hsl(var(--background))" }}
               >
                 Latency analytics require the DuckDB analytics engine to be enabled.
               </div>
@@ -548,12 +548,12 @@ export default function UsagePage() {
             {/* Top models by latency */}
             {overview && overview.topModels.length > 0 && (
               <div className="card overflow-hidden">
-                <div className="px-6 py-4 border-b" style={{ borderColor: "var(--line-soft)" }}>
+                <div className="px-6 py-4 border-b" style={{ borderColor: "hsl(var(--border))" }}>
                   <h2 className="section-title">Models by Latency</h2>
                 </div>
                 <table className="w-full">
                   <thead>
-                    <tr style={{ borderBottom: "1px solid var(--line-soft)" }}>
+                    <tr style={{ borderBottom: "1px solid hsl(var(--border))" }}>
                       <th className="table-header-cell text-left">Model</th>
                       <th className="table-header-cell text-left">Provider</th>
                       <th className="table-header-cell text-right">Requests</th>
@@ -566,10 +566,10 @@ export default function UsagePage() {
                       .map((m, i) => (
                         <tr
                           key={m.modelId + i}
-                          style={{ borderBottom: "1px solid var(--line-soft)" }}
+                          style={{ borderBottom: "1px solid hsl(var(--border))" }}
                         >
                           <td className="table-cell font-mono text-xs">{m.modelId}</td>
-                          <td className="table-cell" style={{ color: "var(--ink-3)" }}>
+                          <td className="table-cell" style={{ color: "hsl(var(--muted-foreground))" }}>
                             {m.providerName}
                           </td>
                           <td className="table-cell text-right tabular-nums">

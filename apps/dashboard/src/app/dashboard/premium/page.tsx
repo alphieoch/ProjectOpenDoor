@@ -313,21 +313,21 @@ export default function PremiumGpuPage() {
   return (
     <div className="flex flex-col h-[calc(100vh-5.5rem)] overflow-hidden space-y-3">
       {/* ── Compact Header Bar with Transparent Policy Definition ── */}
-      <div className="flex items-center justify-between shrink-0 bg-black/40 border border-white/10 rounded-2xl px-4 py-2.5 backdrop-blur-md">
+      <div className="flex items-center justify-between shrink-0 bg-card text-card-foreground border border-border rounded-2xl px-4 py-2.5">
         <div className="flex items-center gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">
+          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20">
             <Cpu className="h-4 w-4" />
           </div>
           <div>
-            <h1 className="text-sm font-bold text-white tracking-tight flex items-center gap-2">
+            <h1 className="text-2xl font-semibold tracking-tight text-foreground flex items-center gap-2">
               <span>GPU Rental Hub</span>
               <span className={cn(
                 "rounded-full px-2 py-0.5 text-[10px] font-mono border",
                 executionMode === "batch"
-                  ? "bg-amber-500/15 text-amber-300 border-amber-500/30"
+                  ? "bg-warning-soft text-warning border-warning/30"
                   : executionMode === "off-peak"
-                    ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/20"
-                    : "bg-indigo-500/15 text-indigo-300 border-indigo-500/20"
+                    ? "bg-success-soft text-success border-success/20"
+                    : "bg-primary/10 text-primary border-primary/20"
               )}>
                 {executionMode === "batch"
                   ? "📦 BATCH QUEUE (~60% OFF)"
@@ -336,7 +336,7 @@ export default function PremiumGpuPage() {
                     : "⚡ ON-DEMAND DEDICATED"}
               </span>
             </h1>
-            <p className="text-[11px] text-zinc-400 font-mono">
+            <p className="text-[11px] text-muted-foreground font-mono">
               Off-peak: 10:00 PM–8:00 AM UK time & weekends · Batch: Asynchronous bulk rendering · No cold starts on dedicated
             </p>
           </div>
@@ -344,7 +344,7 @@ export default function PremiumGpuPage() {
 
         {/* 3-Way Mode Switcher */}
         <div className="flex items-center gap-2">
-          <div className="flex items-center rounded-xl bg-black/60 p-0.5 border border-white/10 text-xs">
+          <div className="flex items-center rounded-xl bg-muted p-0.5 border border-border text-xs">
             {EXECUTION_MODES.map((mode) => (
               <button
                 key={mode.id}
@@ -353,8 +353,8 @@ export default function PremiumGpuPage() {
                 className={cn(
                   "px-2.5 py-1 text-[11px] font-medium rounded-lg transition-all flex items-center gap-1",
                   executionMode === mode.id
-                    ? "bg-indigo-600 text-white shadow-xs font-semibold"
-                    : "text-zinc-400 hover:text-white",
+                    ? "bg-primary text-primary-foreground shadow-xs font-semibold"
+                    : "text-muted-foreground hover:text-foreground",
                 )}
               >
                 {mode.id === "on-demand" && <Zap className="h-3 w-3" />}
@@ -390,15 +390,15 @@ export default function PremiumGpuPage() {
               key={tier.id}
               onClick={() => setSelectedTier(tier.id)}
               className={cn(
-                "group relative cursor-pointer flex flex-col justify-between rounded-2xl border p-3 transition-all duration-200 hover:scale-[1.02] hover:shadow-lg",
+                "group relative cursor-pointer flex flex-col justify-between rounded-2xl border p-3 transition-all duration-200 hover:scale-[1.02] hover:shadow-lg bg-card text-card-foreground",
                 isSelected
-                  ? "border-indigo-500 bg-gradient-to-b from-indigo-950/40 via-purple-950/20 to-black/80 shadow-indigo-500/20 ring-1 ring-indigo-500"
-                  : "border-white/10 bg-black/40 hover:border-indigo-400/40 hover:bg-white/5",
+                  ? "border-primary bg-primary/10 ring-1 ring-primary"
+                  : "border-border hover:border-primary/40 hover:bg-muted",
               )}
             >
               {/* Header with Title & Info Button */}
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold font-mono text-zinc-200 group-hover:text-white truncate">
+                <span className="text-[11px] font-bold font-mono text-foreground truncate">
                   {tier.name}
                 </span>
 
@@ -408,42 +408,42 @@ export default function PremiumGpuPage() {
                     e.stopPropagation();
                     setInspectModalTier(tier);
                   }}
-                  className="rounded-full p-1 text-zinc-400 hover:text-white hover:bg-white/10 transition-colors"
+                  className="rounded-full p-1 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
                   title="View speed & performance benchmarks"
                 >
-                  <Info className="h-3.5 w-3.5 text-indigo-400" />
+                  <Info className="h-3.5 w-3.5 text-primary" />
                 </button>
               </div>
 
               {/* Class Equivalent & VRAM */}
               <div className="mt-1">
-                <span className="inline-block rounded-md bg-white/5 px-1.5 py-0.5 text-[9px] font-mono text-indigo-300 border border-white/5 mb-1">
+                <span className="inline-block rounded-md bg-muted px-1.5 py-0.5 text-[9px] font-mono text-primary border border-border mb-1">
                   {tier.classEquivalent}
                 </span>
-                <p className="text-[10px] text-emerald-400 font-mono font-semibold truncate">{tier.vram}</p>
+                <p className="text-[10px] text-success font-mono font-semibold truncate">{tier.vram}</p>
                 <div className="mt-1 flex items-baseline gap-1">
-                  <span className="text-base font-bold font-mono text-emerald-400">${currentHourly.toFixed(2)}</span>
-                  <span className="text-[10px] text-zinc-400 font-mono">/ hr</span>
+                  <span className="text-base font-bold font-mono text-foreground">${currentHourly.toFixed(2)}</span>
+                  <span className="text-[10px] text-muted-foreground font-mono">/ hr</span>
                 </div>
               </div>
 
               {/* Core Speed Specs */}
-              <div className="mt-2 flex items-center justify-between text-[10px] border-t border-white/10 pt-1.5 text-zinc-400 font-mono">
+              <div className="mt-2 flex items-center justify-between text-[10px] border-t border-border pt-1.5 text-muted-foreground font-mono">
                 <span>Speed</span>
-                <span className="text-zinc-200 font-semibold">{tier.coreSpeed.split(" ")[0]} {tier.coreSpeed.split(" ")[1]}</span>
+                <span className="text-foreground font-semibold">{tier.coreSpeed.split(" ")[0]} {tier.coreSpeed.split(" ")[1]}</span>
               </div>
 
               {/* Slot Allocation Counter */}
               <div className="mt-1.5 space-y-1">
                 <div className="flex justify-between text-[9px] font-mono">
-                  <span className="text-zinc-500">Slots</span>
-                  <span className={tier.availableAllocations <= 2 ? "text-amber-400" : "text-emerald-400"}>
+                  <span className="text-muted-foreground">Slots</span>
+                  <span className={tier.availableAllocations <= 2 ? "text-warning" : "text-success"}>
                     {tier.availableAllocations}/{tier.totalAllocations} Left
                   </span>
                 </div>
-                <div className="h-1 w-full rounded-full bg-white/10 overflow-hidden">
+                <div className="h-1 w-full rounded-full bg-muted overflow-hidden">
                   <div
-                    className={cn("h-full rounded-full", tier.availableAllocations <= 2 ? "bg-amber-400" : "bg-emerald-400")}
+                    className={cn("h-full rounded-full", tier.availableAllocations <= 2 ? "bg-warning" : "bg-success")}
                     style={{ width: `${percentAvailable}%` }}
                   />
                 </div>
@@ -454,7 +454,7 @@ export default function PremiumGpuPage() {
                 <div
                   className={cn(
                     "w-full rounded-lg py-1 text-[10px] font-semibold text-center transition-all",
-                    isSelected ? "bg-indigo-600 text-white shadow-xs" : "bg-white/5 text-zinc-400 group-hover:text-zinc-200",
+                    isSelected ? "bg-primary text-primary-foreground shadow-xs" : "bg-muted text-muted-foreground group-hover:text-foreground",
                   )}
                 >
                   {isSelected ? "Selected" : "Choose"}
@@ -468,30 +468,30 @@ export default function PremiumGpuPage() {
       {/* ── 2. Lower Main Workspace Grid (Fit to Viewport) ── */}
       <div className="grid grid-cols-12 gap-3 flex-1 min-h-0">
         {/* Left Form: Configure & Launch (Col 7) */}
-        <div className="col-span-7 card p-4 flex flex-col justify-between border-indigo-500/30 bg-gradient-to-br from-black/80 via-black/90 to-indigo-950/20 backdrop-blur-xl">
-          <div className="flex items-center justify-between pb-3 border-b border-white/10 shrink-0">
+        <div className="col-span-7 card p-4 flex flex-col justify-between bg-card text-card-foreground border-border">
+          <div className="flex items-center justify-between pb-3 border-b border-border shrink-0">
             <div className="flex items-center gap-2">
-              <Zap className="h-4 w-4 text-indigo-400" />
+              <Zap className="h-4 w-4 text-primary" />
               <div>
-                <h2 className="text-xs font-bold text-white">Configure {activeTier.name} ({activeModeConfig.label})</h2>
-                <p className="text-[10px] text-zinc-400">{activeModeConfig.availabilityNote}</p>
+                <h2 className="text-xs font-bold text-foreground">Configure {activeTier.name} ({activeModeConfig.label})</h2>
+                <p className="text-[10px] text-muted-foreground">{activeModeConfig.availabilityNote}</p>
               </div>
             </div>
-            <span className="text-xs font-mono text-emerald-400 font-semibold shrink-0">
+            <span className="text-xs font-mono text-foreground font-semibold shrink-0">
               ${effectiveHourlyRate.toFixed(2)} / hr ({executionMode.toUpperCase()})
             </span>
           </div>
 
           <form onSubmit={startGpuRental} className="flex-1 flex flex-col justify-between py-2 space-y-3">
             {/* Duration Range (7h - 24h) */}
-            <div className="space-y-2 rounded-xl border border-white/10 bg-white/5 p-3">
+            <div className="space-y-2 rounded-xl border border-border bg-muted p-3">
               <div className="flex items-center justify-between text-xs">
-                <div className="flex items-center gap-1.5 text-white font-medium">
-                  <Clock className="h-3.5 w-3.5 text-indigo-400" />
-                  <span>Duration: <span className="font-mono text-indigo-300 font-bold">{durationHours} Hours</span></span>
-                  {durationHours === 24 && <span className="text-[10px] text-emerald-400 font-mono">(1 Full Day)</span>}
+                <div className="flex items-center gap-1.5 text-foreground font-medium">
+                  <Clock className="h-3.5 w-3.5 text-primary" />
+                  <span>Duration: <span className="font-mono text-primary font-bold">{durationHours} Hours</span></span>
+                  {durationHours === 24 && <span className="text-[10px] text-success font-mono">(1 Full Day)</span>}
                 </div>
-                <span className="text-[10px] font-mono text-zinc-400">Min 7h · Max 24h</span>
+                <span className="text-[10px] font-mono text-muted-foreground">Min 7h · Max 24h</span>
               </div>
 
               <input
@@ -501,7 +501,7 @@ export default function PremiumGpuPage() {
                 step={1}
                 value={durationHours}
                 onChange={(e) => setDurationHours(Number(e.target.value))}
-                className="w-full h-1.5 bg-white/10 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+                className="w-full h-1.5 bg-background rounded-lg appearance-none cursor-pointer accent-primary"
               />
 
               <div className="grid grid-cols-4 gap-1.5">
@@ -518,8 +518,8 @@ export default function PremiumGpuPage() {
                     className={cn(
                       "py-1 text-[10px] font-mono rounded-lg border transition-all text-center",
                       durationHours === p.val
-                        ? "border-indigo-500 bg-indigo-500/20 text-white font-bold"
-                        : "border-white/5 bg-black/40 text-zinc-400 hover:text-white",
+                        ? "border-primary bg-primary/10 text-foreground font-bold"
+                        : "border-border bg-card text-muted-foreground hover:text-foreground",
                     )}
                   >
                     {p.label}
@@ -531,7 +531,7 @@ export default function PremiumGpuPage() {
             {/* Model Selector & LoRA URI */}
             <div className="grid grid-cols-2 gap-2 text-xs">
               <div>
-                <label className="block text-[11px] text-zinc-300 mb-1">Preloaded Model Pipeline</label>
+                <label className="block text-[11px] text-muted-foreground mb-1">Preloaded Model Pipeline</label>
                 <select
                   value={selectedModel}
                   onChange={(e) => setSelectedModel(e.target.value)}
@@ -546,7 +546,7 @@ export default function PremiumGpuPage() {
               </div>
 
               <div>
-                <label className="block text-[11px] text-zinc-300 mb-1">Execution SLA Guarantee</label>
+                <label className="block text-[11px] text-muted-foreground mb-1">Execution SLA Guarantee</label>
                 <input
                   type="text"
                   readOnly
@@ -557,17 +557,17 @@ export default function PremiumGpuPage() {
             </div>
 
             {/* Total Cost & Launch Button */}
-            <div className="flex items-center justify-between pt-2 border-t border-white/10 shrink-0">
+            <div className="flex items-center justify-between pt-2 border-t border-border shrink-0">
               <div>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-[11px] text-zinc-400">Total ({durationHours}h):</span>
-                  <span className="font-mono font-bold text-emerald-400 text-base">${totalCost} USD</span>
+                  <span className="text-[11px] text-muted-foreground">Total ({durationHours}h):</span>
+                  <span className="font-mono font-bold text-foreground text-base">${totalCost} USD</span>
                   {executionMode !== "on-demand" && Number(savings) > 0 && (
-                    <span className="text-[11px] text-zinc-500 line-through font-mono">${standardCost}</span>
+                    <span className="text-[11px] text-muted-foreground line-through font-mono">${standardCost}</span>
                   )}
                 </div>
                 {executionMode !== "on-demand" && Number(savings) > 0 && (
-                  <p className="text-[10px] text-emerald-400 font-mono">
+                  <p className="text-[10px] text-success font-mono">
                     Save ${savings} USD with {activeModeConfig.label}
                   </p>
                 )}
@@ -576,7 +576,7 @@ export default function PremiumGpuPage() {
               <button
                 type="submit"
                 disabled={starting || activeTier.availableAllocations <= 0}
-                className="btn-primary flex items-center gap-2 px-5 py-2 text-xs rounded-xl shadow-md shadow-indigo-600/30"
+                className="btn-primary flex items-center gap-2 px-5 py-2 text-xs rounded-xl"
               >
                 {starting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
                 <span>
@@ -588,16 +588,16 @@ export default function PremiumGpuPage() {
         </div>
 
         {/* Right Panel: Active Nodes & Hardware Specs (Col 5) */}
-        <div className="col-span-5 card p-4 flex flex-col justify-between border-white/10 bg-black/40 backdrop-blur-xl">
+        <div className="col-span-5 card p-4 flex flex-col justify-between border-border bg-card text-card-foreground">
           {/* Tab Switcher for Right Panel */}
-          <div className="flex items-center justify-between pb-2 border-b border-white/10 shrink-0">
+          <div className="flex items-center justify-between pb-2 border-b border-border shrink-0">
             <div className="flex items-center gap-1.5">
               <button
                 type="button"
                 onClick={() => setActiveTab("configure")}
                 className={cn(
                   "px-2.5 py-1 text-xs font-semibold rounded-lg transition-colors",
-                  activeTab === "configure" ? "bg-white/10 text-white" : "text-zinc-400 hover:text-white",
+                  activeTab === "configure" ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground",
                 )}
               >
                 Pricing & SLAs
@@ -607,11 +607,11 @@ export default function PremiumGpuPage() {
                 onClick={() => setActiveTab("active")}
                 className={cn(
                   "px-2.5 py-1 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1",
-                  activeTab === "active" ? "bg-white/10 text-white" : "text-zinc-400 hover:text-white",
+                  activeTab === "active" ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground",
                 )}
               >
                 <span>Active Nodes</span>
-                <span className="rounded-full bg-emerald-500/20 px-1.5 text-[9px] font-mono text-emerald-300">
+                <span className="rounded-full bg-success-soft px-1.5 text-[9px] font-mono text-success">
                   {rentals.length}
                 </span>
               </button>
@@ -620,7 +620,7 @@ export default function PremiumGpuPage() {
             <button
               type="button"
               onClick={() => setInspectModalTier(activeTier)}
-              className="text-[11px] text-indigo-400 hover:text-indigo-300 flex items-center gap-1 font-medium"
+              className="text-[11px] text-primary hover:text-primary flex items-center gap-1 font-medium"
             >
               <span>Full Details</span>
               <ArrowUpRight className="h-3 w-3" />
@@ -630,31 +630,31 @@ export default function PremiumGpuPage() {
           {activeTab === "configure" ? (
             <div className="flex-1 flex flex-col justify-between py-2 text-xs space-y-2">
               <div className="space-y-1.5 font-mono">
-                <div className="flex justify-between py-1 border-b border-white/5">
-                  <span className="text-zinc-400 font-sans">On-Demand Dedicated</span>
-                  <span className="text-zinc-200">${activeTier.onDemandHourly.toFixed(2)}/hr (Instant)</span>
+                <div className="flex justify-between py-1 border-b border-border">
+                  <span className="text-muted-foreground font-sans">On-Demand Dedicated</span>
+                  <span className="text-foreground">${activeTier.onDemandHourly.toFixed(2)}/hr (Instant)</span>
                 </div>
-                <div className="flex justify-between py-1 border-b border-white/5">
-                  <span className="text-zinc-400 font-sans">Off-Peak (10 PM–8 AM UK)</span>
-                  <span className="text-emerald-400 font-bold">${activeTier.offPeakHourly.toFixed(2)}/hr</span>
+                <div className="flex justify-between py-1 border-b border-border">
+                  <span className="text-muted-foreground font-sans">Off-Peak (10 PM–8 AM UK)</span>
+                  <span className="text-success font-bold">${activeTier.offPeakHourly.toFixed(2)}/hr</span>
                 </div>
-                <div className="flex justify-between py-1 border-b border-white/5">
-                  <span className="text-zinc-400 font-sans">Flexible Batch Queue</span>
-                  <span className="text-amber-300 font-bold">${activeTier.batchHourly.toFixed(2)}/hr (Async)</span>
+                <div className="flex justify-between py-1 border-b border-border">
+                  <span className="text-muted-foreground font-sans">Flexible Batch Queue</span>
+                  <span className="text-warning font-bold">${activeTier.batchHourly.toFixed(2)}/hr (Async)</span>
                 </div>
-                <div className="flex justify-between py-1 border-b border-white/5">
-                  <span className="text-zinc-400 font-sans">Flux.1 Dev Latency</span>
-                  <span className="text-indigo-300 font-bold">{activeTier.benchmarks.fluxDev}</span>
+                <div className="flex justify-between py-1 border-b border-border">
+                  <span className="text-muted-foreground font-sans">Flux.1 Dev Latency</span>
+                  <span className="text-primary font-bold">{activeTier.benchmarks.fluxDev}</span>
                 </div>
               </div>
 
               {/* Policy Explanation Box */}
-              <div className="rounded-xl bg-indigo-500/10 border border-indigo-500/20 p-2.5 text-[11px] text-zinc-300">
-                <p className="font-semibold text-indigo-300 flex items-center gap-1">
-                  <ShieldCheck className="h-3.5 w-3.5 text-indigo-400" />
+              <div className="rounded-xl bg-primary/10 border border-primary/20 p-2.5 text-[11px] text-muted-foreground">
+                <p className="font-semibold text-primary flex items-center gap-1">
+                  <ShieldCheck className="h-3.5 w-3.5 text-primary" />
                   <span>Workload & Interruption Transparency</span>
                 </p>
-                <p className="text-zinc-400 mt-0.5 leading-relaxed text-[10px]">
+                <p className="text-muted-foreground mt-0.5 leading-relaxed text-[10px]">
                   • <strong>On-Demand & Off-Peak</strong>: 100% dedicated, non-interrupted instances.<br/>
                   • <strong>Batch Queue</strong>: Jobs process asynchronously when capacity frees up.
                 </p>
@@ -662,15 +662,24 @@ export default function PremiumGpuPage() {
             </div>
           ) : (
             <div className="flex-1 flex flex-col justify-between py-1 overflow-y-auto space-y-2">
+              {rentals.length === 0 ? (
+                <div className="flex flex-1 flex-col items-center justify-center rounded-xl border border-border bg-muted px-4 py-8 text-center">
+                  <Activity className="h-8 w-8 text-muted-foreground" />
+                  <p className="mt-3 text-sm font-medium text-foreground">No active nodes</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Rent a GPU from Configure to see it here.
+                  </p>
+                </div>
+              ) : null}
               {rentals.map((r) => (
-                <div key={r.id} className="rounded-xl border border-white/10 bg-white/5 p-2.5 flex items-center justify-between">
+                <div key={r.id} className="rounded-xl border border-border bg-muted p-2.5 flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-400">
+                    <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-success-soft text-success">
                       <Activity className="h-3.5 w-3.5" />
                     </div>
                     <div>
-                      <p className="text-xs font-semibold text-white">{r.gpuTierName || r.model}</p>
-                      <p className="text-[10px] text-zinc-400 font-mono">${r.hourlyRate.toFixed(2)}/hr · {r.hours}h ({r.executionMode})</p>
+                      <p className="text-xs font-semibold text-foreground">{r.gpuTierName || r.model}</p>
+                      <p className="text-[10px] text-muted-foreground font-mono">${r.hourlyRate.toFixed(2)}/hr · {r.hours}h ({r.executionMode})</p>
                     </div>
                   </div>
 
@@ -682,7 +691,7 @@ export default function PremiumGpuPage() {
                     <button
                       type="button"
                       onClick={() => stopGpuRental(r.id)}
-                      className="rounded-lg p-1 text-zinc-500 hover:text-red-400 hover:bg-white/10"
+                      className="rounded-lg p-1 text-muted-foreground hover:text-destructive hover:bg-muted"
                     >
                       <Square className="h-3 w-3" />
                     </button>
@@ -698,35 +707,34 @@ export default function PremiumGpuPage() {
       {inspectModalTier && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div
-            className="absolute inset-0 bg-black/80 backdrop-blur-md"
+            className="absolute inset-0 bg-black/70 backdrop-blur-md"
             onClick={() => setInspectModalTier(null)}
           />
 
           <div
-            className="relative z-10 w-full max-w-lg rounded-2xl border border-white/20 p-6 shadow-2xl backdrop-blur-2xl space-y-5 animate-in fade-in zoom-in-95 duration-200"
-            style={{ background: "rgba(14, 16, 26, 0.98)" }}
+            className="relative z-10 w-full max-w-lg rounded-2xl border border-border bg-card text-card-foreground p-6 shadow-xl space-y-5 animate-in fade-in zoom-in-95 duration-200"
           >
             {/* Modal Header */}
-            <div className="flex items-center justify-between pb-3 border-b border-white/10">
+            <div className="flex items-center justify-between pb-3 border-b border-border">
               <div className="flex items-center gap-2.5">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20">
                   <Cpu className="h-5 w-5" />
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <h3 className="text-base font-bold text-white">{inspectModalTier.name}</h3>
-                    <span className="rounded-md bg-indigo-500/20 px-2 py-0.5 text-[10px] font-mono font-bold text-indigo-300">
+                    <h3 className="text-base font-bold text-foreground">{inspectModalTier.name}</h3>
+                    <span className="rounded-md bg-primary/10 px-2 py-0.5 text-[10px] font-mono font-bold text-primary">
                       {inspectModalTier.classEquivalent}
                     </span>
                   </div>
-                  <p className="text-xs text-emerald-400 font-mono font-semibold">{inspectModalTier.vram}</p>
+                  <p className="text-xs text-success font-mono font-semibold">{inspectModalTier.vram}</p>
                 </div>
               </div>
 
               <button
                 type="button"
                 onClick={() => setInspectModalTier(null)}
-                className="rounded-full p-1 text-zinc-400 hover:text-white hover:bg-white/10 transition-colors"
+                className="rounded-full p-1 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -734,52 +742,52 @@ export default function PremiumGpuPage() {
 
             {/* Pricing by Execution Mode */}
             <div className="space-y-2">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-400 font-mono">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground font-mono">
                 Pricing by Compute Execution Mode
               </h4>
               <div className="grid grid-cols-3 gap-2 text-xs font-mono">
-                <div className="rounded-xl bg-white/5 p-2.5 border border-white/5">
-                  <span className="text-zinc-500 text-[10px] block">⚡ On-Demand</span>
-                  <span className="text-white font-bold">${inspectModalTier.onDemandHourly.toFixed(2)}/hr</span>
-                  <span className="text-[9px] text-zinc-400 block mt-0.5">Instant dedicated</span>
+                <div className="rounded-xl bg-muted p-2.5 border border-border">
+                  <span className="text-muted-foreground text-[10px] block">⚡ On-Demand</span>
+                  <span className="text-foreground font-bold">${inspectModalTier.onDemandHourly.toFixed(2)}/hr</span>
+                  <span className="text-[9px] text-muted-foreground block mt-0.5">Instant dedicated</span>
                 </div>
-                <div className="rounded-xl bg-indigo-500/10 p-2.5 border border-indigo-500/30">
-                  <span className="text-indigo-300 text-[10px] block">🌙 Off-Peak (10 PM–8 AM)</span>
-                  <span className="text-emerald-400 font-bold">${inspectModalTier.offPeakHourly.toFixed(2)}/hr</span>
-                  <span className="text-[9px] text-emerald-300 block mt-0.5">Uninterrupted</span>
+                <div className="rounded-xl bg-primary/10 p-2.5 border border-primary/20">
+                  <span className="text-primary text-[10px] block">🌙 Off-Peak (10 PM–8 AM)</span>
+                  <span className="text-success font-bold">${inspectModalTier.offPeakHourly.toFixed(2)}/hr</span>
+                  <span className="text-[9px] text-success block mt-0.5">Uninterrupted</span>
                 </div>
-                <div className="rounded-xl bg-amber-500/10 p-2.5 border border-amber-500/30">
-                  <span className="text-amber-300 text-[10px] block">📦 Batch Queue</span>
-                  <span className="text-amber-300 font-bold">${inspectModalTier.batchHourly.toFixed(2)}/hr</span>
-                  <span className="text-[9px] text-amber-400 block mt-0.5">Async throughput</span>
+                <div className="rounded-xl bg-warning-soft p-2.5 border border-warning/30">
+                  <span className="text-warning text-[10px] block">📦 Batch Queue</span>
+                  <span className="text-warning font-bold">${inspectModalTier.batchHourly.toFixed(2)}/hr</span>
+                  <span className="text-[9px] text-warning block mt-0.5">Async throughput</span>
                 </div>
               </div>
             </div>
 
             {/* Inference Speed Benchmarks */}
             <div className="space-y-2">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-400 font-mono flex items-center gap-1.5">
-                <Gauge className="h-3.5 w-3.5 text-indigo-400" />
+              <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground font-mono flex items-center gap-1.5">
+                <Gauge className="h-3.5 w-3.5 text-primary" />
                 <span>Live Inference Benchmarks</span>
               </h4>
               <div className="grid grid-cols-3 gap-2 text-center text-xs">
-                <div className="rounded-xl bg-indigo-500/10 border border-indigo-500/20 p-2">
-                  <span className="text-[10px] text-zinc-400 block">Flux.1 Dev</span>
-                  <span className="font-mono text-indigo-300 font-bold mt-0.5 block">{inspectModalTier.benchmarks.fluxDev}</span>
+                <div className="rounded-xl bg-primary/10 border border-primary/20 p-2">
+                  <span className="text-[10px] text-muted-foreground block">Flux.1 Dev</span>
+                  <span className="font-mono text-primary font-bold mt-0.5 block">{inspectModalTier.benchmarks.fluxDev}</span>
                 </div>
-                <div className="rounded-xl bg-indigo-500/10 border border-indigo-500/20 p-2">
-                  <span className="text-[10px] text-zinc-400 block">Google Imagen 3</span>
-                  <span className="font-mono text-indigo-300 font-bold mt-0.5 block">{inspectModalTier.benchmarks.imagen3}</span>
+                <div className="rounded-xl bg-primary/10 border border-primary/20 p-2">
+                  <span className="text-[10px] text-muted-foreground block">Google Imagen 3</span>
+                  <span className="font-mono text-primary font-bold mt-0.5 block">{inspectModalTier.benchmarks.imagen3}</span>
                 </div>
-                <div className="rounded-xl bg-indigo-500/10 border border-indigo-500/20 p-2">
-                  <span className="text-[10px] text-zinc-400 block">Veo 2 Video</span>
-                  <span className="font-mono text-indigo-300 font-bold mt-0.5 block">{inspectModalTier.benchmarks.veoVideo}</span>
+                <div className="rounded-xl bg-primary/10 border border-primary/20 p-2">
+                  <span className="text-[10px] text-muted-foreground block">Veo 2 Video</span>
+                  <span className="font-mono text-primary font-bold mt-0.5 block">{inspectModalTier.benchmarks.veoVideo}</span>
                 </div>
               </div>
             </div>
 
             {/* Action */}
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-white/10">
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-border">
               <button
                 type="button"
                 onClick={() => setInspectModalTier(null)}

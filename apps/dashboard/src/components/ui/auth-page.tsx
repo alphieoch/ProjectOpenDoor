@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Button } from './button';
+import { Button, buttonVariants } from './button';
 import {
 	AtSignIcon,
 	DoorOpen,
@@ -228,21 +228,22 @@ export function AuthPage() {
 				{/* Mobile theme toggle */}
 				<button
 					onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-					className="absolute top-4 right-4 rounded-lg p-2 text-zinc-500 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800 lg:hidden"
+					className="absolute top-4 right-4 rounded-lg p-2 min-h-[44px] min-w-[44px] text-muted-foreground hover:bg-accent lg:hidden"
+					aria-label="Toggle theme"
 				>
 					{theme === 'dark' ? <Sun className="size-4" /> : <Moon className="size-4" />}
 				</button>
 
-				<Button
-					variant="ghost"
-					className="absolute top-7 left-5 !bg-transparent !text-zinc-900 hover:!bg-zinc-100 dark:!text-white dark:hover:!bg-white/10"
-					asChild
+				<Link
+					href="/"
+					className={cn(
+						buttonVariants({ variant: "ghost" }),
+						"absolute top-7 left-5 !bg-transparent !text-zinc-900 hover:!bg-zinc-100 dark:!text-white dark:hover:!bg-white/10",
+					)}
 				>
-					<Link href="/">
-						<ChevronLeftIcon className="size-4 me-2" />
-						Home
-					</Link>
-				</Button>
+					<ChevronLeftIcon className="size-4 me-2" />
+					Home
+				</Link>
 
 				<div className="mx-auto w-full max-w-sm space-y-4">
 					<Link href="/" className="flex items-center gap-2 transition-opacity hover:opacity-80 lg:hidden">
@@ -256,7 +257,7 @@ export function AuthPage() {
 								{SEGMENT_LABELS[segment]}
 							</span>
 						)}
-						<h1 className="text-2xl font-bold tracking-wide text-zinc-900 dark:text-white">
+						<h1 className="font-garamond text-2xl font-semibold tracking-[-0.03em] text-[#181818] dark:text-[#f2f2f2]">
 							{mode === 'signup' ? 'Create your account' : 'Welcome back'}
 						</h1>
 						<p className="text-base text-zinc-500 dark:text-zinc-400">
@@ -275,7 +276,7 @@ export function AuthPage() {
 					)}
 
 					{(error || ssoErrorMessage) && (
-						<div className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600 dark:bg-red-950/30 dark:text-red-400">
+						<div className="rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-500">
 							{error || ssoErrorMessage}
 						</div>
 					)}
@@ -285,7 +286,7 @@ export function AuthPage() {
 						<Button
 							type="button"
 							size="lg"
-							className="w-full !border-zinc-900 !bg-transparent !text-zinc-900 hover:!bg-zinc-100 dark:!border-white dark:!text-white dark:hover:!bg-white/10"
+							className="w-full h-12 rounded-full !border-gray-300 !bg-white !text-[#3c4043] hover:!bg-gray-50"
 							variant="outline"
 							onClick={() => continueWithOAuth('google')}
 						>
@@ -295,8 +296,7 @@ export function AuthPage() {
 						<Button
 							type="button"
 							size="lg"
-							className="w-full !border-zinc-900 !bg-transparent !text-zinc-900 hover:!bg-zinc-100 dark:!border-white dark:!text-white dark:hover:!bg-white/10"
-							variant="outline"
+							className="w-full h-12 rounded-full !border-0 !bg-black !text-white hover:!bg-black/90"
 							onClick={() => continueWithOAuth('github')}
 						>
 							<GithubIcon className="size-4 me-2" />
@@ -334,10 +334,15 @@ export function AuthPage() {
 
 					{mode === 'password' && (
 						<form onSubmit={handleLogin} className="space-y-2">
-							<div className="relative">
+							<motion.div
+								className="relative"
+								initial={{ y: 20, opacity: 0 }}
+								animate={{ y: 0, opacity: 1 }}
+								transition={{ type: "spring", damping: 25, stiffness: 300, delay: 0 }}
+							>
 								<Input
 									placeholder="you@company.com"
-									className="peer ps-9 !bg-white !border-zinc-300 !text-zinc-900 placeholder:!text-zinc-400 dark:!bg-zinc-900 dark:!border-zinc-700 dark:!text-white dark:placeholder:!text-zinc-500"
+									className="peer h-12 rounded-full border-0 bg-[#181818]/10 ps-12 text-[#181818] placeholder:text-[#181818]/50 auth-focus dark:bg-white/10 dark:text-[#f2f2f2] dark:placeholder:text-[#f2f2f2]/50"
 									type="email"
 									value={email}
 									onChange={(e) => setEmail(e.target.value)}
@@ -346,11 +351,16 @@ export function AuthPage() {
 								<div className="pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center ps-3 text-zinc-400 peer-disabled:opacity-50">
 									<AtSignIcon className="size-4" aria-hidden="true" />
 								</div>
-							</div>
-							<div className="relative">
+							</motion.div>
+							<motion.div
+								className="relative"
+								initial={{ y: 20, opacity: 0 }}
+								animate={{ y: 0, opacity: 1 }}
+								transition={{ type: "spring", damping: 25, stiffness: 300, delay: 0.1 }}
+							>
 								<Input
 									placeholder="Password"
-									className="peer ps-9 !bg-white !border-zinc-300 !text-zinc-900 placeholder:!text-zinc-400 dark:!bg-zinc-900 dark:!border-zinc-700 dark:!text-white dark:placeholder:!text-zinc-500"
+									className="peer h-12 rounded-full border-0 bg-[#181818]/10 ps-12 text-[#181818] placeholder:text-[#181818]/50 auth-focus dark:bg-white/10 dark:text-[#f2f2f2] dark:placeholder:text-[#f2f2f2]/50"
 									type="password"
 									value={password}
 									onChange={(e) => setPassword(e.target.value)}
@@ -359,16 +369,24 @@ export function AuthPage() {
 								<div className="pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center ps-3 text-zinc-400 peer-disabled:opacity-50">
 									<Shield className="size-4" aria-hidden="true" />
 								</div>
-							</div>
+							</motion.div>
 
+							<motion.div
+								initial={{ y: 20, opacity: 0 }}
+								animate={{ y: 0, opacity: 1 }}
+								transition={{ type: "spring", damping: 25, stiffness: 300, delay: 0.2 }}
+							>
 							<Button
 								type="submit"
-								className="w-full !bg-zinc-900 !text-white hover:!bg-zinc-800 dark:!bg-white dark:!text-black dark:hover:!bg-zinc-200"
+								className="w-full h-12 rounded-full !bg-[#181818] !text-white hover:!bg-[#181818]/90 dark:!bg-[#f2f2f2] dark:!text-[#181818] active:scale-[0.98]"
+								size="mobile"
+								isLoading={loading}
 								disabled={loading}
 							>
 								<LogIn className="me-2 size-4" />
 								{loading ? 'Signing in…' : 'Continue With Email'}
 							</Button>
+							</motion.div>
 							<p className="text-center text-sm text-zinc-500 dark:text-zinc-400">
 								No account?{' '}
 								<button
@@ -387,7 +405,7 @@ export function AuthPage() {
 							<div className="relative">
 								<Input
 									placeholder="Full Name"
-									className="peer ps-9 !bg-white !border-zinc-300 !text-zinc-900 placeholder:!text-zinc-400 dark:!bg-zinc-900 dark:!border-zinc-700 dark:!text-white dark:placeholder:!text-zinc-500"
+									className="peer h-12 rounded-full border-0 bg-[#181818]/10 ps-12 text-[#181818] placeholder:text-[#181818]/50 auth-focus dark:bg-white/10 dark:text-[#f2f2f2] dark:placeholder:text-[#f2f2f2]/50"
 									type="text"
 									value={name}
 									onChange={(e) => setName(e.target.value)}
@@ -400,7 +418,7 @@ export function AuthPage() {
 							<div className="relative">
 								<Input
 									placeholder="Organization (optional)"
-									className="peer ps-9 !bg-white !border-zinc-300 !text-zinc-900 placeholder:!text-zinc-400 dark:!bg-zinc-900 dark:!border-zinc-700 dark:!text-white dark:placeholder:!text-zinc-500"
+									className="peer h-12 rounded-full border-0 bg-[#181818]/10 ps-12 text-[#181818] placeholder:text-[#181818]/50 auth-focus dark:bg-white/10 dark:text-[#f2f2f2] dark:placeholder:text-[#f2f2f2]/50"
 									type="text"
 									value={orgName}
 									onChange={(e) => setOrgName(e.target.value)}
@@ -412,7 +430,7 @@ export function AuthPage() {
 							<div className="relative">
 								<Input
 									placeholder="you@company.com"
-									className="peer ps-9 !bg-white !border-zinc-300 !text-zinc-900 placeholder:!text-zinc-400 dark:!bg-zinc-900 dark:!border-zinc-700 dark:!text-white dark:placeholder:!text-zinc-500"
+									className="peer h-12 rounded-full border-0 bg-[#181818]/10 ps-12 text-[#181818] placeholder:text-[#181818]/50 auth-focus dark:bg-white/10 dark:text-[#f2f2f2] dark:placeholder:text-[#f2f2f2]/50"
 									type="email"
 									value={email}
 									onChange={(e) => setEmail(e.target.value)}
@@ -425,7 +443,7 @@ export function AuthPage() {
 							<div className="relative">
 								<Input
 									placeholder="Password (min 10 chars)"
-									className="peer ps-9 !bg-white !border-zinc-300 !text-zinc-900 placeholder:!text-zinc-400 dark:!bg-zinc-900 dark:!border-zinc-700 dark:!text-white dark:placeholder:!text-zinc-500"
+									className="peer h-12 rounded-full border-0 bg-[#181818]/10 ps-12 text-[#181818] placeholder:text-[#181818]/50 auth-focus dark:bg-white/10 dark:text-[#f2f2f2] dark:placeholder:text-[#f2f2f2]/50"
 									type="password"
 									value={password}
 									onChange={(e) => setPassword(e.target.value)}
@@ -439,7 +457,8 @@ export function AuthPage() {
 
 							<Button
 								type="submit"
-								className="w-full !bg-zinc-900 !text-white hover:!bg-zinc-800 dark:!bg-white dark:!text-black dark:hover:!bg-zinc-200"
+								className="w-full h-12 rounded-full !bg-[#181818] !text-white hover:!bg-[#181818]/90 dark:!bg-[#f2f2f2] dark:!text-[#181818]"
+								size="mobile"
 								disabled={loading}
 							>
 								<UserPlus className="me-2 size-4" />
@@ -463,7 +482,7 @@ export function AuthPage() {
 							<div className="relative">
 								<Input
 									placeholder="Organization Slug"
-									className="peer ps-9 !bg-white !border-zinc-300 !text-zinc-900 placeholder:!text-zinc-400 dark:!bg-zinc-900 dark:!border-zinc-700 dark:!text-white dark:placeholder:!text-zinc-500"
+									className="peer h-12 rounded-full border-0 bg-[#181818]/10 ps-12 text-[#181818] placeholder:text-[#181818]/50 auth-focus dark:bg-white/10 dark:text-[#f2f2f2] dark:placeholder:text-[#f2f2f2]/50"
 									type="text"
 									value={orgSlug}
 									onChange={(e) => setOrgSlug(e.target.value)}
@@ -478,7 +497,8 @@ export function AuthPage() {
 							</p>
 							<Button
 								type="submit"
-								className="w-full !bg-zinc-900 !text-white hover:!bg-zinc-800 dark:!bg-white dark:!text-black dark:hover:!bg-zinc-200"
+								className="w-full h-12 rounded-full !bg-[#181818] !text-white hover:!bg-[#181818]/90 dark:!bg-[#f2f2f2] dark:!text-[#181818]"
+								size="mobile"
 								disabled={ssoLoading}
 							>
 								<Shield className="me-2 size-4" />

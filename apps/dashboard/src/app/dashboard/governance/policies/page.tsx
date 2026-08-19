@@ -37,13 +37,13 @@ const ACTION_STYLE: Record<string, { bg: string; color: string; label: string }>
 
 const DATA_CLASS_STYLE: Record<string, { bg: string; color: string }> = {
   public:       { bg: "#E9EBF2", color: "#43474E" },
-  internal:     { bg: "#D3E4FD", color: "#1A73E8" },
+  internal:     { bg: "hsl(221 83% 97%)", color: "#0F172A" },
   confidential: { bg: "#FFEFC2", color: "#7A5700" },
   restricted:   { bg: "#F9DEDC", color: "#B3261E" },
 };
 
 const SECTOR_STYLE: Record<string, { bg: string; color: string; label: string }> = {
-  legal:      { bg: "#D3E4FD", color: "#1A73E8", label: "Legal" },
+  legal:      { bg: "hsl(221 83% 97%)", color: "#0F172A", label: "Legal" },
   finance:    { bg: "#C8EDD9", color: "#1E6E4F", label: "Finance" },
   property:   { bg: "#FFEFC2", color: "#7A5700", label: "Property" },
   healthcare: { bg: "#F9DEDC", color: "#B3261E", label: "Healthcare" },
@@ -60,7 +60,7 @@ const SECTOR_STYLE: Record<string, { bg: string; color: string; label: string }>
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
 function ActionBadge({ action }: { action: string }) {
-  const s = ACTION_STYLE[action] ?? { bg: "var(--paper-3)", color: "var(--ink-2)", label: action };
+  const s = ACTION_STYLE[action] ?? { bg: "hsl(var(--accent))", color: "hsl(var(--muted-foreground))", label: action };
   return (
     <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium"
       style={{ background: s.bg, color: s.color }}>
@@ -70,7 +70,7 @@ function ActionBadge({ action }: { action: string }) {
 }
 
 function DataClassBadge({ cls }: { cls: string }) {
-  const s = DATA_CLASS_STYLE[cls] ?? { bg: "var(--paper-3)", color: "var(--ink-2)" };
+  const s = DATA_CLASS_STYLE[cls] ?? { bg: "hsl(var(--accent))", color: "hsl(var(--muted-foreground))" };
   return (
     <span className="inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium capitalize"
       style={{ background: s.bg, color: s.color }}>
@@ -86,7 +86,7 @@ function SourceBadge({ metadata }: { metadata: Record<string, unknown> | null })
   if (source === "baseline_defaults") {
     return (
       <span className="inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium"
-        style={{ background: "var(--paper-3)", color: "var(--ink-4)" }}>
+        style={{ background: "hsl(var(--accent))", color: "hsl(var(--muted-foreground))" }}>
         Baseline
       </span>
     );
@@ -159,7 +159,7 @@ function PolicyModal({
       >
         {/* Modal header */}
         <div className="flex items-center justify-between border-b px-6 py-4"
-          style={{ borderColor: "var(--line-soft)" }}>
+          style={{ borderColor: "hsl(var(--border))" }}>
           <h2 className="section-title">{isEdit ? "Edit policy" : "New policy"}</h2>
           <button type="button" onClick={onClose} className="md-icon-btn">
             <X className="h-4 w-4" />
@@ -169,7 +169,7 @@ function PolicyModal({
         <div className="max-h-[70vh] overflow-y-auto p-6 space-y-4">
           {/* Name */}
           <div>
-            <label className="mb-1.5 block text-sm font-medium" style={{ color: "var(--ink)" }}>
+            <label className="mb-1.5 block text-sm font-medium" style={{ color: "hsl(var(--foreground))" }}>
               Name <span style={{ color: "var(--red)" }}>*</span>
             </label>
             <input required value={form.name ?? ""} onChange={(e) => set("name", e.target.value)}
@@ -178,7 +178,7 @@ function PolicyModal({
 
           {/* Description */}
           <div>
-            <label className="mb-1.5 block text-sm font-medium" style={{ color: "var(--ink)" }}>Description</label>
+            <label className="mb-1.5 block text-sm font-medium" style={{ color: "hsl(var(--foreground))" }}>Description</label>
             <textarea value={form.description ?? ""} onChange={(e) => set("description", e.target.value)}
               className="input w-full" rows={2} placeholder="Optional — explain when this policy applies" />
           </div>
@@ -186,7 +186,7 @@ function PolicyModal({
           <div className="grid grid-cols-2 gap-4">
             {/* Action */}
             <div>
-              <label className="mb-1.5 block text-sm font-medium" style={{ color: "var(--ink)" }}>Action</label>
+              <label className="mb-1.5 block text-sm font-medium" style={{ color: "hsl(var(--foreground))" }}>Action</label>
               <select value={form.action} onChange={(e) => set("action", e.target.value)} className="input w-full">
                 <option value="allow">Allow</option>
                 <option value="deny">Deny</option>
@@ -197,7 +197,7 @@ function PolicyModal({
 
             {/* Data class */}
             <div>
-              <label className="mb-1.5 block text-sm font-medium" style={{ color: "var(--ink)" }}>Data class</label>
+              <label className="mb-1.5 block text-sm font-medium" style={{ color: "hsl(var(--foreground))" }}>Data class</label>
               <select value={form.dataClass} onChange={(e) => set("dataClass", e.target.value)} className="input w-full">
                 {["public", "internal", "confidential", "restricted"].map((v) => (
                   <option key={v} value={v} className="capitalize">{v}</option>
@@ -207,23 +207,23 @@ function PolicyModal({
 
             {/* Model pattern */}
             <div>
-              <label className="mb-1.5 block text-sm font-medium" style={{ color: "var(--ink)" }}>Model pattern</label>
+              <label className="mb-1.5 block text-sm font-medium" style={{ color: "hsl(var(--foreground))" }}>Model pattern</label>
               <input value={form.modelIdPattern ?? ""} onChange={(e) => set("modelIdPattern", e.target.value)}
                 className="input w-full font-mono text-sm" placeholder="gpt-* or % for all" />
-              <p className="mt-1 text-[11px]" style={{ color: "var(--ink-4)" }}>% = any model, gpt-* = all GPT models</p>
+              <p className="mt-1 text-[11px]" style={{ color: "hsl(var(--muted-foreground))" }}>% = any model, gpt-* = all GPT models</p>
             </div>
 
             {/* Priority */}
             <div>
-              <label className="mb-1.5 block text-sm font-medium" style={{ color: "var(--ink)" }}>Priority</label>
+              <label className="mb-1.5 block text-sm font-medium" style={{ color: "hsl(var(--foreground))" }}>Priority</label>
               <input type="number" value={form.priority ?? 100} onChange={(e) => set("priority", parseInt(e.target.value))}
                 className="input w-full" min={1} max={999} />
-              <p className="mt-1 text-[11px]" style={{ color: "var(--ink-4)" }}>Lower number = evaluated first</p>
+              <p className="mt-1 text-[11px]" style={{ color: "hsl(var(--muted-foreground))" }}>Lower number = evaluated first</p>
             </div>
 
             {/* User role pattern */}
             <div>
-              <label className="mb-1.5 block text-sm font-medium" style={{ color: "var(--ink)" }}>User role pattern</label>
+              <label className="mb-1.5 block text-sm font-medium" style={{ color: "hsl(var(--foreground))" }}>User role pattern</label>
               <input value={form.userRolePattern ?? ""} onChange={(e) => set("userRolePattern", e.target.value)}
                 className="input w-full font-mono text-sm" placeholder="admin|compliance (optional)" />
             </div>
@@ -231,7 +231,7 @@ function PolicyModal({
             {/* Fallback model */}
             {form.action === "route_fallback" && (
               <div>
-                <label className="mb-1.5 block text-sm font-medium" style={{ color: "var(--ink)" }}>Fallback model ID</label>
+                <label className="mb-1.5 block text-sm font-medium" style={{ color: "hsl(var(--foreground))" }}>Fallback model ID</label>
                 <input value={form.fallbackModelId ?? ""} onChange={(e) => set("fallbackModelId", e.target.value)}
                   className="input w-full font-mono text-sm" placeholder="gpt-4o-mini" />
               </div>
@@ -240,24 +240,24 @@ function PolicyModal({
 
           {/* Toggles */}
           <div className="flex flex-wrap items-center gap-6 rounded-xl px-4 py-3"
-            style={{ background: "var(--paper-3)" }}>
+            style={{ background: "hsl(var(--accent))" }}>
             <label className="flex cursor-pointer items-center gap-2 text-sm">
               <input type="checkbox" checked={form.requireHumanApproval ?? false}
                 onChange={(e) => set("requireHumanApproval", e.target.checked)}
                 className="h-4 w-4 rounded accent-indigo-600" />
-              <span style={{ color: "var(--ink-2)" }}>Require human approval</span>
+              <span style={{ color: "hsl(var(--muted-foreground))" }}>Require human approval</span>
             </label>
             <label className="flex cursor-pointer items-center gap-2 text-sm">
               <input type="checkbox" checked={form.enabled ?? true}
                 onChange={(e) => set("enabled", e.target.checked)}
                 className="h-4 w-4 rounded accent-indigo-600" />
-              <span style={{ color: "var(--ink-2)" }}>Enabled</span>
+              <span style={{ color: "hsl(var(--muted-foreground))" }}>Enabled</span>
             </label>
           </div>
         </div>
 
         <div className="flex justify-end gap-2 border-t px-6 py-4"
-          style={{ borderColor: "var(--line-soft)" }}>
+          style={{ borderColor: "hsl(var(--border))" }}>
           <button type="button" onClick={onClose} className="md-btn-outlined text-sm px-4 py-2">Cancel</button>
           <button type="submit" disabled={saving} className="md-btn-filled text-sm px-4 py-2 flex items-center gap-2">
             {saving && <Loader2 className="h-4 w-4 animate-spin" />}
@@ -349,7 +349,7 @@ export default function PoliciesPage() {
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center">
-        <Loader2 className="h-5 w-5 animate-spin" style={{ color: "var(--ink-3)" }} />
+        <Loader2 className="h-5 w-5 animate-spin" style={{ color: "hsl(var(--muted-foreground))" }} />
       </div>
     );
   }
@@ -371,15 +371,15 @@ export default function PoliciesPage() {
       {policies.length > 0 && (
         <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-5">
           {[
-            { label: "Total",    value: stats.total,    color: "var(--ink)" },
-            { label: "Active",   value: stats.active,   color: "var(--ink)" },
+            { label: "Total",    value: stats.total,    color: "hsl(var(--foreground))" },
+            { label: "Active",   value: stats.active,   color: "hsl(var(--foreground))" },
             { label: "Allow",    value: stats.allow,    color: "var(--green)" },
             { label: "Deny",     value: stats.deny,     color: "var(--red)" },
             { label: "Approval", value: stats.approval, color: "var(--yellow)" },
           ].map(({ label, value, color }) => (
             <div key={label} className="card p-4 text-center">
               <p className="text-2xl font-semibold tabular-nums" style={{ color }}>{value}</p>
-              <p className="mt-0.5 text-xs" style={{ color: "var(--ink-4)" }}>{label}</p>
+              <p className="mt-0.5 text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>{label}</p>
             </div>
           ))}
         </div>
@@ -389,12 +389,12 @@ export default function PoliciesPage() {
       {policies.length === 0 ? (
         <div className="card flex flex-col items-center justify-center gap-5 py-16 text-center">
           <div className="grid h-14 w-14 place-items-center rounded-2xl"
-            style={{ background: "var(--paper-3)" }}>
-            <Shield className="h-7 w-7" style={{ color: "var(--ink-3)" }} />
+            style={{ background: "hsl(var(--accent))" }}>
+            <Shield className="h-7 w-7" style={{ color: "hsl(var(--muted-foreground))" }} />
           </div>
           <div>
-            <p className="text-base font-semibold" style={{ color: "var(--ink)" }}>No policies yet</p>
-            <p className="mt-1 max-w-sm text-sm" style={{ color: "var(--ink-3)" }}>
+            <p className="text-base font-semibold" style={{ color: "hsl(var(--foreground))" }}>No policies yet</p>
+            <p className="mt-1 max-w-sm text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
               Policies control which models can process which data classes. Start with baseline defaults or create your own.
             </p>
           </div>
@@ -411,7 +411,7 @@ export default function PoliciesPage() {
               <Plus className="h-4 w-4" /> Create policy
             </button>
           </div>
-          <p className="text-xs" style={{ color: "var(--ink-4)" }}>
+          <p className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
             Apply a Sector Pack to write a set of live gateway rules for that industry.
           </p>
         </div>
@@ -420,7 +420,7 @@ export default function PoliciesPage() {
           {/* Filter bar */}
           <div className="mb-4 flex flex-wrap items-center gap-2">
             <div className="relative flex-1 min-w-48">
-              <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2" style={{ color: "var(--ink-4)" }} />
+              <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2" style={{ color: "hsl(var(--muted-foreground))" }} />
               <input value={search} onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search policies…" className="input w-full pl-8 text-sm" />
             </div>
@@ -445,11 +445,11 @@ export default function PoliciesPage() {
             </select>
             {hasActiveFilters && (
               <button onClick={() => { setSearch(""); setFilterAction("all"); setFilterClass("all"); setFilterEnabled("all"); }}
-                className="flex items-center gap-1 text-xs md-btn-text px-2 py-1" style={{ color: "var(--ink-3)" }}>
+                className="flex items-center gap-1 text-xs md-btn-text px-2 py-1" style={{ color: "hsl(var(--muted-foreground))" }}>
                 <X className="h-3.5 w-3.5" /> Clear
               </button>
             )}
-            <span className="ml-auto text-xs" style={{ color: "var(--ink-4)" }}>
+            <span className="ml-auto text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
               {filtered.length} of {policies.length}
             </span>
           </div>
@@ -458,7 +458,7 @@ export default function PoliciesPage() {
           <div className="card overflow-hidden">
             <table className="w-full">
               <thead>
-                <tr style={{ borderBottom: "1px solid var(--line-soft)" }}>
+                <tr style={{ borderBottom: "1px solid hsl(var(--border))" }}>
                   <th className="table-header-cell text-left" style={{ width: "35%" }}>Policy</th>
                   <th className="table-header-cell text-left">Data class</th>
                   <th className="table-header-cell text-left">Action</th>
@@ -471,22 +471,22 @@ export default function PoliciesPage() {
               <tbody>
                 {filtered.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="py-12 text-center text-sm" style={{ color: "var(--ink-4)" }}>
+                    <td colSpan={7} className="py-12 text-center text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
                       No policies match the current filters.
                     </td>
                   </tr>
                 ) : (
                   filtered.map((p) => (
                     <tr key={p.id} className="transition-colors"
-                      style={{ borderBottom: "1px solid var(--line-soft)", opacity: p.enabled ? 1 : 0.55 }}>
+                      style={{ borderBottom: "1px solid hsl(var(--border))", opacity: p.enabled ? 1 : 0.55 }}>
                       <td className="table-cell">
                         <div className="flex flex-col gap-0.5">
                           <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium" style={{ color: "var(--ink)" }}>{p.name}</span>
+                            <span className="text-sm font-medium" style={{ color: "hsl(var(--foreground))" }}>{p.name}</span>
                             <SourceBadge metadata={p.metadata} />
                           </div>
                           {p.description && (
-                            <span className="text-xs leading-snug" style={{ color: "var(--ink-4)" }}>
+                            <span className="text-xs leading-snug" style={{ color: "hsl(var(--muted-foreground))" }}>
                               {p.description.length > 80 ? p.description.slice(0, 80) + "…" : p.description}
                             </span>
                           )}
@@ -507,22 +507,22 @@ export default function PoliciesPage() {
                       <td className="table-cell">
                         {p.modelIdPattern ? (
                           <code className="rounded px-1.5 py-0.5 text-xs"
-                            style={{ background: "var(--paper-3)", color: "var(--ink-2)", fontFamily: "monospace" }}>
+                            style={{ background: "hsl(var(--accent))", color: "hsl(var(--muted-foreground))", fontFamily: "monospace" }}>
                             {p.modelIdPattern}
                           </code>
                         ) : (
-                          <span className="text-xs" style={{ color: "var(--ink-4)" }}>any</span>
+                          <span className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>any</span>
                         )}
                       </td>
                       <td className="table-cell text-right tabular-nums text-sm"
-                        style={{ color: "var(--ink-3)" }}>
+                        style={{ color: "hsl(var(--muted-foreground))" }}>
                         {p.priority}
                       </td>
                       <td className="table-cell text-center">
                         <button onClick={() => toggleEnabled(p)} title={p.enabled ? "Disable" : "Enable"}>
                           {p.enabled
                             ? <CheckCircle2 className="mx-auto h-5 w-5" style={{ color: "var(--green)" }} />
-                            : <XCircle className="mx-auto h-5 w-5" style={{ color: "var(--ink-4)" }} />}
+                            : <XCircle className="mx-auto h-5 w-5" style={{ color: "hsl(var(--muted-foreground))" }} />}
                         </button>
                       </td>
                       <td className="table-cell text-right">
@@ -547,14 +547,14 @@ export default function PoliciesPage() {
 
           {/* Data class legend */}
           <div className="mt-4 flex flex-wrap items-center gap-4">
-            <span className="text-xs font-medium" style={{ color: "var(--ink-4)" }}>Data classes:</span>
+            <span className="text-xs font-medium" style={{ color: "hsl(var(--muted-foreground))" }}>Data classes:</span>
             {Object.entries(DATA_CLASS_STYLE).map(([cls, s]) => (
-              <span key={cls} className="flex items-center gap-1.5 text-xs capitalize" style={{ color: "var(--ink-3)" }}>
+              <span key={cls} className="flex items-center gap-1.5 text-xs capitalize" style={{ color: "hsl(var(--muted-foreground))" }}>
                 <span className="inline-block h-2 w-2 rounded-full" style={{ background: s.color }} />
                 {cls}
               </span>
             ))}
-            <span className="ml-auto text-xs" style={{ color: "var(--ink-4)" }}>
+            <span className="ml-auto text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
               Lower priority number = evaluated first
             </span>
           </div>

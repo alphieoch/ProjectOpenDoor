@@ -235,7 +235,7 @@ export default function MediaPlaygroundPage() {
         <div className="mb-6 alert-error">
           <p className="font-medium">{error}</p>
           {(error.toLowerCase().includes("not configured") || error.includes("503")) && (
-            <p className="mt-1 text-sm" style={{ color: "var(--ink-3)" }}>
+            <p className="mt-1 text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
               Video needs Vertex Veo (GOOGLE_CLOUD_PROJECT + ADC). Images use Gemini image models on
               the same ADC; Imagen publisher ids still 404 until Model Garden Enable.
             </p>
@@ -267,7 +267,7 @@ export default function MediaPlaygroundPage() {
 
         <div className="space-y-4">
           <div>
-            <label className="mb-1.5 block text-sm font-medium" style={{ color: "var(--ink-2)" }}>
+            <label className="mb-1.5 block text-sm font-medium" style={{ color: "hsl(var(--muted-foreground))" }}>
               Model
             </label>
             <select
@@ -288,7 +288,7 @@ export default function MediaPlaygroundPage() {
           </div>
 
           <div>
-            <label className="mb-1.5 block text-sm font-medium" style={{ color: "var(--ink-2)" }}>
+            <label className="mb-1.5 block text-sm font-medium" style={{ color: "hsl(var(--muted-foreground))" }}>
               Prompt
             </label>
             <textarea
@@ -305,7 +305,7 @@ export default function MediaPlaygroundPage() {
 
           <div className="flex flex-wrap gap-4">
             <div>
-              <label className="mb-1.5 block text-sm font-medium" style={{ color: "var(--ink-2)" }}>
+              <label className="mb-1.5 block text-sm font-medium" style={{ color: "hsl(var(--muted-foreground))" }}>
                 Aspect ratio
               </label>
               <select className="input" value={aspect} onChange={(e) => setAspect(e.target.value)}>
@@ -321,7 +321,7 @@ export default function MediaPlaygroundPage() {
             </div>
             {mode === "video" && (
               <div>
-                <label className="mb-1.5 block text-sm font-medium" style={{ color: "var(--ink-2)" }}>
+                <label className="mb-1.5 block text-sm font-medium" style={{ color: "hsl(var(--muted-foreground))" }}>
                   Duration (seconds)
                 </label>
                 <select
@@ -336,7 +336,7 @@ export default function MediaPlaygroundPage() {
               </div>
             )}
             <div>
-              <label className="mb-1.5 block text-sm font-medium" style={{ color: "var(--ink-2)" }}>
+              <label className="mb-1.5 block text-sm font-medium" style={{ color: "hsl(var(--muted-foreground))" }}>
                 Optional reference image
               </label>
               <input

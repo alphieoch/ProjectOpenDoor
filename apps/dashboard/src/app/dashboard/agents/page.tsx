@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Bot, Loader2, Plus, Shield, Sparkles, Workflow } from "lucide-react";
+import { AiCrest } from "@/components/ui/ai-crest";
 import { PageHeader } from "@/components/ui/page-header";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
@@ -33,7 +34,7 @@ type AgentsAddon = {
 
 const RUNTIME_ICON: Record<AgentRuntimeId, typeof Bot> = {
   openclaw: Workflow,
-  hermes: Sparkles,
+  hermes: Bot,
   nemoclaw: Shield,
 };
 
@@ -183,25 +184,25 @@ export default function AgentsPage() {
       {notice && (
         <div
           className="mb-4 rounded-lg border px-4 py-3 text-sm"
-          style={{ borderColor: "var(--line)", background: "var(--paper-2)", color: "var(--ink-2)" }}
+          style={{ borderColor: "hsl(var(--border))", background: "hsl(var(--card))", color: "hsl(var(--muted-foreground))" }}
         >
           {notice}
         </div>
       )}
 
       {locked && (
-        <div className="od-card mb-6 p-6">
-          <p className="text-sm font-medium" style={{ color: "var(--ink-3)" }}>Add-on</p>
-          <h3 className="mt-1 text-xl font-semibold" style={{ color: "var(--ink)" }}>
+        <div className="rounded-lg border border-border bg-card text-card-foreground shadow-sm mb-6 p-6">
+          <p className="text-sm font-medium" style={{ color: "hsl(var(--muted-foreground))" }}>Add-on</p>
+          <h3 className="mt-1 text-xl font-semibold" style={{ color: "hsl(var(--foreground))" }}>
             Agents · ${price}/month
           </h3>
-          <p className="mt-2 max-w-2xl text-sm leading-6" style={{ color: "var(--ink-3)" }}>
+          <p className="mt-2 max-w-2xl text-sm leading-6" style={{ color: "hsl(var(--muted-foreground))" }}>
             Unlock hosted OpenClaw, Hermes, and NemoClaw on this workspace. This is a separate
             subscription from Pro or Team. Agent tokens still debit the same prepaid quota as
             Playground and the API.
           </p>
           {error && (
-            <p className="mt-3 text-sm" style={{ color: "var(--md-error)" }}>{error}</p>
+            <p className="mt-3 text-sm" style={{ color: "hsl(var(--destructive))" }}>{error}</p>
           )}
           <div className="mt-4 flex flex-wrap gap-2">
             <button
@@ -221,8 +222,8 @@ export default function AgentsPage() {
       )}
 
       {credits !== null && (
-        <p className="mb-6 text-sm" style={{ color: "var(--ink-3)" }}>
-          Quota available: <strong style={{ color: "var(--ink)" }}>${(credits / 100).toFixed(2)}</strong>
+        <p className="mb-6 text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
+          Quota available: <strong style={{ color: "hsl(var(--foreground))" }}>${(credits / 100).toFixed(2)}</strong>
           {" · "}
           Agent tokens debit the same prepaid balance as Playground and the API.
         </p>
@@ -230,13 +231,15 @@ export default function AgentsPage() {
 
       {loading ? (
         <div className="flex h-64 items-center justify-center">
-          <Loader2 className="h-6 w-6 animate-spin" style={{ color: "var(--ink-4)" }} />
+          <Loader2 className="h-6 w-6 animate-spin" style={{ color: "hsl(var(--muted-foreground))" }} />
         </div>
       ) : agents.length === 0 ? (
         <div className="card p-16 text-center">
-          <Bot className="mx-auto h-10 w-10" style={{ color: "var(--ink-4)" }} />
-          <h3 className="mt-4 font-medium" style={{ color: "var(--ink)" }}>No agents yet</h3>
-          <p className="mx-auto mt-1 max-w-md text-sm" style={{ color: "var(--ink-3)" }}>
+          <div className="mx-auto flex justify-center">
+            <AiCrest mood="idle" surface="agent" size={45} />
+          </div>
+          <h3 className="mt-4 font-medium" style={{ color: "hsl(var(--foreground))" }}>No agents yet</h3>
+          <p className="mx-auto mt-1 max-w-md text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
             Stand up OpenClaw, Hermes, or NVIDIA NemoClaw on any catalog model. Usage comes off this workspace.
           </p>
           {locked ? (
@@ -258,25 +261,25 @@ export default function AgentsPage() {
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
           {agents.map((agent) => {
-            const Icon = RUNTIME_ICON[agent.runtime] || Bot;
             return (
               <Link
                 key={agent.id}
                 href={`/dashboard/agents/${agent.id}`}
-                className="od-card od-lift p-6"
+                className="rounded-lg border border-border bg-card text-card-foreground shadow-sm transition-shadow hover:shadow-lg p-6"
                 style={{ textDecoration: "none" }}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-3">
-                    <div
-                      className="grid h-10 w-10 place-items-center rounded-xl"
-                      style={{ background: "var(--paper-3)", color: "var(--ink)" }}
-                    >
-                      <Icon className="h-5 w-5" />
+                    <div className="grid h-10 w-10 place-items-center">
+                      <AiCrest
+                        mood={agent.status === "failed" ? "error" : agent.status === "running" ? "ready" : "idle"}
+                        surface="agent"
+                        size={22}
+                      />
                     </div>
                     <div>
-                      <p className="font-semibold" style={{ color: "var(--ink)" }}>{agent.name}</p>
-                      <p className="text-sm" style={{ color: "var(--ink-3)" }}>
+                      <p className="font-semibold" style={{ color: "hsl(var(--foreground))" }}>{agent.name}</p>
+                      <p className="text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
                         {agent.runtimeName} · {agent.modelId}
                       </p>
                     </div>
@@ -284,7 +287,7 @@ export default function AgentsPage() {
                   <span className={statusBadge(agent.status)}>{agent.status}</span>
                 </div>
                 {agent.statusMessage && (
-                  <p className="mt-3 text-sm" style={{ color: "var(--ink-3)" }}>{agent.statusMessage}</p>
+                  <p className="mt-3 text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>{agent.statusMessage}</p>
                 )}
               </Link>
             );
@@ -302,7 +305,7 @@ export default function AgentsPage() {
           </DialogHeader>
           <form onSubmit={create} className="space-y-5">
             <div>
-              <p className="mb-2 text-sm font-medium" style={{ color: "var(--ink)" }}>Runtime</p>
+              <p className="mb-2 text-sm font-medium" style={{ color: "hsl(var(--foreground))" }}>Runtime</p>
               <div className="grid gap-3 sm:grid-cols-3">
                 {AGENT_RUNTIME_CATALOG.map((item) => {
                   const Icon = RUNTIME_ICON[item.id];
@@ -314,42 +317,42 @@ export default function AgentsPage() {
                       onClick={() => pickRuntime(item.id)}
                       className={cn(
                         "rounded-xl border p-3 text-left transition-colors",
-                        active ? "border-[var(--ink)] bg-[var(--paper-3)]" : "border-[var(--line)] hover:border-[var(--ink-4)]",
+                        active ? "border-[hsl(var(--foreground))] bg-accent" : "border-border hover:border-border",
                       )}
                     >
-                      <Icon className="mb-2 h-4 w-4" style={{ color: "var(--ink-2)" }} />
-                      <p className="text-sm font-semibold" style={{ color: "var(--ink)" }}>{item.name}</p>
-                      <p className="mt-1 text-[11px]" style={{ color: "var(--ink-4)" }}>{item.maker}</p>
-                      <p className="mt-2 text-xs leading-5" style={{ color: "var(--ink-3)" }}>{item.tagline}</p>
+                      <Icon className="mb-2 h-4 w-4" style={{ color: "hsl(var(--muted-foreground))" }} />
+                      <p className="text-sm font-semibold" style={{ color: "hsl(var(--foreground))" }}>{item.name}</p>
+                      <p className="mt-1 text-[11px]" style={{ color: "hsl(var(--muted-foreground))" }}>{item.maker}</p>
+                      <p className="mt-2 text-xs leading-5" style={{ color: "hsl(var(--muted-foreground))" }}>{item.tagline}</p>
                     </button>
                   );
                 })}
               </div>
               {selected && (
-                <p className="mt-3 text-sm" style={{ color: "var(--ink-3)" }}>{selected.description}</p>
+                <p className="mt-3 text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>{selected.description}</p>
               )}
             </div>
 
             <label className="block">
-              <span className="mb-1.5 block text-sm font-medium" style={{ color: "var(--ink)" }}>Name</span>
+              <span className="mb-1.5 block text-sm font-medium" style={{ color: "hsl(var(--foreground))" }}>Name</span>
               <input
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder={selected ? `${selected.name} desk` : "Support agent"}
                 className="w-full rounded-lg border px-3 py-2 text-sm"
-                style={{ borderColor: "var(--line)", background: "var(--paper)", color: "var(--ink)" }}
+                style={{ borderColor: "hsl(var(--border))", background: "hsl(var(--background))", color: "hsl(var(--foreground))" }}
               />
             </label>
 
             <label className="block">
-              <span className="mb-1.5 block text-sm font-medium" style={{ color: "var(--ink)" }}>Model</span>
+              <span className="mb-1.5 block text-sm font-medium" style={{ color: "hsl(var(--foreground))" }}>Model</span>
               <select
                 required
                 value={modelId}
                 onChange={(e) => setModelId(e.target.value)}
                 className="w-full rounded-lg border px-3 py-2 text-sm"
-                style={{ borderColor: "var(--line)", background: "var(--paper)", color: "var(--ink)" }}
+                style={{ borderColor: "hsl(var(--border))", background: "hsl(var(--background))", color: "hsl(var(--foreground))" }}
               >
                 {models.length === 0 && <option value="">No chat models available</option>}
                 {models.map((m) => (
@@ -361,18 +364,18 @@ export default function AgentsPage() {
             </label>
 
             <label className="block">
-              <span className="mb-1.5 block text-sm font-medium" style={{ color: "var(--ink)" }}>Instructions</span>
+              <span className="mb-1.5 block text-sm font-medium" style={{ color: "hsl(var(--foreground))" }}>Instructions</span>
               <textarea
                 value={systemPrompt}
                 onChange={(e) => setSystemPrompt(e.target.value)}
                 rows={4}
                 className="w-full rounded-lg border px-3 py-2 text-sm"
-                style={{ borderColor: "var(--line)", background: "var(--paper)", color: "var(--ink)" }}
+                style={{ borderColor: "hsl(var(--border))", background: "hsl(var(--background))", color: "hsl(var(--foreground))" }}
               />
             </label>
 
             {error && (
-              <p className="text-sm" style={{ color: "var(--md-error)" }}>{error}</p>
+              <p className="text-sm" style={{ color: "hsl(var(--destructive))" }}>{error}</p>
             )}
 
             <DialogFooter>

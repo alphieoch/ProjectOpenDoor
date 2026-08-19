@@ -76,7 +76,7 @@ export function OnboardingSidebar({ orgName, userEmail, completedSteps }: Onboar
 
   return (
     <motion.div
-      className="fixed left-0 z-40 h-full shrink-0 border-r border-slate-200"
+      className="fixed left-0 z-40 h-full shrink-0 border-r border-border"
       initial={isCollapsed ? "closed" : "open"}
       animate={isCollapsed ? "closed" : "open"}
       variants={sidebarVariants}
@@ -85,24 +85,24 @@ export function OnboardingSidebar({ orgName, userEmail, completedSteps }: Onboar
       onMouseLeave={() => setIsCollapsed(true)}
     >
       <motion.div
-        className="relative z-40 flex h-full shrink-0 flex-col bg-white text-slate-500 transition-all"
+        className="relative z-40 flex h-full shrink-0 flex-col bg-background text-muted-foreground transition-all"
         variants={contentVariants}
       >
         <motion.ul variants={staggerVariants} className="flex h-full flex-col">
           <div className="flex grow flex-col items-center">
 
             {/* ── Org header ── */}
-            <div className="flex h-[54px] w-full shrink-0 border-b border-slate-200 p-2">
+            <div className="flex h-[54px] w-full shrink-0 border-b border-border p-2">
               <div className="mt-[1.5px] flex w-full">
                 <DropdownMenu modal={false}>
                   <DropdownMenuTrigger className="w-full" asChild>
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="flex w-fit items-center gap-2 px-2 hover:bg-slate-100 hover:text-slate-900"
+                      className="flex w-fit items-center gap-2 px-2 hover:bg-accent hover:text-foreground"
                     >
                       <Avatar className="size-4 rounded">
-                        <AvatarFallback className="text-[10px] bg-blue-600 text-white rounded">
+                        <AvatarFallback className="text-[10px] bg-primary text-primary-foreground rounded">
                           {orgInitial}
                         </AvatarFallback>
                       </Avatar>
@@ -141,8 +141,8 @@ export function OnboardingSidebar({ orgName, userEmail, completedSteps }: Onboar
                     <Link
                       href="/dashboard"
                       className={cn(
-                        "flex h-8 w-full flex-row items-center rounded-md px-2 py-1.5 transition hover:bg-slate-100 hover:text-slate-900",
-                        pathname?.includes("/dashboard") && !pathname?.includes("/dashboard/") && "bg-slate-100 text-blue-600",
+                        "flex h-8 w-full flex-row items-center rounded-md px-2 py-1.5 transition hover:bg-accent hover:text-foreground",
+                        pathname?.includes("/dashboard") && !pathname?.includes("/dashboard/") && "bg-muted text-foreground",
                       )}
                     >
                       <LayoutDashboard className="h-4 w-4 shrink-0" />
@@ -154,8 +154,8 @@ export function OnboardingSidebar({ orgName, userEmail, completedSteps }: Onboar
                     <Link
                       href="/dashboard/api-keys"
                       className={cn(
-                        "flex h-8 w-full flex-row items-center rounded-md px-2 py-1.5 transition hover:bg-slate-100 hover:text-slate-900",
-                        pathname?.includes("api-keys") && "bg-slate-100 text-blue-600",
+                        "flex h-8 w-full flex-row items-center rounded-md px-2 py-1.5 transition hover:bg-accent hover:text-foreground",
+                        pathname?.includes("api-keys") && "bg-muted text-foreground",
                       )}
                     >
                       <KeyRound className="h-4 w-4 shrink-0" />
@@ -167,8 +167,8 @@ export function OnboardingSidebar({ orgName, userEmail, completedSteps }: Onboar
                     <Link
                       href="/dashboard/usage"
                       className={cn(
-                        "flex h-8 w-full flex-row items-center rounded-md px-2 py-1.5 transition hover:bg-slate-100 hover:text-slate-900",
-                        pathname?.includes("usage") && "bg-slate-100 text-blue-600",
+                        "flex h-8 w-full flex-row items-center rounded-md px-2 py-1.5 transition hover:bg-accent hover:text-foreground",
+                        pathname?.includes("usage") && "bg-muted text-foreground",
                       )}
                     >
                       <BarChart3 className="h-4 w-4 shrink-0" />
@@ -180,8 +180,8 @@ export function OnboardingSidebar({ orgName, userEmail, completedSteps }: Onboar
                     <Link
                       href="/dashboard/playground"
                       className={cn(
-                        "flex h-8 w-full flex-row items-center rounded-md px-2 py-1.5 transition hover:bg-slate-100 hover:text-slate-900",
-                        pathname?.includes("playground") && "bg-slate-100 text-blue-600",
+                        "flex h-8 w-full flex-row items-center rounded-md px-2 py-1.5 transition hover:bg-accent hover:text-foreground",
+                        pathname?.includes("playground") && "bg-muted text-foreground",
                       )}
                     >
                       <Code2 className="h-4 w-4 shrink-0" />
@@ -195,8 +195,8 @@ export function OnboardingSidebar({ orgName, userEmail, completedSteps }: Onboar
                     <Link
                       href="/dashboard/governance"
                       className={cn(
-                        "flex h-8 w-full flex-row items-center rounded-md px-2 py-1.5 transition hover:bg-slate-100 hover:text-slate-900",
-                        pathname?.includes("governance") && "bg-slate-100 text-blue-600",
+                        "flex h-8 w-full flex-row items-center rounded-md px-2 py-1.5 transition hover:bg-accent hover:text-foreground",
+                        pathname?.includes("governance") && "bg-muted text-foreground",
                       )}
                     >
                       <ShieldCheck className="h-4 w-4 shrink-0" />
@@ -204,7 +204,7 @@ export function OnboardingSidebar({ orgName, userEmail, completedSteps }: Onboar
                         {!isCollapsed && (
                           <div className="ml-2 flex items-center gap-2">
                             <p className="text-sm font-medium">Governance</p>
-                            <Badge className="flex h-fit w-fit items-center rounded border-none bg-blue-50 px-1.5 text-blue-600" variant="outline">
+                            <Badge className="flex h-fit w-fit items-center rounded-full border-none bg-blue-100 px-1.5 text-blue-700" variant="outline">
                               NEW
                             </Badge>
                           </div>
@@ -215,8 +215,8 @@ export function OnboardingSidebar({ orgName, userEmail, completedSteps }: Onboar
                     <Link
                       href="/dashboard/billing"
                       className={cn(
-                        "flex h-8 w-full flex-row items-center rounded-md px-2 py-1.5 transition hover:bg-slate-100 hover:text-slate-900",
-                        pathname?.includes("billing") && "bg-slate-100 text-blue-600",
+                        "flex h-8 w-full flex-row items-center rounded-md px-2 py-1.5 transition hover:bg-accent hover:text-foreground",
+                        pathname?.includes("billing") && "bg-muted text-foreground",
                       )}
                     >
                       <CreditCard className="h-4 w-4 shrink-0" />
@@ -229,7 +229,7 @@ export function OnboardingSidebar({ orgName, userEmail, completedSteps }: Onboar
 
                     <Link
                       href="/status"
-                      className="flex h-8 w-full flex-row items-center rounded-md px-2 py-1.5 transition hover:bg-slate-100 hover:text-slate-900"
+                      className="flex h-8 w-full flex-row items-center rounded-md px-2 py-1.5 transition hover:bg-accent hover:text-foreground"
                     >
                       <Activity className="h-4 w-4 shrink-0" />
                       <motion.li variants={variants}>
@@ -245,7 +245,7 @@ export function OnboardingSidebar({ orgName, userEmail, completedSteps }: Onboar
               <div className="flex flex-col p-2">
                 <Link
                   href="/dashboard/settings"
-                  className="flex h-8 w-full flex-row items-center rounded-md px-2 py-1.5 transition hover:bg-slate-100 hover:text-slate-900"
+                  className="flex h-8 w-full flex-row items-center rounded-md px-2 py-1.5 transition hover:bg-accent hover:text-foreground"
                 >
                   <Settings className="h-4 w-4 shrink-0" />
                   <motion.li variants={variants}>
@@ -255,7 +255,7 @@ export function OnboardingSidebar({ orgName, userEmail, completedSteps }: Onboar
 
                 <DropdownMenu modal={false}>
                   <DropdownMenuTrigger className="w-full">
-                    <div className="flex h-8 w-full flex-row items-center gap-2 rounded-md px-2 py-1.5 transition hover:bg-slate-100 hover:text-slate-900">
+                    <div className="flex h-8 w-full flex-row items-center gap-2 rounded-md px-2 py-1.5 transition hover:bg-accent hover:text-foreground">
                       <Avatar className="size-4">
                         <AvatarFallback className="text-[10px] bg-slate-200 text-slate-700">
                           {userInitial}
@@ -298,11 +298,11 @@ export function OnboardingSidebar({ orgName, userEmail, completedSteps }: Onboar
 
                 {/* Setup progress indicator */}
                 {!isCollapsed && (
-                  <div className="mt-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                  <div className="mt-2 rounded-lg border border-border bg-slate-50 px-3 py-2">
                     <p className="text-xs font-medium text-slate-600">Setup progress</p>
                     <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-slate-200">
                       <div
-                        className="h-full rounded-full bg-blue-600 transition-all"
+                        className="h-full rounded-full bg-primary transition-all"
                         style={{ width: `${Math.min((completedSteps / 3) * 100, 100)}%` }}
                       />
                     </div>

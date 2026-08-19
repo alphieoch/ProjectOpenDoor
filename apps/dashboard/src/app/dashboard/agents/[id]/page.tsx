@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, Loader2, Pause, Play, Send, Trash2 } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
+import { AiCrest } from "@/components/ui/ai-crest";
 import { getAgentRuntime, type AgentRuntimeId } from "@/lib/agents/runtimes";
 
 type Workspace = {
@@ -189,7 +190,7 @@ export default function AgentDetailPage() {
   if (loading || !agent) {
     return (
       <div className="flex h-64 items-center justify-center">
-        <Loader2 className="h-6 w-6 animate-spin" style={{ color: "var(--ink-4)" }} />
+        <Loader2 className="h-6 w-6 animate-spin" style={{ color: "hsl(var(--muted-foreground))" }} />
       </div>
     );
   }
@@ -227,11 +228,11 @@ export default function AgentDetailPage() {
 
       <div className="mb-6 flex flex-wrap items-center gap-2">
         <span className={statusBadge(agent.status)}>{agent.status}</span>
-        <span className="text-sm" style={{ color: "var(--ink-3)" }}>
+        <span className="text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
           {runtime?.maker} · {runtime?.tagline}
         </span>
         {ws.probe && (
-          <span className="text-sm" style={{ color: ws.probe.ok ? "var(--ink-3)" : "var(--md-error)" }}>
+          <span className="text-sm" style={{ color: ws.probe.ok ? "hsl(var(--muted-foreground))" : "hsl(var(--destructive))" }}>
             {ws.probe.ok
               ? `Gateway ${ws.probe.latencyMs}ms · ${ws.probe.modelsSeen ?? 0} models`
               : `Gateway down: ${ws.probe.error}`}
@@ -239,12 +240,12 @@ export default function AgentDetailPage() {
         )}
       </div>
       {agent.statusMessage && (
-        <p className="mb-6 text-sm" style={{ color: "var(--ink-3)" }}>{agent.statusMessage}</p>
+        <p className="mb-6 text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>{agent.statusMessage}</p>
       )}
       {!addonActive && (
         <div
           className="mb-6 rounded-lg border px-4 py-3 text-sm"
-          style={{ borderColor: "var(--line)", background: "var(--paper-2)", color: "var(--ink-2)" }}
+          style={{ borderColor: "hsl(var(--border))", background: "hsl(var(--card))", color: "hsl(var(--muted-foreground))" }}
         >
           Agents is a ${addonAmount}/month add-on. Subscribe to start or chat with this agent.{" "}
           <Link href="/dashboard/agents" className="underline">Go to Agents</Link>
@@ -252,80 +253,94 @@ export default function AgentDetailPage() {
       )}
 
       <div className="grid gap-6 lg:grid-cols-[1.4fr_0.8fr]">
-        <div className="od-card flex min-h-[420px] flex-col p-0">
+        <div className="rounded-lg border border-border bg-card text-card-foreground shadow-sm flex min-h-[420px] flex-col p-0">
           <div className="flex-1 space-y-3 overflow-y-auto p-5" style={{ maxHeight: 520 }}>
             {messages.length === 0 && (
-              <p className="text-sm" style={{ color: "var(--ink-4)" }}>
-                This is a live {agent.runtimeName} session. Ask it to remember something, use a skill, or (for OpenClaw) queue a channel message.
-              </p>
+              <div className="flex flex-col items-center gap-3 py-10 text-center">
+                <AiCrest mood="idle" surface="agent" size={45} />
+                <p className="text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
+                  This is a live {agent.runtimeName} session. Ask it to remember something, use a skill, or (for OpenClaw) queue a channel message.
+                </p>
+              </div>
             )}
             {messages.map((m, i) => (
               <div
                 key={m.id || `${m.role}-${i}`}
                 className="rounded-xl px-3 py-2 text-sm"
                 style={{
-                  background: m.role === "user" ? "var(--paper-3)" : "var(--paper)",
-                  color: "var(--ink)",
-                  border: "1px solid var(--line)",
+                  background: m.role === "user" ? "hsl(var(--accent))" : "hsl(var(--background))",
+                  color: "hsl(var(--foreground))",
+                  border: "1px solid hsl(var(--border))",
                   opacity: m.role === "tool" ? 0.85 : 1,
                 }}
               >
-                <p className="mb-1 text-[10px] uppercase tracking-wide" style={{ color: "var(--ink-4)" }}>
+                <p className="mb-1 text-[10px] uppercase tracking-wide" style={{ color: "hsl(var(--muted-foreground))" }}>
                   {m.role === "tool" ? `tool · ${m.toolName || "run"}` : m.role}
                 </p>
                 <p className="whitespace-pre-wrap leading-6">{m.content}</p>
               </div>
             ))}
             <div ref={bottomRef} />
+            {sending && (
+              <div className="flex items-center gap-2 px-1 pb-1">
+                <AiCrest mood="thinking" surface="agent" size="sm" />
+                <span className="text-sm shimmer-text" style={{ color: "hsl(var(--muted-foreground))" }}>
+                  Thinking...
+                </span>
+              </div>
+            )}
           </div>
-          <form onSubmit={send} className="flex gap-2 border-t p-3" style={{ borderColor: "var(--line)" }}>
+          <form onSubmit={send} className="flex gap-2 border-t p-3" style={{ borderColor: "hsl(var(--border))" }}>
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}
               disabled={sending || !addonActive || agent.status !== "running"}
               placeholder={!addonActive ? "Subscribe to the Agents add-on to chat" : agent.status === "running" ? "Message the agent…" : "Start the agent to chat"}
               className="flex-1 rounded-lg border px-3 py-2 text-sm"
-              style={{ borderColor: "var(--line)", background: "var(--paper)", color: "var(--ink)" }}
+              style={{ borderColor: "hsl(var(--border))", background: "hsl(var(--background))", color: "hsl(var(--foreground))" }}
             />
             <button type="submit" className="btn-primary" disabled={sending || !addonActive || agent.status !== "running"}>
               {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
             </button>
           </form>
           {chatError && (
-            <p className="px-4 pb-3 text-sm" style={{ color: "var(--md-error)" }}>{chatError}</p>
+            <div className="flex items-center gap-2 px-4 pb-3 text-sm" style={{ color: "hsl(var(--destructive))" }}>
+              <AiCrest mood="error" surface="agent" size={16} />
+              {chatError}
+            </div>
           )}
         </div>
 
         <div className="space-y-4">
-          <div className="od-card p-5">
-            <h3 className="text-sm font-semibold" style={{ color: "var(--ink)" }}>Live workspace</h3>
-            <p className="mt-2 text-sm leading-6" style={{ color: "var(--ink-3)" }}>
+          <div className="rounded-lg border border-border bg-card text-card-foreground shadow-sm p-5">
+            <h3 className="text-sm font-semibold" style={{ color: "hsl(var(--foreground))" }}>Live workspace</h3>
+            <p className="mt-2 text-sm leading-6" style={{ color: "hsl(var(--muted-foreground))" }}>
               {ws.counts.memory} memories · {ws.counts.skills} skills · {ws.counts.outbox} queued messages
             </p>
             {ws.skills.length > 0 && (
-              <ul className="mt-3 space-y-1 text-sm" style={{ color: "var(--ink-2)" }}>
+              <ul className="mt-3 space-y-1 text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
                 {ws.skills.map((s) => (
-                  <li key={s.id}>· {s.name} <span style={{ color: "var(--ink-4)" }}>({s.source})</span></li>
+                  <li key={s.id}>· {s.name} <span style={{ color: "hsl(var(--muted-foreground))" }}>({s.source})</span></li>
                 ))}
               </ul>
             )}
           </div>
           {ws.memory.length > 0 && (
-            <div className="od-card p-5">
-              <h3 className="text-sm font-semibold" style={{ color: "var(--ink)" }}>Memory</h3>
-              <ul className="mt-3 space-y-2 text-sm" style={{ color: "var(--ink-2)" }}>
+            <div className="rounded-lg border border-border bg-card text-card-foreground shadow-sm p-5">
+              <h3 className="text-sm font-semibold" style={{ color: "hsl(var(--foreground))" }}>Memory</h3>
+              <ul className="mt-3 space-y-2 text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
                 {ws.memory.slice(-6).map((m) => (
                   <li key={m.id}>
-                    <span style={{ color: "var(--ink-4)" }}>[{m.kind}]</span> {m.content}
+                    <span style={{ color: "hsl(var(--muted-foreground))" }}>[{m.kind}]</span> {m.content}
                   </li>
                 ))}
               </ul>
             </div>
           )}
           {ws.outbox.length > 0 && (
-            <div className="od-card p-5">
-              <h3 className="text-sm font-semibold" style={{ color: "var(--ink)" }}>Channel outbox</h3>
-              <ul className="mt-3 space-y-2 text-sm" style={{ color: "var(--ink-2)" }}>
+            <div className="rounded-lg border border-border bg-card text-card-foreground shadow-sm p-5">
+              <h3 className="text-sm font-semibold" style={{ color: "hsl(var(--foreground))" }}>Channel outbox</h3>
+              <ul className="mt-3 space-y-2 text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
                 {ws.outbox.slice(-5).map((m) => (
                   <li key={m.id}>
                     {m.channel} → {m.recipient}: {m.body}
@@ -335,9 +350,9 @@ export default function AgentDetailPage() {
             </div>
           )}
           {ws.audit.length > 0 && (
-            <div className="od-card p-5">
-              <h3 className="text-sm font-semibold" style={{ color: "var(--ink)" }}>Sandbox audit</h3>
-              <ul className="mt-3 space-y-2 text-sm" style={{ color: "var(--ink-2)" }}>
+            <div className="rounded-lg border border-border bg-card text-card-foreground shadow-sm p-5">
+              <h3 className="text-sm font-semibold" style={{ color: "hsl(var(--foreground))" }}>Sandbox audit</h3>
+              <ul className="mt-3 space-y-2 text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
                 {ws.audit.slice(-5).map((m) => (
                   <li key={m.id}>
                     {m.allowed ? "allow" : "deny"} · {m.action} {m.detail}
@@ -346,10 +361,10 @@ export default function AgentDetailPage() {
               </ul>
             </div>
           )}
-          <div className="od-card p-5">
-            <h3 className="text-sm font-semibold" style={{ color: "var(--ink)" }}>Quota path</h3>
-            <p className="mt-2 text-sm leading-6" style={{ color: "var(--ink-3)" }}>
-              Completions go to <span className="od-mono">{agent.gatewayUrl}</span> with this agent&apos;s key. Spend shows up on Usage and Billing like any other API call.
+          <div className="rounded-lg border border-border bg-card text-card-foreground shadow-sm p-5">
+            <h3 className="text-sm font-semibold" style={{ color: "hsl(var(--foreground))" }}>Quota path</h3>
+            <p className="mt-2 text-sm leading-6" style={{ color: "hsl(var(--muted-foreground))" }}>
+              Completions go to <span className="font-mono">{agent.gatewayUrl}</span> with this agent&apos;s key. Spend shows up on Usage and Billing like any other API call.
             </p>
           </div>
         </div>

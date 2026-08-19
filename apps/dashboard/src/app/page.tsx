@@ -54,37 +54,31 @@ export default async function Home() {
   const preview = await loadHeroPreview();
 
   return (
-    <main className="min-h-screen overflow-hidden bg-[#F6F5F1] text-slate-950">
+    <main className="min-h-screen bg-background text-foreground">
       {signedIn ? (
-        <div className="relative z-20 border-b border-slate-200/90 bg-white/95 px-6 py-3 text-center text-sm text-slate-700 backdrop-blur-md">
-          <span className="font-medium text-slate-900">You are signed in.</span>{" "}
+        <div className="relative z-20 border-b border-border bg-background/95 px-6 py-3 text-center text-sm text-muted-foreground backdrop-blur-md">
+          <span className="font-medium text-foreground">You are signed in.</span>{" "}
           <Link
             href="/dashboard"
-            className="font-semibold text-blue-700 underline-offset-2 hover:underline"
+            className="font-semibold text-foreground underline-offset-2 hover:underline"
           >
             Open your dashboard
           </Link>
         </div>
       ) : null}
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute left-1/2 top-[-24rem] h-[48rem] w-[48rem] -translate-x-1/2 rounded-full bg-blue-200/50 blur-3xl" />
-        <div className="absolute right-[-14rem] top-40 h-[32rem] w-[32rem] rounded-full bg-emerald-200/40 blur-3xl" />
-        <div className="absolute bottom-20 left-[-16rem] h-[34rem] w-[34rem] rounded-full bg-indigo-200/40 blur-3xl" />
-      </div>
-
       <MarketingHeader />
 
       <HeroSection signedIn={signedIn} preview={preview} />
 
       <section className="relative z-10 mx-auto max-w-7xl px-6 py-20 lg:px-8">
         <div className="mx-auto max-w-2xl text-center">
-          <p className="text-sm font-semibold uppercase tracking-[0.25em] text-blue-600">
+          <p className="text-sm font-semibold uppercase tracking-[0.25em] text-muted-foreground">
             Explore
           </p>
-          <h2 className="mt-4 text-4xl font-semibold tracking-tight text-slate-950">
+          <h2 className="mt-4 text-4xl font-semibold tracking-tight text-foreground">
             Each page is its own destination.
           </h2>
-          <p className="mt-4 text-lg leading-8 text-slate-600">
+          <p className="mt-4 text-lg leading-8 text-muted-foreground">
             Platform, pricing, how it works, security, and status are separate
             pages — not sections of this homepage.
           </p>
@@ -95,14 +89,14 @@ export default async function Home() {
               key={item.href}
               href={item.href}
               scroll
-              className="group flex flex-col rounded-[2rem] border border-slate-200/70 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-xl hover:shadow-slate-950/5"
+              className="group flex flex-col rounded-2xl border border-border bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-xl hover:shadow-slate-950/5"
             >
-              <div className="mb-6 grid h-12 w-12 place-items-center rounded-2xl bg-slate-950 text-white transition group-hover:bg-blue-600">
+              <div className="mb-6 grid h-12 w-12 place-items-center rounded-2xl bg-slate-950 text-white transition group-hover:bg-primary">
                 <item.icon className="h-5 w-5" />
               </div>
-              <h3 className="text-lg font-semibold tracking-tight text-slate-950">{item.title}</h3>
-              <p className="mt-3 flex-1 leading-7 text-slate-600">{item.description}</p>
-              <span className="mt-5 inline-flex items-center gap-1 text-sm font-semibold text-blue-700">
+              <h3 className="text-lg font-semibold tracking-tight text-foreground">{item.title}</h3>
+              <p className="mt-3 flex-1 leading-7 text-muted-foreground">{item.description}</p>
+              <span className="mt-5 inline-flex items-center gap-1 text-sm font-semibold text-foreground">
                 Open {item.title.toLowerCase()} <ArrowRight className="h-3.5 w-3.5" />
               </span>
             </Link>
@@ -111,25 +105,25 @@ export default async function Home() {
       </section>
 
       <section className="relative z-10 mx-auto max-w-7xl px-6 py-20 lg:px-8">
-        <div className="rounded-[2.5rem] bg-gradient-to-br from-blue-600 via-indigo-600 to-slate-950 p-8 text-center text-white shadow-2xl shadow-blue-950/20 lg:p-14">
+        <div className="rounded-2xl bg-primary p-8 text-center text-primary-foreground shadow-lg lg:p-14">
           <h2 className="mx-auto max-w-3xl text-4xl font-semibold tracking-tight sm:text-5xl">
             Ready to put a gateway in front of your AI traffic?
           </h2>
-          <p className="mx-auto mt-5 max-w-2xl text-lg leading-8 text-blue-100">
+          <p className="mx-auto mt-5 max-w-2xl text-lg leading-8 text-primary-foreground/80">
             Create a workspace, top up $20 to get $5 of open-weight credit, and make your first
             routed model call.
           </p>
           <div className="mt-9 flex flex-col justify-center gap-3 sm:flex-row">
             <Link
               href={signedIn ? "/dashboard" : "/get-started"}
-              className="inline-flex items-center justify-center gap-2 rounded-full bg-white px-7 py-4 font-semibold text-blue-700 transition hover:-translate-y-0.5"
+              className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg bg-primary-foreground px-7 py-4 font-semibold text-primary transition hover:opacity-90"
             >
               {signedIn ? "Open dashboard" : "Get started free"}{" "}
               <ArrowRight className="h-5 w-5" />
             </Link>
             <Link
               href="/status"
-              className="inline-flex items-center justify-center gap-2 rounded-full border border-white/25 px-7 py-4 font-semibold text-white transition hover:-translate-y-0.5 hover:bg-white/10"
+              className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg border border-primary-foreground/25 px-7 py-4 font-semibold text-primary-foreground transition hover:bg-primary-foreground/10"
             >
               Check platform status
             </Link>

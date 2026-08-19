@@ -309,17 +309,17 @@ export default function TeamPage() {
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <span className="text-xs font-mono font-semibold uppercase tracking-wider text-indigo-400">
+            <span className="text-xs font-mono font-semibold uppercase tracking-wider text-muted-foreground">
               Workspace Collaboration
             </span>
-            <span className="rounded-full bg-indigo-500/15 px-2 py-0.5 text-[10px] font-mono text-indigo-300 border border-indigo-500/20">
+            <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-mono text-primary border border-primary/20">
               {viewMode === "family" ? "HOUSEHOLD SHARING" : "ENTERPRISE TEAM"}
             </span>
           </div>
-          <h1 className="text-2xl font-bold tracking-tight text-white mt-1">
+          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-foreground">
             {viewMode === "family" ? "Family & Household Sharing" : "Team & Organization Members"}
           </h1>
-          <p className="text-xs text-zinc-400 mt-0.5">
+          <p className="text-xs text-muted-foreground mt-0.5">
             {viewMode === "family"
               ? "Share your credit pool with household members, add extra seats for £4.99/month, and set per-member monthly caps."
               : "Manage organization workspace roles, invite engineers, and orchestrate Google Cloud MCP tooling."}
@@ -328,15 +328,15 @@ export default function TeamPage() {
 
         {/* View Mode Toggle & Invite Action */}
         <div className="flex items-center gap-3">
-          <div className="flex items-center rounded-xl bg-black/60 p-1 border border-white/10 text-xs">
+          <div className="flex items-center rounded-xl bg-muted p-1 border border-border text-xs">
             <button
               type="button"
               onClick={() => setViewMode("family")}
               className={cn(
                 "flex items-center gap-1.5 px-3 py-1.5 font-medium rounded-lg transition-all",
                 viewMode === "family"
-                  ? "bg-indigo-600 text-white font-semibold shadow-xs"
-                  : "text-zinc-400 hover:text-white",
+                  ? "bg-primary text-foreground font-semibold shadow-xs"
+                  : "text-muted-foreground hover:text-foreground",
               )}
             >
               <Home className="h-3.5 w-3.5" />
@@ -348,8 +348,8 @@ export default function TeamPage() {
               className={cn(
                 "flex items-center gap-1.5 px-3 py-1.5 font-medium rounded-lg transition-all",
                 viewMode === "team"
-                  ? "bg-indigo-600 text-white font-semibold shadow-xs"
-                  : "text-zinc-400 hover:text-white",
+                  ? "bg-primary text-foreground font-semibold shadow-xs"
+                  : "text-muted-foreground hover:text-foreground",
               )}
             >
               <Building className="h-3.5 w-3.5" />
@@ -370,7 +370,7 @@ export default function TeamPage() {
 
       {loading ? (
         <div className="flex h-64 items-center justify-center">
-          <Loader2 className="h-6 w-6 animate-spin text-indigo-400" />
+          <Loader2 className="h-6 w-6 animate-spin text-primary" />
         </div>
       ) : (
         <div className="space-y-6">
@@ -384,9 +384,9 @@ export default function TeamPage() {
                 {/* Left: Shared Pool & 4-Month Rollover (Col 7) */}
                 <div className="lg:col-span-7 card p-5 border-indigo-500/40 bg-gradient-to-br from-indigo-950/40 via-purple-950/20 to-black/80 flex flex-col justify-between">
                   <div>
-                    <div className="flex items-center justify-between pb-3 border-b border-white/10">
+                    <div className="flex items-center justify-between pb-3 border-b border-border">
                       <div className="flex items-center gap-2">
-                        <span className="rounded-full bg-indigo-500/20 px-2 py-0.5 text-[10px] font-mono font-bold text-indigo-300 border border-indigo-500/30">
+                        <span className="rounded-full bg-indigo-500/20 px-2 py-0.5 text-[10px] font-mono font-bold text-primary border border-indigo-500/30">
                           SHARED HOUSEHOLD POOL
                         </span>
                         <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-mono font-bold text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
@@ -395,18 +395,18 @@ export default function TeamPage() {
                         </span>
                       </div>
 
-                      <span className="text-xs font-mono font-bold text-white bg-white/10 px-2.5 py-1 rounded-lg">
+                      <span className="text-xs font-mono font-bold text-foreground bg-white/10 px-2.5 py-1 rounded-lg">
                         {familyData.planName}
                       </span>
                     </div>
 
                     <div className="mt-4 flex items-center justify-between">
                       <div>
-                        <span className="text-[10px] text-zinc-400 font-mono block">Active Spendable Pool</span>
+                        <span className="text-[10px] text-muted-foreground font-mono block">Active Spendable Pool</span>
                         <span className="text-3xl font-bold font-mono text-emerald-400">
                           ${(familyData.totalPoolCreditsCents / 100).toFixed(2)} USD
                         </span>
-                        <p className="text-xs text-zinc-400 mt-1">
+                        <p className="text-xs text-muted-foreground mt-1">
                           Includes ${(familyData.rolledOverCreditsCents / 100).toFixed(2)} rolled over from previous 3 months.
                         </p>
                       </div>
@@ -422,7 +422,7 @@ export default function TeamPage() {
                   </div>
 
                   {/* Rollover Vault 4-Month Status */}
-                  <div className="mt-5 pt-3 border-t border-white/10 grid grid-cols-4 gap-1.5 text-center text-xs">
+                  <div className="mt-5 pt-3 border-t border-border grid grid-cols-4 gap-1.5 text-center text-xs">
                     {[
                       { label: "M1 Current", amt: "$60.00", active: true },
                       { label: "M2 Rollover", amt: "$45.00", active: true },
@@ -430,7 +430,7 @@ export default function TeamPage() {
                       { label: "M4 Vault Cap", amt: "$30.00", active: true },
                     ].map((s, idx) => (
                       <div key={idx} className="rounded-xl bg-white/5 p-2 border border-white/5">
-                        <span className="text-[10px] text-zinc-400 block">{s.label}</span>
+                        <span className="text-[10px] text-muted-foreground block">{s.label}</span>
                         <span className="font-mono text-emerald-300 font-bold text-xs mt-0.5 block">{s.amt}</span>
                       </div>
                     ))}
@@ -440,27 +440,27 @@ export default function TeamPage() {
                 {/* Right: Netflix-Style Extra Member Adder (+£4.99 / mo) (Col 5) */}
                 <div className="lg:col-span-5 card p-5 border-purple-500/40 bg-gradient-to-br from-purple-950/30 via-black/80 to-black/90 flex flex-col justify-between">
                   <div>
-                    <div className="flex items-center justify-between pb-3 border-b border-white/10">
+                    <div className="flex items-center justify-between pb-3 border-b border-border">
                       <div className="flex items-center gap-2">
                         <Sparkles className="h-4 w-4 text-purple-400" />
-                        <h3 className="text-sm font-bold text-white">Extra Member Seats Add-On</h3>
+                        <h3 className="text-sm font-bold text-foreground">Extra Member Seats Add-On</h3>
                       </div>
                       <span className="rounded-full bg-purple-500/20 px-2 py-0.5 text-[10px] font-mono font-bold text-purple-300 border border-purple-500/30">
                         £4.99 / seat / mo
                       </span>
                     </div>
 
-                    <p className="mt-3 text-xs text-zinc-300 leading-relaxed">
+                    <p className="mt-3 text-xs text-muted-foreground leading-relaxed">
                       Need more than your plan’s {familyData.baseSeats} included seats? Add up to{" "}
-                      <strong className="text-white font-semibold">{familyData.maxExtraSeats} additional household members</strong>{" "}
+                      <strong className="text-foreground font-semibold">{familyData.maxExtraSeats} additional household members</strong>{" "}
                       for only <strong className="text-purple-300 font-mono">£4.99 / month</strong> each.
                     </p>
 
                     {/* Capacity breakdown */}
-                    <div className="mt-4 rounded-xl bg-black/40 p-3 border border-white/10 space-y-2">
+                    <div className="mt-4 rounded-xl bg-black/40 p-3 border border-border space-y-2">
                       <div className="flex justify-between text-xs font-mono">
-                        <span className="text-zinc-400">Total Allowed Capacity:</span>
-                        <span className="text-white font-bold">
+                        <span className="text-muted-foreground">Total Allowed Capacity:</span>
+                        <span className="text-foreground font-bold">
                           {totalOccupiedSeats} / {totalCapacity} Seats Occupied
                         </span>
                       </div>
@@ -480,7 +480,7 @@ export default function TeamPage() {
                         )}
                       </div>
 
-                      <div className="flex items-center justify-between text-[10px] text-zinc-400 font-mono pt-1">
+                      <div className="flex items-center justify-between text-[10px] text-muted-foreground font-mono pt-1">
                         <span className="flex items-center gap-1">
                           <span className="h-2 w-2 rounded-full bg-indigo-500 inline-block" />
                           <span>{familyData.baseSeats} Base Included</span>
@@ -494,25 +494,25 @@ export default function TeamPage() {
                   </div>
 
                   {/* Extra Seat Controls */}
-                  <div className="mt-5 pt-3 border-t border-white/10 flex items-center justify-between gap-3">
+                  <div className="mt-5 pt-3 border-t border-border flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2">
                       <button
                         type="button"
                         disabled={seatUpdating || familyData.extraSeatsCount <= 0 || totalOccupiedSeats >= totalCapacity}
                         onClick={handleRemoveExtraSeat}
-                        className="h-8 w-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-zinc-300 hover:text-white hover:bg-white/10 transition-colors disabled:opacity-40"
+                        className="h-8 w-8 rounded-lg bg-white/5 border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-white/10 transition-colors disabled:opacity-40"
                         title="Remove extra seat"
                       >
                         <Minus className="h-3.5 w-3.5" />
                       </button>
-                      <span className="font-mono text-sm font-bold text-white px-2">
+                      <span className="font-mono text-sm font-bold text-foreground px-2">
                         {familyData.extraSeatsCount} Extra
                       </span>
                       <button
                         type="button"
                         disabled={seatUpdating || familyData.extraSeatsCount >= familyData.maxExtraSeats}
                         onClick={handleAddExtraSeat}
-                        className="h-8 w-8 rounded-lg bg-purple-600/30 border border-purple-500/50 flex items-center justify-center text-purple-200 hover:bg-purple-600 hover:text-white transition-all disabled:opacity-40"
+                        className="h-8 w-8 rounded-lg bg-purple-600/30 border border-purple-500/50 flex items-center justify-center text-purple-200 hover:bg-purple-600 hover:text-foreground transition-all disabled:opacity-40"
                         title="Add extra seat (+£4.99/mo)"
                       >
                         <Plus className="h-3.5 w-3.5" />
@@ -523,7 +523,7 @@ export default function TeamPage() {
                       type="button"
                       disabled={seatUpdating || familyData.extraSeatsCount >= familyData.maxExtraSeats}
                       onClick={handleAddExtraSeat}
-                      className="rounded-xl bg-purple-600 px-3.5 py-1.5 text-xs font-semibold text-white shadow-md shadow-purple-600/30 hover:bg-purple-500 transition-colors flex items-center gap-1.5 disabled:opacity-50"
+                      className="rounded-xl bg-purple-600 px-3.5 py-1.5 text-xs font-semibold text-foreground shadow-md shadow-purple-600/30 hover:bg-purple-500 transition-colors flex items-center gap-1.5 disabled:opacity-50"
                     >
                       {seatUpdating ? (
                         <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -538,18 +538,18 @@ export default function TeamPage() {
 
               {/* Household Members List */}
               <div className="card p-6 space-y-4">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 pb-4 border-b border-white/10">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 pb-4 border-b border-border">
                   <div>
-                    <h3 className="text-base font-bold text-white flex items-center gap-2">
-                      <Users className="h-4 w-4 text-indigo-400" />
+                    <h3 className="text-base font-bold text-foreground flex items-center gap-2">
+                      <Users className="h-4 w-4 text-primary" />
                       <span>Household Members ({familyData.members.length} of {totalCapacity} Active)</span>
                     </h3>
-                    <p className="text-xs text-zinc-400 mt-0.5">
+                    <p className="text-xs text-muted-foreground mt-0.5">
                       Each member gets their own private prompt library, isolated creations, and individual fair-use quota.
                     </p>
                   </div>
 
-                  <span className="text-xs font-mono text-zinc-400">
+                  <span className="text-xs font-mono text-muted-foreground">
                     {totalCapacity - totalOccupiedSeats} available slots remaining
                   </span>
                 </div>
@@ -561,18 +561,18 @@ export default function TeamPage() {
                       className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 py-4 hover:bg-white/5 px-3 rounded-xl transition-colors"
                     >
                       <div className="flex items-center gap-3.5">
-                        <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 text-white font-mono font-bold text-sm shadow-md">
+                        <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 text-foreground font-mono font-bold text-sm shadow-md">
                           {member.name.slice(0, 2).toUpperCase()}
                         </div>
                         <div>
                           <div className="flex items-center gap-2">
-                            <span className="text-sm font-bold text-white">{member.name}</span>
+                            <span className="text-sm font-bold text-foreground">{member.name}</span>
                             {member.role === "organizer" ? (
                               <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-[9px] font-mono font-bold text-amber-300 border border-amber-500/30">
                                 ORGANIZER
                               </span>
                             ) : (
-                              <span className="rounded-full bg-indigo-500/15 px-2 py-0.5 text-[9px] font-mono text-indigo-300 border border-indigo-500/20">
+                              <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[9px] font-mono text-primary border border-primary/20">
                                 MEMBER
                               </span>
                             )}
@@ -582,14 +582,14 @@ export default function TeamPage() {
                               </span>
                             )}
                           </div>
-                          <p className="text-xs text-zinc-400 font-mono mt-0.5">{member.email}</p>
+                          <p className="text-xs text-muted-foreground font-mono mt-0.5">{member.email}</p>
                         </div>
                       </div>
 
                       <div className="flex items-center gap-6 self-end md:self-center">
                         {/* Private Library Status */}
                         <div className="text-left md:text-right hidden sm:block">
-                          <span className="text-[10px] text-zinc-400 block font-mono">Workspace Privacy</span>
+                          <span className="text-[10px] text-muted-foreground block font-mono">Workspace Privacy</span>
                           <span className="text-xs text-emerald-400 font-medium flex items-center gap-1">
                             <Lock className="h-3 w-3" />
                             <span>Private Library</span>
@@ -598,11 +598,11 @@ export default function TeamPage() {
 
                         {/* Monthly Fair-Use Quota */}
                         <div className="text-left md:text-right">
-                          <span className="text-[10px] text-zinc-400 block font-mono">Monthly Fair-Use Cap</span>
-                          <span className="text-xs font-mono font-bold text-white">
+                          <span className="text-[10px] text-muted-foreground block font-mono">Monthly Fair-Use Cap</span>
+                          <span className="text-xs font-mono font-bold text-foreground">
                             {member.monthlyQuotaCents ? `$${(member.monthlyQuotaCents / 100).toFixed(0)} / mo limit` : "Uncapped (Full Pool)"}
                           </span>
-                          <span className="text-[10px] text-zinc-400 font-mono block">
+                          <span className="text-[10px] text-muted-foreground font-mono block">
                             Spent: ${(member.currentMonthSpentCents / 100).toFixed(2)}
                           </span>
                         </div>
@@ -612,7 +612,7 @@ export default function TeamPage() {
                           <button
                             type="button"
                             onClick={() => handleRemoveFamilyMember(member.id)}
-                            className="rounded-lg p-2 text-zinc-500 hover:text-red-400 hover:bg-white/10 transition-colors"
+                            className="rounded-lg p-2 text-muted-foreground hover:text-red-400 hover:bg-white/10 transition-colors"
                             title="Remove member from family pool"
                           >
                             <Trash2 className="h-4 w-4" />
@@ -625,13 +625,13 @@ export default function TeamPage() {
 
                 {/* Quick Add Member Prompt if Slots Available */}
                 {totalCapacity > totalOccupiedSeats && (
-                  <div className="pt-3 border-t border-white/10">
+                  <div className="pt-3 border-t border-border">
                     <button
                       type="button"
                       onClick={() => setShowInviteModal(true)}
-                      className="w-full py-3 rounded-xl border border-dashed border-white/20 hover:border-indigo-400/50 hover:bg-white/5 transition-all text-xs font-medium text-zinc-400 hover:text-white flex items-center justify-center gap-2"
+                      className="w-full py-3 rounded-xl border border-dashed border-white/20 hover:border-indigo-400/50 hover:bg-white/5 transition-all text-xs font-medium text-muted-foreground hover:text-foreground flex items-center justify-center gap-2"
                     >
-                      <Plus className="h-4 w-4 text-indigo-400" />
+                      <Plus className="h-4 w-4 text-primary" />
                       <span>Invite Member to Empty Slot ({totalCapacity - totalOccupiedSeats} left)</span>
                     </button>
                   </div>
@@ -644,13 +644,13 @@ export default function TeamPage() {
                ══════════════════════════════════════════════════════ */
             <div className="space-y-6">
               <div className="card p-6 space-y-4">
-                <div className="flex items-center justify-between pb-3 border-b border-white/10">
+                <div className="flex items-center justify-between pb-3 border-b border-border">
                   <div>
-                    <h3 className="text-base font-bold text-white flex items-center gap-2">
-                      <Building className="h-4 w-4 text-indigo-400" />
+                    <h3 className="text-base font-bold text-foreground flex items-center gap-2">
+                      <Building className="h-4 w-4 text-primary" />
                       <span>Team Collaborators ({teamMembers.length} Active)</span>
                     </h3>
-                    <p className="text-xs text-zinc-400 mt-0.5">
+                    <p className="text-xs text-muted-foreground mt-0.5">
                       Manage organization access, developer API keys, and workspace administration roles.
                     </p>
                   </div>
@@ -660,17 +660,17 @@ export default function TeamPage() {
                   {teamMembers.map((m) => (
                     <div key={m.id} className="flex items-center justify-between py-3.5">
                       <div className="flex items-center gap-3">
-                        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 text-white font-mono font-bold text-xs">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 text-foreground font-mono font-bold text-xs">
                           {(m.name || m.email).slice(0, 2).toUpperCase()}
                         </div>
                         <div>
-                          <p className="text-xs font-bold text-white">{m.name || m.email.split("@")[0]}</p>
-                          <p className="text-[11px] text-zinc-400 font-mono">{m.email}</p>
+                          <p className="text-xs font-bold text-foreground">{m.name || m.email.split("@")[0]}</p>
+                          <p className="text-[11px] text-muted-foreground font-mono">{m.email}</p>
                         </div>
                       </div>
 
                       <div className="flex items-center gap-3">
-                        <span className="rounded-lg bg-white/5 px-2.5 py-1 text-xs font-mono text-zinc-300 border border-white/10">
+                        <span className="rounded-lg bg-white/5 px-2.5 py-1 text-xs font-mono text-muted-foreground border border-border">
                           {m.role.toUpperCase()}
                         </span>
                       </div>
@@ -682,7 +682,7 @@ export default function TeamPage() {
               {/* Pending Invitations */}
               {invitations.length > 0 && (
                 <div className="card p-5 space-y-3">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-400 font-mono">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground font-mono">
                     Pending Invitations ({invitations.length})
                   </h4>
                   <div className="divide-y divide-white/10">
@@ -690,7 +690,7 @@ export default function TeamPage() {
                       <div key={inv.id} className="flex items-center justify-between py-2.5 text-xs">
                         <div>
                           <p className="font-mono text-zinc-200">{inv.email}</p>
-                          <span className="text-[10px] text-zinc-500">Role: {inv.role}</span>
+                          <span className="text-[10px] text-muted-foreground">Role: {inv.role}</span>
                         </div>
 
                         <button
@@ -714,19 +714,19 @@ export default function TeamPage() {
              ══════════════════════════════════════════════════════ */}
           {googleMcp && (
             <div className="card p-6 border-indigo-500/30 bg-gradient-to-br from-black/80 via-black/90 to-indigo-950/20 space-y-5">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-white/10">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-border">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-500/20 text-primary border border-indigo-500/30">
                     <Cloud className="h-5 w-5" />
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
-                      <h3 className="text-base font-bold text-white">Google Cloud & Workspace MCP Tooling</h3>
+                      <h3 className="text-base font-bold text-foreground">Google Cloud & Workspace MCP Tooling</h3>
                       <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[9px] font-mono font-bold text-emerald-300 border border-emerald-500/30">
                         HEALTHY / ACTIVE
                       </span>
                     </div>
-                    <p className="text-xs text-zinc-400 mt-0.5">
+                    <p className="text-xs text-muted-foreground mt-0.5">
                       Model Context Protocol (MCP) server integration for Google Vertex AI, Workspace Drive, and Cloud Storage.
                     </p>
                   </div>
@@ -738,7 +738,7 @@ export default function TeamPage() {
                   onClick={triggerGoogleMcpSync}
                   className="btn-secondary text-xs px-3 py-1.5 flex items-center gap-1.5 shrink-0"
                 >
-                  <RefreshCw className={cn("h-3.5 w-3.5", syncingMcp && "animate-spin text-indigo-400")} />
+                  <RefreshCw className={cn("h-3.5 w-3.5", syncingMcp && "animate-spin text-primary")} />
                   <span>{syncingMcp ? "Syncing IAM…" : mcpSyncedSuccess ? "Synced!" : "Sync Google IAM"}</span>
                 </button>
               </div>
@@ -746,25 +746,25 @@ export default function TeamPage() {
               {/* Connected Google Infrastructure Snapshot */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs font-mono">
                 <div className="rounded-xl bg-white/5 p-3 border border-white/5">
-                  <span className="text-[10px] text-zinc-400 block font-sans">Connected Google Project</span>
-                  <span className="text-white font-bold mt-0.5 block truncate">{googleMcp.projectId}</span>
+                  <span className="text-[10px] text-muted-foreground block font-sans">Connected Google Project</span>
+                  <span className="text-foreground font-bold mt-0.5 block truncate">{googleMcp.projectId}</span>
                 </div>
 
                 <div className="rounded-xl bg-white/5 p-3 border border-white/5">
-                  <span className="text-[10px] text-zinc-400 block font-sans">Workspace Domain</span>
+                  <span className="text-[10px] text-muted-foreground block font-sans">Workspace Domain</span>
                   <span className="text-emerald-400 font-bold mt-0.5 block truncate">{googleMcp.workspaceDomain}</span>
                 </div>
 
                 <div className="rounded-xl bg-white/5 p-3 border border-white/5">
-                  <span className="text-[10px] text-zinc-400 block font-sans">Service Account Sync</span>
-                  <span className="text-indigo-300 font-bold mt-0.5 block truncate">{googleMcp.serviceAccount}</span>
+                  <span className="text-[10px] text-muted-foreground block font-sans">Service Account Sync</span>
+                  <span className="text-primary font-bold mt-0.5 block truncate">{googleMcp.serviceAccount}</span>
                 </div>
               </div>
 
               {/* Active MCP Tools Grid */}
               <div className="space-y-3 pt-2">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-400 font-mono flex items-center gap-1.5">
-                  <Layers className="h-3.5 w-3.5 text-indigo-400" />
+                <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground font-mono flex items-center gap-1.5">
+                  <Layers className="h-3.5 w-3.5 text-primary" />
                   <span>Active Google MCP Protocol Tools</span>
                 </h4>
 
@@ -772,7 +772,7 @@ export default function TeamPage() {
                   {googleMcp.tools.map((tool) => (
                     <div
                       key={tool.id}
-                      className="rounded-xl border border-white/10 bg-white/5 p-3.5 flex flex-col justify-between hover:border-indigo-500/40 transition-colors"
+                      className="rounded-xl border border-border bg-white/5 p-3.5 flex flex-col justify-between hover:border-indigo-500/40 transition-colors"
                     >
                       <div>
                         <div className="flex items-center justify-between">
@@ -781,14 +781,14 @@ export default function TeamPage() {
                             {tool.category === "workspace" && <FolderSync className="h-4 w-4 text-blue-400" />}
                             {tool.category === "storage" && <Database className="h-4 w-4 text-amber-400" />}
                             {tool.category === "cloud" && <Cloud className="h-4 w-4 text-emerald-400" />}
-                            <span className="text-xs font-bold text-white">{tool.name}</span>
+                            <span className="text-xs font-bold text-foreground">{tool.name}</span>
                           </div>
                           <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[9px] font-mono text-emerald-300 border border-emerald-500/20">
                             {tool.status.toUpperCase()}
                           </span>
                         </div>
 
-                        <p className="text-[11px] text-zinc-400 mt-1 leading-relaxed">
+                        <p className="text-[11px] text-muted-foreground mt-1 leading-relaxed">
                           {tool.description}
                         </p>
                       </div>
@@ -797,7 +797,7 @@ export default function TeamPage() {
                         {tool.capabilities.map((cap) => (
                           <span
                             key={cap}
-                            className="rounded bg-black/40 px-1.5 py-0.5 text-[9px] font-mono text-zinc-300 border border-white/5"
+                            className="rounded bg-black/40 px-1.5 py-0.5 text-[9px] font-mono text-muted-foreground border border-white/5"
                           >
                             {cap}
                           </span>
@@ -821,10 +821,10 @@ export default function TeamPage() {
             className="relative z-10 w-full max-w-md rounded-2xl border border-white/15 p-6 shadow-2xl backdrop-blur-2xl space-y-4"
             style={{ background: "rgba(16, 18, 28, 0.98)" }}
           >
-            <div className="flex items-center justify-between pb-3 border-b border-white/10">
+            <div className="flex items-center justify-between pb-3 border-b border-border">
               <div className="flex items-center gap-2">
-                <UserPlus className="h-5 w-5 text-indigo-400" />
-                <h3 className="text-base font-bold text-white">
+                <UserPlus className="h-5 w-5 text-primary" />
+                <h3 className="text-base font-bold text-foreground">
                   {viewMode === "family" ? "Invite Household Member" : "Invite Team Colleague"}
                 </h3>
               </div>
@@ -838,7 +838,7 @@ export default function TeamPage() {
 
             <form onSubmit={sendMemberInvite} className="space-y-4">
               <div>
-                <label className="block text-xs font-medium text-zinc-300 mb-1">Email Address</label>
+                <label className="block text-xs font-medium text-muted-foreground mb-1">Email Address</label>
                 <input
                   type="email"
                   required
@@ -850,7 +850,7 @@ export default function TeamPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-zinc-300 mb-1">Display Name (Optional)</label>
+                <label className="block text-xs font-medium text-muted-foreground mb-1">Display Name (Optional)</label>
                 <input
                   type="text"
                   value={inviteName}
@@ -862,11 +862,11 @@ export default function TeamPage() {
 
               {viewMode === "family" ? (
                 <div>
-                  <label className="block text-xs font-medium text-zinc-300 mb-1">
+                  <label className="block text-xs font-medium text-muted-foreground mb-1">
                     Monthly Fair-Use Credit Cap (USD)
                   </label>
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-mono text-zinc-400">$</span>
+                    <span className="text-sm font-mono text-muted-foreground">$</span>
                     <input
                       type="number"
                       min="1"
@@ -875,12 +875,12 @@ export default function TeamPage() {
                       onChange={(e) => setInviteQuotaUsd(e.target.value)}
                       className="input w-28 font-mono text-sm"
                     />
-                    <span className="text-xs text-zinc-400 font-mono">USD / mo limit (protects pool)</span>
+                    <span className="text-xs text-muted-foreground font-mono">USD / mo limit (protects pool)</span>
                   </div>
                 </div>
               ) : (
                 <div>
-                  <label className="block text-xs font-medium text-zinc-300 mb-1">Workspace Role</label>
+                  <label className="block text-xs font-medium text-muted-foreground mb-1">Workspace Role</label>
                   <select
                     value={inviteRole}
                     onChange={(e) => setInviteRole(e.target.value)}
@@ -893,7 +893,7 @@ export default function TeamPage() {
                 </div>
               )}
 
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-white/10">
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-border">
                 <button
                   type="button"
                   onClick={() => setShowInviteModal(false)}

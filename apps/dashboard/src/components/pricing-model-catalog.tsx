@@ -70,7 +70,7 @@ export function PricingModelCatalog({
 
   return (
     <aside
-      className="od-card"
+      className="rounded-lg border border-border bg-card text-card-foreground shadow-sm"
       style={{
         display: "flex",
         flexDirection: "column",
@@ -80,9 +80,9 @@ export function PricingModelCatalog({
         overflow: "hidden",
       }}
     >
-      <div style={{ padding: "16px 16px 12px", borderBottom: "1px solid var(--line)", flexShrink: 0 }}>
-        <div className="od-eyebrow">Model catalog</div>
-        <div style={{ marginTop: 6, fontSize: 16, fontWeight: 600, color: "var(--ink)" }}>
+      <div style={{ padding: "16px 16px 12px", borderBottom: "1px solid hsl(var(--border))", flexShrink: 0 }}>
+        <div className="text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">Model catalog</div>
+        <div style={{ marginTop: 6, fontSize: 16, fontWeight: 600, color: "hsl(var(--foreground))" }}>
           Pick a model to price
         </div>
         <input
@@ -92,12 +92,12 @@ export function PricingModelCatalog({
           style={{
             marginTop: 12,
             width: "100%",
-            border: "1px solid var(--line)",
+            border: "1px solid hsl(var(--border))",
             borderRadius: 10,
             padding: "8px 10px",
             fontSize: 13,
-            background: "var(--paper)",
-            color: "var(--ink)",
+            background: "hsl(var(--background))",
+            color: "hsl(var(--foreground))",
             outline: "none",
           }}
         />
@@ -117,12 +117,12 @@ export function PricingModelCatalog({
 
       <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: 8 }}>
         {loading ? (
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, height: 160, color: "var(--ink-3)" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, height: 160, color: "hsl(var(--muted-foreground))" }}>
             <Loader2 className="h-4 w-4 animate-spin" />
             Loading catalog…
           </div>
         ) : rows.length === 0 ? (
-          <div style={{ padding: 24, textAlign: "center", color: "var(--ink-4)", fontSize: 13 }}>
+          <div style={{ padding: 24, textAlign: "center", color: "hsl(var(--muted-foreground))", fontSize: 13 }}>
             No models match.
           </div>
         ) : (
@@ -145,19 +145,19 @@ export function PricingModelCatalog({
                   cursor: "pointer",
                   marginBottom: 4,
                 }}
-                className={active ? "" : "hover:bg-[var(--paper-3)]"}
+                className={active ? "" : "hover:bg-accent"}
               >
                 <ModelMark name={m.label || m.id} provider={m.provider} modelId={m.id} size={28} />
                 <div style={{ minWidth: 0, flex: 1 }}>
                   <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-                    <span style={{ fontSize: 13, fontWeight: 600, color: "var(--ink)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: "hsl(var(--foreground))", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       {m.label}
                     </span>
-                    <span className="od-mono" style={{ fontSize: 10, color: "var(--ink-4)", marginLeft: "auto", flexShrink: 0 }}>
+                    <span className="font-mono" style={{ fontSize: 10, color: "hsl(var(--muted-foreground))", marginLeft: "auto", flexShrink: 0 }}>
                       {money(m.pricePer1MInputUsd)} / {money(m.pricePer1MOutputUsd)}
                     </span>
                   </div>
-                  <div className="od-mono" style={{ fontSize: 10, color: "var(--ink-4)", marginTop: 2 }}>
+                  <div className="font-mono" style={{ fontSize: 10, color: "hsl(var(--muted-foreground))", marginTop: 2 }}>
                     {m.provider} · {m.id}
                   </div>
                 </div>
@@ -167,7 +167,7 @@ export function PricingModelCatalog({
         )}
       </div>
 
-      <div style={{ padding: "10px 16px", borderTop: "1px solid var(--line)", fontSize: 12, color: "var(--ink-3)", flexShrink: 0 }}>
+      <div style={{ padding: "10px 16px", borderTop: "1px solid hsl(var(--border))", fontSize: 12, color: "hsl(var(--muted-foreground))", flexShrink: 0 }}>
         Rates are $ / 1M tokens.{" "}
         <Link href="/dashboard/models" style={{ color: "var(--brand)", fontWeight: 500 }}>
           Open full catalog

@@ -62,6 +62,9 @@ firebase deploy --only hosting --project project-800192c2-3ecc-4889-8f7
 |-----|--------|
 | `GCP_PROJECT_ID` / `GCP_PROJECT` / `GOOGLE_CLOUD_PROJECT` | `project-800192c2-3ecc-4889-8f7` |
 | `VERTEX_LOCATION` | `global` |
+| `VERTEX_IMAGE_LOCATION` | `global` |
+| `VERTEX_IMAGE_MODEL` | `gemini-3.1-flash-image` (Nano Banana) |
+| `VERTEX_VEO_MODEL` | `veo-3.1-fast-generate-001` |
 | `OPENDOOR_FILES_BUCKET` | `opendoor-files-800192c2` (gateway) |
 | `STRIPE_WEB_SEARCH_ADDON_PRICE_ID` | `price_1U5OPSBZaqY5cS2ZgTgkHNDX` (test; dashboard) |
 | `PRIVATE_IMAGE_GEN_URL` | Optional OpenAI-compatible image server. Unset by default. Never `opendoor-comfy`. |

@@ -1,6 +1,11 @@
 /**
- * No free usage gift. Unpaid workspaces can exist so someone can log in,
- * but inference needs a Pro/Team/Enterprise seat and/or a prepaid top-up.
+ * Warehouse-club pricing: the seat is the profit, usage is the bargain.
+ * Included monthly credit is a taste (always less than the membership),
+ * then tokens and GPUs stay pay-as-you-go at list. Open-weight and closed
+ * both spend that stipend — we do not wall student/Pro off open-weight.
+ *
+ * No free usage gift. Unpaid workspaces can log in, but inference needs a
+ * paid seat and/or a prepaid top-up.
  *
  * First top-up of $20+ grants $5 of open-weight credit (expires in 30 days).
  * That bonus cannot buy closed models or cloud GPUs.
@@ -102,7 +107,16 @@ export function creditWaterfall(args: {
   };
 }
 
-export type PlanId = "free" | "starter" | "pro" | "ultra" | "family" | "family_max" | "team" | "enterprise";
+export type PlanId =
+  | "free"
+  | "starter"
+  | "student"
+  | "pro"
+  | "ultra"
+  | "family"
+  | "family_max"
+  | "team"
+  | "enterprise";
 
 export type PlanDefinition = {
   id: PlanId;
@@ -127,7 +141,7 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
     amountUsd: 0,
     perSeat: false,
     maxSeats: 1,
-    includedCreditsCents: 500,
+    includedCreditsCents: 0,
     rateLimitMultiplier: 1,
     maxApiKeys: 3,
     maxActiveDeployments: 1,
@@ -140,20 +154,33 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
     amountUsd: 0,
     perSeat: false,
     maxSeats: 1,
-    includedCreditsCents: 500,
+    includedCreditsCents: 0,
     rateLimitMultiplier: 1,
     maxApiKeys: 3,
     maxActiveDeployments: 1,
     priorityQueue: false,
     markupByFamily: { closed: 5, open_weight: 35 },
   },
+  student: {
+    id: "student",
+    name: "Student",
+    amountUsd: 9.99,
+    perSeat: false,
+    maxSeats: 1,
+    includedCreditsCents: 200,
+    rateLimitMultiplier: 2,
+    maxApiKeys: 5,
+    maxActiveDeployments: 1,
+    priorityQueue: false,
+    markupByFamily: { closed: 3, open_weight: 30 },
+  },
   pro: {
     id: "pro",
     name: "Pro Studio",
-    amountUsd: 20,
+    amountUsd: 12,
     perSeat: false,
     maxSeats: 1,
-    includedCreditsCents: 5000,
+    includedCreditsCents: 400,
     rateLimitMultiplier: 3,
     maxApiKeys: 10,
     maxActiveDeployments: 2,
@@ -166,7 +193,7 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
     amountUsd: 45,
     perSeat: false,
     maxSeats: 1,
-    includedCreditsCents: 15000,
+    includedCreditsCents: 1200,
     rateLimitMultiplier: 6,
     maxApiKeys: 25,
     maxActiveDeployments: 5,
@@ -176,12 +203,12 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
   family: {
     id: "family",
     name: "Family Pool",
-    amountUsd: 60,
+    amountUsd: 29.99,
     perSeat: false,
     maxSeats: 4,
     rolloverMonths: 4,
     isPool: true,
-    includedCreditsCents: 25000,
+    includedCreditsCents: 2200,
     rateLimitMultiplier: 5,
     maxApiKeys: 20,
     maxActiveDeployments: 4,
@@ -191,12 +218,12 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
   family_max: {
     id: "family_max",
     name: "Family Max Pool",
-    amountUsd: 110,
+    amountUsd: 99,
     perSeat: false,
-    maxSeats: 6,
+    maxSeats: 5,
     rolloverMonths: 4,
     isPool: true,
-    includedCreditsCents: 60000,
+    includedCreditsCents: 7500,
     rateLimitMultiplier: 10,
     maxApiKeys: 50,
     maxActiveDeployments: 10,
@@ -208,7 +235,7 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
     name: "Team Workspace",
     amountUsd: 50,
     perSeat: true,
-    includedCreditsCents: 10000,
+    includedCreditsCents: 1500,
     rateLimitMultiplier: 5,
     maxApiKeys: 50,
     maxActiveDeployments: 5,
@@ -220,7 +247,7 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
     name: "Enterprise",
     amountUsd: 120,
     perSeat: true,
-    includedCreditsCents: 25000,
+    includedCreditsCents: 3500,
     rateLimitMultiplier: 10,
     maxApiKeys: 500,
     maxActiveDeployments: 20,
@@ -242,8 +269,31 @@ export function includedCreditCents(plan: string, seats = 1): number {
   return def.includedCreditsCents * qty;
 }
 
+/** Household club math vs buying that many Pro seats. */
+export function familyClubValue(planId: Extract<PlanId, "family" | "family_max">) {
+  const family = PLANS[planId];
+  const seats = Math.max(1, family.maxSeats ?? 1);
+  const soloPriceUsd = PLANS.pro.amountUsd * seats;
+  const soloCreditCents = PLANS.pro.includedCreditsCents * seats;
+  return {
+    seats,
+    priceUsd: family.amountUsd,
+    perPersonUsd: family.amountUsd / seats,
+    soloPriceUsd,
+    saveVsSoloUsd: Math.round(Math.max(0, soloPriceUsd - family.amountUsd)),
+    poolCents: family.includedCreditsCents,
+    soloCreditCents,
+    extraPoolCents: family.includedCreditsCents - soloCreditCents,
+    rolloverMonths: family.rolloverMonths ?? 0,
+  };
+}
+
 export function formatUsd(cents: number) {
   return `$${(cents / 100).toFixed(cents % 100 === 0 ? 0 : 2)}`;
+}
+
+export function formatPlanPriceUsd(amountUsd: number) {
+  return amountUsd % 1 === 0 ? `$${amountUsd}` : `$${amountUsd.toFixed(2)}`;
 }
 
 /** Customer list = Google all-in × ~1.25. Metal is the customer’s machine. */
@@ -298,7 +348,8 @@ export function workspaceHasAgentsAddon(org: {
   plan?: string | null;
   agentsAddonStatus?: string | null;
 }) {
-  if (org.plan === "enterprise") return true;
+  const plan = (org.plan || "").toLowerCase();
+  if (plan === "enterprise" || plan === "family_max") return true;
   return agentsAddonActive(org.agentsAddonStatus);
 }
 

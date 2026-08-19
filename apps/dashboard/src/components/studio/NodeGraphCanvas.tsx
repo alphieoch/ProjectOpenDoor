@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useMemo, useState } from "react";
+import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useState } from "react";
 import {
   ReactFlow,
   Background,
@@ -30,7 +30,9 @@ import {
   Upload,
   Cpu,
   Eye,
+  Timer,
 } from "lucide-react";
+import type { GenerationFamily } from "./LumaSettingsPopover";
 import { STYLE_PRESETS, OPENDOOR_STUDIO_MODELS } from "@/lib/studio-constants";
 
 // ── Sockets & Colors ────────────────────────────────────────────────────────
@@ -46,16 +48,21 @@ const SOCKET_COLORS = {
 export interface NodeGraphAsset {
   id: string;
   url: string;
-  kind: "image" | "video";
+  kind: "image" | "video" | "audio";
   prompt: string;
   model: string;
   timestamp: number;
 }
 
 interface NodeGraphCanvasProps {
+  family?: GenerationFamily;
   onAssetGenerated?: (asset: NodeGraphAsset) => void;
   onSendToCanvas?: (url: string) => void;
 }
+
+export type NodeGraphCanvasHandle = {
+  applyPromptAndRun: (prompt?: string) => Promise<void>;
+};
 
 // ── Custom Node 1: Prompt Node ──────────────────────────────────────────────
 function PromptNodeComponent({ id, data }: { id: string; data: any }) {
@@ -75,7 +82,7 @@ function PromptNodeComponent({ id, data }: { id: string; data: any }) {
           <textarea
             value={data.prompt || ""}
             onChange={(e) => data.onChange?.(id, "prompt", e.target.value)}
-            placeholder="Describe the desired image scene..."
+            placeholder={data.placeholder || "Describe the desired image scene..."}
             rows={3}
             className="w-full resize-none rounded-xl border border-white/10 bg-black/40 p-2.5 text-xs text-white placeholder-zinc-500 focus:border-orange-500/50 focus:outline-none transition-colors"
           />
@@ -145,7 +152,11 @@ function ModelLoaderNodeComponent({ id, data }: { id: string; data: any }) {
             onChange={(e) => data.onChange?.(id, "model", e.target.value)}
             className="w-full rounded-xl border border-white/10 bg-black/40 p-2 text-[11px] text-zinc-200 focus:outline-none transition-colors"
           >
-            {OPENDOOR_STUDIO_MODELS.map((m) => (
+            {OPENDOOR_STUDIO_MODELS.filter((m) => {
+              if (!data.category) return true;
+              if (data.category === "image") return m.category === "image" || m.category === "enhance";
+              return m.category === data.category;
+            }).map((m) => (
               <option key={m.id} value={m.id}>
                 {m.name}
               </option>
@@ -448,6 +459,13 @@ function OutputNodeComponent({ data }: { id: string; data: any }) {
               <Sparkles className="h-6 w-6 animate-spin text-amber-400" />
               <span className="text-[11px] text-zinc-400">Computing node latent pass...</span>
             </div>
+          ) : data.outputUrl && data.kind === "video" ? (
+            <video src={data.outputUrl} muted loop playsInline className="h-full w-full object-contain" />
+          ) : data.outputUrl && data.kind === "audio" ? (
+            <div className="flex flex-col items-center gap-2 p-3 text-center">
+              <Timer className="h-6 w-6 text-cyan-400" />
+              <audio src={data.outputUrl} controls className="w-full" />
+            </div>
           ) : data.outputUrl ? (
             <img src={data.outputUrl} alt="Graph Output" className="h-full w-full object-contain" />
           ) : (
@@ -489,6 +507,42 @@ function OutputNodeComponent({ data }: { id: string; data: any }) {
   );
 }
 
+function DurationNodeComponent({ id, data }: { id: string; data: any }) {
+  return (
+    <div className="w-56 rounded-2xl border border-white/10 bg-[#121420]/90 p-3.5 text-xs shadow-2xl backdrop-blur-xl">
+      <div className="mb-2.5 flex items-center justify-between border-b border-white/[0.06] pb-2 text-[11px] font-semibold text-cyan-300">
+        <div className="flex items-center gap-1.5">
+          <Timer className="h-3.5 w-3.5" />
+          <span>Duration</span>
+        </div>
+        <span className="rounded-full bg-cyan-500/10 px-2 py-0.5 text-[9px] font-mono font-medium text-cyan-300">Time</span>
+      </div>
+      <div className="flex gap-1.5">
+        {([5, 9] as const).map((seconds) => (
+          <button
+            key={seconds}
+            type="button"
+            onClick={() => data.onChange?.(id, "duration", seconds)}
+            className={`flex-1 rounded-xl py-1.5 font-mono text-[11px] font-semibold ${
+              (data.duration || 5) === seconds
+                ? "border border-cyan-500/40 bg-cyan-500/20 text-cyan-200"
+                : "border border-white/5 bg-black/30 text-zinc-400 hover:bg-black/50"
+            }`}
+          >
+            {seconds}s
+          </button>
+        ))}
+      </div>
+      <Handle
+        type="source"
+        position={Position.Right}
+        id="duration_out"
+        style={{ top: "50%", background: SOCKET_COLORS.image, width: 8, height: 8 }}
+      />
+    </div>
+  );
+}
+
 // ── Register Node Types ──────────────────────────────────────────────────────
 const nodeTypes = {
   prompt: PromptNodeComponent,
@@ -498,6 +552,7 @@ const nodeTypes = {
   imageLoader: ImageLoaderNodeComponent,
   upscaler: UpscalerNodeComponent,
   output: OutputNodeComponent,
+  duration: DurationNodeComponent,
 };
 
 // ── Pre-configured Templates ─────────────────────────────────────────────────
@@ -506,7 +561,7 @@ const TEMPLATE_TXT2IMG_NODES: Node[] = [
     id: "model-1",
     type: "model",
     position: { x: 40, y: 80 },
-    data: { model: "opendoor-flux-canvas" },
+    data: { model: "opendoor-flux-canvas", category: "image" },
   },
   {
     id: "prompt-1",
@@ -542,11 +597,96 @@ const TEMPLATE_TXT2IMG_EDGES: Edge[] = [
   { id: "e4-5", source: "sampler-1", sourceHandle: "latent_out", target: "output-1", targetHandle: "image_in", animated: true, style: { stroke: SOCKET_COLORS.image } },
 ];
 
-export function NodeGraphCanvas({ onAssetGenerated, onSendToCanvas }: NodeGraphCanvasProps) {
-  const [nodes, setNodes, onNodesChange] = useNodesState(TEMPLATE_TXT2IMG_NODES);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(TEMPLATE_TXT2IMG_EDGES);
+const FAMILY_TEMPLATES: Record<GenerationFamily, { id: string; label: string; nodes: Node[]; edges: Edge[] }[]> = {
+  images: [
+    { id: "txt2img", label: "Text to Image", nodes: TEMPLATE_TXT2IMG_NODES, edges: TEMPLATE_TXT2IMG_EDGES },
+    {
+      id: "img2img_upscale",
+      label: "Image remix + 4K",
+      nodes: [
+        { id: "img-1", type: "imageLoader", position: { x: 40, y: 60 }, data: {} },
+        { id: "prompt-1", type: "prompt", position: { x: 40, y: 260 }, data: { prompt: "hyper-detailed, award-winning cinematic lighting", stylePreset: "cinematic" } },
+        { id: "model-1", type: "model", position: { x: 330, y: 40 }, data: { model: "opendoor-flux-canvas", category: "image" } },
+        { id: "sampler-1", type: "sampler", position: { x: 330, y: 200 }, data: { steps: 28, cfg: 7.5, denoise: 0.55 } },
+        { id: "upscale-1", type: "upscaler", position: { x: 630, y: 80 }, data: { scale: 4 } },
+        { id: "output-1", type: "output", position: { x: 860, y: 80 }, data: { kind: "image" } },
+      ],
+      edges: [
+        { id: "e1-sampler", source: "model-1", sourceHandle: "model_out", target: "sampler-1", targetHandle: "model_in", animated: true, style: { stroke: SOCKET_COLORS.model } },
+        { id: "e2-sampler", source: "prompt-1", sourceHandle: "conditioning_out", target: "sampler-1", targetHandle: "positive_in", animated: true, style: { stroke: SOCKET_COLORS.conditioning } },
+        { id: "e3-sampler", source: "img-1", sourceHandle: "image_out", target: "sampler-1", targetHandle: "latent_in", animated: true, style: { stroke: SOCKET_COLORS.image } },
+        { id: "e4-upscale", source: "sampler-1", sourceHandle: "latent_out", target: "upscale-1", targetHandle: "image_in", animated: true, style: { stroke: SOCKET_COLORS.image } },
+        { id: "e5-out", source: "upscale-1", sourceHandle: "image_out", target: "output-1", targetHandle: "image_in", animated: true, style: { stroke: SOCKET_COLORS.image } },
+      ],
+    },
+  ],
+  videos: [
+    {
+      id: "txt2vid",
+      label: "Text to Video",
+      nodes: [
+        { id: "model-1", type: "model", position: { x: 40, y: 80 }, data: { model: "luma-dream-machine", category: "video" } },
+        { id: "prompt-1", type: "prompt", position: { x: 40, y: 260 }, data: { prompt: "Cinematic drone flight over mist-shrouded temple waterfalls", placeholder: "Describe the video scene and camera motion..." } },
+        { id: "duration-1", type: "duration", position: { x: 360, y: 80 }, data: { duration: 5 } },
+        { id: "output-1", type: "output", position: { x: 640, y: 160 }, data: { kind: "video" } },
+      ],
+      edges: [
+        { id: "e-model-prompt", source: "model-1", sourceHandle: "clip_out", target: "prompt-1", targetHandle: "clip_in", animated: true, style: { stroke: SOCKET_COLORS.clip } },
+        { id: "e-prompt-out", source: "prompt-1", sourceHandle: "conditioning_out", target: "output-1", targetHandle: "image_in", animated: true, style: { stroke: SOCKET_COLORS.conditioning } },
+        { id: "e-duration-out", source: "duration-1", sourceHandle: "duration_out", target: "output-1", targetHandle: "image_in", animated: true, style: { stroke: SOCKET_COLORS.image } },
+      ],
+    },
+  ],
+  objects: [
+    {
+      id: "txt2obj",
+      label: "Text to 3D",
+      nodes: [
+        { id: "model-1", type: "model", position: { x: 40, y: 80 }, data: { model: "opendoor-shap-e-3d", category: "3d" } },
+        { id: "prompt-1", type: "prompt", position: { x: 40, y: 260 }, data: { prompt: "Minimalist matte ceramic pour-over kettle with carved walnut handle", placeholder: "Describe the product or object to mesh..." } },
+        { id: "output-1", type: "output", position: { x: 400, y: 150 }, data: { kind: "mesh" } },
+      ],
+      edges: [
+        { id: "e-model-prompt", source: "model-1", sourceHandle: "clip_out", target: "prompt-1", targetHandle: "clip_in", animated: true, style: { stroke: SOCKET_COLORS.clip } },
+        { id: "e-prompt-out", source: "prompt-1", sourceHandle: "conditioning_out", target: "output-1", targetHandle: "image_in", animated: true, style: { stroke: SOCKET_COLORS.conditioning } },
+      ],
+    },
+  ],
+  sound: [
+    {
+      id: "sound_fx",
+      label: "Prompt to Sound",
+      nodes: [
+        { id: "model-1", type: "model", position: { x: 40, y: 80 }, data: { model: "opendoor-cinematic-sfx", category: "sound" } },
+        { id: "prompt-1", type: "prompt", position: { x: 40, y: 260 }, data: { prompt: "Heavy nocturnal rain on metallic roof with distant siren echoes", placeholder: "Describe the Foley, ambience, or impact..." } },
+        { id: "duration-1", type: "duration", position: { x: 360, y: 80 }, data: { duration: 5 } },
+        { id: "output-1", type: "output", position: { x: 640, y: 160 }, data: { kind: "audio" } },
+      ],
+      edges: [
+        { id: "e-model-prompt", source: "model-1", sourceHandle: "clip_out", target: "prompt-1", targetHandle: "clip_in", animated: true, style: { stroke: SOCKET_COLORS.clip } },
+        { id: "e-prompt-out", source: "prompt-1", sourceHandle: "conditioning_out", target: "output-1", targetHandle: "image_in", animated: true, style: { stroke: SOCKET_COLORS.conditioning } },
+        { id: "e-duration-out", source: "duration-1", sourceHandle: "duration_out", target: "output-1", targetHandle: "image_in", animated: true, style: { stroke: SOCKET_COLORS.image } },
+      ],
+    },
+  ],
+};
+
+const FAMILY_TITLE: Record<GenerationFamily, string> = {
+  images: "Image Nodes",
+  videos: "Video Nodes",
+  objects: "Object Nodes",
+  sound: "Sound Nodes",
+};
+
+export const NodeGraphCanvas = forwardRef<NodeGraphCanvasHandle, NodeGraphCanvasProps>(function NodeGraphCanvas(
+  { family = "images", onAssetGenerated, onSendToCanvas },
+  ref,
+) {
+  const familyGraphs = FAMILY_TEMPLATES[family] || FAMILY_TEMPLATES.images;
+  const [nodes, setNodes, onNodesChange] = useNodesState(familyGraphs[0].nodes);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(familyGraphs[0].edges);
   const [isExecuting, setIsExecuting] = useState(false);
-  const [activeTemplate, setActiveTemplate] = useState("txt2img");
+  const [activeTemplate, setActiveTemplate] = useState(familyGraphs[0].id);
 
   const onConnect = useCallback(
     (params: Connection) => setEdges((eds) => addEdge({ ...params, animated: true }, eds)),
@@ -588,29 +728,19 @@ export function NodeGraphCanvas({ onAssetGenerated, onSendToCanvas }: NodeGraphC
     [nodes, handleNodeDataChange, onSendToCanvas, isExecuting]
   );
 
-  const loadTemplate = (name: string) => {
-    setActiveTemplate(name);
-    if (name === "txt2img") {
-      setNodes(TEMPLATE_TXT2IMG_NODES);
-      setEdges(TEMPLATE_TXT2IMG_EDGES);
-    } else if (name === "img2img_upscale") {
-      setNodes([
-        { id: "img-1", type: "imageLoader", position: { x: 40, y: 60 }, data: {} },
-        { id: "prompt-1", type: "prompt", position: { x: 40, y: 260 }, data: { prompt: "hyper-detailed, award-winning cinematic lighting", stylePreset: "cinematic" } },
-        { id: "model-1", type: "model", position: { x: 330, y: 40 }, data: { model: "opendoor-flux-canvas" } },
-        { id: "sampler-1", type: "sampler", position: { x: 330, y: 200 }, data: { steps: 28, cfg: 7.5, denoise: 0.55 } },
-        { id: "upscale-1", type: "upscaler", position: { x: 630, y: 80 }, data: { scale: 4 } },
-        { id: "output-1", type: "output", position: { x: 860, y: 80 }, data: {} },
-      ]);
-      setEdges([
-        { id: "e1-sampler", source: "model-1", sourceHandle: "model_out", target: "sampler-1", targetHandle: "model_in", animated: true, style: { stroke: SOCKET_COLORS.model } },
-        { id: "e2-sampler", source: "prompt-1", sourceHandle: "conditioning_out", target: "sampler-1", targetHandle: "positive_in", animated: true, style: { stroke: SOCKET_COLORS.conditioning } },
-        { id: "e3-sampler", source: "img-1", sourceHandle: "image_out", target: "sampler-1", targetHandle: "latent_in", animated: true, style: { stroke: SOCKET_COLORS.image } },
-        { id: "e4-upscale", source: "sampler-1", sourceHandle: "latent_out", target: "upscale-1", targetHandle: "image_in", animated: true, style: { stroke: SOCKET_COLORS.image } },
-        { id: "e5-out", source: "upscale-1", sourceHandle: "image_out", target: "output-1", targetHandle: "image_in", animated: true, style: { stroke: SOCKET_COLORS.image } },
-      ]);
-    }
+  const loadTemplate = (name: string, nextFamily = family) => {
+    const graphs = FAMILY_TEMPLATES[nextFamily] || FAMILY_TEMPLATES.images;
+    const graph = graphs.find((item) => item.id === name) || graphs[0];
+    setActiveTemplate(graph.id);
+    setNodes(graph.nodes);
+    setEdges(graph.edges);
   };
+
+  useEffect(() => {
+    const graphs = FAMILY_TEMPLATES[family] || FAMILY_TEMPLATES.images;
+    loadTemplate(graphs[0].id, family);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [family]);
 
   const addCustomNode = (type: string) => {
     const id = `${type}-${Date.now()}`;
@@ -623,7 +753,14 @@ export function NodeGraphCanvas({ onAssetGenerated, onSendToCanvas }: NodeGraphC
     setNodes((nds) => [...nds, newNode]);
   };
 
-  const executePipeline = async () => {
+  const executePipeline = async (overridePrompt?: string) => {
+    const nextPrompt = overridePrompt?.trim();
+    if (nextPrompt) {
+      setNodes((nds) =>
+        nds.map((n) => (n.type === "prompt" ? { ...n, data: { ...n.data, prompt: nextPrompt } } : n))
+      );
+    }
+
     setIsExecuting(true);
 
     try {
@@ -634,50 +771,86 @@ export function NodeGraphCanvas({ onAssetGenerated, onSendToCanvas }: NodeGraphC
       const samplerNode = nodes.find((n) => n.type === "sampler");
       const imgNode = nodes.find((n) => n.type === "imageLoader");
 
-      const prompt = promptNode?.data?.prompt || "A masterpiece image synthesis";
+      const durationNode = nodes.find((n) => n.type === "duration");
+      const prompt = nextPrompt || promptNode?.data?.prompt || "A masterpiece image synthesis";
       const model = modelNode?.data?.model || "opendoor-flux-canvas";
       const size = latentNode?.data?.resolution || "1024x1024";
       const strength = samplerNode?.data?.denoise || 0.75;
       const refImage = imgNode?.data?.imageUrl || null;
+      const duration = Number(durationNode?.data?.duration || 5);
 
-      const payload: Record<string, unknown> = {
-        mode: refImage ? "img2img" : "txt2img",
-        prompt,
-        size,
-        strength,
-        model,
-        seed: Math.floor(Math.random() * 1_000_000),
-        steps: samplerNode?.data?.steps || 28,
-      };
+      let url: string | null = null;
+      let kind: NodeGraphAsset["kind"] = "image";
 
-      if (refImage) {
-        payload.image = refImage;
+      if (family === "videos") {
+        const form = new FormData();
+        form.set("mode", "txt2vid");
+        form.set("prompt", String(prompt));
+        form.set("model", String(model));
+        form.set("duration", String(duration));
+        const res = await fetch("/api/studio/video", { method: "POST", body: form });
+        const data = await res.json().catch(() => ({}));
+        const row = data.data?.[0];
+        url = row?.b64_json
+          ? `data:${row.mime || "video/mp4"};base64,${row.b64_json}`
+          : typeof row?.url === "string"
+            ? row.url
+            : typeof data.url === "string"
+              ? data.url
+              : null;
+        kind = "video";
+      } else if (family === "objects") {
+        const res = await fetch("/api/studio/object", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ prompt, model }),
+        });
+        const data = await res.json().catch(() => ({}));
+        url = typeof data.previewUrl === "string" ? data.previewUrl : typeof data.url === "string" ? data.url : null;
+        kind = "image";
+      } else if (family === "sound") {
+        const res = await fetch("/api/studio/audio", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ prompt, model, duration }),
+        });
+        const data = await res.json().catch(() => ({}));
+        url = typeof data.url === "string" ? data.url : null;
+        kind = "audio";
+      } else {
+        const payload: Record<string, unknown> = {
+          mode: refImage ? "img2img" : "txt2img",
+          prompt,
+          size,
+          strength,
+          model,
+          seed: Math.floor(Math.random() * 1_000_000),
+          steps: samplerNode?.data?.steps || 28,
+        };
+        if (refImage) payload.image = refImage;
+        const res = await fetch("/api/studio/generate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json().catch(() => ({}));
+        const row = data.data?.[0];
+        url = row?.b64_json
+          ? `data:${row.mime || "image/png"};base64,${row.b64_json}`
+          : typeof row?.url === "string"
+            ? row.url
+            : null;
       }
 
-      const res = await fetch("/api/studio/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      const data = await res.json().catch(() => ({}));
-      const row = data.data?.[0];
-      const url = row?.b64_json
-        ? `data:${row.mime || "image/png"};base64,${row.b64_json}`
-        : typeof row?.url === "string"
-          ? row.url
-          : null;
-
       if (url) {
-        // Update Output node preview
         setNodes((nds) =>
-          nds.map((n) => (n.type === "output" ? { ...n, data: { ...n.data, outputUrl: url } } : n))
+          nds.map((n) => (n.type === "output" ? { ...n, data: { ...n.data, outputUrl: url, kind } } : n))
         );
 
         const asset: NodeGraphAsset = {
           id: `node-${Date.now()}`,
           url,
-          kind: "image",
+          kind,
           prompt: String(prompt),
           model: String(model),
           timestamp: Date.now(),
@@ -692,6 +865,10 @@ export function NodeGraphCanvas({ onAssetGenerated, onSendToCanvas }: NodeGraphC
     }
   };
 
+  useImperativeHandle(ref, () => ({
+    applyPromptAndRun: (prompt?: string) => executePipeline(prompt),
+  }), [nodes, onAssetGenerated, family]);
+
   return (
     <div className="relative flex h-full w-full flex-col overflow-hidden" style={{ background: "var(--studio-bg)" }}>
       {/* Top Controls Toolbar */}
@@ -703,7 +880,7 @@ export function NodeGraphCanvas({ onAssetGenerated, onSendToCanvas }: NodeGraphC
               <Layers className="h-3.5 w-3.5" />
             </div>
             <span className="text-xs font-semibold uppercase tracking-wider text-zinc-200">
-              Modular Node Pipeline
+              {FAMILY_TITLE[family]}
             </span>
           </div>
 
@@ -717,8 +894,11 @@ export function NodeGraphCanvas({ onAssetGenerated, onSendToCanvas }: NodeGraphC
               onChange={(e) => loadTemplate(e.target.value)}
               className="rounded-xl border border-white/10 bg-zinc-900/90 px-3 py-1.5 text-[11px] font-medium text-zinc-200 focus:outline-none transition-colors"
             >
-              <option value="txt2img">1. Flux Text2Img Standard Graph</option>
-              <option value="img2img_upscale">2. Img2Img + 4K Enhancer Pipeline</option>
+              {familyGraphs.map((graph) => (
+                <option key={graph.id} value={graph.id}>
+                  {graph.label}
+                </option>
+              ))}
             </select>
           </div>
         </div>
@@ -734,22 +914,36 @@ export function NodeGraphCanvas({ onAssetGenerated, onSendToCanvas }: NodeGraphC
               <Plus className="h-3 w-3" />
               <span>Prompt</span>
             </button>
-            <button
-              type="button"
-              onClick={() => addCustomNode("imageLoader")}
-              className="flex items-center gap-1 rounded-xl border border-white/10 bg-white/[0.04] px-2.5 py-1.5 text-[11px] font-medium text-zinc-300 hover:bg-white/[0.08] hover:text-white transition-all"
-            >
-              <Plus className="h-3 w-3" />
-              <span>Image</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => addCustomNode("upscaler")}
-              className="flex items-center gap-1 rounded-xl border border-white/10 bg-white/[0.04] px-2.5 py-1.5 text-[11px] font-medium text-zinc-300 hover:bg-white/[0.08] hover:text-white transition-all"
-            >
-              <Plus className="h-3 w-3" />
-              <span>4K Upscaler</span>
-            </button>
+            {family === "images" && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => addCustomNode("imageLoader")}
+                  className="flex items-center gap-1 rounded-xl border border-white/10 bg-white/[0.04] px-2.5 py-1.5 text-[11px] font-medium text-zinc-300 hover:bg-white/[0.08] hover:text-white transition-all"
+                >
+                  <Plus className="h-3 w-3" />
+                  <span>Image</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => addCustomNode("upscaler")}
+                  className="flex items-center gap-1 rounded-xl border border-white/10 bg-white/[0.04] px-2.5 py-1.5 text-[11px] font-medium text-zinc-300 hover:bg-white/[0.08] hover:text-white transition-all"
+                >
+                  <Plus className="h-3 w-3" />
+                  <span>4K Upscaler</span>
+                </button>
+              </>
+            )}
+            {(family === "videos" || family === "sound") && (
+              <button
+                type="button"
+                onClick={() => addCustomNode("duration")}
+                className="flex items-center gap-1 rounded-xl border border-white/10 bg-white/[0.04] px-2.5 py-1.5 text-[11px] font-medium text-zinc-300 hover:bg-white/[0.08] hover:text-white transition-all"
+              >
+                <Plus className="h-3 w-3" />
+                <span>Duration</span>
+              </button>
+            )}
           </div>
 
           {/* Reset button */}
@@ -801,6 +995,7 @@ export function NodeGraphCanvas({ onAssetGenerated, onSendToCanvas }: NodeGraphC
               if (n.type === "sampler") return "#10b981";
               if (n.type === "imageLoader") return SOCKET_COLORS.image;
               if (n.type === "upscaler") return "#f59e0b";
+              if (n.type === "duration") return SOCKET_COLORS.image;
               return "#71717a";
             }}
             className="border border-white/10 bg-[#141416]"
@@ -810,4 +1005,4 @@ export function NodeGraphCanvas({ onAssetGenerated, onSendToCanvas }: NodeGraphC
       </div>
     </div>
   );
-}
+});

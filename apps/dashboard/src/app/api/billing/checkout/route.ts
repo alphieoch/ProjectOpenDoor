@@ -11,10 +11,15 @@ import { eq } from "drizzle-orm";
 import { requireAuth } from "@/lib/auth";
 import { logAuditEvent } from "@/lib/audit";
 import { appBaseUrl } from "@/lib/public-urls";
-import type { PlanId } from "@opendoor/shared";
+import { getPlan } from "@opendoor/shared";
 
-function asCheckoutPlan(value: unknown): Extract<PlanId, "pro" | "team"> | null {
-  return value === "pro" || value === "team" ? value : null;
+const SELF_SERVE_PLANS = ["student", "pro", "ultra", "family", "family_max", "team"] as const;
+type CheckoutPlan = (typeof SELF_SERVE_PLANS)[number];
+
+function asCheckoutPlan(value: unknown): CheckoutPlan | null {
+  return typeof value === "string" && (SELF_SERVE_PLANS as readonly string[]).includes(value)
+    ? (value as CheckoutPlan)
+    : null;
 }
 
 export async function POST(req: NextRequest) {
@@ -46,10 +51,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const seats =
-      plan === "team"
-        ? Math.min(500, Math.max(1, Number(body.seats) || 1))
-        : 1;
+    const seats = getPlan(plan).perSeat
+      ? Math.min(500, Math.max(1, Number(body.seats) || 1))
+      : 1;
 
     const db = getDb();
     const org = await db.query.organizations.findFirst({

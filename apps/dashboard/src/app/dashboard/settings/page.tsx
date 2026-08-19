@@ -331,8 +331,8 @@ function SettingRow({
   return (
     <div className="flex flex-col gap-3 py-5 sm:flex-row sm:items-start sm:gap-8">
       <div className="w-full shrink-0 sm:w-52">
-        <p className="text-sm font-medium" style={{ color: "var(--ink)" }}>{label}</p>
-        {hint && <p className="mt-0.5 text-xs leading-relaxed" style={{ color: "var(--ink-3)" }}>{hint}</p>}
+        <p className="text-sm font-medium text-foreground">{label}</p>
+        {hint && <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">{hint}</p>}
       </div>
       <div className="flex-1">{children}</div>
     </div>
@@ -416,19 +416,18 @@ const ALL_PLAN_TIERS = [
     id: "family_max",
     category: "family",
     name: "Family Max",
-    price: "$110",
+    price: "$99",
     period: "per month",
-    seatsText: "Up to 6 Family Members",
-    description: "Ultimate family tier with 60,000 pooled credits, 4-month rollover & Veo 2 for all seats.",
+    seatsText: "Up to 5 Family Members",
+    description: "Five household seats, $75 shared pool, Agents included, 4-month rollover.",
     features: [
-      "6 Family Member Seats included",
-      "60,000 Shared Family Credit Pool",
+      "5 Family Member Seats included",
+      "$75 Shared Family Credit Pool",
       "4-Month Rollover Vault (accumulate unused credits)",
-      "Google Veo 2 Cinematic Video for all members",
-      "Google Imagen 3 Ultra 8K for all members",
+      "Agents add-on included",
+      "Pooled OpenDoor Chat (225 messages / 5h)",
       "Highest priority GPU queue across all family seats",
       "Organizer anti-abuse spending caps & seat management",
-      "Unlimited 4K AI detail enhancements",
     ],
     badge: "Maximum Family Power",
     isFamily: true,
@@ -895,36 +894,38 @@ export default function SettingsPage() {
                   className={cn(
                     "flex w-full items-center gap-2.5 rounded-xl px-3.5 py-2.5 text-sm font-medium transition-all",
                     activeTab === id
-                      ? "bg-[var(--paper-3)] text-[var(--ink)] shadow-xs"
-                      : "text-[var(--ink-2)] hover:bg-[var(--paper-3)] hover:text-[var(--ink)]",
+                      ? "bg-accent text-foreground shadow-xs"
+                      : "text-muted-foreground hover:bg-accent hover:text-foreground",
                   )}
                 >
                   <Icon
-                    className="h-4 w-4 shrink-0"
-                    style={{ color: activeTab === id ? "var(--brand)" : "var(--ink-3)" }}
+                    className={cn(
+                      "h-4 w-4 shrink-0",
+                      activeTab === id ? "text-primary" : "text-muted-foreground",
+                    )}
                   />
                   <span>{label}</span>
                   {"enterprise" in tab && tab.enterprise && domainLocked && (
-                    <Lock className="ml-auto h-3.5 w-3.5 shrink-0" style={{ color: "var(--ink-4)" }} />
+                    <Lock className="ml-auto h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                   )}
                   {activeTab === id && !("enterprise" in tab && tab.enterprise && domainLocked) && (
-                    <ChevronRight className="ml-auto hidden md:block h-3.5 w-3.5" style={{ color: "var(--ink-4)" }} />
+                    <ChevronRight className="ml-auto hidden md:block h-3.5 w-3.5 text-muted-foreground" />
                   )}
                 </button>
               </li>
             ))}
 
-            <li className="hidden md:block my-2 border-t" style={{ borderColor: "var(--line)" }} />
+            <li className="hidden md:block my-2 border-t border-border" />
 
             <li className="shrink-0">
               <Link
                 href="/dashboard/settings/byok"
                 className={cn(
                   "flex w-full items-center gap-2.5 rounded-xl px-3.5 py-2.5 text-sm font-medium transition-colors",
-                  "text-[var(--ink-2)] hover:bg-[var(--paper-3)] hover:text-[var(--ink)]",
+                  "text-muted-foreground hover:bg-accent hover:text-foreground",
                 )}
               >
-                <KeyRound className="h-4 w-4 shrink-0" style={{ color: "var(--ink-3)" }} />
+                <KeyRound className="h-4 w-4 shrink-0 text-muted-foreground" />
                 <span>Provider Keys</span>
               </Link>
             </li>
@@ -933,10 +934,10 @@ export default function SettingsPage() {
                 href="/dashboard/support"
                 className={cn(
                   "flex w-full items-center gap-2.5 rounded-xl px-3.5 py-2.5 text-sm font-medium transition-colors",
-                  "text-[var(--ink-2)] hover:bg-[var(--paper-3)] hover:text-[var(--ink)]",
+                  "text-muted-foreground hover:bg-accent hover:text-foreground",
                 )}
               >
-                <LifeBuoy className="h-4 w-4 shrink-0" style={{ color: "var(--ink-3)" }} />
+                <LifeBuoy className="h-4 w-4 shrink-0 text-muted-foreground" />
                 <span>Support</span>
               </Link>
             </li>
@@ -947,20 +948,20 @@ export default function SettingsPage() {
         <div className="flex-1 min-w-0">
           {loading ? (
             <div className="flex h-64 items-center justify-center">
-              <Loader2 className="h-6 w-6 animate-spin text-indigo-400" />
+              <Loader2 className="h-6 w-6 animate-spin text-info" />
             </div>
           ) : (
             <form onSubmit={saveProfile}>
               {/* ── 1. Profile & Account ── */}
               {activeTab === "profile" && (
                 <div className="card space-y-0 overflow-hidden">
-                  <div className="px-6 py-4" style={{ borderBottom: "1px solid var(--line)" }}>
+                  <div className="border-b border-border px-6 py-4">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2.5">
-                        <User className="h-4 w-4" style={{ color: "var(--brand)" }} />
+                        <User className="h-4 w-4 text-primary" />
                         <h2 className="section-title">Personal Profile & Account</h2>
                       </div>
-                      <span className="inline-flex items-center gap-1.5 rounded-full bg-indigo-500/10 px-3 py-1 text-xs font-mono font-medium text-indigo-400 border border-indigo-500/20">
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-info/10 px-3 py-1 text-xs font-mono font-medium text-info border border-info/20">
                         <Sparkles className="h-3 w-3" />
                         <span>
                           {userProfile.isSiteAdmin
@@ -969,12 +970,12 @@ export default function SettingsPage() {
                         </span>
                       </span>
                     </div>
-                    <p className="mt-1 text-sm" style={{ color: "var(--ink-3)" }}>
+                    <p className="mt-1 text-sm text-muted-foreground">
                       Manage your profile photo, personal information, and workspace account identity.
                     </p>
                   </div>
 
-                  <div className="divide-y px-6" style={{ borderColor: "var(--line)" }}>
+                  <div className="divide-y divide-border px-6">
                     {/* User Avatar & Photo */}
                     <SettingRow label="Profile Avatar" hint="Your photo or account avatar shown across the studio.">
                       <div className="flex items-center gap-4">
@@ -1016,13 +1017,13 @@ export default function SettingsPage() {
                               <button
                                 type="button"
                                 onClick={() => setUserProfile((prev) => ({ ...prev, avatarUrl: null }))}
-                                className="text-xs text-zinc-400 hover:text-white px-2 py-1 transition-colors"
+                                className="text-xs text-muted-foreground hover:text-foreground px-2 py-1 transition-colors"
                               >
                                 Remove
                               </button>
                             )}
                           </div>
-                          <p className="text-[11px]" style={{ color: "var(--ink-4)" }}>
+                          <p className="text-[11px] text-muted-foreground">
                             JPG, PNG or GIF up to 5MB.
                           </p>
                         </div>
@@ -1061,7 +1062,7 @@ export default function SettingsPage() {
                           value={userProfile.email}
                           className="input flex-1 text-sm font-mono opacity-90 cursor-default"
                         />
-                        <span className="inline-flex items-center gap-1 rounded-md bg-emerald-500/10 px-2.5 py-1 text-xs font-mono text-emerald-400 border border-emerald-500/20">
+                        <span className="inline-flex items-center gap-1 rounded-md bg-success/10 px-2.5 py-1 text-xs font-mono text-success border border-success/20">
                           <Check className="h-3 w-3" />
                           <span>Verified</span>
                         </span>
@@ -1078,11 +1079,11 @@ export default function SettingsPage() {
                           placeholder="Workspace Name"
                           className="input text-sm w-56"
                         />
-                        <span className="rounded-lg bg-[var(--paper-3)] px-3 py-1.5 text-xs font-mono text-zinc-300 border border-[var(--line)]">
+                        <span className="rounded-lg bg-muted px-3 py-1.5 text-xs font-mono text-foreground border border-border">
                           Role: {userProfile.role.toUpperCase()}
                         </span>
                         {userProfile.isSiteAdmin && (
-                          <span className="rounded-lg border border-indigo-500/30 bg-indigo-500/10 px-3 py-1.5 text-xs font-mono text-indigo-300">
+                          <span className="rounded-lg border border-info/30 bg-info/10 px-3 py-1.5 text-xs font-mono text-info">
                             Site admin · unlimited
                           </span>
                         )}
@@ -1091,16 +1092,16 @@ export default function SettingsPage() {
 
                     {/* Subscription Callout */}
                     <SettingRow label="Subscription Plan" hint="Manage your subscription tier, family pooling, and credits.">
-                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 rounded-xl border border-indigo-500/30 bg-indigo-500/5 p-4">
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 rounded-xl border border-info/30 bg-info/5 p-4">
                         <div className="space-y-0.5">
                           <div className="flex items-center gap-2">
-                            <span className="text-sm font-semibold text-white">
+                            <span className="text-sm font-semibold text-foreground">
                               {userProfile.isSiteAdmin
                                 ? "Site admin (unlimited)"
                                 : settings.plan === "family"
                                   ? "Family Plan (4 Seats)"
                                   : settings.plan === "family_max"
-                                    ? "Family Max Plan (6 Seats)"
+                                    ? "Family Max Plan (5 Seats)"
                                     : settings.plan === "ultra"
                                       ? "Ultra Studio Plan"
                                       : settings.plan === "pro"
@@ -1109,13 +1110,13 @@ export default function SettingsPage() {
                                           ? "Enterprise Plan"
                                           : "Starter Plan"}
                             </span>
-                            <span className="rounded-full bg-indigo-500/20 px-2 py-0.5 text-[10px] font-mono text-indigo-300">
+                            <span className="rounded-full bg-info/20 px-2 py-0.5 text-[10px] font-mono text-info">
                               Active
                             </span>
                           </div>
-                          <p className="text-xs text-zinc-400">
+                          <p className="text-xs text-muted-foreground">
                             Pool Balance:{" "}
-                            <span className="font-mono text-emerald-400 font-medium">
+                            <span className="font-mono text-success font-medium">
                               ${(settings.creditsUsdCents / 100).toFixed(2)} USD
                             </span>{" "}
                             {isCurrentFamily && "(includes 4-month rolled over credits)"}
@@ -1125,7 +1126,7 @@ export default function SettingsPage() {
                         <button
                           type="button"
                           onClick={() => setActiveTab("billing")}
-                          className="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 px-3.5 py-1.5 text-xs font-semibold text-white shadow-md shadow-indigo-500/20 hover:scale-102 transition-all"
+                          className="flex items-center gap-1.5 rounded-xl bg-info px-3.5 py-1.5 text-xs font-semibold text-info-foreground shadow-md shadow-info/20 hover:bg-info/90 transition-all"
                         >
                           <span>Manage & Upgrade Plan</span>
                           <ArrowUpRight className="h-3.5 w-3.5" />
@@ -1138,10 +1139,10 @@ export default function SettingsPage() {
 
               {/* ── 2. Unified Plans, GPU Rentals & Billing Hub ── */}
               {activeTab === "billing" && (
-                <div className="space-y-6">
+                <div className="space-y-6 text-zinc-900 dark:text-zinc-50">
                   {/* Unified Sub-Nav Header inside Billing */}
-                  <div className="flex items-center justify-between border-b border-white/10 pb-3">
-                    <div className="flex items-center gap-1.5 rounded-xl bg-black/50 p-1 border border-white/10">
+                  <div className="flex items-center justify-between border-b border-zinc-200 pb-3 dark:border-zinc-800">
+                    <div className="flex items-center gap-1.5 rounded-xl border border-zinc-200 bg-zinc-100 p-1 dark:border-zinc-800 dark:bg-zinc-900">
                       {[
                         { id: "plans", label: "Subscription Plans", icon: Sparkles },
                         { id: "gpus", label: "GPU Rental Hub", icon: Cpu },
@@ -1157,8 +1158,8 @@ export default function SettingsPage() {
                             className={cn(
                               "flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-all",
                               billingSubTab === sub.id
-                                ? "bg-indigo-600 text-white shadow-xs font-semibold"
-                                : "text-zinc-400 hover:text-white",
+                                ? "bg-white text-zinc-900 shadow-sm font-semibold dark:bg-zinc-950 dark:text-zinc-50"
+                                : "text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100",
                             )}
                           >
                             <Icon className="h-3.5 w-3.5" />
@@ -1170,8 +1171,8 @@ export default function SettingsPage() {
 
                     <div className="flex items-center gap-3">
                       <div className="text-right">
-                        <span className="text-[10px] text-zinc-400 font-mono block">Compute Balance</span>
-                        <span className="text-sm font-bold font-mono text-emerald-400">
+                        <span className="text-[10px] text-zinc-500 font-mono block">Compute Balance</span>
+                        <span className="text-sm font-bold font-mono text-zinc-900 dark:text-zinc-50">
                           ${(settings.creditsUsdCents / 100).toFixed(2)} USD
                         </span>
                       </div>
@@ -1183,11 +1184,11 @@ export default function SettingsPage() {
                     <div className="space-y-5">
                       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                         <div>
-                          <h3 className="text-sm font-semibold text-white">Subscription Plans & Tiers</h3>
-                          <p className="text-xs text-zinc-400">Choose between solo creator plans and pooled family tiers.</p>
+                          <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">Subscription Plans & Tiers</h3>
+                          <p className="text-xs text-zinc-500">Choose between solo creator plans and pooled family tiers.</p>
                         </div>
 
-                        <div className="flex items-center rounded-xl bg-black/50 p-1 border border-white/10">
+                        <div className="flex items-center rounded-xl border border-zinc-200 bg-zinc-100 p-1 dark:border-zinc-800 dark:bg-zinc-900">
                           {[
                             { id: "all", label: "All Plans" },
                             { id: "individual", label: "Solo Tiers" },
@@ -1200,8 +1201,8 @@ export default function SettingsPage() {
                               className={cn(
                                 "px-3 py-1 text-xs font-medium rounded-lg transition-all",
                                 planCategoryView === btn.id
-                                  ? "bg-indigo-600 text-white shadow-xs"
-                                  : "text-zinc-400 hover:text-white",
+                                  ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-950 dark:text-zinc-50"
+                                  : "text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100",
                               )}
                             >
                               {btn.label}
@@ -1217,41 +1218,39 @@ export default function SettingsPage() {
                             <div
                               key={tier.id}
                               className={cn(
-                                "relative flex flex-col justify-between rounded-2xl border p-5 transition-all duration-200",
+                                "relative flex flex-col justify-between rounded-2xl border bg-white p-5 text-zinc-900 shadow-sm transition-all duration-200 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-50",
                                 isCurrent
-                                  ? "border-indigo-500/60 bg-indigo-500/10 shadow-lg shadow-indigo-500/10"
-                                  : tier.isFamily
-                                    ? "border-purple-500/30 bg-purple-950/10 hover:border-purple-500/50"
-                                    : "border-white/10 bg-black/40 hover:border-white/20",
+                                  ? "border-zinc-900 dark:border-zinc-100"
+                                  : "border-zinc-200 hover:border-zinc-400 dark:hover:border-zinc-600",
                               )}
                             >
                               {tier.badge && (
-                                <span className="absolute -top-2.5 right-4 rounded-full bg-gradient-to-r from-indigo-500 to-purple-600 px-2.5 py-0.5 text-[9px] font-mono font-bold text-white shadow-sm">
+                                <span className="absolute -top-2.5 right-4 rounded-full border border-zinc-200 bg-white px-2.5 py-0.5 text-[9px] font-mono font-semibold text-zinc-600 shadow-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-300">
                                   {tier.badge}
                                 </span>
                               )}
 
                               <div>
                                 <div className="flex items-baseline justify-between">
-                                  <h4 className="text-base font-bold text-white">{tier.name}</h4>
-                                  <span className="text-[10px] font-mono text-zinc-400 bg-white/5 px-2 py-0.5 rounded-full border border-white/5">
+                                  <h4 className="text-base font-bold text-zinc-900 dark:text-zinc-50">{tier.name}</h4>
+                                  <span className="rounded-full border border-zinc-200 bg-zinc-50 px-2 py-0.5 text-[10px] font-mono text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900">
                                     {tier.seatsText}
                                   </span>
                                 </div>
 
                                 <div className="mt-2 flex items-baseline gap-1">
-                                  <span className="text-2xl font-bold font-mono text-white">{tier.price}</span>
-                                  <span className="text-xs text-zinc-400">{tier.period}</span>
+                                  <span className="text-2xl font-bold font-mono text-zinc-900 dark:text-zinc-50">{tier.price}</span>
+                                  <span className="text-xs text-zinc-500">{tier.period}</span>
                                 </div>
 
-                                <p className="mt-2 text-xs text-zinc-400 leading-relaxed min-h-[36px]">
+                                <p className="mt-2 min-h-[36px] text-xs leading-relaxed text-zinc-500">
                                   {tier.description}
                                 </p>
 
-                                <ul className="mt-4 space-y-2 border-t border-white/10 pt-4 text-xs text-zinc-300">
+                                <ul className="mt-4 space-y-2 border-t border-zinc-200 pt-4 text-xs text-zinc-700 dark:border-zinc-800 dark:text-zinc-300">
                                   {tier.features.map((feat) => (
                                     <li key={feat} className="flex items-start gap-2">
-                                      <Check className="h-3.5 w-3.5 text-indigo-400 shrink-0 mt-0.5" />
+                                      <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-zinc-400" />
                                       <span>{feat}</span>
                                     </li>
                                   ))}
@@ -1263,7 +1262,7 @@ export default function SettingsPage() {
                                   <button
                                     type="button"
                                     disabled
-                                    className="w-full rounded-xl border border-indigo-500/40 bg-indigo-500/20 py-2 text-xs font-semibold text-indigo-300 cursor-default"
+                                    className="w-full cursor-default rounded-xl border border-zinc-200 bg-zinc-50 py-2 text-xs font-semibold text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900"
                                   >
                                     Current Plan
                                   </button>
@@ -1272,7 +1271,7 @@ export default function SettingsPage() {
                                     type="button"
                                     disabled={checkoutLoading === tier.id}
                                     onClick={() => void handleUpgradePlan(tier.id)}
-                                    className="w-full rounded-xl bg-white text-black py-2 text-xs font-semibold hover:bg-zinc-200 transition-colors shadow-md flex items-center justify-center gap-1.5"
+                                    className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-zinc-900 py-2 text-xs font-semibold text-white transition-colors hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
                                   >
                                     {checkoutLoading === tier.id ? (
                                       <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -1296,10 +1295,10 @@ export default function SettingsPage() {
                   {billingSubTab === "gpus" && (
                     <div className="space-y-4">
                       {/* Mode Header */}
-                      <div className="flex items-center justify-between p-3 rounded-2xl bg-black/40 border border-white/10">
+                      <div className="flex items-center justify-between p-3 rounded-2xl bg-muted border border-border">
                         <div className="flex items-center gap-2">
-                          <Cpu className="h-4 w-4 text-indigo-400" />
-                          <span className="text-xs font-bold text-white">Select Execution Mode:</span>
+                          <Cpu className="h-4 w-4 text-info" />
+                          <span className="text-xs font-bold text-foreground">Select Execution Mode:</span>
                         </div>
                         <div className="flex items-center gap-1">
                           {EXECUTION_MODES.map((mode) => (
@@ -1310,8 +1309,8 @@ export default function SettingsPage() {
                               className={cn(
                                 "px-2.5 py-1 text-[11px] font-medium rounded-lg transition-all flex items-center gap-1",
                                 executionMode === mode.id
-                                  ? "bg-indigo-600 text-white font-semibold shadow-xs"
-                                  : "text-zinc-400 hover:text-white bg-white/5",
+                                  ? "bg-background text-foreground font-semibold shadow-sm"
+                                  : "text-muted-foreground hover:text-foreground",
                               )}
                             >
                               {mode.id === "on-demand" && <Zap className="h-3 w-3" />}
@@ -1341,38 +1340,38 @@ export default function SettingsPage() {
                               className={cn(
                                 "group relative cursor-pointer flex flex-col justify-between rounded-2xl border p-3 transition-all duration-200 hover:scale-[1.02]",
                                 isSelected
-                                  ? "border-indigo-500 bg-gradient-to-b from-indigo-950/40 via-purple-950/20 to-black/80 shadow-indigo-500/20 ring-1 ring-indigo-500"
-                                  : "border-white/10 bg-black/40 hover:border-indigo-400/40",
+                                  ? "border-info bg-info/10 ring-1 ring-info"
+                                  : "border-border bg-card hover:border-info/40",
                               )}
                             >
                               <div className="flex items-center justify-between">
-                                <span className="text-[11px] font-bold font-mono text-zinc-200">{tier.name}</span>
+                                <span className="text-[11px] font-bold font-mono text-foreground">{tier.name}</span>
                                 <button
                                   type="button"
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     setInspectModalTier(tier);
                                   }}
-                                  className="text-zinc-400 hover:text-white"
+                                  className="text-muted-foreground hover:text-foreground"
                                 >
-                                  <Info className="h-3.5 w-3.5 text-indigo-400" />
+                                  <Info className="h-3.5 w-3.5 text-info" />
                                 </button>
                               </div>
 
                               <div className="mt-1">
-                                <span className="inline-block rounded bg-white/5 px-1 py-0.5 text-[9px] font-mono text-indigo-300">
+                                <span className="inline-block rounded bg-muted px-1 py-0.5 text-[9px] font-mono text-info">
                                   {tier.classEquivalent}
                                 </span>
-                                <p className="text-[10px] text-emerald-400 font-mono font-semibold mt-0.5">{tier.vram}</p>
+                                <p className="text-[10px] text-success font-mono font-semibold mt-0.5">{tier.vram}</p>
                                 <div className="mt-1 flex items-baseline gap-1">
-                                  <span className="text-base font-bold font-mono text-emerald-400">${currentHourly.toFixed(2)}</span>
-                                  <span className="text-[10px] text-zinc-400 font-mono">/ hr</span>
+                                  <span className="text-base font-bold font-mono text-success">${currentHourly.toFixed(2)}</span>
+                                  <span className="text-[10px] text-muted-foreground font-mono">/ hr</span>
                                 </div>
                               </div>
 
-                              <div className="mt-2 border-t border-white/10 pt-1.5 flex justify-between text-[9px] font-mono text-zinc-400">
+                              <div className="mt-2 border-t border-border pt-1.5 flex justify-between text-[9px] font-mono text-muted-foreground">
                                 <span>Slots:</span>
-                                <span className={tier.availableAllocations <= 2 ? "text-amber-400" : "text-emerald-400"}>
+                                <span className={tier.availableAllocations <= 2 ? "text-warning" : "text-success"}>
                                   {tier.availableAllocations}/{tier.totalAllocations} Left
                                 </span>
                               </div>
@@ -1382,14 +1381,14 @@ export default function SettingsPage() {
                       </div>
 
                       {/* Lease Form */}
-                      <div className="card p-4 border-indigo-500/30 bg-gradient-to-br from-black/80 to-indigo-950/20 flex flex-col md:flex-row items-center justify-between gap-4">
+                      <div className="card p-4 border-info/30 bg-info/5 flex flex-col md:flex-row items-center justify-between gap-4">
                         <div className="flex-1 space-y-2 w-full">
                           <div className="flex items-center justify-between text-xs">
-                            <span className="text-white font-medium flex items-center gap-1.5">
-                              <Clock className="h-3.5 w-3.5 text-indigo-400" />
-                              Duration: <span className="font-mono text-indigo-300 font-bold">{durationHours} Hours</span>
+                            <span className="text-foreground font-medium flex items-center gap-1.5">
+                              <Clock className="h-3.5 w-3.5 text-info" />
+                              Duration: <span className="font-mono text-info font-bold">{durationHours} Hours</span>
                             </span>
-                            <span className="text-[10px] font-mono text-zinc-400">{activeModeConfig.availabilityNote}</span>
+                            <span className="text-[10px] font-mono text-muted-foreground">{activeModeConfig.availabilityNote}</span>
                           </div>
                           <input
                             type="range"
@@ -1398,7 +1397,7 @@ export default function SettingsPage() {
                             step={1}
                             value={durationHours}
                             onChange={(e) => setDurationHours(Number(e.target.value))}
-                            className="w-full h-1.5 bg-white/10 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+                            className="w-full h-1.5 bg-muted rounded-lg appearance-none cursor-pointer accent-[hsl(var(--info))]"
                           />
                           <div className="pt-1">
                             <select
@@ -1416,11 +1415,11 @@ export default function SettingsPage() {
 
                         <div className="flex items-center gap-4 shrink-0">
                           <div>
-                            <span className="text-[10px] text-zinc-400 block font-mono">Total ({durationHours}h)</span>
+                            <span className="text-[10px] text-muted-foreground block font-mono">Total ({durationHours}h)</span>
                             <div className="flex items-baseline gap-1.5">
-                              <span className="text-lg font-bold font-mono text-emerald-400">${totalGpuCost} USD</span>
+                              <span className="text-lg font-bold font-mono text-success">${totalGpuCost} USD</span>
                               {executionMode !== "on-demand" && Number(gpuSavings) > 0 && (
-                                <span className="text-[10px] text-emerald-400 font-mono">(-${gpuSavings})</span>
+                                <span className="text-[10px] text-success font-mono">(-${gpuSavings})</span>
                               )}
                             </div>
                           </div>
@@ -1439,15 +1438,15 @@ export default function SettingsPage() {
                       {/* Active GPU Nodes if any */}
                       {rentals.length > 0 && (
                         <div className="card p-4 space-y-2">
-                          <span className="text-xs font-semibold text-white block">Active GPU Leases ({rentals.length})</span>
+                          <span className="text-xs font-semibold text-foreground block">Active GPU Leases ({rentals.length})</span>
                           <div className="space-y-2">
                             {rentals.map((r) => (
-                              <div key={r.id} className="flex items-center justify-between p-2.5 rounded-xl bg-white/5 border border-white/10 text-xs">
+                              <div key={r.id} className="flex items-center justify-between p-2.5 rounded-xl bg-muted border border-border text-xs">
                                 <div>
-                                  <p className="font-semibold text-white">{r.gpuTierName || r.model}</p>
-                                  <p className="text-[10px] text-zinc-400 font-mono">${r.hourlyRate.toFixed(2)}/hr · {r.hours}h lease ({r.executionMode})</p>
+                                  <p className="font-semibold text-foreground">{r.gpuTierName || r.model}</p>
+                                  <p className="text-[10px] text-muted-foreground font-mono">${r.hourlyRate.toFixed(2)}/hr · {r.hours}h lease ({r.executionMode})</p>
                                 </div>
-                                <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[9px] font-mono text-emerald-300">
+                                <span className="rounded-full bg-success/15 px-2 py-0.5 text-[9px] font-mono text-success">
                                   Running
                                 </span>
                               </div>
@@ -1461,38 +1460,38 @@ export default function SettingsPage() {
                   {/* ── Sub-Tab 3: Family Pool & Rollover ── */}
                   {billingSubTab === "family" && (
                     <div className="space-y-4">
-                      <div className="card p-6 border-indigo-500/40 bg-gradient-to-br from-indigo-950/40 via-purple-950/20 to-black/80 backdrop-blur-xl">
-                        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 pb-5 border-b border-white/10">
+                      <div className="card p-6 border-info/30 bg-gradient-to-br from-info/10 via-info/5 to-transparent">
+                        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 pb-5 border-b border-border">
                           <div>
                             <div className="flex items-center gap-2">
-                              <span className="rounded-full bg-indigo-500/20 px-2.5 py-0.5 text-[10px] font-mono font-bold text-indigo-300 border border-indigo-500/30">
+                              <span className="rounded-full bg-info/15 px-2.5 py-0.5 text-[10px] font-mono font-bold text-info border border-info/25">
                                 SHARED FAMILY CREDIT POOL
                               </span>
-                              <span className="rounded-full bg-emerald-500/20 px-2.5 py-0.5 text-[10px] font-mono font-bold text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
+                              <span className="rounded-full bg-success/15 px-2.5 py-0.5 text-[10px] font-mono font-bold text-success border border-success/25 flex items-center gap-1">
                                 <Clock className="h-3 w-3" />
                                 <span>4-MONTH ROLLOVER VAULT</span>
                               </span>
                             </div>
 
-                            <h2 className="mt-2 text-2xl font-bold text-white tracking-tight">
-                              {settings.plan === "family_max" ? "Family Max Plan (6 Seats)" : "Family Plan (4 Seats)"}
+                            <h2 className="mt-2 text-2xl font-bold text-foreground tracking-tight">
+                              {settings.plan === "family_max" ? "Family Max Plan (5 Seats)" : "Family Plan (4 Seats)"}
                             </h2>
-                            <p className="mt-1 text-xs text-zinc-300 max-w-xl">
+                            <p className="mt-1 text-xs text-muted-foreground max-w-xl">
                               All family members share this centralized credit pool with private individual libraries, anti-abuse quotas, and automatic 4-month rollover.
                             </p>
                           </div>
 
-                          <div className="flex items-center gap-6 bg-black/40 p-3.5 rounded-2xl border border-white/10">
+                          <div className="flex items-center gap-6 bg-card p-3.5 rounded-2xl border border-border">
                             <div>
-                              <span className="text-[10px] text-zinc-400 font-mono block">Total Spendable Pool</span>
-                              <span className="text-2xl font-bold font-mono text-emerald-400">
+                              <span className="text-[10px] text-muted-foreground font-mono block">Total Spendable Pool</span>
+                              <span className="text-2xl font-bold font-mono text-success">
                                 ${(settings.creditsUsdCents / 100).toFixed(2)}
                               </span>
                             </div>
 
-                            <div className="border-l border-white/10 pl-6">
-                              <span className="text-[10px] text-zinc-400 font-mono block">Rolled Over (Up to 4 mo)</span>
-                              <span className="text-lg font-bold font-mono text-indigo-300">
+                            <div className="border-l border-border pl-6">
+                              <span className="text-[10px] text-muted-foreground font-mono block">Rolled Over (Up to 4 mo)</span>
+                              <span className="text-lg font-bold font-mono text-info">
                                 ${(familyData.rolledOverCreditsCents / 100).toFixed(2)}
                               </span>
                             </div>
@@ -1501,22 +1500,22 @@ export default function SettingsPage() {
 
                         {/* 4-Month Rollover Progress Timeline */}
                         <div className="pt-4 space-y-2">
-                          <div className="flex items-center justify-between text-xs text-zinc-300">
-                            <div className="flex items-center gap-1.5 font-medium">
-                              <Calendar className="h-3.5 w-3.5 text-indigo-400" />
+                          <div className="flex items-center justify-between text-xs text-muted-foreground">
+                            <div className="flex items-center gap-1.5 font-medium text-foreground">
+                              <Calendar className="h-3.5 w-3.5 text-info" />
                               <span>Credit Rollover Vault Activity (Up to 4 Consecutive Months)</span>
                             </div>
-                            <span className="text-[11px] font-mono text-zinc-400">
+                            <span className="text-[11px] font-mono text-muted-foreground">
                               Unused credits roll over automatically
                             </span>
                           </div>
 
                           <div className="grid grid-cols-4 gap-2 pt-1">
                             {[
-                              { month: "Month 1 (Current)", status: "Active Grant ($60.00)", color: "border-indigo-500/60 bg-indigo-500/20 text-indigo-200" },
-                              { month: "Month 2 Rollover", status: "Preserved ($45.00)", color: "border-emerald-500/50 bg-emerald-500/15 text-emerald-200" },
-                              { month: "Month 3 Rollover", status: "Preserved ($40.00)", color: "border-emerald-500/50 bg-emerald-500/15 text-emerald-200" },
-                              { month: "Month 4 Vault Cap", status: "Protected ($30.00)", color: "border-purple-500/50 bg-purple-500/15 text-purple-200" },
+                              { month: "Month 1 (Current)", status: "Active Grant ($60.00)", color: "border-info/40 bg-info/10 text-info" },
+                              { month: "Month 2 Rollover", status: "Preserved ($45.00)", color: "border-success/30 bg-success/10 text-success" },
+                              { month: "Month 3 Rollover", status: "Preserved ($40.00)", color: "border-success/30 bg-success/10 text-success" },
+                              { month: "Month 4 Vault Cap", status: "Protected ($30.00)", color: "border-border bg-muted text-muted-foreground" },
                             ].map((slot, idx) => (
                               <div key={idx} className={cn("rounded-xl border p-2.5 text-center", slot.color)}>
                                 <p className="text-[11px] font-semibold">{slot.month}</p>
@@ -1532,11 +1531,11 @@ export default function SettingsPage() {
                         <div className="flex items-center justify-between">
                           <div>
                             <div className="flex items-center gap-2">
-                              <Users className="h-4 w-4 text-indigo-400" />
-                              <h3 className="text-sm font-semibold text-white">Family Members & Seat Controls</h3>
+                              <Users className="h-4 w-4 text-info" />
+                              <h3 className="text-sm font-semibold text-foreground">Family Members & Seat Controls</h3>
                             </div>
-                            <p className="text-xs text-zinc-400 mt-0.5">
-                              {familyData.members.length} of {settings.plan === "family_max" ? 6 : 4} seats filled. Manage per-seat monthly spending caps and child protection.
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              {familyData.members.length} of {settings.plan === "family_max" ? 5 : 4} seats filled. Manage per-seat monthly spending caps and child protection.
                             </p>
                           </div>
 
@@ -1544,15 +1543,15 @@ export default function SettingsPage() {
                             <button
                               type="button"
                               onClick={() => void handleSetParentPin()}
-                              className="rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-zinc-200 hover:bg-white/10"
+                              className="rounded-xl border border-border bg-muted px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-accent"
                             >
                               {familyData.hasParentPin ? "Change parent PIN" : "Set parent PIN"}
                             </button>
                             <button
                               type="button"
                               onClick={() => setShowInviteModal(true)}
-                              disabled={familyData.members.length >= (settings.plan === "family_max" ? 6 : 4)}
-                              className="flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-500 transition-colors disabled:opacity-40"
+                              disabled={familyData.members.length >= (settings.plan === "family_max" ? 5 : 4)}
+                              className="flex items-center gap-1.5 rounded-xl bg-info px-3 py-1.5 text-xs font-semibold text-info-foreground hover:bg-info/90 transition-colors disabled:opacity-40"
                             >
                               <Plus className="h-3.5 w-3.5" />
                               <span>Invite Family Member</span>
@@ -1560,41 +1559,41 @@ export default function SettingsPage() {
                           </div>
                         </div>
 
-                        <div className="divide-y divide-white/10 border-t border-b border-white/10">
+                        <div className="divide-y divide-border border-t border-b border-border">
                           {familyData.members.map((member) => (
                             <div key={member.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 py-3">
                               <div className="flex items-center gap-3">
-                                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white font-mono font-bold text-xs">
+                                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-info text-info-foreground font-mono font-bold text-xs">
                                   {member.name.slice(0, 2).toUpperCase()}
                                 </div>
                                 <div>
                                   <div className="flex items-center gap-2">
-                                    <span className="text-xs font-semibold text-white">{member.name}</span>
+                                    <span className="text-xs font-semibold text-foreground">{member.name}</span>
                                     {member.role === "organizer" && (
-                                      <span className="rounded-full bg-amber-500/20 px-2 py-0.2 text-[9px] font-mono text-amber-300 border border-amber-500/30">
+                                      <span className="rounded-full bg-warning/15 px-2 py-0.5 text-[9px] font-mono text-warning border border-warning/25">
                                         ORGANIZER
                                       </span>
                                     )}
                                   </div>
-                                  <span className="text-[11px] text-zinc-400 font-mono">{member.email}</span>
+                                  <span className="text-[11px] text-muted-foreground font-mono">{member.email}</span>
                                 </div>
                               </div>
 
                               <div className="flex items-center gap-4">
                                 <div className="text-right">
-                                  <span className="text-[10px] text-zinc-400 block font-mono">Monthly Fair-Use Cap</span>
-                                  <span className="text-xs font-mono font-medium text-emerald-300">
+                                  <span className="text-[10px] text-muted-foreground block font-mono">Monthly Fair-Use Cap</span>
+                                  <span className="text-xs font-mono font-medium text-success">
                                     {member.monthlyQuotaCents ? `$${member.monthlyQuotaCents / 100} / mo limit` : "Uncapped (Full Pool)"}
                                   </span>
                                 </div>
 
                                 {member.role !== "organizer" && (
-                                  <label className="flex items-center gap-1.5 text-[10px] font-mono text-zinc-300">
+                                  <label className="flex items-center gap-1.5 text-[10px] font-mono text-muted-foreground">
                                     <input
                                       type="checkbox"
                                       checked={Boolean(member.protectedChild)}
                                       onChange={(e) => void handleSetChild(member.id, e.target.checked)}
-                                      className="rounded border-white/20"
+                                      className="rounded border-border"
                                     />
                                     Child / Protected
                                   </label>
@@ -1604,7 +1603,7 @@ export default function SettingsPage() {
                                   <button
                                     type="button"
                                     onClick={() => handleRemoveMember(member.id)}
-                                    className="text-zinc-500 hover:text-red-400 p-1.5 rounded-lg hover:bg-white/5 transition-colors"
+                                    className="text-muted-foreground hover:text-destructive p-1.5 rounded-lg hover:bg-accent transition-colors"
                                   >
                                     <Trash2 className="h-3.5 w-3.5" />
                                   </button>
@@ -1620,16 +1619,16 @@ export default function SettingsPage() {
                   {/* ── Sub-Tab 4: Credits & Invoices ── */}
                   {billingSubTab === "credits" && (
                     <div className="space-y-4">
-                      <div className="card p-6 border-indigo-500/30 bg-gradient-to-br from-black/80 to-indigo-950/20">
+                      <div className="card p-6 border-info/30 bg-info/5">
                         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                           <div>
-                            <span className="text-[10px] font-semibold uppercase tracking-wider text-indigo-400 font-mono">
+                            <span className="text-[10px] font-semibold uppercase tracking-wider text-info font-mono">
                               Available Compute Credits
                             </span>
-                            <div className="text-3xl font-bold font-mono text-emerald-400 mt-1">
+                            <div className="text-3xl font-bold font-mono text-success mt-1">
                               ${(settings.creditsUsdCents / 100).toFixed(2)} USD
                             </div>
-                            <p className="text-xs text-zinc-400 mt-1">
+                            <p className="text-xs text-muted-foreground mt-1">
                               Use compute credits for GPU rentals, real-time canvas synthesis, and 4K upscaling.
                             </p>
                           </div>
@@ -1641,7 +1640,7 @@ export default function SettingsPage() {
                                 type="button"
                                 disabled={topupLoading === cents}
                                 onClick={() => void handleTopup(cents)}
-                                className="rounded-xl border border-white/10 bg-white/5 px-3.5 py-2 text-xs font-mono font-bold text-zinc-200 hover:bg-white/10 transition-colors"
+                                className="rounded-xl border border-border bg-muted px-3.5 py-2 text-xs font-mono font-bold text-foreground hover:bg-accent transition-colors"
                               >
                                 {topupLoading === cents ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : `+$${cents / 100}`}
                               </button>
@@ -1652,12 +1651,12 @@ export default function SettingsPage() {
 
                       <div className="card p-4 flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/5 border border-white/10">
-                            <CreditCard className="h-4 w-4 text-zinc-300" />
+                          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-muted border border-border">
+                            <CreditCard className="h-4 w-4 text-muted-foreground" />
                           </div>
                           <div>
-                            <p className="text-xs font-semibold text-white">Payment Methods & Invoices</p>
-                            <p className="text-[11px] text-zinc-400">Update payment cards and download past tax receipts via Stripe.</p>
+                            <p className="text-xs font-semibold text-foreground">Payment Methods & Invoices</p>
+                            <p className="text-[11px] text-muted-foreground">Update payment cards and download past tax receipts via Stripe.</p>
                           </div>
                         </div>
 
@@ -1682,26 +1681,26 @@ export default function SettingsPage() {
               {/* ── 3. Authentication / SSO ── */}
               {activeTab === "sso" && (
                 <div className="card">
-                  <div className="px-6 py-4" style={{ borderBottom: "1px solid var(--line)" }}>
+                  <div className="border-b border-border px-6 py-4">
                     <div className="flex items-center gap-2.5">
-                      <Shield className="h-4 w-4" style={{ color: "var(--brand)" }} />
+                      <Shield className="h-4 w-4 text-primary" />
                       <h2 className="section-title">Single Sign-On & Authentication</h2>
                     </div>
-                    <p className="mt-1 text-sm" style={{ color: "var(--ink-3)" }}>
+                    <p className="mt-1 text-sm text-muted-foreground">
                       Allow your team to authenticate via Okta, Azure AD, Google Workspace, and SAML through WorkOS.
                     </p>
                   </div>
 
-                  <div className="divide-y px-6" style={{ borderColor: "var(--line)" }}>
+                  <div className="divide-y divide-border px-6">
                     <SettingRow label="Enable SSO" hint="Team members will be redirected to your identity provider.">
                       <label className="flex cursor-pointer items-center gap-3">
                         <input
                           type="checkbox"
                           checked={settings.ssoEnabled || false}
                           onChange={(e) => setSettings({ ...settings, ssoEnabled: e.target.checked })}
-                          className="h-4 w-4 rounded accent-indigo-600"
+                          className="h-4 w-4 rounded accent-[hsl(var(--info))]"
                         />
-                        <span className="text-sm" style={{ color: "var(--ink-2)" }}>
+                        <span className="text-sm text-muted-foreground">
                           {settings.ssoEnabled ? "SSO is enabled" : "SSO is disabled"}
                         </span>
                       </label>
@@ -1735,17 +1734,17 @@ export default function SettingsPage() {
               {activeTab === "domain" && (
                 <EnterpriseGate locked={domainLocked} feature="Custom Domain">
                   <div className="card">
-                    <div className="px-6 py-4" style={{ borderBottom: "1px solid var(--line)" }}>
+                    <div className="border-b border-border px-6 py-4">
                       <div className="flex items-center gap-2.5">
-                        <Globe className="h-4 w-4" style={{ color: "var(--brand)" }} />
+                        <Globe className="h-4 w-4 text-primary" />
                         <h2 className="section-title">Custom Domain</h2>
                       </div>
-                      <p className="mt-1 text-sm" style={{ color: "var(--ink-3)" }}>
+                      <p className="mt-1 text-sm text-muted-foreground">
                         Configure a custom branded domain for your OpenDoor dashboard and API gateway.
                       </p>
                     </div>
 
-                    <div className="divide-y px-6" style={{ borderColor: "var(--line)" }}>
+                    <div className="divide-y divide-border px-6">
                       <SettingRow label="Dashboard Domain" hint="The custom domain you want to use for the studio.">
                         <input
                           type="text"
@@ -1763,26 +1762,26 @@ export default function SettingsPage() {
               {/* ── 5. Email Notifications ── */}
               {activeTab === "email" && (
                 <div className="card">
-                  <div className="px-6 py-4" style={{ borderBottom: "1px solid var(--line)" }}>
+                  <div className="border-b border-border px-6 py-4">
                     <div className="flex items-center gap-2.5">
-                      <Mail className="h-4 w-4" style={{ color: "var(--brand)" }} />
+                      <Mail className="h-4 w-4 text-primary" />
                       <h2 className="section-title">Email Notifications</h2>
                     </div>
-                    <p className="mt-1 text-sm" style={{ color: "var(--ink-3)" }}>
+                    <p className="mt-1 text-sm text-muted-foreground">
                       Control which notification alerts you receive.
                     </p>
                   </div>
 
-                  <div className="divide-y px-6" style={{ borderColor: "var(--line)" }}>
+                  <div className="divide-y divide-border px-6">
                     <SettingRow label="Master Notifications" hint="Toggle all email notifications on or off.">
                       <label className="flex cursor-pointer items-center gap-3">
                         <input
                           type="checkbox"
                           checked={settings.emailNotificationsEnabled || false}
                           onChange={(e) => setSettings({ ...settings, emailNotificationsEnabled: e.target.checked })}
-                          className="h-4 w-4 rounded accent-indigo-600"
+                          className="h-4 w-4 rounded accent-[hsl(var(--info))]"
                         />
-                        <span className="text-sm" style={{ color: "var(--ink-2)" }}>
+                        <span className="text-sm text-muted-foreground">
                           {settings.emailNotificationsEnabled ? "Email notifications enabled" : "Email notifications disabled"}
                         </span>
                       </label>
@@ -1795,9 +1794,9 @@ export default function SettingsPage() {
                           checked={settings.notifyOnBillingAlerts || false}
                           onChange={(e) => setSettings({ ...settings, notifyOnBillingAlerts: e.target.checked })}
                           disabled={!settings.emailNotificationsEnabled}
-                          className="h-4 w-4 rounded accent-indigo-600 disabled:opacity-40"
+                          className="h-4 w-4 rounded accent-[hsl(var(--info))] disabled:opacity-40"
                         />
-                        <span className="text-sm" style={{ color: settings.emailNotificationsEnabled ? "var(--ink-2)" : "var(--ink-4)" }}>
+                        <span className={cn("text-sm", settings.emailNotificationsEnabled ? "text-muted-foreground" : "text-muted-foreground/50")}>
                           {settings.notifyOnBillingAlerts ? "On" : "Off"}
                         </span>
                       </label>
@@ -1824,7 +1823,7 @@ export default function SettingsPage() {
                     <span>{saving ? "Saving…" : saved ? "Saved!" : "Save Changes"}</span>
                   </button>
                   {saved && (
-                    <span className="text-xs text-emerald-400 font-medium">Changes saved successfully.</span>
+                    <span className="text-xs text-success font-medium">Changes saved successfully.</span>
                   )}
                 </div>
               )}
@@ -1837,85 +1836,82 @@ export default function SettingsPage() {
       {inspectModalTier && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div
-            className="absolute inset-0 bg-black/80 backdrop-blur-md"
+            className="absolute inset-0 bg-foreground/40 backdrop-blur-md"
             onClick={() => setInspectModalTier(null)}
           />
 
-          <div
-            className="relative z-10 w-full max-w-lg rounded-2xl border border-white/20 p-6 shadow-2xl backdrop-blur-2xl space-y-5 animate-in fade-in zoom-in-95 duration-200"
-            style={{ background: "rgba(14, 16, 26, 0.98)" }}
-          >
-            <div className="flex items-center justify-between pb-3 border-b border-white/10">
+          <div className="relative z-10 w-full max-w-lg rounded-2xl border border-border bg-card p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between pb-3 border-b border-border">
               <div className="flex items-center gap-2.5">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-info/15 text-info border border-info/25">
                   <Cpu className="h-5 w-5" />
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <h3 className="text-base font-bold text-white">{inspectModalTier.name}</h3>
-                    <span className="rounded-md bg-indigo-500/20 px-2 py-0.5 text-[10px] font-mono font-bold text-indigo-300">
+                    <h3 className="text-base font-bold text-foreground">{inspectModalTier.name}</h3>
+                    <span className="rounded-md bg-info/15 px-2 py-0.5 text-[10px] font-mono font-bold text-info">
                       {inspectModalTier.classEquivalent}
                     </span>
                   </div>
-                  <p className="text-xs text-emerald-400 font-mono font-semibold">{inspectModalTier.vram}</p>
+                  <p className="text-xs text-success font-mono font-semibold">{inspectModalTier.vram}</p>
                 </div>
               </div>
 
               <button
                 type="button"
                 onClick={() => setInspectModalTier(null)}
-                className="rounded-full p-1 text-zinc-400 hover:text-white hover:bg-white/10 transition-colors"
+                className="rounded-full p-1 text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
 
             <div className="space-y-3">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-400 font-mono">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground font-mono">
                 Compute & Memory Specifications
               </h4>
               <div className="grid grid-cols-2 gap-2 text-xs font-mono">
-                <div className="rounded-xl bg-white/5 p-2.5 border border-white/5">
-                  <span className="text-zinc-500 text-[10px] block">Dedicated VRAM</span>
-                  <span className="text-emerald-400 font-bold">{inspectModalTier.vram}</span>
+                <div className="rounded-xl bg-muted p-2.5 border border-border">
+                  <span className="text-muted-foreground text-[10px] block">Dedicated VRAM</span>
+                  <span className="text-success font-bold">{inspectModalTier.vram}</span>
                 </div>
-                <div className="rounded-xl bg-white/5 p-2.5 border border-white/5">
-                  <span className="text-zinc-500 text-[10px] block">Core Compute Speed</span>
-                  <span className="text-white font-bold">{inspectModalTier.coreSpeed}</span>
+                <div className="rounded-xl bg-muted p-2.5 border border-border">
+                  <span className="text-muted-foreground text-[10px] block">Core Compute Speed</span>
+                  <span className="text-foreground font-bold">{inspectModalTier.coreSpeed}</span>
                 </div>
-                <div className="rounded-xl bg-white/5 p-2.5 border border-white/5">
-                  <span className="text-zinc-500 text-[10px] block">Memory Bandwidth</span>
-                  <span className="text-white font-bold">{inspectModalTier.bandwidth}</span>
+                <div className="rounded-xl bg-muted p-2.5 border border-border">
+                  <span className="text-muted-foreground text-[10px] block">Memory Bandwidth</span>
+                  <span className="text-foreground font-bold">{inspectModalTier.bandwidth}</span>
                 </div>
-                <div className="rounded-xl bg-white/5 p-2.5 border border-white/5">
-                  <span className="text-zinc-500 text-[10px] block">Platform Advantage</span>
-                  <span className="text-emerald-300 font-sans text-[11px]">{inspectModalTier.marketComparison}</span>
+                <div className="rounded-xl bg-muted p-2.5 border border-border">
+                  <span className="text-muted-foreground text-[10px] block">Platform Advantage</span>
+                  <span className="text-success font-sans text-[11px]">{inspectModalTier.marketComparison}</span>
                 </div>
               </div>
             </div>
 
             <div className="space-y-2">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-400 font-mono flex items-center gap-1.5">
-                <Gauge className="h-3.5 w-3.5 text-indigo-400" />
+              <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground font-mono flex items-center gap-1.5">
+                <Gauge className="h-3.5 w-3.5 text-info" />
                 <span>Live Inference Benchmarks</span>
               </h4>
               <div className="grid grid-cols-3 gap-2 text-center text-xs">
-                <div className="rounded-xl bg-indigo-500/10 border border-indigo-500/20 p-2">
-                  <span className="text-[10px] text-zinc-400 block">Flux.1 Dev</span>
-                  <span className="font-mono text-indigo-300 font-bold mt-0.5 block">{inspectModalTier.benchmarks.fluxDev}</span>
+                <div className="rounded-xl bg-info/10 border border-info/20 p-2">
+                  <span className="text-[10px] text-muted-foreground block">Flux.1 Dev</span>
+                  <span className="font-mono text-info font-bold mt-0.5 block">{inspectModalTier.benchmarks.fluxDev}</span>
                 </div>
-                <div className="rounded-xl bg-indigo-500/10 border border-indigo-500/20 p-2">
-                  <span className="text-[10px] text-zinc-400 block">Google Imagen 3</span>
-                  <span className="font-mono text-indigo-300 font-bold mt-0.5 block">{inspectModalTier.benchmarks.imagen3}</span>
+                <div className="rounded-xl bg-info/10 border border-info/20 p-2">
+                  <span className="text-[10px] text-muted-foreground block">Google Imagen 3</span>
+                  <span className="font-mono text-info font-bold mt-0.5 block">{inspectModalTier.benchmarks.imagen3}</span>
                 </div>
-                <div className="rounded-xl bg-indigo-500/10 border border-indigo-500/20 p-2">
-                  <span className="text-[10px] text-zinc-400 block">Veo 2 Video</span>
-                  <span className="font-mono text-indigo-300 font-bold mt-0.5 block">{inspectModalTier.benchmarks.veoVideo}</span>
+                <div className="rounded-xl bg-info/10 border border-info/20 p-2">
+                  <span className="text-[10px] text-muted-foreground block">Veo 2 Video</span>
+                  <span className="font-mono text-info font-bold mt-0.5 block">{inspectModalTier.benchmarks.veoVideo}</span>
                 </div>
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-white/10">
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-border">
               <button
                 type="button"
                 onClick={() => setInspectModalTier(null)}
@@ -1942,22 +1938,19 @@ export default function SettingsPage() {
       {/* Invite Family Modal */}
       {showInviteModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={() => setShowInviteModal(false)} />
+          <div className="absolute inset-0 bg-foreground/40 backdrop-blur-md" onClick={() => setShowInviteModal(false)} />
 
-          <div
-            className="relative z-10 w-full max-w-md rounded-2xl border border-white/15 p-6 shadow-2xl backdrop-blur-2xl"
-            style={{ background: "rgba(16, 18, 28, 0.98)" }}
-          >
-            <div className="flex items-center justify-between pb-3 border-b border-white/10">
+          <div className="relative z-10 w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-2xl">
+            <div className="flex items-center justify-between pb-3 border-b border-border">
               <div className="flex items-center gap-2">
-                <Users className="h-5 w-5 text-indigo-400" />
-                <h3 className="text-base font-bold text-white">Invite Family Member</h3>
+                <Users className="h-5 w-5 text-info" />
+                <h3 className="text-base font-bold text-foreground">Invite Family Member</h3>
               </div>
             </div>
 
             <form onSubmit={handleInviteMember} className="mt-4 space-y-4">
               <div>
-                <label className="block text-xs font-medium text-zinc-300 mb-1">Family Member Email</label>
+                <label className="block text-xs font-medium text-foreground mb-1">Family Member Email</label>
                 <input
                   type="email"
                   required
@@ -1969,7 +1962,7 @@ export default function SettingsPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-zinc-300 mb-1">Name (Optional)</label>
+                <label className="block text-xs font-medium text-foreground mb-1">Name (Optional)</label>
                 <input
                   type="text"
                   value={inviteName}
@@ -1980,11 +1973,11 @@ export default function SettingsPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-zinc-300 mb-1">
+                <label className="block text-xs font-medium text-foreground mb-1">
                   Monthly Fair-Use Cap (USD)
                 </label>
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-mono text-zinc-400">$</span>
+                  <span className="text-sm font-mono text-muted-foreground">$</span>
                   <input
                     type="number"
                     min="1"
@@ -1993,11 +1986,11 @@ export default function SettingsPage() {
                     onChange={(e) => setInviteQuotaUsd(e.target.value)}
                     className="input w-32 font-mono text-sm"
                   />
-                  <span className="text-xs text-zinc-400 font-mono">USD / month cap</span>
+                  <span className="text-xs text-muted-foreground font-mono">USD / month cap</span>
                 </div>
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-white/10">
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-border">
                 <button
                   type="button"
                   onClick={() => setShowInviteModal(false)}

@@ -61,7 +61,7 @@ const RISK_STYLE: Record<string, { bg: string; color: string; dot: string }> = {
 
 const DATA_CLASS_STYLE: Record<string, { bg: string; color: string }> = {
   public:       { bg: "#E9EBF2", color: "#43474E" },
-  internal:     { bg: "#D3E4FD", color: "#1A73E8" },
+  internal:     { bg: "hsl(221 83% 97%)", color: "#0F172A" },
   confidential: { bg: "#FFEFC2", color: "#7A5700" },
   restricted:   { bg: "#F9DEDC", color: "#B3261E" },
 };
@@ -97,7 +97,7 @@ function RiskBadge({ risk }: { risk: string }) {
 }
 
 function DataClassBadge({ cls }: { cls: string }) {
-  const s = DATA_CLASS_STYLE[cls] ?? { bg: "var(--paper-3)", color: "var(--ink-2)" };
+  const s = DATA_CLASS_STYLE[cls] ?? { bg: "hsl(var(--accent))", color: "hsl(var(--muted-foreground))" };
   return (
     <span className="inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium capitalize"
       style={{ background: s.bg, color: s.color }}>
@@ -136,30 +136,30 @@ function ApprovalCard({
     <div className="card overflow-hidden">
       {/* Header */}
       <div className="flex flex-wrap items-center gap-3 border-b px-5 py-4"
-        style={{ borderColor: "var(--line-soft)" }}>
+        style={{ borderColor: "hsl(var(--border))" }}>
         <Dot risk={m.riskLevel} />
-        <h3 className="text-base font-semibold" style={{ color: "var(--ink)" }}>
+        <h3 className="text-base font-semibold" style={{ color: "hsl(var(--foreground))" }}>
           {m.displayName}
         </h3>
         <StatusBadge status={approval.status} />
         <RiskBadge risk={m.riskLevel} />
-        <span className="ml-auto text-xs" style={{ color: "var(--ink-4)" }}>
+        <span className="ml-auto text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
           {timeAgo(approval.requestedAt)}
         </span>
       </div>
 
       <div className="p-5 space-y-4">
         {/* Model meta */}
-        <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs" style={{ color: "var(--ink-3)" }}>
+        <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
           <span>Model: <code className="rounded px-1 py-0.5 text-[11px]"
-            style={{ background: "var(--paper-3)", color: "var(--ink-2)" }}>{m.modelId}</code></span>
+            style={{ background: "hsl(var(--accent))", color: "hsl(var(--muted-foreground))" }}>{m.modelId}</code></span>
           {m.costTier && <span>Cost: <strong className="capitalize">{m.costTier}</strong></span>}
           {m.contextWindow && <span>Context: <strong>{(m.contextWindow / 1000).toFixed(0)}k tokens</strong></span>}
           {m.licenseType && <span>Licence: <strong>{m.licenseType}</strong></span>}
         </div>
 
         {m.description && (
-          <p className="text-sm" style={{ color: "var(--ink-2)" }}>{m.description}</p>
+          <p className="text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>{m.description}</p>
         )}
 
         {/* Business labels */}
@@ -167,7 +167,7 @@ function ApprovalCard({
           <div className="flex flex-wrap gap-1">
             {m.businessLabels.map((l) => (
               <span key={l} className="rounded-full px-2 py-0.5 text-[11px]"
-                style={{ background: "var(--paper-3)", color: "var(--ink-2)" }}>
+                style={{ background: "hsl(var(--accent))", color: "hsl(var(--muted-foreground))" }}>
                 {l}
               </span>
             ))}
@@ -177,7 +177,7 @@ function ApprovalCard({
         {/* Data classes */}
         {m.dataClassesAllowed?.length > 0 && (
           <div>
-            <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--ink-4)" }}>
+            <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide" style={{ color: "hsl(var(--muted-foreground))" }}>
               Data classes
             </p>
             <div className="flex flex-wrap gap-1">
@@ -191,36 +191,36 @@ function ApprovalCard({
           <div className="grid gap-3 sm:grid-cols-2">
             {m.allowedUseCases?.length > 0 && (
               <div>
-                <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--ink-4)" }}>
+                <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide" style={{ color: "hsl(var(--muted-foreground))" }}>
                   Allowed uses
                 </p>
                 <ul className="space-y-0.5">
                   {m.allowedUseCases.slice(0, 3).map((u) => (
-                    <li key={u} className="flex items-center gap-1.5 text-xs" style={{ color: "var(--ink-2)" }}>
+                    <li key={u} className="flex items-center gap-1.5 text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
                       <CheckCircle2 className="h-3 w-3 shrink-0" style={{ color: "var(--green)" }} />
                       {u}
                     </li>
                   ))}
                   {m.allowedUseCases.length > 3 && (
-                    <li className="text-xs" style={{ color: "var(--ink-4)" }}>+{m.allowedUseCases.length - 3} more</li>
+                    <li className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>+{m.allowedUseCases.length - 3} more</li>
                   )}
                 </ul>
               </div>
             )}
             {m.bannedUseCases?.length > 0 && (
               <div>
-                <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--ink-4)" }}>
+                <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide" style={{ color: "hsl(var(--muted-foreground))" }}>
                   Banned uses
                 </p>
                 <ul className="space-y-0.5">
                   {m.bannedUseCases.slice(0, 3).map((u) => (
-                    <li key={u} className="flex items-center gap-1.5 text-xs" style={{ color: "var(--ink-2)" }}>
+                    <li key={u} className="flex items-center gap-1.5 text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
                       <XCircle className="h-3 w-3 shrink-0" style={{ color: "var(--red)" }} />
                       {u}
                     </li>
                   ))}
                   {m.bannedUseCases.length > 3 && (
-                    <li className="text-xs" style={{ color: "var(--ink-4)" }}>+{m.bannedUseCases.length - 3} more</li>
+                    <li className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>+{m.bannedUseCases.length - 3} more</li>
                   )}
                 </ul>
               </div>
@@ -230,11 +230,11 @@ function ApprovalCard({
 
         {/* Existing review notes (if already reviewed) */}
         {!isPending && approval.reviewNotes && (
-          <div className="rounded-xl px-3 py-2.5" style={{ background: "var(--paper-3)" }}>
-            <p className="text-xs font-medium" style={{ color: "var(--ink-3)" }}>Review notes</p>
-            <p className="mt-0.5 text-sm" style={{ color: "var(--ink-2)" }}>{approval.reviewNotes}</p>
+          <div className="rounded-xl px-3 py-2.5" style={{ background: "hsl(var(--accent))" }}>
+            <p className="text-xs font-medium" style={{ color: "hsl(var(--muted-foreground))" }}>Review notes</p>
+            <p className="mt-0.5 text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>{approval.reviewNotes}</p>
             {approval.reviewedAt && (
-              <p className="mt-1 text-[11px]" style={{ color: "var(--ink-4)" }}>
+              <p className="mt-1 text-[11px]" style={{ color: "hsl(var(--muted-foreground))" }}>
                 Reviewed {timeAgo(approval.reviewedAt)}
               </p>
             )}
@@ -243,7 +243,7 @@ function ApprovalCard({
 
         {/* Review actions */}
         {isPending && (
-          <div className="border-t pt-4" style={{ borderColor: "var(--line-soft)" }}>
+          <div className="border-t pt-4" style={{ borderColor: "hsl(var(--border))" }}>
             <textarea
               placeholder="Add review notes (optional)…"
               value={notes}
@@ -332,16 +332,16 @@ function ModelCatalogueCard({
   };
 
   return (
-    <div className="card flex flex-col overflow-hidden od-lift">
+    <div className="card flex flex-col overflow-hidden transition-shadow hover:shadow-lg">
       {/* Header strip */}
       <div className="flex items-center gap-2.5 border-b px-5 py-3.5"
-        style={{ borderColor: "var(--line-soft)", background: rk.bg }}>
+        style={{ borderColor: "hsl(var(--border))", background: rk.bg }}>
         <Dot risk={model.riskLevel} />
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold truncate" style={{ color: "var(--ink)" }}>
+          <p className="text-sm font-semibold truncate" style={{ color: "hsl(var(--foreground))" }}>
             {model.displayName}
           </p>
-          <p className="text-[11px]" style={{ color: "var(--ink-3)" }}>
+          <p className="text-[11px]" style={{ color: "hsl(var(--muted-foreground))" }}>
             <code>{model.modelId}</code>
           </p>
         </div>
@@ -357,7 +357,7 @@ function ModelCatalogueCard({
 
       <div className="flex flex-1 flex-col p-5 space-y-3">
         {model.description && (
-          <p className="text-sm leading-relaxed" style={{ color: "var(--ink-2)" }}>
+          <p className="text-sm leading-relaxed" style={{ color: "hsl(var(--muted-foreground))" }}>
             {model.description.length > 120 ? model.description.slice(0, 120) + "…" : model.description}
           </p>
         )}
@@ -367,7 +367,7 @@ function ModelCatalogueCard({
           <div className="flex flex-wrap gap-1">
             {model.businessLabels.map((l) => (
               <span key={l} className="rounded-full px-2 py-0.5 text-[11px]"
-                style={{ background: "var(--paper-3)", color: "var(--ink-2)" }}>
+                style={{ background: "hsl(var(--accent))", color: "hsl(var(--muted-foreground))" }}>
                 {l}
               </span>
             ))}
@@ -377,7 +377,7 @@ function ModelCatalogueCard({
         {/* Data classes */}
         {model.dataClassesAllowed?.length > 0 && (
           <div>
-            <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--ink-4)" }}>
+            <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide" style={{ color: "hsl(var(--muted-foreground))" }}>
               Data classes
             </p>
             <div className="flex flex-wrap gap-1">
@@ -394,7 +394,7 @@ function ModelCatalogueCard({
             { ok: model.safetyReviewed,     label: "Safety" },
           ].map(({ ok, label }) => (
             <span key={label} className="flex items-center gap-1 text-[11px]"
-              style={{ color: ok ? "var(--green)" : "var(--ink-4)" }}>
+              style={{ color: ok ? "var(--green)" : "hsl(var(--muted-foreground))" }}>
               {ok
                 ? <CheckCircle2 className="h-3 w-3" />
                 : <XCircle className="h-3 w-3" />}
@@ -402,7 +402,7 @@ function ModelCatalogueCard({
             </span>
           ))}
           {model.allowedRegions?.length > 0 && (
-            <span className="text-[11px]" style={{ color: "var(--ink-3)" }}>
+            <span className="text-[11px]" style={{ color: "hsl(var(--muted-foreground))" }}>
               {model.allowedRegions.join(" · ").toUpperCase()}
             </span>
           )}
@@ -539,7 +539,7 @@ export default function ApprovalsPage() {
 
       {loading ? (
         <div className="flex h-48 items-center justify-center">
-          <Loader2 className="h-5 w-5 animate-spin" style={{ color: "var(--ink-3)" }} />
+          <Loader2 className="h-5 w-5 animate-spin" style={{ color: "hsl(var(--muted-foreground))" }} />
         </div>
       ) : (
         <>
@@ -554,19 +554,19 @@ export default function ApprovalsPage() {
         ].map(({ label, value, color }) => (
           <div key={label} className="card p-4 text-center">
             <p className="text-2xl font-semibold tabular-nums" style={{ color }}>{value}</p>
-            <p className="mt-0.5 text-xs" style={{ color: "var(--ink-4)" }}>{label}</p>
+            <p className="mt-0.5 text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>{label}</p>
           </div>
         ))}
       </div>
 
       {/* Tabs */}
-      <div className="mb-5 flex gap-1 border-b" style={{ borderColor: "var(--line-soft)" }}>
+      <div className="mb-5 flex gap-1 border-b" style={{ borderColor: "hsl(var(--border))" }}>
         {tabs.map((t) => (
           <button key={t.id} onClick={() => setTab(t.id)}
             className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium transition-colors"
             style={{
-              color: tab === t.id ? "var(--ink)" : "var(--ink-4)",
-              borderBottom: tab === t.id ? "2px solid var(--ink)" : "2px solid transparent",
+              color: tab === t.id ? "hsl(var(--foreground))" : "hsl(var(--muted-foreground))",
+              borderBottom: tab === t.id ? "2px solid hsl(var(--foreground))" : "2px solid transparent",
               marginBottom: "-1px", background: "transparent", cursor: "pointer",
             }}>
             {t.label}
@@ -602,7 +602,7 @@ export default function ApprovalsPage() {
                 <option value="high">High</option>
                 <option value="critical">Critical</option>
               </select>
-              <span className="self-center ml-auto text-xs" style={{ color: "var(--ink-4)" }}>
+              <span className="self-center ml-auto text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
                 {filteredApprovals.length} of {approvals.length}
               </span>
             </div>
@@ -612,14 +612,14 @@ export default function ApprovalsPage() {
           {approvals.length === 0 ? (
             <div className="card flex flex-col items-center justify-center gap-5 py-16 text-center">
               <div className="grid h-14 w-14 place-items-center rounded-2xl"
-                style={{ background: "var(--paper-3)" }}>
-                <Shield className="h-7 w-7" style={{ color: "var(--ink-3)" }} />
+                style={{ background: "hsl(var(--accent))" }}>
+                <Shield className="h-7 w-7" style={{ color: "hsl(var(--muted-foreground))" }} />
               </div>
               <div>
-                <p className="text-base font-semibold" style={{ color: "var(--ink)" }}>
+                <p className="text-base font-semibold" style={{ color: "hsl(var(--foreground))" }}>
                   No approval requests yet
                 </p>
-                <p className="mt-1 max-w-sm text-sm" style={{ color: "var(--ink-3)" }}>
+                <p className="mt-1 max-w-sm text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
                   Switch to Request Access to browse available models and submit your first access request.
                 </p>
               </div>
@@ -630,7 +630,7 @@ export default function ApprovalsPage() {
             </div>
           ) : filteredApprovals.length === 0 ? (
             <div className="card flex h-32 items-center justify-center text-sm"
-              style={{ color: "var(--ink-3)" }}>
+              style={{ color: "hsl(var(--muted-foreground))" }}>
               No approvals match the current filter.
             </div>
           ) : (
@@ -654,7 +654,7 @@ export default function ApprovalsPage() {
           <div className="flex flex-wrap items-center gap-2">
             <div className="relative flex-1 min-w-48">
               <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2"
-                style={{ color: "var(--ink-4)" }} />
+                style={{ color: "hsl(var(--muted-foreground))" }} />
               <input value={search} onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search models…" className="input w-full pl-8 text-sm" />
             </div>
@@ -666,7 +666,7 @@ export default function ApprovalsPage() {
               <option value="high">High risk</option>
               <option value="critical">Critical risk</option>
             </select>
-            <span className="text-xs" style={{ color: "var(--ink-4)" }}>
+            <span className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
               {filteredModels.length} model{filteredModels.length !== 1 ? "s" : ""}
             </span>
           </div>
@@ -674,21 +674,21 @@ export default function ApprovalsPage() {
           {/* Model catalogue */}
           {!modelsReady ? (
             <div className="flex h-40 items-center justify-center">
-              <Loader2 className="h-5 w-5 animate-spin" style={{ color: "var(--ink-3)" }} />
+              <Loader2 className="h-5 w-5 animate-spin" style={{ color: "hsl(var(--muted-foreground))" }} />
             </div>
           ) : models.length === 0 ? (
             <div className="card flex flex-col items-center justify-center gap-4 py-16 text-center">
-              <AlertTriangle className="h-8 w-8" style={{ color: "var(--ink-4)" }} />
+              <AlertTriangle className="h-8 w-8" style={{ color: "hsl(var(--muted-foreground))" }} />
               <div>
-                <p className="font-medium" style={{ color: "var(--ink)" }}>Model registry is empty</p>
-                <p className="mt-1 text-sm" style={{ color: "var(--ink-3)" }}>
+                <p className="font-medium" style={{ color: "hsl(var(--foreground))" }}>Model registry is empty</p>
+                <p className="mt-1 text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
                   Run the enterprise governance seed script to populate the model catalogue.
                 </p>
               </div>
             </div>
           ) : filteredModels.length === 0 ? (
             <div className="card flex h-32 items-center justify-center text-sm"
-              style={{ color: "var(--ink-3)" }}>
+              style={{ color: "hsl(var(--muted-foreground))" }}>
               No models match the current search or filters.
             </div>
           ) : (

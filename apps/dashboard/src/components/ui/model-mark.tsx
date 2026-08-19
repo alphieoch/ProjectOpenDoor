@@ -1,7 +1,7 @@
 import { ProviderLogo } from "@/components/ui/provider-logo";
 
 const PALETTE = [
-  ["#1A73E8", "#D3E4FD"],
+  ["#0F172A", "hsl(221 83% 97%)"],
   ["#006E5A", "#C8EDD9"],
   ["#7A5700", "#FFEFC2"],
   ["#7C5CFF", "#E8E0FF"],

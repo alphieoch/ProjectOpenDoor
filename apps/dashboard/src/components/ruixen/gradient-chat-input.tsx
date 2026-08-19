@@ -2,7 +2,9 @@
 
 import * as React from "react";
 import { Send, Paperclip, Globe, Brain } from "lucide-react";
-import { ThinkingOrb, type OrbState } from "thinking-orbs";
+import { type OrbState } from "thinking-orbs";
+import { AiCrest } from "@/components/ui/ai-crest";
+import { orbStateToMood } from "@/lib/ai-crest";
 import { AnimatePresence, motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { BorderBeam } from "@/components/ui/border-beam";
@@ -254,7 +256,7 @@ export default function GradientChatInput({
                   >
                     <button
                       type="button"
-                      aria-label="Agent thought orb and attachments"
+                      aria-label="AI crest and attachments"
                       aria-expanded={orbOpen}
                       disabled={disabled}
                       onClick={() => {
@@ -263,7 +265,7 @@ export default function GradientChatInput({
                       }}
                       className="flex size-10 items-center justify-center rounded-xl bg-transparent transition-transform active:scale-95 disabled:opacity-40"
                     >
-                      <ThinkingOrb state={liveOrb} size={20} speed={orbSpeed} />
+                      <AiCrest mood={orbStateToMood(liveOrb)} size={20} />
                     </button>
                   </Liquid.Item>
                   <Liquid.Item
@@ -374,7 +376,7 @@ export default function GradientChatInput({
                         }}
                       >
                         <div className="size-16 flex items-center justify-center mb-2">
-                          <ThinkingOrb state={selectedOrbState} size={64} speed={orbSpeed} />
+                          <AiCrest mood={orbStateToMood(selectedOrbState)} size={64} />
                         </div>
                         <span
                           className="text-sm font-semibold tracking-tight"
@@ -383,7 +385,7 @@ export default function GradientChatInput({
                           {ORB_MODES.find((m) => m.state === selectedOrbState)?.label || "Thinking"}
                         </span>
                         <p className="text-[11.5px] mt-0.5" style={{ color: "var(--ink-3)" }}>
-                          {ORB_MODES.find((m) => m.state === selectedOrbState)?.desc || "Active particle stream"}
+                          {ORB_MODES.find((m) => m.state === selectedOrbState)?.desc || "Crest pulse"}
                         </p>
 
                         {/* Speed multiplier pill buttons */}
@@ -408,7 +410,7 @@ export default function GradientChatInput({
                       {/* State selector grid */}
                       <div className="p-2.5 border-b" style={{ borderColor: "var(--line)" }}>
                         <p className="text-[10.5px] font-mono uppercase tracking-wider px-1.5 mb-1.5" style={{ color: "var(--ink-4)" }}>
-                          Orb States
+                          Crest moods
                         </p>
                         <div className="grid grid-cols-3 gap-1">
                           {ORB_MODES.map((mode) => {
@@ -426,7 +428,7 @@ export default function GradientChatInput({
                                 }}
                               >
                                 <span className="size-4 shrink-0 flex items-center justify-center">
-                                  <ThinkingOrb state={mode.state} size={20} speed={orbSpeed} />
+                                  <AiCrest mood={orbStateToMood(mode.state)} size={16} />
                                 </span>
                                 <span className="truncate text-[11.5px]">{mode.label}</span>
                               </button>
