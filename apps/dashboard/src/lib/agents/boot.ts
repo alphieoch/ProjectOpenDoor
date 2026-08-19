@@ -3,7 +3,7 @@ import { workspaceAgents } from "@opendoor/database";
 import { eq } from "drizzle-orm";
 import { decryptAgentSecret } from "@/lib/agents/crypto";
 import { provisionAgentKey } from "@/lib/agents/provision";
-import { getAgentRuntime } from "@/lib/agents/runtimes";
+import { getAgentRuntime, type AgentRuntimeId } from "@/lib/agents/runtimes";
 import { gatewayBaseUrl } from "@/lib/public-urls";
 import { readWorkspace, seedSkills, type AgentProbe } from "@/lib/agents/state";
 
@@ -80,7 +80,7 @@ export async function bootAgent(row: typeof workspaceAgents.$inferSelect) {
   const apiKey = await unlockAgentKey(current);
   const probe = await probeGateway(apiKey);
   const ws = readWorkspace(current.config);
-  if (ws.skills.length === 0) ws.skills = seedSkills(current.runtime as "openclaw" | "hermes" | "nemoclaw");
+  if (ws.skills.length === 0) ws.skills = seedSkills(current.runtime as AgentRuntimeId);
   ws.probe = probe;
 
   if (!probe.ok) {

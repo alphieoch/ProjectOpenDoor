@@ -24,13 +24,25 @@ function systemPrompt(row: typeof workspaceAgents.$inferSelect) {
   const ws = readWorkspace(row.config);
   const memory = ws.memory.slice(-8).map((m) => `- [${m.kind}] ${m.content}`).join("\n") || "(empty)";
   const skills = ws.skills.map((s) => `- ${s.name}`).join("\n") || "(none)";
-  return [
+  const parts = [
     row.systemPrompt || runtime?.defaultPrompt || "",
     `Runtime: ${runtime?.name ?? row.runtime}. Model: ${row.modelId}.`,
     "You are the hosted runtime for this workspace. Use your tools when they help. Do not claim you lack tools.",
     `Installed skills:\n${skills}`,
     `Recent memory:\n${memory}`,
-  ].join("\n\n");
+  ];
+  if (row.runtime === "openbot") {
+    const files = ws.computer.files.map((f) => `- ${f.path}`).join("\n") || "(empty)";
+    const audit = ws.audit.slice(-6).map((a) => `- ${a.outcome || (a.allowed ? "permitted" : "refused")} ${a.action} (${a.rule || "n/a"})`).join("\n") || "(none)";
+    parts.push(
+      `OpenBot computer: operator=${ws.computer.operator} status=${ws.computer.status}`,
+      `Current page: ${ws.computer.url || "(none)"} ${ws.computer.title ? `— ${ws.computer.title}` : ""}`,
+      ws.computer.helpReason ? `Help requested: ${ws.computer.helpReason}` : "",
+      `/workspace files:\n${files}`,
+      `Recent computer audit:\n${audit}`,
+    );
+  }
+  return parts.filter(Boolean).join("\n\n");
 }
 
 export async function loadThread(agentId: string, limit = 40) {

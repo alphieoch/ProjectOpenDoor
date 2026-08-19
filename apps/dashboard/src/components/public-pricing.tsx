@@ -94,7 +94,7 @@ export function PublicPricing({
           <div>
             <h2 className="text-2xl font-semibold tracking-tight">Agents</h2>
             <p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">
-              Hosted OpenClaw, Hermes, and NemoClaw on your workspace. Included on
+              Hosted OpenClaw, Hermes, NemoClaw, and OpenBot on your workspace. Included on
               Enterprise. Agent tokens still bill the same prepaid quota.
             </p>
           </div>

@@ -1150,7 +1150,7 @@ export const guardrailOutcomes = pgTable(
 );
 
 /* ─────────────────────────────────────────────────────────────────
-   Workspace agents (OpenClaw / Hermes / NemoClaw)
+   Workspace agents (OpenClaw / Hermes / NemoClaw / OpenBot)
 ───────────────────────────────────────────────────────────────── */
 export const workspaceAgents = pgTable(
   "workspace_agents",

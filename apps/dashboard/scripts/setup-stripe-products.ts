@@ -150,7 +150,7 @@ async function main() {
   const agentsProduct = await getOrCreateProduct(
     stripe,
     "OpenDoor Agents",
-    "Agents add-on — hosted OpenClaw, Hermes, and NemoClaw. Tokens still bill workspace quota."
+    "Agents add-on — hosted OpenClaw, Hermes, NemoClaw, and OpenBot. Tokens still bill workspace quota."
   );
   const webSearchProduct = await getOrCreateProduct(
     stripe,

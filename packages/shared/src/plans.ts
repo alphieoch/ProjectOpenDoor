@@ -331,13 +331,13 @@ export function gcpStartCreditCents(reserved: boolean) {
   return reserved ? GCP_RESERVED_MIN_CREDIT_CENTS : GCP_GPU_MIN_CREDIT_CENTS;
 }
 
-/** Hosted OpenClaw / Hermes / NemoClaw — monthly add-on, tokens still bill quota. */
+/** Hosted OpenClaw / Hermes / NemoClaw / OpenBot — monthly add-on, tokens still bill quota. */
 export const AGENTS_ADDON = {
   id: "agents" as const,
   name: "Agents",
   amountUsd: 20,
   amountCents: 2000,
-  description: "Hosted OpenClaw, Hermes, and NemoClaw runtimes on this workspace.",
+  description: "Hosted OpenClaw, Hermes, NemoClaw, and OpenBot runtimes on this workspace.",
 };
 
 export function agentsAddonActive(status: string | null | undefined) {

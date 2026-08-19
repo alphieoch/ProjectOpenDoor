@@ -106,7 +106,7 @@ export const ACCOUNT_PLANS: AccountPlan[] = [
       "Legal, compliance, and dedicated support",
       "Custom dashboard and API domain",
       "Governance: Trust Center, policies, violations, approvals, compliance, and sector packs",
-      "Agents add-on included (OpenClaw, Hermes, NemoClaw)",
+      "Agents add-on included (OpenClaw, Hermes, NemoClaw, OpenBot)",
       "Web Search add-on included (Vertex AI Grounding)",
     ],
   },

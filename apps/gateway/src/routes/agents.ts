@@ -4,7 +4,7 @@ import { db, workspaceAgents } from "@opendoor/database";
 import { asString, publicAgent, requireTenant, slugify, uniqueConflict, writeAudit } from "../lib/platform.js";
 
 const agentsRouter = new Hono();
-const RUNTIMES = new Set(["openclaw", "hermes", "nemoclaw"]);
+const RUNTIMES = new Set(["openclaw", "hermes", "nemoclaw", "openbot"]);
 
 function agentsAddonActive(org: { plan?: string | null; agentsAddonStatus?: string | null }) {
   if (org.plan === "enterprise" || org.plan === "team") return true;
@@ -44,7 +44,7 @@ agentsRouter.post("/", async (c) => {
   const runtime = asString(body.runtime);
   const modelId = asString(body.modelId || body.model);
   if (!name) return c.json({ error: "name is required" }, 400);
-  if (!RUNTIMES.has(runtime)) return c.json({ error: "runtime must be openclaw, hermes, or nemoclaw" }, 400);
+  if (!RUNTIMES.has(runtime)) return c.json({ error: "runtime must be openclaw, hermes, nemoclaw, or openbot" }, 400);
   if (!modelId) return c.json({ error: "modelId is required" }, 400);
   try {
     const [created] = await db

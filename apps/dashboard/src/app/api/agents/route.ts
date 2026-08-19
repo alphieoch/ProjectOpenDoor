@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
   if (!name) return NextResponse.json({ error: "name is required" }, { status: 400 });
   if (!isAgentRuntime(runtime)) {
     return NextResponse.json(
-      { error: "runtime must be openclaw, hermes, or nemoclaw" },
+      { error: "runtime must be openclaw, hermes, nemoclaw, or openbot" },
       { status: 400 },
     );
   }

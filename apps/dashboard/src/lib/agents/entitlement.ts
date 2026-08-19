@@ -46,7 +46,7 @@ export async function loadAgentsEntitlement(orgId: string, session?: SessionPayl
 
 export function agentsAddonRequiredResponse(entitlement: Awaited<ReturnType<typeof loadAgentsEntitlement>>) {
   return {
-    error: `Agents is a $${entitlement.amountUsd}/month add-on. Subscribe on Billing or this page to unlock OpenClaw, Hermes, and NemoClaw.`,
+    error: `Agents is a $${entitlement.amountUsd}/month add-on. Subscribe on Billing or this page to unlock OpenClaw, Hermes, NemoClaw, and OpenBot.`,
     addon: "agents",
     amountUsd: entitlement.amountUsd,
     checkout: entitlement.configured,

@@ -1,6 +1,17 @@
-import type { ToolDefinition } from "@opendoor/shared";
+import { sanitizeWorkspacePath, type ToolDefinition } from "@opendoor/shared";
 import type { AgentRuntimeId } from "@/lib/agents/runtimes";
-import { emptyWorkspace, type AgentWorkspace } from "@/lib/agents/state";
+import {
+  applyNavigate,
+  applyRenderComponent,
+  applyRequestHelp,
+  applyWriteFile,
+  decideThen,
+  fetchComputerPage,
+  formatPageSnapshot,
+  readWorkspaceFile,
+  resolveFollowLink,
+} from "@/lib/agents/openbot";
+import { emptyWorkspace, readWorkspace, type AgentWorkspace } from "@/lib/agents/state";
 
 export type ToolEvent = { name: string; ok: boolean; detail: string };
 
@@ -47,6 +58,37 @@ export function toolsForRuntime(runtime: AgentRuntimeId): ToolDefinition[] {
         name: { type: "string" },
         body: { type: "string" },
       }, ["name", "body"]),
+    ];
+  }
+
+  if (runtime === "openbot") {
+    return [
+      ...shared,
+      fn("computer_navigate", "Open a public http(s) page on this Bot's computer. Decided and audited before the fetch.", {
+        url: { type: "string" },
+        intent: { type: "string" },
+      }, ["url"]),
+      fn("computer_read_page", "Read the current page snapshot: title, excerpt, and visible links.", {}, []),
+      fn("computer_follow_link", "Follow a link from the current page by matching its text or URL.", {
+        query: { type: "string" },
+        intent: { type: "string" },
+      }, ["query"]),
+      fn("computer_list_files", "List files in this Bot's /workspace volume.", {}, []),
+      fn("computer_read_file", "Read a file from /workspace.", {
+        path: { type: "string" },
+      }, ["path"]),
+      fn("computer_write_file", "Write a text file under /workspace.", {
+        path: { type: "string" },
+        content: { type: "string" },
+      }, ["path", "content"]),
+      fn("request_help", "Ask a person to take the wheel (login, 2FA, or a judgment call).", {
+        reason: { type: "string" },
+      }, ["reason"]),
+      fn("render_component", "Answer with a governed UI card instead of only prose.", {
+        kind: { type: "string", enum: ["metric", "list", "table", "links", "note"] },
+        title: { type: "string" },
+        body: { type: "string" },
+      }, ["kind", "title", "body"]),
     ];
   }
 
@@ -145,9 +187,17 @@ export async function executeTool(
   workspace: AgentWorkspace,
 ): Promise<{ result: string; workspace: AgentWorkspace; event: ToolEvent }> {
   const args = parseArgs(rawArgs);
-  const ws = workspace.memory ? workspace : emptyWorkspace();
+  let ws = workspace.memory ? { ...emptyWorkspace(), ...workspace, computer: workspace.computer || emptyWorkspace().computer } : emptyWorkspace();
   const now = new Date().toISOString();
   const str = (k: string) => (typeof args[k] === "string" ? String(args[k]).trim() : "");
+
+  const failClosed = (err: unknown) => {
+    const failed = err && typeof err === "object" && "openbotFailedWorkspace" in err
+      ? (err as { openbotFailedWorkspace: AgentWorkspace }).openbotFailedWorkspace
+      : ws;
+    const message = err instanceof Error ? err.message : "Tool failed";
+    return { result: `ERROR: ${message}`, workspace: failed, event: { name, ok: false, detail: message } };
+  };
 
   try {
     if (name === "remember" || name === "write_memory") {
@@ -185,6 +235,78 @@ export async function executeTool(
         workspace: ws,
         event: { name, ok: true, detail: skill.name },
       };
+    }
+
+    if (runtime === "openbot" && (name.startsWith("computer_") || name === "request_help" || name === "render_component")) {
+      try {
+        if (name === "computer_navigate") {
+          const gated = await decideThen(ws, name, { url: str("url"), intent: str("intent") }, () => fetchComputerPage(str("url")));
+          if (!gated.allowed) return { result: gated.result, workspace: gated.workspace, event: { name, ok: false, detail: "refused" } };
+          ws = { ...gated.workspace, computer: applyNavigate(gated.workspace.computer, gated.value) };
+          const hint = gated.value.loginWall ? "\nLOGIN_WALL: call request_help if you cannot continue." : "";
+          return {
+            result: `Opened ${gated.value.url} (HTTP ${gated.value.status}).\n${formatPageSnapshot(ws.computer)}${hint}`,
+            workspace: ws,
+            event: { name, ok: true, detail: gated.value.host },
+          };
+        }
+        if (name === "computer_follow_link") {
+          const href = resolveFollowLink(ws.computer, str("query"));
+          if (!href) throw new Error("No matching link on the current page. Navigate first.");
+          const gated = await decideThen(ws, name, { url: href, intent: str("intent") || str("query") }, () => fetchComputerPage(href));
+          if (!gated.allowed) return { result: gated.result, workspace: gated.workspace, event: { name, ok: false, detail: "refused" } };
+          ws = { ...gated.workspace, computer: applyNavigate(gated.workspace.computer, gated.value) };
+          return {
+            result: `Followed ${href}.\n${formatPageSnapshot(ws.computer)}`,
+            workspace: ws,
+            event: { name, ok: true, detail: gated.value.host },
+          };
+        }
+        if (name === "computer_read_page") {
+          const gated = await decideThen(ws, name, {}, () => formatPageSnapshot(ws.computer));
+          if (!gated.allowed) return { result: gated.result, workspace: gated.workspace, event: { name, ok: false, detail: "refused" } };
+          return { result: gated.value, workspace: gated.workspace, event: { name, ok: true, detail: ws.computer.url || "empty" } };
+        }
+        if (name === "computer_list_files") {
+          const gated = await decideThen(ws, name, {}, () => ws.computer.files);
+          if (!gated.allowed) return { result: gated.result, workspace: gated.workspace, event: { name, ok: false, detail: "refused" } };
+          const files = gated.value;
+          return {
+            result: files.length ? files.map((f) => `${f.path} (${f.content.length} bytes)`).join("\n") : "No files in /workspace.",
+            workspace: gated.workspace,
+            event: { name, ok: true, detail: `${files.length} files` },
+          };
+        }
+        if (name === "computer_read_file") {
+          const gated = await decideThen(ws, name, { path: str("path") }, () => readWorkspaceFile(ws.computer, str("path")));
+          if (!gated.allowed) return { result: gated.result, workspace: gated.workspace, event: { name, ok: false, detail: "refused" } };
+          return { result: `${gated.value.path}\n${gated.value.content}`, workspace: gated.workspace, event: { name, ok: true, detail: gated.value.path } };
+        }
+        if (name === "computer_write_file") {
+          const gated = await decideThen(ws, name, { path: str("path") }, () => applyWriteFile(ws.computer, str("path"), str("content")));
+          if (!gated.allowed) return { result: gated.result, workspace: gated.workspace, event: { name, ok: false, detail: "refused" } };
+          ws = { ...gated.workspace, computer: gated.value };
+          return { result: `Wrote ${sanitizeWorkspacePath(str("path")) || str("path")}.`, workspace: ws, event: { name, ok: true, detail: str("path") } };
+        }
+        if (name === "request_help") {
+          const gated = await decideThen(ws, name, { intent: str("reason") }, () => applyRequestHelp(ws.computer, str("reason")));
+          if (!gated.allowed) return { result: gated.result, workspace: gated.workspace, event: { name, ok: false, detail: "refused" } };
+          ws = { ...gated.workspace, computer: gated.value };
+          return { result: "Help requested. A person can take the wheel from the computer panel.", workspace: ws, event: { name, ok: true, detail: "help" } };
+        }
+        if (name === "render_component") {
+          const gated = await decideThen(ws, name, { intent: str("title") }, () => applyRenderComponent(ws.computer, str("kind"), str("title"), str("body")));
+          if (!gated.allowed) return { result: gated.result, workspace: gated.workspace, event: { name, ok: false, detail: "refused" } };
+          ws = { ...gated.workspace, computer: gated.value.computer };
+          return {
+            result: `Rendered ${gated.value.component.kind} component “${gated.value.component.title}”.`,
+            workspace: ws,
+            event: { name, ok: true, detail: gated.value.component.kind },
+          };
+        }
+      } catch (err) {
+        return failClosed(err);
+      }
     }
 
     if (name === "author_skill") {

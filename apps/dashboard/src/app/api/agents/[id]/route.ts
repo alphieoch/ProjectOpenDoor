@@ -9,6 +9,8 @@ import { publicAgent } from "@/lib/agents/provision";
 import { bootAgent, stopAgent } from "@/lib/agents/boot";
 import { agentsAddonRequiredResponse, loadAgentsEntitlement } from "@/lib/agents/entitlement";
 import { loadThread } from "@/lib/agents/engine";
+import { applyComputerControl, recordOpenBotAudit } from "@/lib/agents/openbot";
+import { readWorkspace } from "@/lib/agents/state";
 
 async function loadOwned(orgId: string, id: string) {
   const db = getDb();
@@ -56,6 +58,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const systemPrompt = typeof body.systemPrompt === "string" ? body.systemPrompt.trim() : undefined;
   const name = typeof body.name === "string" ? body.name.trim().slice(0, 200) : undefined;
   const modelId = typeof body.modelId === "string" ? body.modelId.trim().slice(0, 150) : undefined;
+  const computerControl = body.computerControl === "take" || body.computerControl === "release" ? body.computerControl : null;
 
   if (nextStatus && !["running", "stopped"].includes(nextStatus)) {
     return NextResponse.json({ error: "status must be running or stopped" }, { status: 400 });
@@ -86,13 +89,33 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     });
   }
 
+  if (computerControl) {
+    const ws = readWorkspace(updated.config);
+    ws.computer = applyComputerControl(ws.computer, computerControl);
+    const audited = recordOpenBotAudit(ws, {
+      action: computerControl === "take" ? "computer.control_taken" : "computer.control_released",
+      detail: computerControl === "take" ? "A person took the wheel." : "Control returned to the bot.",
+      allowed: true,
+      rule: "human_control",
+      outcome: "permitted",
+    });
+    const [saved] = await db
+      .update(workspaceAgents)
+      .set({ config: audited, updatedAt: new Date() })
+      .where(eq(workspaceAgents.id, updated.id))
+      .returning();
+    if (saved) updated = saved;
+  }
+
   await logAuditEvent({
     organizationId: session.orgId,
     userId: sessionActorId(session),
-    action: nextStatus === "stopped" ? "agent.stopped" : nextStatus === "running" ? "agent.started" : "agent.updated",
+    action: computerControl
+      ? computerControl === "take" ? "agent.computer.take" : "agent.computer.release"
+      : nextStatus === "stopped" ? "agent.stopped" : nextStatus === "running" ? "agent.started" : "agent.updated",
     entityType: "workspace_agent",
     entityId: row.id,
-    metadata: { status: updated.status, runtime: updated.runtime, modelId: updated.modelId },
+    metadata: { status: updated.status, runtime: updated.runtime, modelId: updated.modelId, computerControl },
   });
 
   return NextResponse.json({ agent: publicAgent(updated) });

@@ -5,6 +5,7 @@ export * from "./credit-ledger.js";
 export * from "./chat-modes.js";
 export * from "./house-chat.js";
 export * from "./runtime.js";
+export * from "./openbot.js";
 export * from "./private-image.js";
 export * from "./private-video.js";
 export * from "./gcp-id-token.js";

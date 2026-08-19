@@ -3,12 +3,12 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Bot, Loader2, Plus, Shield, Sparkles, Workflow } from "lucide-react";
+import { Bot, Loader2, Monitor, Plus, Shield, Sparkles, Workflow } from "lucide-react";
 import { AiCrest } from "@/components/ui/ai-crest";
 import { PageHeader } from "@/components/ui/page-header";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
-import { AGENT_RUNTIME_CATALOG, type AgentRuntimeId } from "@/lib/agents/runtimes";
+import { AGENT_RUNTIME_CATALOG, agentRuntimeList, type AgentRuntimeId } from "@/lib/agents/runtimes";
 
 type Agent = {
   id: string;
@@ -36,6 +36,7 @@ const RUNTIME_ICON: Record<AgentRuntimeId, typeof Bot> = {
   openclaw: Workflow,
   hermes: Bot,
   nemoclaw: Shield,
+  openbot: Monitor,
 };
 
 function statusBadge(status: string) {
@@ -94,7 +95,7 @@ export default function AgentsPage() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("addon") === "success") {
-      setNotice("Agents add-on is on. You can create OpenClaw, Hermes, or NemoClaw agents on this workspace.");
+      setNotice(`Agents add-on is on. You can create ${agentRuntimeList("or")} agents on this workspace.`);
     } else if (params.get("addon") === "canceled") {
       setNotice("Checkout canceled. No charge was made.");
     }
@@ -161,7 +162,7 @@ export default function AgentsPage() {
       <PageHeader
         eyebrow="Workspace"
         title="Agents"
-        description="Create your own agent. Pick OpenClaw, Hermes, or NemoClaw, choose the LLM, and spin it up on this workspace's quota."
+        description={`Create your own agent. Pick ${agentRuntimeList("or")}, choose the LLM, and spin it up on this workspace's quota.`}
         actions={
           locked ? (
             <button
@@ -197,7 +198,7 @@ export default function AgentsPage() {
             Agents · ${price}/month
           </h3>
           <p className="mt-2 max-w-2xl text-sm leading-6" style={{ color: "hsl(var(--muted-foreground))" }}>
-            Unlock hosted OpenClaw, Hermes, and NemoClaw on this workspace. This is a separate
+            Unlock hosted {agentRuntimeList("and")} on this workspace. This is a separate
             subscription from Pro or Team. Agent tokens still debit the same prepaid quota as
             Playground and the API.
           </p>
@@ -240,7 +241,7 @@ export default function AgentsPage() {
           </div>
           <h3 className="mt-4 font-medium" style={{ color: "hsl(var(--foreground))" }}>No agents yet</h3>
           <p className="mx-auto mt-1 max-w-md text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
-            Stand up OpenClaw, Hermes, or NVIDIA NemoClaw on any catalog model. Usage comes off this workspace.
+            Stand up {agentRuntimeList("or")} on any catalog model. Usage comes off this workspace.
           </p>
           {locked ? (
             <button
@@ -300,13 +301,13 @@ export default function AgentsPage() {
           <DialogHeader>
             <DialogTitle>Create agent</DialogTitle>
             <DialogDescription>
-              Choose a runtime, pick the model it should call, then we spin it up on your quota.
+              Choose a runtime — including OpenBot — pick the model it should call, then we spin it up on your quota.
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={create} className="space-y-5">
             <div>
               <p className="mb-2 text-sm font-medium" style={{ color: "hsl(var(--foreground))" }}>Runtime</p>
-              <div className="grid gap-3 sm:grid-cols-3">
+              <div className="grid gap-3 sm:grid-cols-2">
                 {AGENT_RUNTIME_CATALOG.map((item) => {
                   const Icon = RUNTIME_ICON[item.id];
                   const active = runtime === item.id;
@@ -316,10 +317,21 @@ export default function AgentsPage() {
                       type="button"
                       onClick={() => pickRuntime(item.id)}
                       className={cn(
-                        "rounded-xl border p-3 text-left transition-colors",
+                        "relative rounded-xl border p-3 text-left transition-colors",
                         active ? "border-[hsl(var(--foreground))] bg-accent" : "border-border hover:border-border",
                       )}
                     >
+                      {item.badge && (
+                        <span
+                          className="absolute right-2 top-2 rounded-full px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
+                          style={{
+                            background: "hsl(var(--foreground))",
+                            color: "hsl(var(--background))",
+                          }}
+                        >
+                          {item.badge}
+                        </span>
+                      )}
                       <Icon className="mb-2 h-4 w-4" style={{ color: "hsl(var(--muted-foreground))" }} />
                       <p className="text-sm font-semibold" style={{ color: "hsl(var(--foreground))" }}>{item.name}</p>
                       <p className="mt-1 text-[11px]" style={{ color: "hsl(var(--muted-foreground))" }}>{item.maker}</p>
