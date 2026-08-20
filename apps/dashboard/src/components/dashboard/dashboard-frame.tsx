@@ -7,6 +7,7 @@ import { DashboardErrorBoundary } from "@/components/dashboard/dashboard-error-b
 import { DashboardMotionConfig } from "@/components/motion";
 import { PageTransition } from "@/components/PageTransition";
 import { MobileBottomNav } from "@/components/dashboard/MobileBottomNav";
+import { ReportButton } from "@/components/dashboard/report-button";
 import { DASHBOARD_SIDEBAR_CONTENT_OFFSET_CLASS } from "@/lib/dashboard-sidebar";
 import { cn } from "@/lib/utils";
 
@@ -77,6 +78,7 @@ export function DashboardFrame({
           protectedChild={profile.protectedChild}
           isSiteAdmin={profile.isSiteAdmin}
         />
+        <ReportButton />
       </div>
       </DashboardMotionConfig>
     </DashboardProfileContext.Provider>

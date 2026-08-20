@@ -58,10 +58,20 @@ export async function POST(req: NextRequest) {
       subject?: string;
       body?: string;
       severity?: string;
+      pageUrl?: string;
+      source?: string;
     };
     const subject = typeof body.subject === "string" ? body.subject.trim() : "";
     const text = typeof body.body === "string" ? body.body.trim() : "";
     const severity = asSeverity(body.severity);
+    const pageUrl =
+      typeof body.pageUrl === "string" && body.pageUrl.trim()
+        ? body.pageUrl.trim().slice(0, 2000)
+        : null;
+    const source =
+      typeof body.source === "string" && body.source.trim()
+        ? body.source.trim().slice(0, 64)
+        : "support_page";
     if (!subject || !text || !severity) {
       return NextResponse.json(
         { error: "subject, body, and severity (low|medium|high|critical) are required" },
@@ -72,6 +82,7 @@ export async function POST(req: NextRequest) {
     const sessionId = req.headers.get("x-posthog-session-id");
     const distinctId =
       req.headers.get("x-posthog-distinct-id") || session.userId;
+    const userAgent = req.headers.get("user-agent");
 
     const ticket = await createSupportIssue({
       subject,
@@ -79,6 +90,9 @@ export async function POST(req: NextRequest) {
       severity,
       orgId: session.orgId,
       email: session.email,
+      userId: session.userId,
+      pageUrl,
+      userAgent,
       distinctId,
       sessionId,
     });
@@ -88,6 +102,8 @@ export async function POST(req: NextRequest) {
       severity,
       linear_identifier: ticket.identifier,
       linear_url: ticket.url,
+      source,
+      page_url: pageUrl,
     });
 
     return NextResponse.json({ ticket }, { status: 201 });

@@ -109,24 +109,34 @@ export async function createSupportIssue(opts: {
   severity: SupportSeverity;
   orgId: string;
   email: string;
+  userId?: string | null;
+  pageUrl?: string | null;
+  userAgent?: string | null;
+  reportedAt?: string | null;
   distinctId?: string | null;
   sessionId?: string | null;
 }): Promise<LinearTicket> {
   const teamId = process.env.LINEAR_SUPPORT_TEAM_ID!.trim();
+  const projectId = process.env.LINEAR_SUPPORT_PROJECT_ID?.trim();
   const labels = inferLabels(opts.subject, opts.body, opts.severity);
   const ids = await labelIdsFor(labels);
   const { personUrl, sessionUrl } = posthogLinks({
     distinctId: opts.distinctId,
     sessionId: opts.sessionId,
   });
+  const reportedAt = opts.reportedAt?.trim() || new Date().toISOString();
 
   const description = [
     opts.body.trim(),
     "",
     "---",
     `**${orgToken(opts.orgId)}**`,
+    opts.userId ? `**User ID:** ${opts.userId}` : null,
     `**Email:** ${opts.email}`,
     `**Severity:** ${opts.severity}`,
+    opts.pageUrl ? `**Page:** ${opts.pageUrl}` : null,
+    opts.userAgent ? `**User-Agent:** ${opts.userAgent}` : null,
+    `**Reported at:** ${reportedAt}`,
     personUrl ? `**PostHog person:** ${personUrl}` : null,
     sessionUrl ? `**PostHog session:** ${sessionUrl}` : null,
   ]
@@ -159,6 +169,7 @@ export async function createSupportIssue(opts: {
     {
       input: {
         teamId,
+        ...(projectId ? { projectId } : {}),
         title: opts.subject.slice(0, 200),
         description,
         priority: linearPriority(opts.severity),
