@@ -76,7 +76,7 @@ function normalize(raw: unknown): {
 const raw = readPayload();
 if (!raw) {
   console.log(
-    "No webhook payload. Pass --file or stdin. Native Linear destination is not connected yet — connect at https://us.posthog.com/project/407244/settings/environment-integrations then point an error-tracking alert (template-linear or webhook) here."
+    "No webhook payload. Pass --file or stdin. Prefer the native PostHog alert \"Self-heal → Linear\" (template-linear on $error_tracking_issue_created). This script is the webhook/cron fallback."
   );
   if (dryRun) {
     console.log("[dry-run] would upsert a Linear agent/self-heal issue from a PostHog payload");

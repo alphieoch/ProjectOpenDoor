@@ -3,11 +3,12 @@
 ## Overnight path
 
 1. Dashboard/gateway capture `$exception` to PostHog [ProjectOpenDoor 407244](https://us.posthog.com/project/407244/error_tracking).
-2. `posthog-sync.ts` (webhook/cron) or Linear MCP upserts a Linear issue on [Self-heal](https://linear.app/ochiengandco/project/self-heal-cc5e1194b121) with labels **`agent`** + **`self-heal`**.
-3. Either:
+2. **Primary:** PostHog alert **Self-heal → Linear** (`template-linear` on `$error_tracking_issue_created`) creates a Linear issue on [Self-heal](https://linear.app/ochiengandco/project/self-heal-cc5e1194b121) with labels **`agent`** + **`self-heal`**.
+3. **Fallback:** `posthog-sync.ts` (webhook/cron) or Linear MCP if the native alert is disabled.
+4. Either:
    - **GitHub (preferred auto):** open/mirror an issue and label `jules` (official App) or `agent`/`self-heal` (workflow on `main`).
    - **Local:** `bun --env-file=.env scripts/self-heal/dispatch.ts`
-4. Jules opens a PR. Workflow comments on the GitHub issue. `comment-pr.ts` comments Linear if `LINEAR_API_KEY` is set.
+5. Jules opens a PR. Workflow comments on the GitHub issue. `comment-pr.ts` comments Linear if `LINEAR_API_KEY` is set.
 
 ## What is live
 
@@ -17,8 +18,9 @@
 | Jules GitHub App | Connected (CLI lists this repo) |
 | GitHub labels | `agent`, `self-heal`, `jules` |
 | Workflow | `.github/workflows/self-heal-jules.yml` (runs after merge to `main`) |
-| Linear | [OCH-11](https://linear.app/ochiengandco/issue/OCH-11) |
-| PostHog Linear destination | **Not connected** — one click at [integrations](https://us.posthog.com/project/407244/settings/environment-integrations) |
+| Linear | [OCH-11](https://linear.app/ochiengandco/issue/OCH-11) · project Self-heal · labels `agent` + `self-heal` |
+| PostHog Linear destination | **Connected** (workspace Ochieng&Co) — [integrations](https://us.posthog.com/project/407244/settings/environment-integrations) |
+| PostHog alert | **Self-heal → Linear** enabled on `$error_tracking_issue_created` |
 | `JULES_API_KEY` / `LINEAR_API_KEY` | Not in local `.env` or repo secrets yet |
 
 ## Commands
