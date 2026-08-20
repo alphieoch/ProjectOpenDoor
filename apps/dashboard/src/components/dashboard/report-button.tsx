@@ -145,10 +145,8 @@ export function ReportButton() {
           className="sm:max-w-[420px]"
           aria-labelledby={titleId}
           onOpenAutoFocus={(event) => {
-            const target = (event.target as HTMLElement | null)?.querySelector?.(
-              "textarea",
-            ) as HTMLTextAreaElement | null;
-            if (target) {
+            const target = event.currentTarget.querySelector("textarea");
+            if (target instanceof HTMLTextAreaElement) {
               event.preventDefault();
               target.focus();
             }

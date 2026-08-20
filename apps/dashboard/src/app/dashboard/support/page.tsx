@@ -74,7 +74,13 @@ export default function SupportPage() {
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json", ...posthogRequestHeaders() },
-      body: JSON.stringify({ subject, body, severity }),
+      body: JSON.stringify({
+        subject,
+        body,
+        severity,
+        pageUrl: typeof window !== "undefined" ? window.location.href : undefined,
+        source: "support_page",
+      }),
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
