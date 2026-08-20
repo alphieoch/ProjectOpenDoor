@@ -12,6 +12,7 @@ COPY apps/sandbox/package.json ./apps/sandbox/package.json
 COPY apps/openbot-bot/package.json ./apps/openbot-bot/package.json
 COPY apps/openbot-computer/package.json ./apps/openbot-computer/package.json
 COPY apps/openbot-supervisor/package.json ./apps/openbot-supervisor/package.json
+COPY scripts/server-only-stub ./scripts/server-only-stub
 RUN bun install --frozen-lockfile
 
 FROM base AS builder
