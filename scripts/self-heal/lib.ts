@@ -22,6 +22,32 @@ export function linearTeamId(): string {
   );
 }
 
+/** Prefer LINEAR_SELF_HEAL_ASSIGNEE, then LINEAR_SUPPORT_ASSIGNEE (UUID or email). */
+async function resolveAssigneeId(): Promise<string | undefined> {
+  const raw =
+    process.env.LINEAR_SELF_HEAL_ASSIGNEE?.trim() ||
+    process.env.LINEAR_SUPPORT_ASSIGNEE?.trim();
+  if (!raw) return undefined;
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(raw)) {
+    return raw;
+  }
+  try {
+    const data = await linearGql<{
+      users: { nodes: { id: string }[] };
+    }>(
+      `query Users($q: String!) {
+        users(filter: { email: { eqIgnoreCase: $q } }, first: 1) {
+          nodes { id }
+        }
+      }`,
+      { q: raw }
+    );
+    return data.users.nodes[0]?.id;
+  } catch {
+    return undefined;
+  }
+}
+
 async function linearGql<T>(
   query: string,
   variables: Record<string, unknown>
@@ -221,6 +247,7 @@ export async function upsertSelfHealIssue(opts: {
   const projectId =
     process.env.LINEAR_SELF_HEAL_PROJECT_ID?.trim() ||
     "1259fce9-8751-45b4-a2c7-e39088feae3d";
+  const assigneeId = await resolveAssigneeId();
   const labelData = await linearGql<{
     issueLabels: { nodes: { id: string; name: string }[] };
   }>(
@@ -259,6 +286,7 @@ export async function upsertSelfHealIssue(opts: {
       input: {
         teamId,
         projectId,
+        ...(assigneeId ? { assigneeId } : {}),
         title: opts.title.slice(0, 200),
         description: opts.description,
         priority: opts.priority ?? 2,

@@ -87,6 +87,30 @@ async function labelIdsFor(names: string[]): Promise<string[]> {
   }
 }
 
+/** Resolve LINEAR_SUPPORT_ASSIGNEE (UUID or email) so tickets land in My issues + Inbox. */
+async function resolveAssigneeId(): Promise<string | undefined> {
+  const raw = process.env.LINEAR_SUPPORT_ASSIGNEE?.trim();
+  if (!raw) return undefined;
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(raw)) {
+    return raw;
+  }
+  try {
+    const data = await linearGql<{
+      users: { nodes: { id: string; email: string; displayName: string }[] };
+    }>(
+      `query Users($q: String!) {
+        users(filter: { email: { eqIgnoreCase: $q } }, first: 1) {
+          nodes { id email displayName }
+        }
+      }`,
+      { q: raw }
+    );
+    return data.users.nodes[0]?.id;
+  } catch {
+    return undefined;
+  }
+}
+
 function inferLabels(subject: string, body: string, severity: SupportSeverity): string[] {
   const text = `${subject}\n${body}`.toLowerCase();
   const labels = ["user-report"];
@@ -120,6 +144,7 @@ export async function createSupportIssue(opts: {
   const projectId = process.env.LINEAR_SUPPORT_PROJECT_ID?.trim();
   const labels = inferLabels(opts.subject, opts.body, opts.severity);
   const ids = await labelIdsFor(labels);
+  const assigneeId = await resolveAssigneeId();
   const { personUrl, sessionUrl } = posthogLinks({
     distinctId: opts.distinctId,
     sessionId: opts.sessionId,
@@ -170,6 +195,7 @@ export async function createSupportIssue(opts: {
       input: {
         teamId,
         ...(projectId ? { projectId } : {}),
+        ...(assigneeId ? { assigneeId } : {}),
         title: opts.subject.slice(0, 200),
         description,
         priority: linearPriority(opts.severity),
