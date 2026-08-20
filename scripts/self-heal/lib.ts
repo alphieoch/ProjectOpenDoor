@@ -156,3 +156,130 @@ export async function searchIssuesByIdentifier(
     return null;
   }
 }
+
+export function posthogFingerprintToken(id: string): string {
+  return `posthog_issue:${id}`;
+}
+
+export async function findIssueByToken(token: string): Promise<LinearIssue | null> {
+  const teamId = linearTeamId();
+  const data = await linearGql<{
+    issues: {
+      nodes: {
+        id: string;
+        identifier: string;
+        title: string;
+        description: string | null;
+        url: string;
+        state: { name: string };
+        labels: { nodes: { name: string }[] };
+      }[];
+    };
+  }>(
+    `query ByToken($teamId: ID!, $token: String!) {
+      issues(
+        first: 5
+        filter: {
+          team: { id: { eq: $teamId } }
+          description: { contains: $token }
+        }
+      ) {
+        nodes {
+          id identifier title description url
+          state { name }
+          labels { nodes { name } }
+        }
+      }
+    }`,
+    { teamId, token }
+  );
+  const n = data.issues.nodes[0];
+  if (!n) return null;
+  return {
+    id: n.id,
+    identifier: n.identifier,
+    title: n.title,
+    description: n.description || "",
+    url: n.url,
+    state: n.state.name,
+    labels: n.labels.nodes.map((l) => l.name),
+  };
+}
+
+export async function upsertSelfHealIssue(opts: {
+  title: string;
+  description: string;
+  token: string;
+  url?: string;
+  priority?: number;
+}): Promise<{ issue: LinearIssue; created: boolean }> {
+  const existing = await findIssueByToken(opts.token);
+  if (existing) {
+    return { issue: existing, created: false };
+  }
+  const teamId = linearTeamId();
+  const projectId =
+    process.env.LINEAR_SELF_HEAL_PROJECT_ID?.trim() ||
+    "1259fce9-8751-45b4-a2c7-e39088feae3d";
+  const labelData = await linearGql<{
+    issueLabels: { nodes: { id: string; name: string }[] };
+  }>(
+    `query Labels { issueLabels(first: 100) { nodes { id name } } }`,
+    {}
+  );
+  const wanted = new Set(["agent", "self-heal"]);
+  const labelIds = labelData.issueLabels.nodes
+    .filter((l) => wanted.has(l.name.toLowerCase()))
+    .map((l) => l.id);
+  const data = await linearGql<{
+    issueCreate: {
+      success: boolean;
+      issue: {
+        id: string;
+        identifier: string;
+        title: string;
+        description: string | null;
+        url: string;
+        state: { name: string };
+        labels: { nodes: { name: string }[] };
+      } | null;
+    };
+  }>(
+    `mutation Create($input: IssueCreateInput!) {
+      issueCreate(input: $input) {
+        success
+        issue {
+          id identifier title description url
+          state { name }
+          labels { nodes { name } }
+        }
+      }
+    }`,
+    {
+      input: {
+        teamId,
+        projectId,
+        title: opts.title.slice(0, 200),
+        description: opts.description,
+        priority: opts.priority ?? 2,
+        ...(labelIds.length ? { labelIds } : {}),
+      },
+    }
+  );
+  const issue = data.issueCreate.issue;
+  if (!data.issueCreate.success || !issue) {
+    throw new Error("Linear did not create the self-heal issue");
+  }
+  return {
+    issue: {
+      id: issue.id,
+      identifier: issue.identifier,
+      title: issue.title,
+      description: issue.description || "",
+      url: issue.url,
+      state: issue.state.name,
+      labels: issue.labels.nodes.map((l) => l.name),
+    },
+    created: true,
+  };
+}

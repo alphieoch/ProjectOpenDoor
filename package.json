@@ -30,6 +30,7 @@
     "self-heal:jules": "bun --env-file=.env scripts/self-heal/jules-run.ts",
     "self-heal:dispatch": "bun --env-file=.env scripts/self-heal/dispatch.ts",
     "self-heal:comment-pr": "bun --env-file=.env scripts/self-heal/comment-pr.ts",
+    "self-heal:sync": "bun --env-file=.env scripts/self-heal/posthog-sync.ts",
     "gcp:edge-lb": "bash scripts/setup-edge-lb.sh",
     "typecheck": "turbo run typecheck"
   },
