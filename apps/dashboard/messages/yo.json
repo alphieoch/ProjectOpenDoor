@@ -1,0 +1,138 @@
+{
+  "common": {
+    "language": "Èdè",
+    "region": "Àgbègbè",
+    "country": "Orílẹ̀-èdè",
+    "countryOptional": "Orílẹ̀-èdè (kò pọn dandan)",
+    "countryNone": "Fò ní báyìí",
+    "save": "Fi pamọ́",
+    "continue": "Tẹ̀síwájú",
+    "skip": "Fò",
+    "home": "Ilé",
+    "signIn": "Wọlé",
+    "getStarted": "Bẹ̀rẹ̀",
+    "openDashboard": "Ṣí dashboard"
+  },
+  "auth": {
+    "welcomeBack": "Ẹ kú àbọ̀",
+    "createAccount": "Ṣẹ̀dá àkáǹtì rẹ",
+    "signInSubtitle": "Wọlé sí ẹnu-ọ̀nà LLM rẹ",
+    "signupSubtitle": "Bẹ̀rẹ̀ pẹ̀lú ẹnu-ọ̀nà LLM",
+    "educationSubtitle": "Bẹ̀rẹ̀ pẹ̀lú ìtòlẹ́sẹẹsẹ ilé-ìwé",
+    "email": "Ímeèlì",
+    "password": "Ọ̀rọ̀ aṣínà",
+    "fullName": "Orúkọ kíkún",
+    "organization": "Àjọ",
+    "organizationOptional": "kò pọn dandan",
+    "signIn": "Wọlé",
+    "signingIn": "Ń wọlé…",
+    "createAccountCta": "Ṣẹ̀dá àkáǹtì",
+    "creatingAccount": "Ń ṣẹ̀dá àkáǹtì…",
+    "noAccount": "Kò sí àkáǹtì?",
+    "signUpFree": "Forúkọ sílẹ̀ lọ́fẹ̀ẹ́",
+    "haveAccount": "O ti ní àkáǹtì?",
+    "enterpriseSso": "SSO àjọ ńlá",
+    "orgSlug": "Àmì àjọ",
+    "continueSso": "Tẹ̀síwájú pẹ̀lú SSO",
+    "choosePlan": "Yan ètò",
+    "enterpriseSales": "Títà Enterprise",
+    "loginFailed": "Wíwọlé kùnà",
+    "signupFailed": "Ìforúkọsílẹ̀ kùnà",
+    "passwordHint": "Ó kéré tán létà 10"
+  },
+  "onboarding": {
+    "eyebrow": "Ààyè iṣẹ́ rẹ",
+    "title": "Bí OpenDoor ṣe ń ṣiṣẹ́",
+    "body": "Ìwọlé kan. Ìtàkurọ̀sọ nínú ẹ̀rọ aṣàwákiri, ilé àwọn ẹlẹgbẹ́ OpenBot, àti kete ìwọ̀n owó. Yan àgbègbè — a kì í dènà orílẹ̀-èdè.",
+    "pickRegion": "Níbo lo wà?",
+    "pickRegionHint": "Èyí kan ṣe pààrọ̀ ọ̀rọ̀ àti ààyò. Gbogbo àgbègbè lè forúkọ sílẹ̀.",
+    "productChatTitle": "Ìtàkurọ̀sọ",
+    "productChatBody": "Ṣí Ìtàkurọ̀sọ kí o sọ̀rọ̀ pẹ̀lú àwọn àwòṣe lórí foonu tàbí kọ̀ǹpútà. O kò nílò bọ́tìnì API láti bẹ̀rẹ̀.",
+    "productHouseTitle": "Ilé",
+    "productHouseBody": "OpenBot jẹ́ ilé àwọn ẹlẹgbẹ́ — olórí pẹ̀lú àwọn amòye tí o fi kún. Wọ́n pín ààyè kannáà.",
+    "productPoolTitle": "Kete àjọpín",
+    "productPoolBody": "Ẹbí àti Ẹgbẹ́ pín kete ìwọ̀n owó kan. Ìwé-owo kan, kì í ṣe bọ́tìnì fún ẹnìkọ̀ọ̀kan.",
+    "saveWorld": "Fi èdè àti àgbègbè pamọ́",
+    "saved": "A ti fi pamọ́",
+    "africa": {
+      "school": "Ilé-ìwé: ojú-ewé fẹ́ẹ́rẹ́ lórí foonu, ìjókòó Akẹ́kọ̀ọ́ fún kíláàsì tàbí iṣẹ́ ilé, láì ná data àfikún láti dé àwòṣe.",
+      "family": "Ẹbí: kete kan fún ilé. Àwọn òbí àti ọmọ nlo owó kannáà — ó dín owó ju ìwé-owo mẹ́rin lọ, a sì ṣe é fún iye data.",
+      "team": "Ẹgbẹ́: ààyè kan fún yàrá ìwádìí, NGO, tàbí ilé-ìtajà. Pè nípa ímeèlì. Gbogbo ènìyàn pín kete náà."
+    },
+    "europe": {
+      "school": "Ilé-ìwé: ìbẹ̀rẹ̀ Akẹ́kọ̀ọ́ fún kíláàsì tàbí yàrá, ọ̀nà kannáà pẹ̀lú Pro.",
+      "family": "Ẹbí: kete ilé pẹ̀lú ìkó owó — ẹgbẹ́ kan fún ilé.",
+      "team": "Ẹgbẹ́: SSO àti ìdarí àjọpín. Enterprise ń bá títà sọ̀rọ̀."
+    },
+    "americas": {
+      "school": "Ilé-ìwé: Akẹ́kọ̀ọ́ ni ẹgbẹ́ fún iṣẹ́ ilé àti yàrá. Àwọn àwòṣe Pro kannáà.",
+      "family": "Ẹbí: kete ilé, ó dín owó ju ìjókòó Pro mẹ́rin lọ.",
+      "team": "Ẹgbẹ́: ìjókòó tí o lè ra fúnra rẹ. Enterprise: ibùgbé data, SCIM, àti títà."
+    },
+    "asia_pacific": {
+      "school": "Ilé-ìwé: bẹ̀rẹ̀ lórí foonu. Akẹ́kọ̀ọ́ bo ìjókòó; àwọn tóòkènì wà ní iye ilé-ìṣura.",
+      "family": "Ẹbí: kete kan fún ilé kí a má ra data àti ìjókòó nígbà mẹ́rin.",
+      "team": "Ẹgbẹ́: ààyè kan, pè àwọn ẹlẹgbẹ́, pín owó."
+    },
+    "middle_east": {
+      "school": "Ilé-ìwé: ìtòlẹ́sẹẹsẹ Akẹ́kọ̀ọ́ fún kíláàsì àti ìwádìí. Lárúbáwá jẹ́ èdè àkọ́kọ́.",
+      "family": "Ẹbí: kete ilé — ìwé-owo kan fún ilé.",
+      "team": "Ẹgbẹ́: ààyè àjọpín àti SSO nígbà tí o bá nílò. Enterprise nípasẹ̀ títà."
+    }
+  },
+  "getStarted": {
+    "eyebrow": "Bẹ̀rẹ̀",
+    "title": "Yan ọ̀nà rẹ.",
+    "body": "OpenDoor ń bá ilé-ìwé, ẹbí, àti ẹgbẹ́ mu. Yan àgbègbè — a kì í dènà ẹnikẹ́ni.",
+    "startFree": "Bẹ̀rẹ̀ lọ́fẹ̀ẹ́",
+    "startFreeBody": "Ṣe fúnra rẹ fún ẹnìkan tàbí ẹgbẹ́ kékeré. Tẹ̀síwájú pẹ̀lú ímeèlì.",
+    "education": "Ẹ̀kọ́",
+    "educationBody": "Fún àwọn ilé-ìwé, yàrá, àti akẹ́kọ̀ọ́. Ìbẹ̀rẹ̀ ń dúró bí ti ilé-ìwé.",
+    "enterprise": "Àjọ ńlá",
+    "enterpriseBody": "Àwọn àjọ tó wà ń wọlé pẹ̀lú SSO. Ìgbékalẹ̀ tuntun ń bẹ̀rẹ̀ pẹ̀lú títà.",
+    "continueEmail": "Tẹ̀síwájú pẹ̀lú ímeèlì",
+    "continueEducation": "Tẹ̀síwájú pẹ̀lú ìforúkọsílẹ̀ ẹ̀kọ́",
+    "joinSso": "Dara pọ̀ nípasẹ̀ SSO",
+    "talkSales": "Bá títà sọ̀rọ̀"
+  },
+  "gettingStarted": {
+    "eyebrow": "Ìbẹ̀rẹ̀",
+    "title": "Ẹ kú àbọ̀ sí OpenDoor",
+    "coreDone": "Ìṣètò pàtàkì ti parí. Àwọn ìgbésẹ̀ àṣàyàn wà nígbà tí o bá nílò.",
+    "coreTodo": "Ìtàkurọ̀sọ àti ẹlẹgbẹ́ kan fi ọ́ sínú ọjà. Ohun yòókù kò pọn dandan.",
+    "hide": "Fi ìṣètò pamọ́"
+  },
+  "pricing": {
+    "audienceStudent": "Akẹ́kọ̀ọ́",
+    "audienceFamily": "Ẹbí",
+    "audienceTeam": "Ẹgbẹ́",
+    "audienceEnterprise": "Àjọ ńlá",
+    "singleLabel": "Akẹ́kọ̀ọ́",
+    "familyLabel": "Ẹbí",
+    "enterpriseLabel": "Ẹgbẹ́ / Àjọ ńlá",
+    "singleHeadline": "Àwọn ètò fún ẹnìkan",
+    "familyHeadline": "Kete àjọpín fún ilé yín",
+    "enterpriseHeadline": "Àwọn ètò fún ẹgbẹ́ àti àjọ",
+    "compare": "Fi àwọn ètò wé ara wọn"
+  },
+  "tools": {
+    "searchOneLiner": "Béèrè ìbéèrè. OpenDoor Search ń dáhùn pẹ̀lú orísun lórí stack wa — a yọ owó kúrò nínú kete rẹ, kò sí bọ́tìnì ìṣàwárí ẹlòmíràn."
+  },
+  "openbot": {
+    "houseTitle": "Kí ni ilé yìí?",
+    "houseBody": "Ilé ni ààyè OpenBot rẹ: ẹlẹgbẹ́ olórí pẹ̀lú àwọn amòye tí o fi kún. Wọ́n pín àwọn ikanni, ọgbọ́n, àti kete owó àjọ. Bẹ̀rẹ̀ ikanni láti sọ̀rọ̀; fi ẹlẹgbẹ́ kún nígbà tí o bá fẹ́ ipa tó ní orúkọ.",
+    "houseGotIt": "Mo gbà",
+    "startChannel": "Bẹ̀rẹ̀ ikanni tuntun"
+  },
+  "settings": {
+    "languageRegion": "Èdè àti àgbègbè",
+    "languageRegionHint": "A lò ó ní ìwọlé, ìbẹ̀rẹ̀, àti ojú ìwé àkọ́kọ́. Àyíká dashboard yòókù ń dúró ní Gẹ̀ẹ́sì fún nísinsìnyí."
+  },
+  "regions": {
+    "africa": "Áfríkà",
+    "europe": "Yúróòpù",
+    "americas": "Amẹ́ríkà",
+    "asia_pacific": "Éṣíà-Pásífíìkì",
+    "middle_east": "Àárín Gbùngbùn Ìlà-Oòrùn"
+  }
+}

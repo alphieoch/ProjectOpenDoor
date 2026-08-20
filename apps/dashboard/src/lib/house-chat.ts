@@ -1,14 +1,17 @@
 import {
+  applyFiveHourWindow,
   formatAllowanceCountdown,
   getMinutesRemaining,
   getWindowMs,
   houseChatAllowanceForPlan,
+  houseChatWindowPooled,
   isWindowExpired,
+  normalizeHouseChatMode,
   type HouseChatMode,
 } from "@opendoor/shared";
 import { getDb } from "@/lib/db";
-import { houseChatUsage, organizations, users } from "@opendoor/database";
-import { eq, sql } from "drizzle-orm";
+import { chatRateLimits, houseChatUsage, organizations, users } from "@opendoor/database";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import { createHash, timingSafeEqual } from "crypto";
 
 export type HouseChatAllowanceStatus = {
@@ -25,6 +28,8 @@ export type HouseChatAllowanceStatus = {
   reason: "ok" | "period_limit" | "weekly_limit";
   refillLabel: string | null;
   unlimited?: boolean;
+  retryAfterSeconds?: number;
+  pooled?: boolean;
 };
 
 const SITE_ADMIN_UNLIMITED: HouseChatAllowanceStatus = {
@@ -43,11 +48,8 @@ const SITE_ADMIN_UNLIMITED: HouseChatAllowanceStatus = {
   unlimited: true,
 };
 
-export function normalizeHouseChatMode(raw: unknown): HouseChatMode {
-  const m = typeof raw === "string" ? raw.toLowerCase() : "";
-  if (m === "thinking" || m === "fast" || m === "max" || m === "auto") return m;
-  return "auto";
-}
+export { normalizeHouseChatMode };
+export type { HouseChatMode };
 
 export async function loadOrgPlan(orgId: string): Promise<string> {
   const db = getDb();
@@ -210,6 +212,100 @@ async function rollUsageWindows(
   return next;
 }
 
+async function loadChatRateLimitRow(orgId: string, userId: string, pooled: boolean) {
+  const db = getDb();
+  if (pooled) {
+    return db.query.chatRateLimits.findFirst({
+      where: and(
+        eq(chatRateLimits.organizationId, orgId),
+        isNull(chatRateLimits.userId),
+        eq(chatRateLimits.scope, "workspace")
+      ),
+    });
+  }
+  return db.query.chatRateLimits.findFirst({
+    where: and(
+      eq(chatRateLimits.organizationId, orgId),
+      eq(chatRateLimits.userId, userId),
+      eq(chatRateLimits.scope, "user")
+    ),
+  });
+}
+
+export async function consumeChatRateLimit(opts: {
+  userId: string;
+  orgId: string;
+  plan?: string;
+  increment: boolean;
+}) {
+  const resolvedPlan = opts.plan || (await loadOrgPlan(opts.orgId));
+  const caps = houseChatAllowanceForPlan(resolvedPlan);
+  const windowMs = getWindowMs(caps.periodWindow)!;
+  const pooled = houseChatWindowPooled(resolvedPlan);
+  const existing = await loadChatRateLimitRow(opts.orgId, opts.userId, pooled);
+  const snapshot = existing
+    ? {
+        windowStartTime: existing.windowStartTime,
+        windowExpiresAt: existing.windowExpiresAt,
+        messageCount: existing.messageCount,
+      }
+    : null;
+  const now = new Date();
+  const applied = opts.increment
+    ? applyFiveHourWindow(snapshot, caps.periodMessageLimit, now, windowMs)
+    : (() => {
+        const peek = applyFiveHourWindow(snapshot, caps.periodMessageLimit, now, windowMs);
+        if (!snapshot || peek.reset) {
+          return {
+            ...peek,
+            allowed: true,
+            next: snapshot || {
+              windowStartTime: now,
+              windowExpiresAt: new Date(now.getTime() + windowMs),
+              messageCount: 0,
+            },
+          };
+        }
+        return {
+          allowed: snapshot.messageCount < caps.periodMessageLimit,
+          reset: false,
+          retryAfterSeconds:
+            snapshot.messageCount >= caps.periodMessageLimit ? peek.retryAfterSeconds : 0,
+          next: snapshot,
+        };
+      })();
+
+  if (opts.increment && applied.allowed) {
+    const db = getDb();
+    if (existing) {
+      await db
+        .update(chatRateLimits)
+        .set({
+          windowStartTime: applied.next.windowStartTime,
+          windowExpiresAt: applied.next.windowExpiresAt,
+          messageCount: applied.next.messageCount,
+        })
+        .where(eq(chatRateLimits.id, existing.id));
+    } else {
+      await db.insert(chatRateLimits).values({
+        organizationId: opts.orgId,
+        userId: pooled ? null : opts.userId,
+        scope: pooled ? "workspace" : "user",
+        windowStartTime: applied.next.windowStartTime,
+        windowExpiresAt: applied.next.windowExpiresAt,
+        messageCount: applied.next.messageCount,
+      });
+    }
+  }
+
+  return {
+    ...applied,
+    caps,
+    pooled,
+    windowMs,
+  };
+}
+
 export async function getHouseChatAllowance(
   userId: string,
   orgId: string,
@@ -221,52 +317,67 @@ export async function getHouseChatAllowance(
   const caps = houseChatAllowanceForPlan(resolvedPlan);
   const periodMs = getWindowMs(caps.periodWindow)!;
   const weeklyMs = getWindowMs("weekly")!;
+  const pooled = houseChatWindowPooled(resolvedPlan);
 
-  const usage = await rollUsageWindows(
+  const rate = await consumeChatRateLimit({
     userId,
-    await ensureUsageRow(userId, orgId),
-    periodMs,
-    weeklyMs
-  );
-
-  const periodUsed = usage.periodMessagesUsed ?? 0;
-  const weeklyUsed = usage.weeklyMessagesUsed ?? 0;
+    orgId,
+    plan: resolvedPlan,
+    increment: false,
+  });
+  const periodUsed = rate.next.messageCount;
   const periodRemaining = Math.max(0, caps.periodMessageLimit - periodUsed);
-  const weeklyRemaining = Math.max(0, caps.weeklyMessageLimit - weeklyUsed);
+  const periodMinutesRemaining = getMinutesRemaining(rate.next.windowStartTime, periodMs);
 
-  if (weeklyUsed >= caps.weeklyMessageLimit) {
-    const mins = getMinutesRemaining(usage.weekStartedAt, weeklyMs);
-    return {
-      periodWindow: caps.periodWindow,
-      periodUsed,
-      periodLimit: caps.periodMessageLimit,
-      periodRemaining: 0,
-      periodMinutesRemaining: getMinutesRemaining(usage.periodWindowStartedAt, periodMs),
-      weeklyUsed,
-      weeklyLimit: caps.weeklyMessageLimit,
-      weeklyRemaining: 0,
-      weeklyMinutesRemaining: mins,
-      allowed: false,
-      reason: "weekly_limit",
-      refillLabel: `Weekly allowance resets in ${formatAllowanceCountdown(mins)}`,
-    };
+  let weeklyUsed = 0;
+  let weeklyRemaining = caps.weeklyMessageLimit;
+  let weeklyMinutesRemaining: number | null = null;
+  if (!pooled) {
+    const usage = await rollUsageWindows(
+      userId,
+      await ensureUsageRow(userId, orgId),
+      periodMs,
+      weeklyMs
+    );
+    weeklyUsed = usage.weeklyMessagesUsed ?? 0;
+    weeklyRemaining = Math.max(0, caps.weeklyMessageLimit - weeklyUsed);
+    weeklyMinutesRemaining = getMinutesRemaining(usage.weekStartedAt, weeklyMs);
+    if (weeklyUsed >= caps.weeklyMessageLimit) {
+      return {
+        periodWindow: caps.periodWindow,
+        periodUsed,
+        periodLimit: caps.periodMessageLimit,
+        periodRemaining: 0,
+        periodMinutesRemaining,
+        weeklyUsed,
+        weeklyLimit: caps.weeklyMessageLimit,
+        weeklyRemaining: 0,
+        weeklyMinutesRemaining,
+        allowed: false,
+        reason: "weekly_limit",
+        refillLabel: `Weekly allowance resets in ${formatAllowanceCountdown(weeklyMinutesRemaining)}`,
+        retryAfterSeconds: Math.max(1, (weeklyMinutesRemaining || 1) * 60),
+        pooled,
+      };
+    }
   }
 
-  if (periodUsed >= caps.periodMessageLimit) {
-    const mins = getMinutesRemaining(usage.periodWindowStartedAt, periodMs);
+  if (!rate.allowed) {
     return {
       periodWindow: caps.periodWindow,
       periodUsed,
       periodLimit: caps.periodMessageLimit,
       periodRemaining: 0,
-      periodMinutesRemaining: mins,
+      periodMinutesRemaining,
       weeklyUsed,
       weeklyLimit: caps.weeklyMessageLimit,
       weeklyRemaining,
-      weeklyMinutesRemaining: getMinutesRemaining(usage.weekStartedAt, weeklyMs),
+      weeklyMinutesRemaining,
       allowed: false,
       reason: "period_limit",
-      refillLabel: `Refills in ${formatAllowanceCountdown(mins)}`,
+      refillLabel: `Refills in ${formatAllowanceCountdown(periodMinutesRemaining)}`,
+      retryAfterSeconds: rate.retryAfterSeconds,
+      pooled,
     };
   }
 
@@ -275,21 +386,37 @@ export async function getHouseChatAllowance(
     periodUsed,
     periodLimit: caps.periodMessageLimit,
     periodRemaining,
-    periodMinutesRemaining: getMinutesRemaining(usage.periodWindowStartedAt, periodMs),
+    periodMinutesRemaining,
     weeklyUsed,
     weeklyLimit: caps.weeklyMessageLimit,
     weeklyRemaining,
-    weeklyMinutesRemaining: getMinutesRemaining(usage.weekStartedAt, weeklyMs),
+    weeklyMinutesRemaining,
     allowed: true,
     reason: "ok",
     refillLabel: null,
+    retryAfterSeconds: 0,
+    pooled,
   };
 }
 
-/** Reserve one message against period + weekly counters. Call after allow check. */
+/** Reserve one message against the 5h window (and weekly for non-pooled plans). */
 export async function incrementHouseChatUsage(userId: string, orgId: string) {
   const db = getDb();
   const resolvedPlan = await loadOrgPlan(orgId);
+  const reserved = await consumeChatRateLimit({
+    userId,
+    orgId,
+    plan: resolvedPlan,
+    increment: true,
+  });
+  if (!reserved.allowed) {
+    const err = new Error("period_limit") as Error & { retryAfterSeconds?: number };
+    err.retryAfterSeconds = reserved.retryAfterSeconds;
+    throw err;
+  }
+
+  if (houseChatWindowPooled(resolvedPlan)) return;
+
   const caps = houseChatAllowanceForPlan(resolvedPlan);
   const periodMs = getWindowMs(caps.periodWindow)!;
   const weeklyMs = getWindowMs("weekly")!;

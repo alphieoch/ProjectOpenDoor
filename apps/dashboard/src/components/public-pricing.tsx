@@ -3,7 +3,12 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Flag, BarChart3, Check } from "lucide-react";
-import { PricingPlans } from "@/components/pricing-plans";
+import ComparisonBlock from "@/components/ui/comparison-3";
+import {
+  SEARCH_QUERY_LIST_CENTS,
+  WEB_SEARCH_ADDON,
+  formatUsdCents,
+} from "@opendoor/shared";
 
 export type ChatRate = {
   modelId: string;
@@ -53,11 +58,11 @@ export function PublicPricing({
 
   return (
     <div className="mx-auto max-w-6xl px-6 py-16 lg:px-8">
-      <p className="od-eyebrow" style={{ color: "#1A73E8" }}>[ for projects big and small ]</p>
+      <p className="od-eyebrow text-muted-foreground">[ for projects big and small ]</p>
       <h1
         className="mt-4"
         style={{
-          fontFamily: "var(--font-serif)",
+          fontFamily: "var(--font-garamond), EB Garamond, Georgia, serif",
           fontSize: "clamp(40px, 6vw, 64px)",
           lineHeight: 1.05,
           letterSpacing: "-0.03em",
@@ -65,41 +70,60 @@ export function PublicPricing({
       >
         Plans and pricing
       </h1>
-      <p className="mt-5 max-w-2xl text-lg leading-8 text-slate-600">
-        No free plan. Pro is $12 — forty percent under Perplexity Pro. Usage is
-        pay-as-you-go. The first $20 top-up adds $5 of open-weight credit; closed
-        models and cloud GPUs stay prepaid.
+      <p className="mt-5 max-w-2xl text-lg leading-8 text-muted-foreground">
+        No free plan. Student is $9.99. Pro is $12 — under Perplexity Pro at $20. The
+        membership is the savings; included credit is a small taste, then warehouse-rate
+        tokens (open-weight included) and prepaid GPUs. The first $20 top-up adds $5 of
+        open-weight bonus.
       </p>
       <div className="mt-7 flex flex-wrap gap-3">
         <Link
           href="/signup"
-          className="rounded-full bg-slate-950 px-5 py-2.5 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-blue-600"
+          className="rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90"
         >
           Start building
         </Link>
         <Link
           href="/dashboard/models"
-          className="rounded-full border border-slate-300 bg-white px-5 py-2.5 text-sm font-semibold text-slate-800 transition hover:-translate-y-0.5"
+          className="rounded-lg border border-border bg-card px-5 py-2.5 text-sm font-semibold text-foreground transition hover:bg-accent"
         >
           Browse models
         </Link>
       </div>
 
-      <PricingPlans />
+      <ComparisonBlock />
 
-      <div className="mt-8 rounded-[1.75rem] border border-slate-200 bg-white p-6 sm:p-7">
+      <div className="mt-8 rounded-[1.75rem] border border-border bg-white p-6 sm:p-7">
         <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">Add-on</p>
         <div className="mt-2 flex flex-wrap items-end justify-between gap-4">
           <div>
             <h2 className="text-2xl font-semibold tracking-tight">Agents</h2>
-            <p className="mt-2 max-w-xl text-sm leading-6 text-slate-600">
-              Hosted OpenClaw, Hermes, and NemoClaw on your workspace. Included on
+            <p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">
+              Hosted OpenClaw, Hermes, NemoClaw, and OpenBot on your workspace. Included on
               Enterprise. Agent tokens still bill the same prepaid quota.
             </p>
           </div>
           <p className="text-4xl font-semibold tracking-tight">
             $20
-            <span className="ml-1 text-sm font-normal text-slate-500">/month</span>
+            <span className="ml-1 text-sm font-normal text-muted-foreground">/month</span>
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-8 rounded-[1.75rem] border border-border bg-white p-6 sm:p-7">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">Metered</p>
+        <div className="mt-2 flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <h2 className="text-2xl font-semibold tracking-tight">OpenDoor Search</h2>
+            <p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">
+              Visible on Tools and this page. Queries debit credits at list price — enable to use.
+              The ${WEB_SEARCH_ADDON.amountUsd}/month Web Search add-on covers Search for the month.
+              Included on Enterprise. Site admins are unlimited. No third-party search keys.
+            </p>
+          </div>
+          <p className="text-4xl font-semibold tracking-tight">
+            {formatUsdCents(SEARCH_QUERY_LIST_CENTS)}
+            <span className="ml-1 text-sm font-normal text-muted-foreground">/ query</span>
           </p>
         </div>
       </div>
@@ -111,9 +135,9 @@ export function PublicPricing({
           { icon: Check, title: "Choose your model", body: "Serverless catalog first. Dedicated L4 / A100 / H100 when you need isolation." },
         ].map(({ icon: Icon, title, body }) => (
           <div key={title}>
-            <Icon className="h-5 w-5 text-slate-950" />
-            <h3 className="mt-3 font-semibold text-slate-950">{title}</h3>
-            <p className="mt-2 text-sm leading-6 text-slate-600">{body}</p>
+            <Icon className="h-5 w-5 text-foreground" />
+            <h3 className="mt-3 font-semibold text-foreground">{title}</h3>
+            <p className="mt-2 text-sm leading-6 text-muted-foreground">{body}</p>
           </div>
         ))}
       </div>
@@ -122,10 +146,10 @@ export function PublicPricing({
         className="mt-12 flex flex-wrap items-center justify-between gap-3 rounded-2xl px-5 py-4"
         style={{ background: "#E8EFE4" }}
       >
-        <p className="text-sm text-slate-800">
+        <p className="text-sm text-foreground">
           Save 50% with batch processing via <code>POST /v1/batches</code>.
         </p>
-        <label className="flex items-center gap-3 text-sm font-medium text-slate-800">
+        <label className="flex items-center gap-3 text-sm font-medium text-foreground">
           Batch processing
           <button
             type="button"
@@ -133,7 +157,7 @@ export function PublicPricing({
             aria-checked={batch}
             onClick={() => setBatch((v) => !v)}
             className="relative h-6 w-11 rounded-full transition-colors"
-            style={{ background: batch ? "#1A73E8" : "#C5C8BE" }}
+            style={{ background: batch ? "#0F172A" : "#C5C8BE" }}
           >
             <span
               className="absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform"
@@ -144,13 +168,13 @@ export function PublicPricing({
       </div>
 
       <section className="mt-14">
-        <h2 style={{ fontFamily: "var(--font-serif)", fontSize: 32, letterSpacing: "-0.02em" }}>
+        <h2 style={{ fontFamily: "var(--font-garamond), EB Garamond, Georgia, serif", fontSize: 32, letterSpacing: "-0.02em" }}>
           Serverless chat
         </h2>
-        <p className="mt-2 text-slate-600">
+        <p className="mt-2 text-muted-foreground">
           USD per 1M tokens{batch ? " · batch rates shown" : ""}. Cached input is 50% of input until prompt cache ships.
         </p>
-        <div className="mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-white" style={{ boxShadow: "var(--shadow-soft)" }}>
+        <div className="mt-6 overflow-hidden rounded-2xl border border-border bg-white" style={{ boxShadow: "var(--shadow-soft)" }}>
           <table className="od-price-table text-sm">
             <thead>
               <tr>
@@ -165,8 +189,8 @@ export function PublicPricing({
               {chat.map((r) => (
                 <tr key={r.modelId}>
                   <td>
-                    <div className="font-medium text-slate-950">{r.modelId}</div>
-                    <div className="mt-0.5 text-xs text-slate-500">{r.provider}</div>
+                    <div className="font-medium text-foreground">{r.modelId}</div>
+                    <div className="mt-0.5 text-xs text-muted-foreground">{r.provider}</div>
                   </td>
                   <td className="font-mono text-base font-semibold">{money(r.inputPer1MUsd * mul)}</td>
                   <td className="font-mono">{money(r.cachedInputPer1MUsd * mul)}</td>
@@ -184,7 +208,7 @@ export function PublicPricing({
               ))}
               {chat.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center text-slate-500">
+                  <td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">
                     Pricing data unavailable. Seed the database and refresh.
                   </td>
                 </tr>
@@ -192,15 +216,15 @@ export function PublicPricing({
             </tbody>
           </table>
         </div>
-        <p className="mt-3 text-right text-xs text-slate-500">All pricing is per million tokens.</p>
+        <p className="mt-3 text-right text-xs text-muted-foreground">All pricing is per million tokens.</p>
       </section>
 
       <section className="mt-16">
-        <h2 style={{ fontFamily: "var(--font-serif)", fontSize: 32, letterSpacing: "-0.02em" }}>Embeddings</h2>
-        <p className="mt-2 text-slate-600">
+        <h2 style={{ fontFamily: "var(--font-garamond), EB Garamond, Georgia, serif", fontSize: 32, letterSpacing: "-0.02em" }}>Embeddings</h2>
+        <p className="mt-2 text-muted-foreground">
           USD per 1M input tokens via <code className="text-sm">POST /v1/embeddings</code>.
         </p>
-        <div className="mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-white" style={{ boxShadow: "var(--shadow-soft)" }}>
+        <div className="mt-6 overflow-hidden rounded-2xl border border-border bg-white" style={{ boxShadow: "var(--shadow-soft)" }}>
           <table className="od-price-table text-sm">
             <thead>
               <tr>
@@ -212,7 +236,7 @@ export function PublicPricing({
             <tbody>
               {embeddings.length === 0 ? (
                 <tr>
-                  <td colSpan={3} className="px-4 py-6 text-slate-500">
+                  <td colSpan={3} className="px-4 py-6 text-muted-foreground">
                     Embedding rates appear after seeding.
                   </td>
                 </tr>
@@ -221,7 +245,7 @@ export function PublicPricing({
                   <tr key={r.modelId}>
                     <td className="font-mono text-xs">{r.modelId}</td>
                     <td className="font-mono text-base font-semibold">{money(r.inputPer1MUsd == null ? null : r.inputPer1MUsd * mul)}</td>
-                    <td className="text-slate-600">{r.provider}</td>
+                    <td className="text-muted-foreground">{r.provider}</td>
                   </tr>
                 ))
               )}
@@ -231,21 +255,21 @@ export function PublicPricing({
       </section>
 
       <section className="mt-16">
-        <h2 style={{ fontFamily: "var(--font-serif)", fontSize: 32, letterSpacing: "-0.02em" }}>On-demand GPUs</h2>
-        <p className="mt-2 text-slate-600">
+        <h2 style={{ fontFamily: "var(--font-garamond), EB Garamond, Georgia, serif", fontSize: 32, letterSpacing: "-0.02em" }}>On-demand GPUs</h2>
+        <p className="mt-2 text-muted-foreground">
           Dedicated capacity. This Mac (Metal) is $0. GCP is list price — about 25% over Google’s all-in cost — billed per second while warm. Scale-to-zero is $0 idle.
         </p>
         <div className="mt-6 grid gap-4 sm:grid-cols-3">
           {gpus.map((g) => (
-            <div key={g.sku} className="rounded-2xl border border-slate-200 bg-white p-5" style={{ boxShadow: "var(--shadow-soft)" }}>
-              <div className="text-sm text-slate-500">{g.sku}</div>
-              <div className="mt-1" style={{ fontFamily: "var(--font-serif)", fontSize: 26 }}>{g.displayName}</div>
-              <div className="mt-4 flex items-baseline justify-between border-t border-slate-100 pt-3">
-                <span className="text-sm text-slate-500">Hourly</span>
+            <div key={g.sku} className="rounded-2xl border border-border bg-white p-5" style={{ boxShadow: "var(--shadow-soft)" }}>
+              <div className="text-sm text-muted-foreground">{g.sku}</div>
+              <div className="mt-1" style={{ fontFamily: "var(--font-garamond), EB Garamond, Georgia, serif", fontSize: 26 }}>{g.displayName}</div>
+              <div className="mt-4 flex items-baseline justify-between border-t border-border pt-3">
+                <span className="text-sm text-muted-foreground">Hourly</span>
                 <span className="font-mono font-semibold">{money(g.hourlyUsd)}/hr</span>
               </div>
               <div className="mt-2 flex items-baseline justify-between">
-                <span className="text-sm text-slate-500">Per second</span>
+                <span className="text-sm text-muted-foreground">Per second</span>
                 <span className="font-mono text-xs">${g.perSecondUsd.toFixed(6)}</span>
               </div>
             </div>
@@ -253,7 +277,7 @@ export function PublicPricing({
         </div>
       </section>
 
-      <ul className="mt-10 list-disc space-y-2 pl-5 text-sm text-slate-600">
+      <ul className="mt-10 list-disc space-y-2 pl-5 text-sm text-muted-foreground">
         <li>Cached input is billed at 50% of input until prompt-cache affinity ships.</li>
         <li>Serverless models need no GPU deploy step (wholesale warm path).</li>
         <li>On-demand GPUs map to dedicated capacity, not serverless.</li>

@@ -84,7 +84,7 @@ export function CompanyLogo({ provider, className = "h-3.5 w-3.5" }: { provider:
       );
     default:
       return (
-        <div className="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-indigo-500/20 text-indigo-400 font-bold text-[8px]">
+        <div className="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-info/20 text-info font-bold text-[8px]">
           OD
         </div>
       );
@@ -156,7 +156,7 @@ export function StudioModelPicker({
         disabled={disabled}
         className={`group flex h-7.5 items-center gap-2 rounded-lg px-2.5 text-[11px] font-medium transition-all duration-150 ${
           isOpen
-            ? "bg-white/[0.12] text-white border border-indigo-500/50 shadow-sm shadow-indigo-500/20"
+            ? "bg-white/[0.12] text-white border border-info/50 shadow-sm shadow-info/20"
             : "bg-[var(--studio-elevated)] text-[var(--studio-ink)] hover:bg-white/[0.08] hover:text-white border border-[var(--studio-line)]"
         } disabled:opacity-40`}
       >
@@ -182,7 +182,7 @@ export function StudioModelPicker({
           {/* Header */}
           <div className="flex items-center justify-between pb-2.5 border-b border-white/[0.08]">
             <div className="flex items-center gap-2">
-              <div className="flex h-5 w-5 items-center justify-center rounded-lg bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">
+              <div className="flex h-5 w-5 items-center justify-center rounded-lg bg-info/20 text-info border border-info/30">
                 <Cpu className="h-3 w-3" />
               </div>
               <span className="text-[12px] font-semibold text-white tracking-tight">AI Foundation Models</span>
@@ -205,7 +205,7 @@ export function StudioModelPicker({
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search Google, Flux, Veo, checkpoints..."
-              className="w-full rounded-xl border border-white/10 bg-black/40 pl-8 pr-3 py-1.5 text-[11px] text-zinc-200 placeholder-zinc-500 focus:border-indigo-500/50 focus:outline-none transition-colors"
+              className="w-full rounded-xl border border-white/10 bg-black/40 pl-8 pr-3 py-1.5 text-[11px] text-zinc-200 placeholder-zinc-500 focus:border-info/50 focus:outline-none transition-colors"
             />
           </div>
 
@@ -225,7 +225,7 @@ export function StudioModelPicker({
                 onClick={() => setCategoryFilter(cat.id)}
                 className={`shrink-0 rounded-lg px-2.5 py-1 text-[10px] font-medium transition-all ${
                   categoryFilter === cat.id
-                    ? "bg-indigo-500/20 text-indigo-300 border border-indigo-500/40"
+                    ? "bg-info/20 text-info border border-info/40"
                     : "bg-white/[0.03] text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.06] border border-transparent"
                 }`}
               >
@@ -254,7 +254,7 @@ export function StudioModelPicker({
                     }}
                     className={`group flex w-full flex-col rounded-xl p-2.5 text-left transition-all duration-150 ${
                       isSelected
-                        ? "bg-indigo-500/15 border border-indigo-500/50 shadow-xs"
+                        ? "bg-info/15 border border-info/50 shadow-xs"
                         : "bg-black/30 hover:bg-white/[0.05] border border-white/[0.06] hover:border-white/15"
                     }`}
                   >
@@ -264,11 +264,16 @@ export function StudioModelPicker({
                         <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-white/5 border border-white/10 p-0.5">
                           <CompanyLogo provider={model.provider} className="h-3.5 w-3.5" />
                         </div>
-                        <span className="text-[12px] font-semibold text-white truncate">
-                          {model.name}
-                        </span>
+                        <div className="min-w-0">
+                          <span className="block text-[9px] font-mono uppercase tracking-wide text-zinc-500 truncate">
+                            {model.companyName}
+                          </span>
+                          <span className="text-[12px] font-semibold text-white truncate">
+                            {model.name}
+                          </span>
+                        </div>
                         {model.badge && (
-                          <span className="shrink-0 rounded-full bg-white/10 px-2 py-0.5 text-[9px] font-mono font-medium text-indigo-300 border border-white/10">
+                          <span className="shrink-0 rounded-full bg-white/10 px-2 py-0.5 text-[9px] font-mono font-medium text-info border border-white/10">
                             {model.badge}
                           </span>
                         )}
@@ -288,7 +293,7 @@ export function StudioModelPicker({
                           </span>
                         )}
                         {isSelected && (
-                          <div className="flex h-4 w-4 items-center justify-center rounded-full bg-indigo-500 text-white">
+                          <div className="flex h-4 w-4 items-center justify-center rounded-full bg-info text-white">
                             <Check className="h-2.5 w-2.5 stroke-[3]" />
                           </div>
                         )}

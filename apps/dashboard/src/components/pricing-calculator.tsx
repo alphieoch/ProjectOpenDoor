@@ -133,7 +133,7 @@ export default function PricingCalculator({
 
   if (loading) {
     return (
-      <div className="od-card flex h-full items-center p-6" style={{ color: "var(--ink-4)", fontSize: 13 }}>
+      <div className="rounded-lg border border-border bg-card text-card-foreground shadow-sm flex h-full items-center p-6" style={{ color: "hsl(var(--muted-foreground))", fontSize: 13 }}>
         Loading rates…
       </div>
     );
@@ -141,7 +141,7 @@ export default function PricingCalculator({
 
   if (rules.length === 0) {
     return (
-      <div className="od-card flex h-full items-center p-6" style={{ color: "var(--ink-4)", fontSize: 13 }}>
+      <div className="rounded-lg border border-border bg-card text-card-foreground shadow-sm flex h-full items-center p-6" style={{ color: "hsl(var(--muted-foreground))", fontSize: 13 }}>
         No published rates yet. Seed pricing_rules or check the public catalog.
       </div>
     );
@@ -149,7 +149,7 @@ export default function PricingCalculator({
 
   return (
     <div
-      className="od-card"
+      className="rounded-lg border border-border bg-card text-card-foreground shadow-sm"
       style={{
         display: "flex",
         flexDirection: "column",
@@ -159,13 +159,13 @@ export default function PricingCalculator({
         overflow: "hidden",
       }}
     >
-      <div style={{ padding: "16px 16px 12px", borderBottom: "1px solid var(--line)", flexShrink: 0 }}>
-        <div className="od-eyebrow">Estimate</div>
-        <div style={{ marginTop: 6, fontSize: 16, fontWeight: 600, color: "var(--ink)" }}>
+      <div style={{ padding: "16px 16px 12px", borderBottom: "1px solid hsl(var(--border))", flexShrink: 0 }}>
+        <div className="text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">Estimate</div>
+        <div style={{ marginTop: 6, fontSize: 16, fontWeight: 600, color: "hsl(var(--foreground))" }}>
           Monthly token spend
         </div>
         <div style={{ marginTop: 12 }}>
-          <div style={{ fontSize: 11, color: "var(--ink-3)", marginBottom: 6 }}>Speed</div>
+          <div style={{ fontSize: 11, color: "hsl(var(--muted-foreground))", marginBottom: 6 }}>Speed</div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
             <button
               type="button"
@@ -174,16 +174,16 @@ export default function PricingCalculator({
                 textAlign: "left",
                 padding: "10px 12px",
                 borderRadius: 10,
-                border: `1px solid ${speedTier === "regular" ? "var(--brand)" : "var(--line)"}`,
+                border: `1px solid ${speedTier === "regular" ? "var(--brand)" : "hsl(var(--border))"}`,
                 background:
                   speedTier === "regular"
-                    ? "color-mix(in srgb, var(--brand) 8%, var(--paper))"
-                    : "var(--paper)",
+                    ? "color-mix(in srgb, var(--brand) 8%, hsl(var(--background)))"
+                    : "hsl(var(--background))",
                 cursor: "pointer",
               }}
             >
-              <div style={{ fontWeight: 600, fontSize: 13, color: "var(--ink)" }}>Regular</div>
-              <div style={{ marginTop: 2, fontSize: 11, color: "var(--ink-3)", lineHeight: 1.35 }}>
+              <div style={{ fontWeight: 600, fontSize: 13, color: "hsl(var(--foreground))" }}>Regular</div>
+              <div style={{ marginTop: 2, fontSize: 11, color: "hsl(var(--muted-foreground))", lineHeight: 1.35 }}>
                 Cheaper. Fine when the job can wait.
               </div>
             </button>
@@ -194,23 +194,23 @@ export default function PricingCalculator({
                 textAlign: "left",
                 padding: "10px 12px",
                 borderRadius: 10,
-                border: `1px solid ${speedTier === "fast" ? "var(--brand)" : "var(--line)"}`,
+                border: `1px solid ${speedTier === "fast" ? "var(--brand)" : "hsl(var(--border))"}`,
                 background:
                   speedTier === "fast"
-                    ? "color-mix(in srgb, var(--brand) 8%, var(--paper))"
-                    : "var(--paper)",
+                    ? "color-mix(in srgb, var(--brand) 8%, hsl(var(--background)))"
+                    : "hsl(var(--background))",
                 cursor: "pointer",
               }}
             >
-              <div style={{ fontWeight: 600, fontSize: 13, color: "var(--ink)" }}>Fast</div>
-              <div style={{ marginTop: 2, fontSize: 11, color: "var(--ink-3)", lineHeight: 1.35 }}>
+              <div style={{ fontWeight: 600, fontSize: 13, color: "hsl(var(--foreground))" }}>Fast</div>
+              <div style={{ marginTop: 2, fontSize: 11, color: "hsl(var(--muted-foreground))", lineHeight: 1.35 }}>
                 Costs more. Use only when you need it now.
               </div>
             </button>
           </div>
         </div>
         <div style={{ marginTop: 12 }}>
-          <div style={{ fontSize: 11, color: "var(--ink-3)", marginBottom: 6 }}>Effort</div>
+          <div style={{ fontSize: 11, color: "hsl(var(--muted-foreground))", marginBottom: 6 }}>Effort</div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: 6 }}>
             {EFFORT_LEVELS.map((level) => {
               const active = effortLevel === level.id;
@@ -223,15 +223,15 @@ export default function PricingCalculator({
                     textAlign: "left",
                     padding: "8px 8px",
                     borderRadius: 10,
-                    border: `1px solid ${active ? "var(--brand)" : "var(--line)"}`,
+                    border: `1px solid ${active ? "var(--brand)" : "hsl(var(--border))"}`,
                     background: active
-                      ? "color-mix(in srgb, var(--brand) 8%, var(--paper))"
-                      : "var(--paper)",
+                      ? "color-mix(in srgb, var(--brand) 8%, hsl(var(--background)))"
+                      : "hsl(var(--background))",
                     cursor: "pointer",
                   }}
                 >
-                  <div style={{ fontWeight: 600, fontSize: 12, color: "var(--ink)" }}>{level.label}</div>
-                  <div style={{ marginTop: 2, fontSize: 10, color: "var(--ink-3)", lineHeight: 1.3 }}>
+                  <div style={{ fontWeight: 600, fontSize: 12, color: "hsl(var(--foreground))" }}>{level.label}</div>
+                  <div style={{ marginTop: 2, fontSize: 10, color: "hsl(var(--muted-foreground))", lineHeight: 1.3 }}>
                     {level.blurb}
                   </div>
                 </button>
@@ -242,7 +242,7 @@ export default function PricingCalculator({
       </div>
 
       <div style={{ padding: "12px 16px 0", flexShrink: 0 }}>
-        <label style={{ fontSize: 11, color: "var(--ink-3)" }}>
+        <label style={{ fontSize: 11, color: "hsl(var(--muted-foreground))" }}>
           Model in this estimate
           <select
             value={selectedModel}
@@ -261,16 +261,16 @@ export default function PricingCalculator({
             ))}
           </select>
         </label>
-        <p style={{ marginTop: 8, fontSize: 12, color: "var(--ink-4)" }}>
+        <p style={{ marginTop: 8, fontSize: 12, color: "hsl(var(--muted-foreground))" }}>
           Model × speed × effort. Low effort is cheaper. Very high thinks longer and costs more.
         </p>
       </div>
 
       <div style={{ flex: 1, minHeight: 0 }} />
 
-      <div style={{ padding: "12px 16px 16px", borderTop: "1px solid var(--line)", flexShrink: 0 }}>
+      <div style={{ padding: "12px 16px 16px", borderTop: "1px solid hsl(var(--border))", flexShrink: 0 }}>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 12 }}>
-          <label style={{ fontSize: 11, color: "var(--ink-3)" }}>
+          <label style={{ fontSize: 11, color: "hsl(var(--muted-foreground))" }}>
             Requests / day
             <input
               type="range"
@@ -281,9 +281,9 @@ export default function PricingCalculator({
               onChange={(e) => setRequestsPerDay(Number(e.target.value))}
               className="w-full accent-[var(--brand)]"
             />
-            <div style={{ fontWeight: 600, color: "var(--ink)", fontSize: 12 }}>{requestsPerDay.toLocaleString()}</div>
+            <div style={{ fontWeight: 600, color: "hsl(var(--foreground))", fontSize: 12 }}>{requestsPerDay.toLocaleString()}</div>
           </label>
-          <label style={{ fontSize: 11, color: "var(--ink-3)" }}>
+          <label style={{ fontSize: 11, color: "hsl(var(--muted-foreground))" }}>
             Input tokens
             <input
               type="range"
@@ -294,9 +294,9 @@ export default function PricingCalculator({
               onChange={(e) => setInputTokens(Number(e.target.value))}
               className="w-full accent-[var(--brand)]"
             />
-            <div style={{ fontWeight: 600, color: "var(--ink)", fontSize: 12 }}>{inputTokens.toLocaleString()}</div>
+            <div style={{ fontWeight: 600, color: "hsl(var(--foreground))", fontSize: 12 }}>{inputTokens.toLocaleString()}</div>
           </label>
-          <label style={{ fontSize: 11, color: "var(--ink-3)" }}>
+          <label style={{ fontSize: 11, color: "hsl(var(--muted-foreground))" }}>
             Output tokens
             <input
               type="range"
@@ -307,12 +307,12 @@ export default function PricingCalculator({
               onChange={(e) => setOutputTokens(Number(e.target.value))}
               className="w-full accent-[var(--brand)]"
             />
-            <div style={{ fontWeight: 600, color: "var(--ink)", fontSize: 12 }}>{outputTokens.toLocaleString()}</div>
+            <div style={{ fontWeight: 600, color: "hsl(var(--foreground))", fontSize: 12 }}>{outputTokens.toLocaleString()}</div>
           </label>
         </div>
 
         {selectedModel && !selectedRule ? (
-          <p style={{ fontSize: 13, color: "var(--ink-3)" }}>
+          <p style={{ fontSize: 13, color: "hsl(var(--muted-foreground))" }}>
             {selectedModel} is available to run, but it has no published rate yet. Pick a priced model to estimate spend.
           </p>
         ) : null}
@@ -322,8 +322,8 @@ export default function PricingCalculator({
             <div
               style={{
                 borderRadius: 12,
-                background: "var(--ink)",
-                color: "var(--paper-2)",
+                background: "hsl(var(--foreground))",
+                color: "hsl(var(--card))",
                 padding: "14px 16px",
                 display: "flex",
                 alignItems: "baseline",
@@ -341,21 +341,21 @@ export default function PricingCalculator({
               </div>
               <div style={{ textAlign: "right", fontSize: 12, opacity: 0.8 }}>
                 {selectedRule.label}
-                <div className="od-mono" style={{ marginTop: 2, fontSize: 11 }}>
+                <div className="font-mono" style={{ marginTop: 2, fontSize: 11 }}>
                   {money(per1M(estimate.customerIn))} in · {money(per1M(estimate.customerOut))} out / 1M
                   {` · ~${Math.round(estimate.billedOut).toLocaleString()} billed out`}
                 </div>
               </div>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 8 }}>
-              <div className="od-card" style={{ padding: "8px 10px", boxShadow: "none" }}>
-                <div style={{ fontSize: 10, color: "var(--ink-4)", textTransform: "uppercase" }}>
+              <div className="rounded-lg border border-border bg-card text-card-foreground shadow-sm" style={{ padding: "8px 10px", boxShadow: "none" }}>
+                <div style={{ fontSize: 10, color: "hsl(var(--muted-foreground))", textTransform: "uppercase" }}>
                   {speedTier === "fast" ? "Regular instead" : "Fast instead"}
                 </div>
                 <div style={{ fontWeight: 600, fontSize: 13 }}>{otherSpeed ? money(otherSpeed.monthly) : "—"}</div>
               </div>
-              <div className="od-card" style={{ padding: "8px 10px", boxShadow: "none" }}>
-                <div style={{ fontSize: 10, color: "var(--ink-4)", textTransform: "uppercase" }}>
+              <div className="rounded-lg border border-border bg-card text-card-foreground shadow-sm" style={{ padding: "8px 10px", boxShadow: "none" }}>
+                <div style={{ fontSize: 10, color: "hsl(var(--muted-foreground))", textTransform: "uppercase" }}>
                   {effortLevel === "low" ? "Very high instead" : "Low effort instead"}
                 </div>
                 <div style={{ fontWeight: 600, fontSize: 13 }}>
@@ -368,12 +368,12 @@ export default function PricingCalculator({
                       : "—"}
                 </div>
               </div>
-              <div className="od-card" style={{ padding: "8px 10px", boxShadow: "none" }}>
-                <div style={{ fontSize: 10, color: "var(--ink-4)", textTransform: "uppercase" }}>Daily</div>
+              <div className="rounded-lg border border-border bg-card text-card-foreground shadow-sm" style={{ padding: "8px 10px", boxShadow: "none" }}>
+                <div style={{ fontSize: 10, color: "hsl(var(--muted-foreground))", textTransform: "uppercase" }}>Daily</div>
                 <div style={{ fontWeight: 600, fontSize: 13 }}>{money(estimate.daily)}</div>
               </div>
-              <div className="od-card" style={{ padding: "8px 10px", boxShadow: "none" }}>
-                <div style={{ fontSize: 10, color: "var(--ink-4)", textTransform: "uppercase" }}>Per request</div>
+              <div className="rounded-lg border border-border bg-card text-card-foreground shadow-sm" style={{ padding: "8px 10px", boxShadow: "none" }}>
+                <div style={{ fontSize: 10, color: "hsl(var(--muted-foreground))", textTransform: "uppercase" }}>Per request</div>
                 <div style={{ fontWeight: 600, fontSize: 13 }}>{money(estimate.perRequest)}</div>
               </div>
             </div>

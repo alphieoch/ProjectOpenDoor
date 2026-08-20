@@ -18,12 +18,12 @@ defineShortcuts({
       collapsible
       resizable
       :menu="{ inset: true }"
-      class="border-r-0 py-4 dark:[--ui-bg-elevated:var(--ui-color-neutral-900)]"
+      class="border-r-0 py-4 dark:[--ui-bg-elevated:#000000]"
     >
       <template #header="{ collapsed }">
         <NuxtLink v-if="!collapsed" to="/" class="flex items-end gap-0.5">
           <Logo class="h-8 w-auto shrink-0" />
-          <span class="text-xl font-bold text-highlighted">Chat</span>
+          <span class="text-xl font-bold text-highlighted font-serif">Chat</span>
         </NuxtLink>
 
         <UDashboardSidebarCollapse class="ms-auto" />

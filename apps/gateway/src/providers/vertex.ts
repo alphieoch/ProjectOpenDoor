@@ -8,9 +8,13 @@ import { isProductionRuntime } from "@opendoor/shared";
 import type { ProviderAdapter } from "./base.js";
 import { generateId } from "./base.js";
 import { openaiChatPayload } from "./openai-body.js";
-import { toGeminiParts } from "./content.js";
 import { normalizeUsage } from "../utils/usage.js";
 import { getGcpAccessToken } from "../lib/web-search.js";
+import {
+  geminiContentsFromMessages,
+  geminiFunctionDeclarations,
+  geminiPartsToMessage,
+} from "./vertex-tools.js";
 
 type VertexProtocol = "openai" | "generateContent";
 
@@ -390,11 +394,7 @@ export class VertexProvider implements ProviderAdapter {
   }
 
   private geminiBody(request: ChatCompletionRequest, route: VertexRoute) {
-    const history = request.messages.slice(0, -1).map((m) => ({
-      role: m.role === "assistant" ? "model" : "user",
-      parts: toGeminiParts(m.content),
-    }));
-    const lastMessage = request.messages[request.messages.length - 1];
+    const packed = geminiContentsFromMessages(request.messages);
     const generationConfig: Record<string, unknown> = {};
     // gemini-2.5-pro rejects thinking_budget=0 (live probe 400).
     if (!/pro/i.test(route.upstream)) {
@@ -403,9 +403,14 @@ export class VertexProvider implements ProviderAdapter {
     if (request.temperature != null) generationConfig.temperature = request.temperature;
     if (request.max_tokens != null) generationConfig.maxOutputTokens = request.max_tokens;
     if (request.top_p != null) generationConfig.topP = request.top_p;
+    const declarations = geminiFunctionDeclarations(request.tools);
     return {
-      contents: [...history, { role: "user", parts: toGeminiParts(lastMessage.content) }],
+      ...(packed.system ? { systemInstruction: { parts: [{ text: packed.system }] } } : {}),
+      contents: packed.contents.length
+        ? packed.contents
+        : [{ role: "user", parts: [{ text: "" }] }],
       generationConfig,
+      ...(declarations ? { tools: [{ functionDeclarations: declarations }] } : {}),
     };
   }
 
@@ -425,8 +430,7 @@ export class VertexProvider implements ProviderAdapter {
       throw new Error(`Vertex API error: ${response.status} ${await response.text()}`);
     }
     const data = (await response.json()) as any;
-    const text =
-      data.candidates?.[0]?.content?.parts?.map((p: any) => p.text || "").join("") || "";
+    const parsed = geminiPartsToMessage(data.candidates?.[0]?.content?.parts);
     const usage = data.usageMetadata;
     return {
       id: generateId(),
@@ -436,8 +440,12 @@ export class VertexProvider implements ProviderAdapter {
       choices: [
         {
           index: 0,
-          message: { role: "assistant", content: text },
-          finish_reason: "stop",
+          message: {
+            role: "assistant",
+            content: parsed.text,
+            ...(parsed.tool_calls.length ? { tool_calls: parsed.tool_calls } : {}),
+          },
+          finish_reason: parsed.finish_reason,
         },
       ],
       usage: {

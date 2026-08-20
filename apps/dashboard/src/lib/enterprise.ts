@@ -2,11 +2,10 @@ import { getDb } from "@/lib/db";
 import { organizations } from "@opendoor/database";
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
+import { isEnterprisePlan, workspaceHasEnterpriseTools } from "@opendoor/shared";
 import type { SessionPayload } from "@/lib/auth";
 
-export function isEnterprisePlan(plan?: string | null) {
-  return (plan || "").toLowerCase() === "enterprise";
-}
+export { isEnterprisePlan, workspaceHasEnterpriseTools };
 
 export async function loadEnterpriseAccess(
   orgId: string,
@@ -22,7 +21,7 @@ export async function loadEnterpriseAccess(
   });
   const plan = org?.plan || "free";
   return {
-    active: isEnterprisePlan(plan),
+    active: workspaceHasEnterpriseTools({ plan }),
     plan,
     viaAdmin: false,
   };

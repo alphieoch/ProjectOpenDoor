@@ -1,32 +1,11 @@
 import { Hono } from "hono";
 import { and, eq, isNull } from "drizzle-orm";
 import { db, organizationProviderKeys } from "@opendoor/database";
-import { asString, publicByok, requireTenant, writeAudit } from "../lib/platform.js";
+import { byokKeyPrefix, parseByokCreateBody, publicByokRow } from "@opendoor/shared";
+import { requireTenant, writeAudit } from "../lib/platform.js";
 import { encryptSecret } from "../lib/secrets.js";
 
 const byokRouter = new Hono();
-const PROVIDER_SLUGS = new Set([
-  "vertex",
-  "together",
-  "openai",
-  "anthropic",
-  "google",
-  "cohere",
-  "mistral",
-  "deepseek",
-  "qwen",
-  "groq",
-  "xai",
-  "azure-foundry",
-  "cerebras",
-  "perplexity",
-]);
-
-function keyPrefix(raw: string): string {
-  const trimmed = raw.trim();
-  if (trimmed.length <= 8) return `${trimmed.slice(0, 2)}••••`;
-  return `${trimmed.slice(0, 4)}…${trimmed.slice(-4)}`;
-}
 
 byokRouter.get("/", async (c) => {
   const tenant = requireTenant(c);
@@ -40,31 +19,48 @@ byokRouter.get("/", async (c) => {
         isNull(organizationProviderKeys.revokedAt)
       )
     );
-  return c.json({ object: "list", data: rows.map(publicByok) });
+  return c.json({ object: "list", data: rows.map(publicByokRow) });
 });
 
 byokRouter.post("/", async (c) => {
   const tenant = requireTenant(c);
   if (!tenant) return c.json({ error: "Unauthorized" }, 401);
-  const body = await c.req.json().catch(() => ({}));
-  const providerSlug = asString(body.providerSlug || body.provider);
-  const apiKey = asString(body.apiKey || body.secret);
-  if (!providerSlug || !PROVIDER_SLUGS.has(providerSlug)) {
-    return c.json({ error: `Invalid providerSlug. Allowed: ${[...PROVIDER_SLUGS].join(", ")}` }, 400);
+  const parsed = parseByokCreateBody(await c.req.json().catch(() => ({})));
+  if (!parsed.ok) return c.json({ error: parsed.error }, parsed.status);
+  const encrypted = encryptSecret(parsed.apiKey);
+  const existing = await db
+    .select({ id: organizationProviderKeys.id })
+    .from(organizationProviderKeys)
+    .where(
+      and(
+        eq(organizationProviderKeys.organizationId, tenant.organization.id),
+        eq(organizationProviderKeys.providerSlug, parsed.providerSlug),
+        isNull(organizationProviderKeys.revokedAt)
+      )
+    );
+  if (existing.length > 0) {
+    await db
+      .update(organizationProviderKeys)
+      .set({ revokedAt: new Date(), updatedAt: new Date() })
+      .where(
+        and(
+          eq(organizationProviderKeys.organizationId, tenant.organization.id),
+          eq(organizationProviderKeys.providerSlug, parsed.providerSlug),
+          isNull(organizationProviderKeys.revokedAt)
+        )
+      );
   }
-  if (apiKey.length < 8) return c.json({ error: "apiKey must be at least 8 characters" }, 400);
-  const encrypted = encryptSecret(apiKey);
   const [inserted] = await db
     .insert(organizationProviderKeys)
     .values({
       organizationId: tenant.organization.id,
-      providerSlug,
-      label: asString(body.label) || null,
-      keyPrefix: keyPrefix(apiKey),
+      providerSlug: parsed.providerSlug,
+      label: parsed.label,
+      keyPrefix: byokKeyPrefix(parsed.apiKey),
       keyCiphertext: encrypted.ciphertext,
       keyIv: encrypted.iv,
       keyTag: encrypted.tag,
-      alwaysUse: body.alwaysUse === true,
+      alwaysUse: parsed.alwaysUse,
     })
     .returning();
   await writeAudit({
@@ -72,9 +68,12 @@ byokRouter.post("/", async (c) => {
     action: "byok.created",
     entityType: "organization_provider_key",
     entityId: inserted.id,
-    metadata: { providerSlug, alwaysUse: body.alwaysUse === true },
+    metadata: { providerSlug: parsed.providerSlug, alwaysUse: parsed.alwaysUse, rotated: existing.length > 0 },
   });
-  return c.json({ object: "byok", ...publicByok(inserted) }, 201);
+  return c.json(
+    { object: "byok", ...publicByokRow(inserted), rotated: existing.length > 0 },
+    existing.length > 0 ? 200 : 201
+  );
 });
 
 byokRouter.delete("/:id", async (c) => {

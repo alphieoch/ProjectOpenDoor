@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ThinkingOrb, type OrbState } from "thinking-orbs";
+import { AiCrest } from "@/components/ui/ai-crest";
+import { orbStateToMood } from "@/lib/ai-crest";
+import type { OrbState } from "thinking-orbs";
 
 /* ─────────────────────────────────────────────────────────
  * LOADING STATE — pixel-grid loader for long-running work
@@ -123,7 +125,7 @@ export default function LoadingState({
     return (
       <div role="status" className={`flex w-fit flex-col items-start ${className || ""}`}>
         <div className="flex items-center gap-2.5" style={{ color: "var(--ink)" }}>
-          <ThinkingOrb state={state} size={20} />
+          <AiCrest mood={orbStateToMood(state)} size={20} />
           {labelEl}
           {elapsedEl}
         </div>
@@ -164,7 +166,7 @@ export default function LoadingState({
 
   return (
     <div role="status" className={`flex w-fit items-center gap-2.5 ${className || ""}`} style={{ color: "var(--ink)" }}>
-      <ThinkingOrb state={state} size={20} />
+      <AiCrest mood={orbStateToMood(state)} size={20} />
       {labelEl}
       {elapsedEl}
     </div>

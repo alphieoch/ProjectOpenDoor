@@ -43,10 +43,9 @@ export async function GET(req: NextRequest) {
       images: images.ok && Array.isArray(imageJson.data) ? imageJson.data : [],
       videos: videos.ok && Array.isArray(videoJson.data) ? videoJson.data : [],
     });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Gateway unreachable";
+  } catch {
     return NextResponse.json(
-      { error: `Cannot reach the gateway at ${url}. ${message}`, images: [], videos: [] },
+      { error: "Cannot reach the gateway.", images: [], videos: [] },
       { status: 502 },
     );
   }

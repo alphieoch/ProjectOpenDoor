@@ -11,4 +11,4 @@ Groq and xAI were already registered by the parity pass — they are **not** in 
 
 Set `CEREBRAS_API_KEY` / `PERPLEXITY_API_KEY` to advertise those models. Constructors throw without a key; `registerExtraProviders` catches that and skips.
 
-**Leftover:** extras constructors do not take a BYOK `apiKey` argument, so `instantiateProvider("cerebras" | "perplexity", orgKey)` cannot swap in an org key. Env keys only.
+`instantiateProvider("cerebras" | "perplexity", orgKey)` passes the org BYOK key into the constructor. Env keys are the fallback.

@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getWorkOS, saveSession } from "@workos-inc/authkit-nextjs";
-import {
-  sessionCookieOptions,
-  syncWorkOSUserToSession,
-} from "@/lib/workos-sync";
+import { applySessionCookies, cookieSecureFromRequest } from "@/lib/session-cookie";
+import { syncWorkOSUserToSession } from "@/lib/workos-sync";
 import { getWorkOSClientId } from "@/lib/workos";
 
 function workosErrorMessage(error: unknown, fallback: string) {
@@ -87,10 +85,11 @@ export async function createWorkOSUser(opts: {
 export function jsonAuthSuccess(
   body: Record<string, unknown>,
   token: string,
-  redirectTo?: string
+  redirectTo?: string,
+  req?: NextRequest
 ) {
   const response = NextResponse.json({ ...body, redirectTo });
-  response.cookies.set("session", token, sessionCookieOptions());
+  applySessionCookies(response, token, 60 * 60 * 24 * 7, cookieSecureFromRequest(req));
   return response;
 }
 

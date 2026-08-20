@@ -12,6 +12,7 @@ import Link from "next/link";
 import posthog from "posthog-js";
 import { gatewayBaseUrl } from "@/lib/public-urls";
 import { ProviderLogo } from "@/components/ui/provider-logo";
+import { AiCrest } from "@/components/ui/ai-crest";
 import {
   formatGatewayError,
   inferModelModality,
@@ -219,13 +220,13 @@ function RenderContent({ text, mode }: { text: string; mode: CanvasMode }) {
   // Markdown-ish: split on code fences, render interleaved
   const parts = text.split(/(```[\w]*\n[\s\S]*?```)/g);
   return (
-    <div style={{ fontSize: 14, lineHeight: 1.75, color: "var(--ink)", fontFamily: "var(--font-geist-sans)" }}>
+    <div style={{ fontSize: 14, lineHeight: 1.75, color: "hsl(var(--foreground))", fontFamily: "var(--font-geist-sans)" }}>
       {parts.map((part, i) => {
         const codeMatch = part.match(/```(\w*)\n([\s\S]*?)```/);
         if (codeMatch) {
           return (
             <pre key={i} className="od-code" style={{ fontSize: 12.5, lineHeight: 1.7, margin: "12px 0", borderRadius: 10 }}>
-              {codeMatch[1] && <div style={{ fontSize: 10, color: "var(--ink-4)", fontFamily: "var(--font-mono)", marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.1em" }}>{codeMatch[1]}</div>}
+              {codeMatch[1] && <div style={{ fontSize: 10, color: "hsl(var(--muted-foreground))", fontFamily: "var(--font-mono)", marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.1em" }}>{codeMatch[1]}</div>}
               <code>{codeMatch[2].trim()}</code>
             </pre>
           );
@@ -329,38 +330,38 @@ function ModelPicker({
         onClick={() => setOpen(o => !o)}
         style={{
           display: "flex", alignItems: "center", gap: 8,
-          padding: "6px 14px", borderRadius: 999, border: "1px solid var(--line)",
-          background: "var(--paper-2)", cursor: "pointer", fontSize: 13, fontWeight: 500,
-          color: "var(--ink)", transition: "all 0.12s",
+          padding: "6px 14px", borderRadius: 999, border: "1px solid hsl(var(--border))",
+          background: "hsl(var(--card))", cursor: "pointer", fontSize: 13, fontWeight: 500,
+          color: "hsl(var(--foreground))", transition: "all 0.12s",
         }}
-        className="hover:border-[var(--ink-4)]"
+        className="hover:border-border"
       >
         <ProviderLogo provider={model.provider} modelId={model.id} size={16} />
         {model.name}
-        {model.vision && <span className="od-tag od-tag-blue" style={{ padding: "0 5px", fontSize: 9 }}>Vision</span>}
-        {model.code && <span className="od-tag od-tag-green" style={{ padding: "0 5px", fontSize: 9 }}>Code</span>}
-        <ChevronDown style={{ width: 12, height: 12, color: "var(--ink-3)" }} />
+        {model.vision && <span className="inline-flex items-center rounded-full bg-blue-500/10 px-2 py-0.5 text-[11px] font-medium text-blue-700 dark:text-blue-400" style={{ padding: "0 5px", fontSize: 9 }}>Vision</span>}
+        {model.code && <span className="inline-flex items-center rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-700 dark:text-emerald-400" style={{ padding: "0 5px", fontSize: 9 }}>Code</span>}
+        <ChevronDown style={{ width: 12, height: 12, color: "hsl(var(--muted-foreground))" }} />
       </button>
 
       {open && (
         <div style={{
           position: "absolute", top: "calc(100% + 8px)", left: 0,
-          width: 360, background: "var(--paper-2)", border: "1px solid var(--line)",
+          width: 360, background: "hsl(var(--card))", border: "1px solid hsl(var(--border))",
           borderRadius: 12, boxShadow: "0 16px 48px rgba(26,26,46,0.14)", zIndex: 100,
           overflow: "hidden", display: "flex", flexDirection: "column",
         }}>
-          <div style={{ padding: "10px 12px", borderBottom: "1px solid var(--line-soft)" }}>
+          <div style={{ padding: "10px 12px", borderBottom: "1px solid hsl(var(--border))" }}>
             <input
               autoFocus
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="Search models…"
-              style={{ width: "100%", border: "none", outline: "none", fontSize: 13, color: "var(--ink)", background: "transparent", fontFamily: "inherit" }}
+              style={{ width: "100%", border: "none", outline: "none", fontSize: 13, color: "hsl(var(--foreground))", background: "transparent", fontFamily: "inherit" }}
             />
           </div>
           <div style={{ maxHeight: 320, overflowY: "auto", flex: 1, minHeight: 0 }}>
             <div>
-              <div style={{ padding: "8px 14px 4px", fontSize: 10, fontFamily: "var(--font-mono)", textTransform: "uppercase", letterSpacing: "0.12em", color: "var(--ink-4)", display: "flex", alignItems: "center", gap: 7 }}>
+              <div style={{ padding: "8px 14px 4px", fontSize: 10, fontFamily: "var(--font-mono)", textTransform: "uppercase", letterSpacing: "0.12em", color: "hsl(var(--muted-foreground))", display: "flex", alignItems: "center", gap: 7 }}>
                 <ProviderLogo provider="My LLM" size={14} />
                 My LLM
               </div>
@@ -374,14 +375,14 @@ function ModelPicker({
                   style={{
                     display: "flex", alignItems: "center", gap: 8, width: "100%",
                     padding: "8px 14px", background: m.id === value ? "var(--brand-soft)" : "transparent",
-                    border: "none", cursor: "pointer", fontSize: 13, color: m.id === value ? "var(--brand-deep)" : "var(--ink)",
+                    border: "none", cursor: "pointer", fontSize: 13, color: m.id === value ? "hsl(var(--primary))" : "hsl(var(--foreground))",
                     fontFamily: "inherit", textAlign: "left", transition: "background 0.1s",
                   }}
-                  className={m.id !== value ? "hover:bg-[var(--paper)]" : ""}
+                  className={m.id !== value ? "hover:bg-accent" : ""}
                 >
                   <ProviderLogo provider={m.provider} modelId={m.id} size={18} />
                   <span style={{ flex: 1 }}>{m.name}</span>
-                  <span style={{ fontSize: 10, fontFamily: "var(--font-mono)", color: "var(--ink-4)" }}>{m.ready === false ? "needs key" : m.context}</span>
+                  <span style={{ fontSize: 10, fontFamily: "var(--font-mono)", color: "hsl(var(--muted-foreground))" }}>{m.ready === false ? "needs key" : m.context}</span>
                 </button>
               ))}
               {adding ? (
@@ -391,7 +392,7 @@ function ModelPicker({
                     value={customId}
                     onChange={(e) => setCustomId(e.target.value)}
                     placeholder="qwen2.5:7b or hf.co/org/repo"
-                    style={{ flex: 1, border: "1px solid var(--line)", borderRadius: 8, padding: "6px 8px", fontSize: 12, fontFamily: "var(--font-mono)", color: "var(--ink)", background: "var(--paper)" }}
+                    style={{ flex: 1, border: "1px solid hsl(var(--border))", borderRadius: 8, padding: "6px 8px", fontSize: 12, fontFamily: "var(--font-mono)", color: "hsl(var(--foreground))", background: "hsl(var(--background))" }}
                   />
                   <button type="submit" className="btn-primary" style={{ padding: "6px 10px", fontSize: 12 }}>Use</button>
                 </form>
@@ -402,22 +403,22 @@ function ModelPicker({
                   style={{
                     display: "flex", alignItems: "center", gap: 8, width: "100%",
                     padding: "8px 14px", background: "transparent", border: "none",
-                    cursor: "pointer", fontSize: 13, color: "var(--ink-2)", fontFamily: "inherit", textAlign: "left",
+                    cursor: "pointer", fontSize: 13, color: "hsl(var(--muted-foreground))", fontFamily: "inherit", textAlign: "left",
                   }}
-                  className="hover:bg-[var(--paper)]"
+                  className="hover:bg-accent"
                 >
                   <Plus style={{ width: 14, height: 14 }} />
                   Add my model
                 </button>
               )}
               <div style={{ padding: "0 14px 10px", display: "flex", gap: 10 }}>
-                <Link href="/dashboard/models" style={{ fontSize: 11, color: "var(--brand)", textDecoration: "none" }}>Import weights</Link>
-                <Link href="/dashboard/deployments/new" style={{ fontSize: 11, color: "var(--brand)", textDecoration: "none" }}>Request GPU</Link>
+                <Link href="/dashboard/models" style={{ fontSize: 11, color: "hsl(var(--primary))", textDecoration: "none" }}>Import weights</Link>
+                <Link href="/dashboard/deployments/new" style={{ fontSize: 11, color: "hsl(var(--primary))", textDecoration: "none" }}>Request GPU</Link>
               </div>
             </div>
             {embeddings.length > 0 && (
               <div>
-                <div style={{ padding: "8px 14px 4px", fontSize: 10, fontFamily: "var(--font-mono)", textTransform: "uppercase", letterSpacing: "0.12em", color: "var(--ink-4)" }}>
+                <div style={{ padding: "8px 14px 4px", fontSize: 10, fontFamily: "var(--font-mono)", textTransform: "uppercase", letterSpacing: "0.12em", color: "hsl(var(--muted-foreground))" }}>
                   Embeddings — not for chat
                 </div>
                 {embeddings.map((m) => (
@@ -430,21 +431,21 @@ function ModelPicker({
                     style={{
                       display: "flex", alignItems: "center", gap: 8, width: "100%",
                       padding: "8px 14px", background: m.id === value ? "var(--brand-soft)" : "transparent",
-                      border: "none", cursor: "pointer", fontSize: 13, color: m.id === value ? "var(--brand-deep)" : "var(--ink-3)",
+                      border: "none", cursor: "pointer", fontSize: 13, color: m.id === value ? "hsl(var(--primary))" : "hsl(var(--muted-foreground))",
                       fontFamily: "inherit", textAlign: "left",
                     }}
-                    className={m.id !== value ? "hover:bg-[var(--paper)]" : ""}
+                    className={m.id !== value ? "hover:bg-accent" : ""}
                   >
                     <ProviderLogo provider={m.provider} modelId={m.id} size={18} />
                     <span style={{ flex: 1 }}>{m.name}</span>
-                    <span style={{ fontSize: 10, fontFamily: "var(--font-mono)", color: "var(--ink-4)" }}>{m.modality}</span>
+                    <span style={{ fontSize: 10, fontFamily: "var(--font-mono)", color: "hsl(var(--muted-foreground))" }}>{m.modality}</span>
                   </button>
                 ))}
               </div>
             )}
             {Object.entries(grouped).map(([provider, models]) => (
               <div key={provider}>
-                <div style={{ padding: "8px 14px 4px", fontSize: 10, fontFamily: "var(--font-mono)", textTransform: "uppercase", letterSpacing: "0.12em", color: "var(--ink-4)", display: "flex", alignItems: "center", gap: 7 }}>
+                <div style={{ padding: "8px 14px 4px", fontSize: 10, fontFamily: "var(--font-mono)", textTransform: "uppercase", letterSpacing: "0.12em", color: "hsl(var(--muted-foreground))", display: "flex", alignItems: "center", gap: 7 }}>
                   <ProviderLogo provider={provider} size={14} />
                   {provider}
                 </div>
@@ -458,14 +459,14 @@ function ModelPicker({
                     style={{
                       display: "flex", alignItems: "center", gap: 8, width: "100%",
                       padding: "8px 14px", background: m.id === value ? "var(--brand-soft)" : "transparent",
-                      border: "none", cursor: "pointer", fontSize: 13, color: m.id === value ? "var(--brand-deep)" : "var(--ink)",
+                      border: "none", cursor: "pointer", fontSize: 13, color: m.id === value ? "hsl(var(--primary))" : "hsl(var(--foreground))",
                       fontFamily: "inherit", textAlign: "left", transition: "background 0.1s",
                     }}
-                    className={m.id !== value ? "hover:bg-[var(--paper)]" : ""}
+                    className={m.id !== value ? "hover:bg-accent" : ""}
                   >
                     <ProviderLogo provider={m.provider} modelId={m.id} size={18} />
                     <span style={{ flex: 1, opacity: m.ready === false ? 0.7 : 1 }}>{m.name}</span>
-                    <span style={{ fontSize: 10, fontFamily: "var(--font-mono)", color: "var(--ink-4)" }}>{m.ready === false ? "needs key" : m.context}</span>
+                    <span style={{ fontSize: 10, fontFamily: "var(--font-mono)", color: "hsl(var(--muted-foreground))" }}>{m.ready === false ? "needs key" : m.context}</span>
                     {m.vision && <Eye style={{ width: 12, height: 12, color: "#4285F4" }} />}
                     {m.code && <Code2 style={{ width: 12, height: 12, color: "#2E7D5B" }} />}
                   </button>
@@ -477,20 +478,20 @@ function ModelPicker({
             role="note"
             style={{
               flexShrink: 0,
-              borderTop: "1px solid var(--line-soft)",
+              borderTop: "1px solid hsl(var(--border))",
               padding: "10px 14px",
-              background: "var(--paper)",
+              background: "hsl(var(--background))",
               fontSize: 12,
               lineHeight: 1.45,
-              color: "var(--ink-3)",
+              color: "hsl(var(--muted-foreground))",
             }}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 600, color: "var(--ink)", marginBottom: 4 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 600, color: "hsl(var(--foreground))", marginBottom: 4 }}>
               <ProviderLogo provider={previewModel.provider} modelId={previewModel.id} size={18} />
               {previewModel.name}
             </div>
             <div style={{ marginBottom: 6 }}>{modelHoverBlurb(previewModel)}</div>
-            <div style={{ fontSize: 11, fontFamily: "var(--font-mono)", color: "var(--ink-4)" }}>
+            <div style={{ fontSize: 11, fontFamily: "var(--font-mono)", color: "hsl(var(--muted-foreground))" }}>
               {modelCapabilityLine(previewModel)}
             </div>
           </div>
@@ -518,8 +519,8 @@ function ParamsPanel({
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
       <div>
-        <label style={{ fontSize: 12, color: "var(--ink-3)", fontFamily: "var(--font-mono)", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 500 }}>Data class</label>
-        <p style={{ fontSize: 11, color: "var(--ink-4)", margin: "4px 0 8px" }}>Sent as X-Data-Class. Policies evaluate this before the model runs.</p>
+        <label style={{ fontSize: 12, color: "hsl(var(--muted-foreground))", fontFamily: "var(--font-mono)", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 500 }}>Data class</label>
+        <p style={{ fontSize: 11, color: "hsl(var(--muted-foreground))", margin: "4px 0 8px" }}>Sent as X-Data-Class. Policies evaluate this before the model runs.</p>
         <select
           value={dataClass}
           onChange={(e) => setDataClass(e.target.value)}
@@ -538,22 +539,22 @@ function ParamsPanel({
       ].map(({ label, value, setter, min, max, step, fmt }) => (
         <div key={label}>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-            <label style={{ fontSize: 12, color: "var(--ink-3)", fontFamily: "var(--font-mono)", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 500 }}>{label}</label>
-            <span style={{ fontSize: 12, fontFamily: "var(--font-mono)", color: "var(--ink-2)", fontWeight: 600 }}>{fmt(value)}</span>
+            <label style={{ fontSize: 12, color: "hsl(var(--muted-foreground))", fontFamily: "var(--font-mono)", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 500 }}>{label}</label>
+            <span style={{ fontSize: 12, fontFamily: "var(--font-mono)", color: "hsl(var(--muted-foreground))", fontWeight: 600 }}>{fmt(value)}</span>
           </div>
           <input
             type="range" min={min} max={max} step={step} value={value}
             onChange={e => setter(Number(e.target.value))}
-            style={{ width: "100%", accentColor: "var(--brand)", cursor: "pointer" }}
+            style={{ width: "100%", accentColor: "hsl(var(--primary))", cursor: "pointer" }}
           />
-          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: "var(--ink-4)", fontFamily: "var(--font-mono)", marginTop: 2 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: "hsl(var(--muted-foreground))", fontFamily: "var(--font-mono)", marginTop: 2 }}>
             <span>{min}</span><span>{max}</span>
           </div>
         </div>
       ))}
       <div>
-        <label style={{ fontSize: 12, color: "var(--ink-3)", fontFamily: "var(--font-mono)", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 500 }}>Provider sort</label>
-        <p style={{ fontSize: 11, color: "var(--ink-4)", margin: "4px 0 8px" }}>OpenRouter-style routing. Sent as <code>provider.sort</code>.</p>
+        <label style={{ fontSize: 12, color: "hsl(var(--muted-foreground))", fontFamily: "var(--font-mono)", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 500 }}>Provider sort</label>
+        <p style={{ fontSize: 11, color: "hsl(var(--muted-foreground))", margin: "4px 0 8px" }}>OpenRouter-style routing. Sent as <code>provider.sort</code>.</p>
         <select
           value={providerSort}
           onChange={(e) => setProviderSort(e.target.value as "default" | "price" | "latency" | "throughput")}
@@ -570,13 +571,13 @@ function ParamsPanel({
           type="checkbox"
           checked={allowFallbacks}
           onChange={(e) => setAllowFallbacks(e.target.checked)}
-          className="h-4 w-4 rounded accent-[var(--brand)]"
+          className="h-4 w-4 rounded accent-[hsl(var(--primary))]"
         />
-        <span style={{ fontSize: 13, color: "var(--ink-2)" }}>Allow fallbacks</span>
+        <span style={{ fontSize: 13, color: "hsl(var(--muted-foreground))" }}>Allow fallbacks</span>
       </label>
       <div>
-        <label style={{ fontSize: 12, color: "var(--ink-3)", fontFamily: "var(--font-mono)", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 500 }}>Provider order</label>
-        <p style={{ fontSize: 11, color: "var(--ink-4)", margin: "4px 0 8px" }}>Optional comma-separated slugs.</p>
+        <label style={{ fontSize: 12, color: "hsl(var(--muted-foreground))", fontFamily: "var(--font-mono)", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 500 }}>Provider order</label>
+        <p style={{ fontSize: 11, color: "hsl(var(--muted-foreground))", margin: "4px 0 8px" }}>Optional comma-separated slugs.</p>
         <input
           type="text"
           value={providerOrder}
@@ -595,11 +596,13 @@ function ChatBubble({ msg, isStreaming }: { msg: Message; isStreaming?: boolean 
     <div style={{ display: "flex", gap: 10, flexDirection: isUser ? "row-reverse" : "row", alignItems: "flex-start" }}>
       {/* Avatar */}
       <div style={{
-        width: 28, height: 28, borderRadius: 999, flexShrink: 0,
-        background: isUser ? "var(--ink)" : "var(--brand)",
-        display: "grid", placeItems: "center", color: "white", fontSize: 11, fontWeight: 700,
+        width: 28, height: 28, flexShrink: 0,
+        display: "grid", placeItems: "center",
+        borderRadius: isUser ? 999 : 0,
+        background: isUser ? "hsl(var(--foreground))" : "transparent",
+        color: "white", fontSize: 11, fontWeight: 700,
       }}>
-        {isUser ? "U" : <Sparkles style={{ width: 12, height: 12 }} />}
+        {isUser ? "U" : <AiCrest mood={isStreaming ? "thinking" : "ready"} size={22} />}
       </div>
       <div style={{ maxWidth: "75%", display: "flex", flexDirection: "column", gap: 4 }}>
         {/* Images */}
@@ -607,7 +610,7 @@ function ChatBubble({ msg, isStreaming }: { msg: Message; isStreaming?: boolean 
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
             {msg.images.map((src, i) => (
               // eslint-disable-next-line @next/next/no-img-element
-              <img key={i} src={src} alt="" style={{ maxWidth: 180, maxHeight: 120, borderRadius: 8, objectFit: "cover", border: "1px solid var(--line)" }} />
+              <img key={i} src={src} alt="" style={{ maxWidth: 180, maxHeight: 120, borderRadius: 8, objectFit: "cover", border: "1px solid hsl(var(--border))" }} />
             ))}
           </div>
         )}
@@ -616,27 +619,27 @@ function ChatBubble({ msg, isStreaming }: { msg: Message; isStreaming?: boolean 
           <div style={{
             padding: "10px 14px",
             borderRadius: isUser ? "16px 4px 16px 16px" : "4px 16px 16px 16px",
-            background: isUser ? "var(--ink)" : "var(--paper-2)",
-            color: isUser ? "white" : "var(--ink)",
-            border: isUser ? "none" : "1px solid var(--line)",
+            background: isUser ? "hsl(var(--foreground))" : "hsl(var(--card))",
+            color: isUser ? "white" : "hsl(var(--foreground))",
+            border: isUser ? "none" : "1px solid hsl(var(--border))",
             fontSize: 13.5, lineHeight: 1.65,
           }}>
             {isStreaming && !msg.content ? (
-              <span style={{ color: "var(--ink-3)", display: "inline-flex", alignItems: "center", gap: 8 }}>
+              <span style={{ color: "hsl(var(--muted-foreground))", display: "inline-flex", alignItems: "center", gap: 8 }}>
                 <Loader2 style={{ width: 13, height: 13 }} className="animate-spin" />
                 Connecting to model…
               </span>
             ) : isStreaming ? (
               <span style={{ whiteSpace: "pre-wrap" }}>
                 {msg.content}
-                <span style={{ display: "inline-block", width: 2, height: 14, background: "var(--brand)", marginLeft: 2, animation: "od-pulse 1s ease-out infinite", borderRadius: 1 }} />
+                <span style={{ display: "inline-block", width: 2, height: 14, background: "hsl(var(--primary))", marginLeft: 2, animation: "od-pulse 1s ease-out infinite", borderRadius: 1 }} />
               </span>
             ) : (
               <span style={{ whiteSpace: "pre-wrap" }}>{msg.content}</span>
             )}
           </div>
         )}
-        <div style={{ fontSize: 10, color: "var(--ink-4)", fontFamily: "var(--font-mono)", paddingInline: 2, textAlign: isUser ? "right" : "left" }}>
+        <div style={{ fontSize: 10, color: "hsl(var(--muted-foreground))", fontFamily: "var(--font-mono)", paddingInline: 2, textAlign: isUser ? "right" : "left" }}>
           {msg.timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
         </div>
       </div>
@@ -1237,30 +1240,26 @@ function PlaygroundPage() {
   const connectionColor =
     connection.phase === "connected" ? "var(--green)" :
     connection.phase === "offline" || connection.phase === "bad_key" ? "var(--red)" :
-    "var(--brand)";
+    "hsl(var(--primary))";
 
   // ─── Render ──────────────────────────────────────────────────────────────
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0, minWidth: 0, width: "100%", height: "100%", overflow: "hidden", position: "relative" }}>
+    <div className="relative flex h-full min-h-0 min-w-0 w-full flex-1 flex-col overflow-hidden">
 
       {/* ── Toolbar ── */}
-      <div style={{
-        minHeight: 56, borderBottom: "1px solid var(--line)",
-        background: "var(--paper-2)", display: "flex", alignItems: "center",
-        flexWrap: "wrap", padding: "8px 16px", gap: 8, flexShrink: 0, zIndex: 10,
-      }}>
-        <div className="od-eyebrow" style={{ marginRight: 4 }}>Playground</div>
+      <div className="z-10 flex min-h-14 shrink-0 flex-wrap items-center gap-2 border-b border-border bg-card px-4 py-2">
+        <div className="mr-1 text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">Playground</div>
         <Link
           href="/dashboard/playground/media"
-          style={{ fontSize: 12, color: "var(--ink-3)", textDecoration: "none", marginRight: 4 }}
+          className="mr-1 text-xs text-muted-foreground hover:text-foreground"
         >
           Media
         </Link>
-        <div style={{ width: 1, height: 20, background: "var(--line)" }} />
+        <div className="h-5 w-px bg-border" />
 
         {catalogLoading ? (
-          <span className="od-mono" style={{ fontSize: 12, color: "var(--ink-4)", display: "inline-flex", alignItems: "center", gap: 6 }}>
+          <span className="font-mono" style={{ fontSize: 12, color: "hsl(var(--muted-foreground))", display: "inline-flex", alignItems: "center", gap: 6 }}>
             <Loader2 style={{ width: 12, height: 12 }} className="animate-spin" /> Loading catalog…
           </span>
         ) : (
@@ -1284,7 +1283,7 @@ function PlaygroundPage() {
           </div>
         )}
         {modelSupportsDocs && (
-          <div style={{ display: "flex", alignItems: "center", gap: 4, padding: "3px 8px", borderRadius: 6, background: "var(--paper-3)", color: "var(--ink-2)", fontSize: 11, fontFamily: "var(--font-mono)", fontWeight: 500 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 4, padding: "3px 8px", borderRadius: 6, background: "hsl(var(--accent))", color: "hsl(var(--muted-foreground))", fontSize: 11, fontFamily: "var(--font-mono)", fontWeight: 500 }}>
             <Paperclip style={{ width: 11, height: 11 }} /> Documents
           </div>
         )}
@@ -1293,7 +1292,7 @@ function PlaygroundPage() {
             <Sparkles style={{ width: 11, height: 11 }} /> Native file APIs
           </div>
         )}
-        <div style={{ display: "flex", alignItems: "center", gap: 4, padding: "3px 8px", borderRadius: 6, background: "var(--paper-3)", color: "var(--ink-3)", fontSize: 11, fontFamily: "var(--font-mono)", fontWeight: 500 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 4, padding: "3px 8px", borderRadius: 6, background: "hsl(var(--accent))", color: "hsl(var(--muted-foreground))", fontSize: 11, fontFamily: "var(--font-mono)", fontWeight: 500 }}>
           <Zap style={{ width: 11, height: 11 }} /> {model.context}
         </div>
 
@@ -1305,8 +1304,8 @@ function PlaygroundPage() {
           title={connection.detail}
           style={{
             display: "flex", alignItems: "center", gap: 7,
-            padding: "5px 12px", borderRadius: 999, border: "1px solid var(--line)",
-            background: "var(--paper)", fontSize: 12, color: "var(--ink-2)", cursor: "pointer",
+            padding: "5px 12px", borderRadius: 999, border: "1px solid hsl(var(--border))",
+            background: "hsl(var(--background))", fontSize: 12, color: "hsl(var(--muted-foreground))", cursor: "pointer",
             maxWidth: 280,
           }}
         >
@@ -1327,8 +1326,8 @@ function PlaygroundPage() {
                     : "Loading connection…"}
           </span>
         </button>
-        <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 12px", borderRadius: 8, border: "1px solid var(--line)", background: "var(--paper)", fontSize: 12 }}>
-          <Cpu style={{ width: 12, height: 12, color: "var(--ink-3)" }} />
+        <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 12px", borderRadius: 8, border: "1px solid hsl(var(--border))", background: "hsl(var(--background))", fontSize: 12 }}>
+          <Cpu style={{ width: 12, height: 12, color: "hsl(var(--muted-foreground))" }} />
           <input
             type="password"
             value={apiKey}
@@ -1338,7 +1337,7 @@ function PlaygroundPage() {
             }}
             placeholder="API key…"
             title={apiKey ? "Playground key stored in this browser" : "Creating a Playground key…"}
-            style={{ border: "none", outline: "none", background: "transparent", fontSize: 12, color: "var(--ink)", fontFamily: "var(--font-mono)", width: 140 }}
+            style={{ border: "none", outline: "none", background: "transparent", fontSize: 12, color: "hsl(var(--foreground))", fontFamily: "var(--font-mono)", width: 140 }}
           />
         </div>
 
@@ -1347,9 +1346,9 @@ function PlaygroundPage() {
           style={{
             display: "flex", alignItems: "center", gap: 6,
             padding: "6px 12px", borderRadius: 999,
-            border: `1px solid ${showParams ? "var(--brand)" : "var(--line)"}`,
-            background: showParams ? "var(--brand-soft)" : "var(--paper-2)",
-            color: showParams ? "var(--brand-deep)" : "var(--ink-2)",
+            border: `1px solid ${showParams ? "hsl(var(--primary))" : "hsl(var(--border))"}`,
+            background: showParams ? "var(--brand-soft)" : "hsl(var(--card))",
+            color: showParams ? "hsl(var(--primary))" : "hsl(var(--muted-foreground))",
             fontSize: 12, fontWeight: 500, cursor: "pointer", transition: "all 0.18s",
           }}
         >
@@ -1360,9 +1359,9 @@ function PlaygroundPage() {
           style={{
             display: "flex", alignItems: "center", gap: 6,
             padding: "6px 12px", borderRadius: 999,
-            border: `1px solid ${showCode ? "var(--brand)" : "var(--line)"}`,
-            background: showCode ? "var(--brand-soft)" : "var(--paper-2)",
-            color: showCode ? "var(--brand-deep)" : "var(--ink-2)",
+            border: `1px solid ${showCode ? "hsl(var(--primary))" : "hsl(var(--border))"}`,
+            background: showCode ? "var(--brand-soft)" : "hsl(var(--card))",
+            color: showCode ? "hsl(var(--primary))" : "hsl(var(--muted-foreground))",
             fontSize: 12, fontWeight: 500, cursor: "pointer",
           }}
         >
@@ -1373,8 +1372,8 @@ function PlaygroundPage() {
         <button
           onClick={clearConversation}
           title="Clear conversation"
-          style={{ width: 32, height: 32, display: "grid", placeItems: "center", borderRadius: 8, border: "1px solid transparent", background: "transparent", color: "var(--ink-3)", cursor: "pointer", transition: "all 0.12s" }}
-          className="hover:bg-[var(--paper-3)] hover:text-[var(--red)]"
+          style={{ width: 32, height: 32, display: "grid", placeItems: "center", borderRadius: 8, border: "1px solid transparent", background: "transparent", color: "hsl(var(--muted-foreground))", cursor: "pointer", transition: "all 0.12s" }}
+          className="hover:bg-accent hover:text-[var(--red)]"
         >
           <RotateCcw style={{ width: 14, height: 14 }} />
         </button>
@@ -1386,8 +1385,8 @@ function PlaygroundPage() {
           style={{
             display: "flex", alignItems: "center", gap: 6,
             padding: "7px 16px", borderRadius: 999,
-            background: canRun ? "var(--brand)" : "var(--paper-3)",
-            color: canRun ? "white" : "var(--ink-4)",
+            background: canRun ? "hsl(var(--primary))" : "hsl(var(--accent))",
+            color: canRun ? "white" : "hsl(var(--muted-foreground))",
             border: "none", fontSize: 13, fontWeight: 500, cursor: canRun ? "pointer" : "not-allowed",
             transition: "all 0.15s",
           }}
@@ -1400,9 +1399,9 @@ function PlaygroundPage() {
 
       {(connection.phase === "loading" || connection.phase === "offline" || connection.phase === "bad_key" || connection.phase === "deploying" || !modelIsChat) && (
         <div style={{
-          padding: "10px 20px", borderBottom: "1px solid var(--line)", fontSize: 13,
-          background: connection.phase === "offline" || !modelIsChat ? "var(--red-soft)" : "var(--paper)",
-          color: connection.phase === "offline" || !modelIsChat ? "var(--red)" : "var(--ink-2)",
+          padding: "10px 20px", borderBottom: "1px solid hsl(var(--border))", fontSize: 13,
+          background: connection.phase === "offline" || !modelIsChat ? "var(--red-soft)" : "hsl(var(--background))",
+          color: connection.phase === "offline" || !modelIsChat ? "var(--red)" : "hsl(var(--muted-foreground))",
           display: "flex", alignItems: "center", gap: 8,
         }}>
           {(connection.phase === "loading" || connection.phase === "deploying") && <Loader2 style={{ width: 13, height: 13 }} className="animate-spin" />}
@@ -1424,9 +1423,9 @@ function PlaygroundPage() {
         </div>
       )}
       {!catalogLoading && catalog.length === 0 && (
-        <div style={{ padding: "10px 20px", background: "var(--paper)", borderBottom: "1px solid var(--line)", fontSize: 13, color: "var(--ink-2)" }}>
+        <div style={{ padding: "10px 20px", background: "hsl(var(--background))", borderBottom: "1px solid hsl(var(--border))", fontSize: 13, color: "hsl(var(--muted-foreground))" }}>
           No live models in the catalog.{" "}
-          <Link href="/dashboard/models" style={{ color: "var(--brand)", fontWeight: 500 }}>Open models</Link>
+          <Link href="/dashboard/models" style={{ color: "hsl(var(--primary))", fontWeight: 500 }}>Open models</Link>
           {" "}to see what is seeded, or ingest open-weight models.
         </div>
       )}
@@ -1442,8 +1441,8 @@ function PlaygroundPage() {
               minWidth: 220,
               maxWidth: 260,
               flexShrink: 0,
-              borderRight: "1px solid var(--line)",
-              background: "var(--paper-2)",
+              borderRight: "1px solid hsl(var(--border))",
+              background: "hsl(var(--card))",
               overflowY: "auto",
               overflowX: "hidden",
               padding: "18px 16px 24px",
@@ -1454,21 +1453,21 @@ function PlaygroundPage() {
             }}
           >
             <div>
-              <div className="od-eyebrow" style={{ marginBottom: 8 }}>System prompt</div>
+              <div className="text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground" style={{ marginBottom: 8 }}>System prompt</div>
               <textarea
                 value={systemPrompt}
                 onChange={e => setSystemPrompt(e.target.value)}
                 rows={5}
                 style={{
-                  width: "100%", maxWidth: "100%", boxSizing: "border-box", padding: 12, border: "1px solid var(--line)", outline: "none",
-                  background: "var(--paper)", fontFamily: "var(--font-mono)", fontSize: 12,
-                  color: "var(--ink-2)", resize: "vertical", lineHeight: 1.6, borderRadius: 12,
+                  width: "100%", maxWidth: "100%", boxSizing: "border-box", padding: 12, border: "1px solid hsl(var(--border))", outline: "none",
+                  background: "hsl(var(--background))", fontFamily: "var(--font-mono)", fontSize: 12,
+                  color: "hsl(var(--muted-foreground))", resize: "vertical", lineHeight: 1.6, borderRadius: 12,
                 }}
                 placeholder="How the model should behave…"
               />
             </div>
             <div>
-              <div className="od-eyebrow" style={{ marginBottom: 12 }}>Parameters</div>
+              <div className="text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground" style={{ marginBottom: 12 }}>Parameters</div>
               <ParamsPanel temperature={temperature} setTemperature={setTemperature}
                 maxTokens={maxTokens} setMaxTokens={setMaxTokens}
                 topP={topP} setTopP={setTopP}
@@ -1478,8 +1477,8 @@ function PlaygroundPage() {
                 providerOrder={providerOrder} setProviderOrder={setProviderOrder} />
             </div>
             <div>
-              <div className="od-eyebrow" style={{ marginBottom: 8 }}>Response format</div>
-              <div style={{ padding: "8px 12px", borderRadius: 10, border: "1px solid var(--line)", fontSize: 13, color: "var(--ink-2)" }}>
+              <div className="text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground" style={{ marginBottom: 8 }}>Response format</div>
+              <div style={{ padding: "8px 12px", borderRadius: 10, border: "1px solid hsl(var(--border))", fontSize: 13, color: "hsl(var(--muted-foreground))" }}>
                 Text
               </div>
             </div>
@@ -1491,17 +1490,17 @@ function PlaygroundPage() {
           style={{ flex: 1, minWidth: 0, minHeight: 0, display: "flex", overflow: "hidden" }}
         >
         {/* Left: chat panel */}
-        <div style={{ width: `${splitPct}%`, minWidth: 280, display: "flex", flexDirection: "column", borderRight: "1px solid var(--line)", overflow: "hidden" }}>
+        <div style={{ width: `${splitPct}%`, minWidth: 280, display: "flex", flexDirection: "column", borderRight: "1px solid hsl(var(--border))", overflow: "hidden" }}>
 
           {/* Messages */}
           <div style={{ flex: 1, overflowY: "auto", padding: "20px 16px", display: "flex", flexDirection: "column", gap: 20 }}>
             {messages.length === 0 && (
-              <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, color: "var(--ink-4)", textAlign: "center", padding: 32 }}>
+              <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, color: "hsl(var(--muted-foreground))", textAlign: "center", padding: 32 }}>
                 <div style={{ width: 48, height: 48, borderRadius: 999, background: "var(--brand-soft)", display: "grid", placeItems: "center" }}>
-                  <MessageSquare style={{ width: 22, height: 22, color: "var(--brand)" }} />
+                  <MessageSquare style={{ width: 22, height: 22, color: "hsl(var(--primary))" }} />
                 </div>
-                <div style={{ fontSize: 14, fontWeight: 600, color: "var(--ink-3)" }}>Start a conversation</div>
-                <div style={{ fontSize: 12, color: "var(--ink-4)", maxWidth: 240 }}>
+                <div style={{ fontSize: 14, fontWeight: 600, color: "hsl(var(--muted-foreground))" }}>Start a conversation</div>
+                <div style={{ fontSize: 12, color: "hsl(var(--muted-foreground))", maxWidth: 240 }}>
                   {connection.phase === "loading"
                     ? "Loading connection to the gateway…"
                     : connection.phase === "offline"
@@ -1535,10 +1534,10 @@ function PlaygroundPage() {
               {images.map((src, i) => (
                 <div key={i} style={{ position: "relative" }}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={src} alt="" style={{ width: 64, height: 64, objectFit: "cover", borderRadius: 8, border: "1px solid var(--line)" }} />
+                  <img src={src} alt="" style={{ width: 64, height: 64, objectFit: "cover", borderRadius: 8, border: "1px solid hsl(var(--border))" }} />
                   <button
                     onClick={() => setImages(prev => prev.filter((_, j) => j !== i))}
-                    style={{ position: "absolute", top: -6, right: -6, width: 18, height: 18, borderRadius: 999, background: "var(--ink)", color: "white", border: "none", cursor: "pointer", display: "grid", placeItems: "center" }}
+                    style={{ position: "absolute", top: -6, right: -6, width: 18, height: 18, borderRadius: 999, background: "hsl(var(--foreground))", color: "white", border: "none", cursor: "pointer", display: "grid", placeItems: "center" }}
                   >
                     <X style={{ width: 10, height: 10 }} />
                   </button>
@@ -1550,17 +1549,17 @@ function PlaygroundPage() {
           {documents.length > 0 && (
             <div style={{ display: "flex", gap: 8, padding: "8px 16px", flexWrap: "wrap" }}>
               {documents.map((doc) => (
-                <div key={doc.id} style={{ display: "flex", alignItems: "center", gap: 8, border: "1px solid var(--line)", background: "var(--paper)", borderRadius: 8, padding: "6px 8px" }}>
-                  <Paperclip style={{ width: 12, height: 12, color: "var(--ink-3)" }} />
+                <div key={doc.id} style={{ display: "flex", alignItems: "center", gap: 8, border: "1px solid hsl(var(--border))", background: "hsl(var(--background))", borderRadius: 8, padding: "6px 8px" }}>
+                  <Paperclip style={{ width: 12, height: 12, color: "hsl(var(--muted-foreground))" }} />
                   <div style={{ display: "flex", flexDirection: "column", lineHeight: 1.2 }}>
-                    <span style={{ fontSize: 11, color: "var(--ink-2)", maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{doc.name}</span>
-                    <span style={{ fontSize: 10, color: "var(--ink-4)", fontFamily: "var(--font-mono)" }}>
+                    <span style={{ fontSize: 11, color: "hsl(var(--muted-foreground))", maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{doc.name}</span>
+                    <span style={{ fontSize: 10, color: "hsl(var(--muted-foreground))", fontFamily: "var(--font-mono)" }}>
                       {(doc.size / 1024).toFixed(0)} KB{doc.truncated ? " · truncated" : ""}
                     </span>
                   </div>
                   <button
                     onClick={() => setDocuments(prev => prev.filter(d => d.id !== doc.id))}
-                    style={{ width: 18, height: 18, borderRadius: 999, background: "var(--ink)", color: "white", border: "none", cursor: "pointer", display: "grid", placeItems: "center" }}
+                    style={{ width: 18, height: 18, borderRadius: 999, background: "hsl(var(--foreground))", color: "white", border: "none", cursor: "pointer", display: "grid", placeItems: "center" }}
                     title="Remove document"
                   >
                     <X style={{ width: 10, height: 10 }} />
@@ -1573,9 +1572,9 @@ function PlaygroundPage() {
           {/* Input area */}
           <div
             style={{
-              borderTop: "1px solid var(--line)", padding: "12px 12px 14px",
-              background: "var(--paper-2)", flexShrink: 0,
-              outline: dragOver ? `2px solid var(--brand)` : "none",
+              borderTop: "1px solid hsl(var(--border))", padding: "12px 12px 14px",
+              background: "hsl(var(--card))", flexShrink: 0,
+              outline: dragOver ? `2px solid hsl(var(--primary))` : "none",
               transition: "outline 0.15s",
             }}
             onDragOver={e => { e.preventDefault(); setDragOver(true); }}
@@ -1583,8 +1582,8 @@ function PlaygroundPage() {
             onDrop={handleDrop}
           >
             {dragOver && (
-              <div style={{ position: "absolute", inset: 0, background: "var(--brand-soft)", display: "grid", placeItems: "center", borderRadius: 8, zIndex: 5, pointerEvents: "none", border: "2px dashed var(--brand)" }}>
-                <div style={{ color: "var(--brand)", fontWeight: 600, fontSize: 14 }}>
+              <div style={{ position: "absolute", inset: 0, background: "var(--brand-soft)", display: "grid", placeItems: "center", borderRadius: 8, zIndex: 5, pointerEvents: "none", border: "2px dashed hsl(var(--primary))" }}>
+                <div style={{ color: "hsl(var(--primary))", fontWeight: 600, fontSize: 14 }}>
                   Drop files here
                 </div>
               </div>
@@ -1601,8 +1600,8 @@ function PlaygroundPage() {
               <button
                 onClick={() => docInputRef.current?.click()}
                 title="Attach document"
-                style={{ width: 34, height: 34, display: "grid", placeItems: "center", borderRadius: 999, border: "none", background: "transparent", color: "var(--ink-3)", cursor: "pointer", flexShrink: 0 }}
-                className="hover:text-[var(--brand)]"
+                style={{ width: 34, height: 34, display: "grid", placeItems: "center", borderRadius: 999, border: "none", background: "transparent", color: "hsl(var(--muted-foreground))", cursor: "pointer", flexShrink: 0 }}
+                className="hover:text-primary"
               >
                 <Paperclip style={{ width: 15, height: 15 }} />
               </button>
@@ -1612,8 +1611,8 @@ function PlaygroundPage() {
                   <button
                     onClick={() => fileInputRef.current?.click()}
                     title="Attach image"
-                    style={{ width: 34, height: 34, display: "grid", placeItems: "center", borderRadius: 999, border: "none", background: "transparent", color: "var(--ink-3)", cursor: "pointer", flexShrink: 0 }}
-                    className="hover:text-[var(--brand)]"
+                    style={{ width: 34, height: 34, display: "grid", placeItems: "center", borderRadius: 999, border: "none", background: "transparent", color: "hsl(var(--muted-foreground))", cursor: "pointer", flexShrink: 0 }}
+                    className="hover:text-primary"
                   >
                     <ImagePlus style={{ width: 15, height: 15 }} />
                   </button>
@@ -1630,7 +1629,7 @@ function PlaygroundPage() {
                   flex: 1, border: "none",
                   padding: "8px 4px", resize: "none", outline: "none",
                   fontSize: 14, lineHeight: 1.55, fontFamily: "inherit",
-                  color: "var(--ink)", background: "transparent", maxHeight: 160,
+                  color: "hsl(var(--foreground))", background: "transparent", maxHeight: 160,
                   overflowY: "auto",
                 }}
               />
@@ -1644,7 +1643,7 @@ function PlaygroundPage() {
                   : <Send style={{ width: 14, height: 14 }} />}
               </button>
             </div>
-            <div style={{ marginTop: 8, fontSize: 10.5, color: "var(--ink-4)", fontFamily: "var(--font-mono)" }}>
+            <div style={{ marginTop: 8, fontSize: 10.5, color: "hsl(var(--muted-foreground))", fontFamily: "var(--font-mono)" }}>
               {modelHasNativeDocs
                 ? "Model supports native document workflows. Playground currently sends document text inline with your prompt."
                 : "Model does not expose native document APIs here. Uploaded files are sent as extracted text context."}
@@ -1657,20 +1656,20 @@ function PlaygroundPage() {
           onMouseDown={onSplitterMouseDown}
           style={{
             width: 6, flexShrink: 0, cursor: "col-resize",
-            background: isDragging ? "var(--brand)" : "transparent",
+            background: isDragging ? "hsl(var(--primary))" : "transparent",
             transition: "background 0.15s", zIndex: 5,
           }}
           className="hover:bg-[var(--brand-tint)]"
         />
 
         {/* Right: canvas panel */}
-        <div style={{ flex: 1, minWidth: 240, display: "flex", flexDirection: "column", overflow: "hidden", background: "var(--paper)" }}>
+        <div style={{ flex: 1, minWidth: 240, display: "flex", flexDirection: "column", overflow: "hidden", background: "hsl(var(--background))" }}>
           {/* Canvas toolbar */}
           <div style={{
-            height: 44, borderBottom: "1px solid var(--line)", background: "var(--paper-2)",
+            height: 44, borderBottom: "1px solid hsl(var(--border))", background: "hsl(var(--card))",
             display: "flex", alignItems: "center", paddingInline: 16, gap: 8, flexShrink: 0,
           }}>
-            <span className="od-eyebrow">Canvas</span>
+            <span className="text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">Canvas</span>
             <div style={{ flex: 1 }} />
             {/* Mode tabs */}
             <div className="od-tabs" style={{ padding: 3 }}>
@@ -1682,15 +1681,15 @@ function PlaygroundPage() {
             </div>
             {/* Code blocks count */}
             {codeBlocks.length > 0 && (
-              <div style={{ fontSize: 10, fontFamily: "var(--font-mono)", color: "var(--ink-3)", padding: "2px 8px", borderRadius: 4, background: "var(--paper-3)" }}>
+              <div style={{ fontSize: 10, fontFamily: "var(--font-mono)", color: "hsl(var(--muted-foreground))", padding: "2px 8px", borderRadius: 4, background: "hsl(var(--accent))" }}>
                 {codeBlocks.length} block{codeBlocks.length > 1 ? "s" : ""}
               </div>
             )}
             {canvasText && (
               <button
                 onClick={copyCanvas}
-                style={{ width: 28, height: 28, display: "grid", placeItems: "center", borderRadius: 6, border: "1px solid transparent", background: "transparent", color: "var(--ink-3)", cursor: "pointer", transition: "all 0.12s" }}
-                className="hover:bg-[var(--paper-3)] hover:text-[var(--ink)]"
+                style={{ width: 28, height: 28, display: "grid", placeItems: "center", borderRadius: 6, border: "1px solid transparent", background: "transparent", color: "hsl(var(--muted-foreground))", cursor: "pointer", transition: "all 0.12s" }}
+                className="hover:bg-accent hover:text-foreground"
               >
                 {copiedCanvas ? <Check style={{ width: 13, height: 13, color: "var(--green)" }} /> : <Copy style={{ width: 13, height: 13 }} />}
               </button>
@@ -1725,13 +1724,13 @@ function PlaygroundPage() {
               </pre>
             )}
             {!showCode && !canvasText && (
-              <div style={{ height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16, color: "var(--ink-4)" }}>
-                <div style={{ width: 56, height: 56, borderRadius: 999, background: "var(--paper-3)", display: "grid", placeItems: "center" }}>
-                  <SquareTerminal style={{ width: 24, height: 24, color: "var(--ink-4)" }} />
+              <div style={{ height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16, color: "hsl(var(--muted-foreground))" }}>
+                <div style={{ width: 56, height: 56, borderRadius: 999, background: "hsl(var(--accent))", display: "grid", placeItems: "center" }}>
+                  <SquareTerminal style={{ width: 24, height: 24, color: "hsl(var(--muted-foreground))" }} />
                 </div>
                 <div style={{ textAlign: "center" }}>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: "var(--ink-3)", marginBottom: 4 }}>Canvas is empty</div>
-                  <div style={{ fontSize: 12, color: "var(--ink-4)" }}>The model's response will appear here</div>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: "hsl(var(--muted-foreground))", marginBottom: 4 }}>Canvas is empty</div>
+                  <div style={{ fontSize: 12, color: "hsl(var(--muted-foreground))" }}>The model's response will appear here</div>
                 </div>
                 {/* Quick prompt suggestions */}
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 8, maxWidth: 400, justifyContent: "center", marginTop: 8 }}>
@@ -1745,11 +1744,11 @@ function PlaygroundPage() {
                       key={s}
                       onClick={() => { setDraft(s); textareaRef.current?.focus(); }}
                       style={{
-                        padding: "6px 14px", borderRadius: 999, border: "1px solid var(--line)",
-                        background: "var(--paper-2)", color: "var(--ink-2)", fontSize: 12, fontWeight: 500,
+                        padding: "6px 14px", borderRadius: 999, border: "1px solid hsl(var(--border))",
+                        background: "hsl(var(--card))", color: "hsl(var(--muted-foreground))", fontSize: 12, fontWeight: 500,
                         cursor: "pointer", transition: "all 0.12s",
                       }}
-                      className="hover:border-[var(--brand)] hover:text-[var(--brand)]"
+                      className="hover:border-[hsl(var(--primary))] hover:text-primary"
                     >
                       {s}
                     </button>
@@ -1763,8 +1762,8 @@ function PlaygroundPage() {
 
           {/* Canvas footer: token count */}
           {!showCode && canvasText && (
-            <div style={{ borderTop: "1px solid var(--line-soft)", padding: "8px 16px", display: "flex", alignItems: "center", gap: 16, background: "var(--paper-2)", flexShrink: 0 }}>
-              <span style={{ fontSize: 11, fontFamily: "var(--font-mono)", color: "var(--ink-4)" }}>
+            <div style={{ borderTop: "1px solid hsl(var(--border))", padding: "8px 16px", display: "flex", alignItems: "center", gap: 16, background: "hsl(var(--card))", flexShrink: 0 }}>
+              <span style={{ fontSize: 11, fontFamily: "var(--font-mono)", color: "hsl(var(--muted-foreground))" }}>
                 ~{Math.ceil(canvasText.length / 4).toLocaleString()} tokens out
               </span>
               {codeBlocks.length > 0 && (
@@ -1773,7 +1772,7 @@ function PlaygroundPage() {
                 </span>
               )}
               <div style={{ flex: 1 }} />
-              <span style={{ fontSize: 11, fontFamily: "var(--font-mono)", color: "var(--ink-4)" }}>
+              <span style={{ fontSize: 11, fontFamily: "var(--font-mono)", color: "hsl(var(--muted-foreground))" }}>
                 {model.name} · temp {temperature.toFixed(2)}
               </span>
             </div>
@@ -1787,7 +1786,7 @@ function PlaygroundPage() {
         <div style={{
           position: "absolute", top: 64, left: "50%", transform: "translateX(-50%)",
           display: "flex", alignItems: "center", gap: 8, padding: "8px 16px", borderRadius: 999,
-          background: "var(--brand-soft)", color: "var(--brand-deep)", fontSize: 12, fontWeight: 500,
+          background: "var(--brand-soft)", color: "hsl(var(--primary))", fontSize: 12, fontWeight: 500,
           border: "1px solid var(--brand-tint)", zIndex: 20, boxShadow: "0 4px 16px rgba(124,92,255,0.2)",
         }}>
           <Sparkles style={{ width: 13, height: 13 }} />
@@ -1800,7 +1799,7 @@ function PlaygroundPage() {
 
 export default function PlaygroundRoute() {
   return (
-    <Suspense fallback={<div style={{ padding: 32, color: "var(--ink-3)" }}>Loading playground…</div>}>
+    <Suspense fallback={<div style={{ padding: 32, color: "hsl(var(--muted-foreground))" }}>Loading playground…</div>}>
       <PlaygroundPage />
     </Suspense>
   );

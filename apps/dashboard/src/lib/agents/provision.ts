@@ -9,6 +9,7 @@ import { readWorkspace, workspacePublic } from "@/lib/agents/state";
 
 export function publicAgent(row: typeof workspaceAgents.$inferSelect) {
   const runtime = getAgentRuntime(row.runtime);
+  const workspace = readWorkspace(row.config);
   return {
     id: row.id,
     name: row.name,
@@ -20,10 +21,12 @@ export function publicAgent(row: typeof workspaceAgents.$inferSelect) {
     status: row.status,
     statusMessage: row.statusMessage,
     keyPrefix: row.keyPrefix,
-    workspace: workspacePublic(readWorkspace(row.config)),
+    kind: workspace.kind,
+    workspace: workspacePublic(workspace),
     lastUsedAt: row.lastUsedAt,
     startedAt: row.startedAt,
     stoppedAt: row.stoppedAt,
+    deletedAt: row.deletedAt,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
     gatewayUrl: `${gatewayBaseUrl()}/v1`,

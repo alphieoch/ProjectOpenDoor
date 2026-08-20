@@ -16,13 +16,16 @@ import {
   Layers,
   ArrowRight,
 } from "lucide-react";
-import { Button, Chip, Card, CardContent } from "@heroui/react";
-import type { StudioTool } from "@/lib/studio-constants";
+import { Button, Chip } from "@heroui/react";
+import type { StudioModelOption, StudioResolution, StudioTool } from "@/lib/studio-constants";
+import { STUDIO_RESOLUTION_OPTIONS } from "@/lib/studio-constants";
+
+export type GeneratedAssetKind = "image" | "video" | "audio" | "object";
 
 export interface GeneratedAssetDetail {
   id: string;
   url: string;
-  kind: "image" | "video";
+  kind: GeneratedAssetKind;
   prompt: string;
   model: string;
   timestamp: number;
@@ -30,6 +33,36 @@ export interface GeneratedAssetDetail {
   mode?: StudioTool;
   aspectRatio?: string;
   seed?: number;
+  resolution?: StudioResolution;
+  durationSeconds?: number;
+  variations?: number;
+  size?: string;
+}
+
+export function studioModeLabel(mode?: StudioTool): string {
+  if (mode === "txt2vid") return "Text to Video";
+  if (mode === "img2vid") return "Image to Video";
+  if (mode === "img2img") return "Image to Image";
+  if (mode === "v2v") return "Timeline Edit";
+  if (mode === "nodes") return "Node Graph";
+  if (mode === "txt2obj") return "Text to Object";
+  if (mode === "sound_fx") return "Sound FX";
+  return "Text to Image";
+}
+
+export function studioResolutionLabel(resolution?: StudioResolution): string {
+  if (!resolution) return "";
+  return STUDIO_RESOLUTION_OPTIONS.find((item) => item.id === resolution)?.label ?? resolution;
+}
+
+export function resolveStudioModelMeta(modelId: string, models: StudioModelOption[] = []) {
+  const found = models.find((model) => model.id === modelId);
+  return {
+    id: modelId,
+    name: found?.name ?? modelId,
+    company: found?.companyName,
+    tagline: found?.tagline,
+  };
 }
 
 interface GenerationDetailModalProps {
@@ -41,7 +74,7 @@ interface GenerationDetailModalProps {
   onUseAsReference: (asset: GeneratedAssetDetail) => void;
   onEditInTimeline: (asset: GeneratedAssetDetail) => void;
   onSendToNodes: (asset: GeneratedAssetDetail) => void;
-  onDownload: (url: string, id: string, kind: "image" | "video") => void;
+  onDownload: (url: string, id: string, kind: GeneratedAssetKind) => void;
 }
 
 export function GenerationDetailModal({
@@ -84,18 +117,7 @@ export function GenerationDetailModal({
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const modeBadge =
-    asset.mode === "txt2vid"
-      ? "Text to Video"
-      : asset.mode === "img2vid"
-        ? "Image to Video"
-        : asset.mode === "img2img"
-          ? "Image to Image"
-          : asset.mode === "v2v"
-            ? "Timeline Edit"
-            : asset.mode === "nodes"
-              ? "Node Graph"
-              : "Text to Image";
+  const modeBadge = studioModeLabel(asset.mode);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-8 bg-black/85 backdrop-blur-xl animate-in fade-in duration-200">
@@ -137,12 +159,16 @@ export function GenerationDetailModal({
                 playsInline
                 className="max-h-[70vh] max-w-full rounded-2xl object-contain shadow-2xl"
               />
-            ) : (
+            ) : asset.kind === "image" && asset.url ? (
               <img
                 src={asset.url}
                 alt={asset.prompt}
                 className="max-h-[70vh] max-w-full rounded-2xl object-contain shadow-2xl"
               />
+            ) : (
+              <div className="flex h-48 w-full max-w-sm items-center justify-center rounded-2xl border border-white/10 bg-black/40 font-mono text-xs text-zinc-400">
+                {asset.kind === "audio" ? "Audio generation" : "3D object generation"}
+              </div>
             )}
           </div>
 
@@ -212,35 +238,33 @@ export function GenerationDetailModal({
             </div>
 
             {/* Prompt Card with 1-Click Copy */}
-            <Card className="border border-white/10 bg-black/40 p-3.5 space-y-2">
-              <CardContent className="p-0">
-                <div className="flex items-center justify-between text-[11px] font-medium text-zinc-400 mb-1">
-                  <span>Prompt Specification</span>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onPress={copyPrompt}
-                    className="h-5 px-1 text-[10px] text-zinc-300 hover:text-white"
-                  >
-                    {copied ? (
-                      <>
-                        <Check className="h-3 w-3 text-emerald-400 inline mr-1" />
-                        <span className="text-emerald-400">Copied</span>
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="h-3 w-3 inline mr-1" />
-                        <span>Copy</span>
-                      </>
-                    )}
-                  </Button>
-                </div>
+            <div className="rounded-2xl border border-white/10 bg-black/50 p-3.5 space-y-2">
+              <div className="flex items-center justify-between text-[11px] font-medium text-zinc-400 mb-1">
+                <span>Prompt Specification</span>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onPress={copyPrompt}
+                  className="h-5 px-1 text-[10px] text-zinc-300 hover:text-white"
+                >
+                  {copied ? (
+                    <>
+                      <Check className="h-3 w-3 text-emerald-400 inline mr-1" />
+                      <span className="text-emerald-400">Copied</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="h-3 w-3 inline mr-1" />
+                      <span>Copy</span>
+                    </>
+                  )}
+                </Button>
+              </div>
 
-                <p className="text-[12px] font-normal leading-relaxed text-zinc-200 break-words">
-                  {asset.prompt || "No text prompt recorded."}
-                </p>
-              </CardContent>
-            </Card>
+              <p className="text-[12px] font-normal leading-relaxed text-zinc-200 break-words">
+                {asset.prompt || "No text prompt recorded."}
+              </p>
+            </div>
 
             {/* Model & Generation Metadata Details */}
             <div className="grid grid-cols-2 gap-2 text-[11px]">
@@ -251,8 +275,22 @@ export function GenerationDetailModal({
 
               <div className="rounded-xl border border-white/5 bg-white/[0.02] p-2.5">
                 <span className="block text-[10px] text-zinc-500 font-medium">Aspect Ratio</span>
-                <span className="font-mono text-zinc-200 block mt-0.5">{asset.aspectRatio || "1:1"}</span>
+                <span className="font-mono text-zinc-200 block mt-0.5">{asset.aspectRatio || "—"}</span>
               </div>
+
+              {asset.resolution && (
+                <div className="rounded-xl border border-white/5 bg-white/[0.02] p-2.5">
+                  <span className="block text-[10px] text-zinc-500 font-medium">Resolution</span>
+                  <span className="font-mono text-zinc-200 block mt-0.5">{studioResolutionLabel(asset.resolution)}</span>
+                </div>
+              )}
+
+              {asset.durationSeconds != null && (
+                <div className="rounded-xl border border-white/5 bg-white/[0.02] p-2.5">
+                  <span className="block text-[10px] text-zinc-500 font-medium">Duration</span>
+                  <span className="font-mono text-zinc-200 block mt-0.5">{asset.durationSeconds}s</span>
+                </div>
+              )}
             </div>
 
             {/* Original Reference Preview (If available) */}
@@ -285,7 +323,7 @@ export function GenerationDetailModal({
                 onRemix(asset);
                 onClose();
               }}
-              className="w-full justify-between bg-gradient-to-r from-indigo-500 to-purple-600 font-semibold text-xs h-9 text-white shadow-lg shadow-indigo-500/20"
+              className="w-full justify-between bg-gradient-to-r from-indigo-500 to-purple-600 font-semibold text-xs h-9 text-white shadow-lg shadow-info/20"
             >
               <div className="flex items-center gap-1.5">
                 <RefreshCw className="h-3.5 w-3.5" />
@@ -305,7 +343,7 @@ export function GenerationDetailModal({
                 }}
                 className="text-[11px] bg-white/5 hover:bg-white/10 text-zinc-300 justify-start h-8 px-2"
               >
-                <ImageIcon className="h-3.5 w-3.5 text-indigo-400 inline mr-1" />
+                <ImageIcon className="h-3.5 w-3.5 text-info inline mr-1" />
                 <span className="truncate">As Start Frame</span>
               </Button>
 
@@ -342,7 +380,9 @@ export function GenerationDetailModal({
                 className="text-[11px] bg-white/5 hover:bg-white/10 text-zinc-300 justify-start h-8 px-2"
               >
                 <Download className="h-3.5 w-3.5 text-emerald-400 inline mr-1" />
-                <span className="truncate">Download {asset.kind === "video" ? "MP4" : "PNG"}</span>
+                <span className="truncate">
+                  Download {asset.kind === "video" ? "MP4" : asset.kind === "audio" ? "MP3" : asset.kind === "object" ? "GLB" : "PNG"}
+                </span>
               </Button>
             </div>
           </div>

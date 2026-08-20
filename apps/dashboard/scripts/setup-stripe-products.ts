@@ -112,10 +112,25 @@ async function main() {
 
   const stripe = new Stripe(key, { apiVersion: API_VERSION, typescript: true });
 
+  const studentProduct = await getOrCreateProduct(
+    stripe,
+    "OpenDoor Student",
+    "Student membership — warehouse-rate inference with a small monthly taste"
+  );
   const proProduct = await getOrCreateProduct(
     stripe,
     "OpenDoor Pro",
     "Pro account — personal storage, inference credits, and GPU quota"
+  );
+  const familyProduct = await getOrCreateProduct(
+    stripe,
+    "OpenDoor Family",
+    "Family pool — 4 household seats, shared inference pool, 4-month rollover"
+  );
+  const familyMaxProduct = await getOrCreateProduct(
+    stripe,
+    "OpenDoor Family Max",
+    "Family Max pool — 5 household seats, $75 shared pool, Agents included, 4-month rollover"
   );
   const teamProduct = await getOrCreateProduct(
     stripe,
@@ -135,7 +150,7 @@ async function main() {
   const agentsProduct = await getOrCreateProduct(
     stripe,
     "OpenDoor Agents",
-    "Agents add-on — hosted OpenClaw, Hermes, and NemoClaw. Tokens still bill workspace quota."
+    "Agents add-on — hosted OpenClaw, Hermes, NemoClaw, and OpenBot. Tokens still bill workspace quota."
   );
   const webSearchProduct = await getOrCreateProduct(
     stripe,
@@ -147,7 +162,12 @@ async function main() {
   await archiveLegacyMonthlyPrices(stripe, teamProduct.id, [2000, 1500]);
   await archiveLegacyMonthlyPrices(stripe, enterpriseProduct.id, [29900, 29999, 5000, 3900]);
 
+  await archiveLegacyMonthlyPrices(stripe, familyMaxProduct.id, [4499]);
+
+  const studentPrice = await getOrCreateMonthlyPrice(stripe, studentProduct.id, 999);
   const proPrice = await getOrCreateMonthlyPrice(stripe, proProduct.id, 1200);
+  const familyPrice = await getOrCreateMonthlyPrice(stripe, familyProduct.id, 2999);
+  const familyMaxPrice = await getOrCreateMonthlyPrice(stripe, familyMaxProduct.id, 9900);
   const teamPrice = await getOrCreateMonthlyPrice(stripe, teamProduct.id, 1800);
   const enterprisePrice = await getOrCreateMonthlyPrice(
     stripe,
@@ -165,7 +185,10 @@ async function main() {
   const topup200 = await getOrCreateOneTimePrice(stripe, creditsProduct.id, 20000);
 
   console.log("\nStripe prices ready. Add to .env / apps/dashboard/.env.local:\n");
+  console.log(`STRIPE_STUDENT_PRICE_ID=${studentPrice.id}`);
   console.log(`STRIPE_PRO_PRICE_ID=${proPrice.id}`);
+  console.log(`STRIPE_FAMILY_PRICE_ID=${familyPrice.id}`);
+  console.log(`STRIPE_FAMILY_MAX_PRICE_ID=${familyMaxPrice.id}`);
   console.log(`STRIPE_TEAM_PRICE_ID=${teamPrice.id}`);
   console.log(`STRIPE_ENTERPRISE_PRICE_ID=${enterprisePrice.id}`);
   console.log(`STRIPE_AGENTS_ADDON_PRICE_ID=${agentsPrice.id}`);

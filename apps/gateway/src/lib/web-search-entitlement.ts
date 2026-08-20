@@ -1,6 +1,7 @@
 import { db, organizations } from "@opendoor/database";
 import { eq, sql } from "drizzle-orm";
-import { WEB_SEARCH_ADDON, workspaceHasWebSearchAddon } from "@opendoor/shared";
+import { SEARCH_TOOL_ID, WEB_SEARCH_ADDON, workspaceHasWebSearchAddon } from "@opendoor/shared";
+import { orgHasToolEnabled } from "./tool-entitlement.js";
 
 const g = global as typeof global & { _webSearchAddonColsReady?: boolean };
 
@@ -11,21 +12,39 @@ export async function ensureWebSearchAddonColumns() {
   g._webSearchAddonColsReady = true;
 }
 
-export async function orgHasWebSearchAddon(orgId: string, plan?: string | null) {
+export async function webSearchAccess(
+  orgId: string,
+  plan?: string | null
+): Promise<{ ok: boolean; via: "addon" | "usage" | null }> {
   await ensureWebSearchAddonColumns();
   const org = await db.query.organizations.findFirst({
     where: eq(organizations.id, orgId),
     columns: { plan: true, webSearchAddonStatus: true },
   });
-  return workspaceHasWebSearchAddon({
-    plan: org?.plan ?? plan,
-    webSearchAddonStatus: org?.webSearchAddonStatus,
-  });
+  if (
+    workspaceHasWebSearchAddon({
+      plan: org?.plan ?? plan,
+      webSearchAddonStatus: org?.webSearchAddonStatus,
+    })
+  ) {
+    return { ok: true, via: "addon" };
+  }
+  if (
+    (await orgHasToolEnabled(orgId, "web_search")) ||
+    (await orgHasToolEnabled(orgId, SEARCH_TOOL_ID))
+  ) {
+    return { ok: true, via: "usage" };
+  }
+  return { ok: false, via: null };
+}
+
+export async function orgHasWebSearchAddon(orgId: string, plan?: string | null) {
+  return (await webSearchAccess(orgId, plan)).ok;
 }
 
 export function webSearchAddonRequiredBody() {
   return {
-    error: `Web Search is a $${WEB_SEARCH_ADDON.amountUsd}/month add-on. Subscribe on Billing to unlock live Google results via Vertex AI Grounding.`,
+    error: `OpenDoor Search is metered on credits, or a $${WEB_SEARCH_ADDON.amountUsd}/month add-on. Enable it on Tools or subscribe on Billing.`,
     code: "addon_required" as const,
     addon: "web_search" as const,
     amountUsd: WEB_SEARCH_ADDON.amountUsd,

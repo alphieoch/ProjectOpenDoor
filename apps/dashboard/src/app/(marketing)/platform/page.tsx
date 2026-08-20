@@ -13,6 +13,7 @@ import {
   Server,
 } from "lucide-react";
 import { MarketingCtaBanner, MarketingHero } from "@/components/marketing-page-shell";
+import { cn } from "@/lib/utils";
 import { getDb } from "@/lib/db";
 import { models, providers } from "@opendoor/database";
 import { and, eq } from "drizzle-orm";
@@ -86,7 +87,7 @@ const surfaces = [
   },
   {
     title: "GPU SKUs",
-    body: "L4 / A100 / H100 on-demand pricing with per-second metering for dedicated fleets.",
+    body: "Standard, Fast, and Ultra GPUs available — on-demand, with per-second metering for dedicated fleets.",
     icon: Cpu,
     href: "/pricing",
   },
@@ -144,28 +145,25 @@ export default async function PlatformPage() {
             </Link>
             <Link
               href="/pricing"
-              className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-6 py-3 text-sm font-semibold text-slate-800 transition hover:-translate-y-0.5 hover:bg-slate-50"
+              className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-6 py-3 text-sm font-semibold text-foreground transition hover:-translate-y-0.5 hover:bg-slate-50"
             >
               View pricing
             </Link>
           </>
         }
         aside={
-          <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
+          <div className="grid gap-6 sm:grid-cols-3 lg:grid-cols-1 lg:gap-0 lg:divide-y lg:divide-border">
             {[
               { label: "Live models", value: stats.liveModels || "—" },
               { label: "Providers", value: stats.providers || "—" },
               { label: "Gateway", value: stats.host, mono: true },
             ].map((item) => (
-              <div
-                key={item.label}
-                className="rounded-[1.75rem] border border-slate-200/80 bg-white p-5 shadow-sm"
-              >
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+              <div key={item.label} className="lg:py-5 first:lg:pt-0 last:lg:pb-0">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
                   {item.label}
                 </p>
                 <p
-                  className={`mt-2 font-semibold text-slate-950 ${item.mono ? "truncate font-mono text-sm" : "text-3xl"}`}
+                  className={`mt-1 font-semibold text-foreground ${item.mono ? "truncate font-mono text-sm" : "text-3xl"}`}
                 >
                   {item.value}
                 </p>
@@ -179,23 +177,26 @@ export default async function PlatformPage() {
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
           What you can build
         </p>
-        <h2 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">
+        <h2 className="mt-2 text-3xl font-semibold tracking-tight text-foreground">
           Build anything on OpenDoor.
         </h2>
-        <div className="mt-8 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-8 grid md:grid-cols-2 lg:grid-cols-3">
           {pillars.map((item) => (
             <div
               key={item.title}
-              className="flex flex-col rounded-[2rem] border border-slate-200/70 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-xl hover:shadow-slate-950/5"
+              className={cn(
+                "flex flex-col border-border py-8",
+                "max-md:border-t max-md:first:border-t-0",
+                "md:border-r md:px-8 md:[&:nth-child(2n)]:border-r-0 md:[&:nth-child(n+3)]:border-t",
+                "lg:[&:nth-child(2n)]:border-r lg:[&:nth-child(3n)]:border-r-0 lg:[&:nth-child(n+3)]:border-t-0 lg:[&:nth-child(n+4)]:border-t",
+              )}
             >
-              <div className="mb-6 grid h-12 w-12 place-items-center rounded-2xl bg-blue-50 text-blue-700">
-                <item.icon className="h-5 w-5" />
-              </div>
-              <h3 className="text-lg font-semibold tracking-tight text-slate-950">{item.title}</h3>
-              <p className="mt-3 flex-1 leading-7 text-slate-600">{item.description}</p>
+              <item.icon className="h-5 w-5 text-muted-foreground" />
+              <h3 className="mt-4 text-lg font-semibold tracking-tight text-foreground">{item.title}</h3>
+              <p className="mt-3 flex-1 leading-7 text-muted-foreground">{item.description}</p>
               <Link
                 href={item.href}
-                className="mt-5 inline-flex items-center gap-1 text-sm font-semibold text-blue-700 underline-offset-4 hover:underline"
+                className="mt-5 inline-flex items-center gap-1 text-sm font-semibold text-foreground underline-offset-4 hover:underline"
               >
                 {item.link} <ArrowRight className="h-3.5 w-3.5" />
               </Link>
@@ -205,12 +206,12 @@ export default async function PlatformPage() {
       </section>
 
       <section className="mx-auto max-w-7xl px-6 py-16 lg:px-8">
-        <div className="overflow-hidden rounded-[2.5rem] border border-slate-200 bg-white shadow-sm">
-          <div className="border-b border-slate-100 px-8 py-8 lg:px-12">
-            <h2 className="text-3xl font-semibold tracking-tight text-slate-950">What you get day one</h2>
-            <p className="mt-3 max-w-2xl text-slate-600">
-              Fireworks-style commercial surface plus OpenDoor governance — UK/EU residency and
-              policy controls as the differentiator.
+        <div className="overflow-hidden rounded-2xl border border-border bg-white shadow-sm">
+          <div className="border-b border-border px-8 py-8 lg:px-12">
+            <h2 className="text-3xl font-semibold tracking-tight text-foreground">What you get day one</h2>
+            <p className="mt-3 max-w-2xl text-muted-foreground">
+              Fireworks-style commercial surface plus OpenDoor governance. Worldwide residency —
+              process your data where you want, and we can support it.
             </p>
           </div>
           <div className="grid gap-0 md:grid-cols-3">
@@ -218,11 +219,11 @@ export default async function PlatformPage() {
               <Link
                 key={s.title}
                 href={s.href}
-                className="border-t border-slate-100 p-8 transition hover:bg-slate-50 md:border-t-0 md:border-l md:first:border-l-0"
+                className="border-t border-border p-8 transition hover:bg-slate-50 md:border-t-0 md:border-l md:first:border-l-0"
               >
-                <s.icon className="h-6 w-6 text-blue-600" />
-                <h3 className="mt-4 font-semibold text-slate-950">{s.title}</h3>
-                <p className="mt-2 text-sm leading-6 text-slate-600">{s.body}</p>
+                <s.icon className="h-6 w-6 text-muted-foreground" />
+                <h3 className="mt-4 font-semibold text-foreground">{s.title}</h3>
+                <p className="mt-2 text-sm leading-6 text-muted-foreground">{s.body}</p>
               </Link>
             ))}
           </div>

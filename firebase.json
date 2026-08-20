@@ -23,6 +23,13 @@
         }
       },
       {
+        "source": "/gateway/status",
+        "run": {
+          "serviceId": "opendoor-gateway",
+          "region": "us-central1"
+        }
+      },
+      {
         "source": "**",
         "run": {
           "serviceId": "opendoor-dashboard",
@@ -37,6 +44,31 @@
           {
             "key": "Access-Control-Allow-Origin",
             "value": "*"
+          },
+          {
+            "key": "Access-Control-Allow-Headers",
+            "value": "Authorization, Content-Type, X-OpenDoor-Organization-Id, X-Data-Class"
+          },
+          {
+            "key": "X-Content-Type-Options",
+            "value": "nosniff"
+          }
+        ]
+      },
+      {
+        "source": "**",
+        "headers": [
+          {
+            "key": "X-Frame-Options",
+            "value": "DENY"
+          },
+          {
+            "key": "X-Content-Type-Options",
+            "value": "nosniff"
+          },
+          {
+            "key": "Referrer-Policy",
+            "value": "strict-origin-when-cross-origin"
           }
         ]
       }

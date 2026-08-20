@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { Bot } from "lucide-react";
+import { AiCrest } from "@/components/ui/ai-crest";
 import { ChatInterface } from "./ChatInterface";
 
 type AssistantPayload = {
@@ -127,7 +127,7 @@ export default function PublicChatPage() {
     );
   }
 
-  const primaryColor = payload.primaryColor ?? "#1A73E8";
+  const primaryColor = payload.primaryColor ?? "#0F172A";
   const avatarLetter = payload.avatarLetter ?? payload.name.charAt(0).toUpperCase();
   const logoUrl = payload.logoUrl;
 
@@ -143,14 +143,11 @@ export default function PublicChatPage() {
           borderColor: "var(--line)",
         }}
       >
-        <div
-          className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center text-white font-bold text-sm select-none"
-          style={{ background: primaryColor }}
-        >
+        <div className="w-8 h-8 flex items-center justify-center select-none">
           {logoUrl
             ? // eslint-disable-next-line @next/next/no-img-element
-              <img src={logoUrl} alt={payload.name} className="h-full w-full object-cover" />
-            : avatarLetter}
+              <img src={logoUrl} alt={payload.name} className="h-8 w-8 rounded-lg object-cover" />
+            : <AiCrest mood="ready" size={22} />}
         </div>
 
         <div className="flex flex-col min-w-0">
@@ -174,7 +171,7 @@ export default function PublicChatPage() {
           className="ml-auto flex items-center gap-1.5 rounded-full px-3 py-1 border"
           style={{ borderColor: "var(--line)", background: "var(--paper-3)" }}
         >
-          <Bot className="w-3.5 h-3.5" style={{ color: "var(--ink-3)" }} />
+          <AiCrest mood="ready" size={16} />
           <span className="text-xs font-medium" style={{ color: "var(--ink-3)" }}>
             OpenDoor AI
           </span>
@@ -211,7 +208,7 @@ function AccessDenied({ message }: { message: string }) {
   return (
     <div className="flex flex-col items-center justify-center h-dvh gap-4 bg-[var(--paper)] text-[var(--ink)]">
       <div className="w-16 h-16 rounded-2xl bg-[var(--paper-3)] flex items-center justify-center">
-        <Bot className="w-8 h-8 text-[var(--ink-3)]" />
+        <AiCrest mood="error" size={32} />
       </div>
       <h1 className="text-xl font-semibold">{message}</h1>
       <p className="text-sm text-[var(--ink-3)]">
@@ -225,7 +222,7 @@ function AssistantNotFound({ slug }: { slug: string }) {
   return (
     <div className="flex flex-col items-center justify-center h-dvh gap-4 bg-[var(--paper)] text-[var(--ink)] px-6 text-center">
       <div className="w-16 h-16 rounded-2xl bg-[var(--paper-3)] flex items-center justify-center">
-        <Bot className="w-8 h-8 text-[var(--ink-3)]" />
+        <AiCrest mood="idle" size={32} />
       </div>
       <h1 className="text-xl font-semibold">Assistant not found</h1>
       <p className="max-w-md text-sm text-[var(--ink-3)]">

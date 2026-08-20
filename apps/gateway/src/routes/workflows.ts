@@ -1,7 +1,15 @@
 import { Hono } from "hono";
 import { and, desc, eq } from "drizzle-orm";
-import { db, workflowRuns, workflows } from "@opendoor/database";
+import { db, workflowRuns, workflowVersions, workflows } from "@opendoor/database";
 import type { ChatMessage } from "@opendoor/shared";
+import {
+  evaluateCondition,
+  graphForLiveRun,
+  interpolate,
+  nextPublishedVersion,
+  normalizeTrigger,
+  parseVariables,
+} from "@opendoor/shared";
 import { asString, requireTenant, writeAudit } from "../lib/platform.js";
 import { runBilledChat } from "../lib/run-completion.js";
 import { orgHasWebSearchAddon, webSearchAddonRequiredBody } from "../lib/web-search-entitlement.js";
@@ -135,6 +143,8 @@ workflowsRouter.patch("/:id", async (c) => {
       status: asString(body.status) || existing.status,
       graph: body.graph !== undefined ? body.graph : existing.graph,
       tags: Array.isArray(body.tags) ? body.tags : existing.tags,
+      trigger: body.trigger !== undefined ? normalizeTrigger(body.trigger) : existing.trigger,
+      variables: body.variables !== undefined ? parseVariables(body.variables) : existing.variables,
       updatedAt: new Date(),
     })
     .where(eq(workflows.id, existing.id))
@@ -198,8 +208,13 @@ workflowsRouter.post("/:id/run", async (c) => {
   if (!workflow) return c.json({ error: "Workflow not found" }, 404);
   const body = await c.req.json().catch(() => ({}));
   const input = (body.input && typeof body.input === "object" ? body.input : body) as Record<string, unknown>;
-  const graph = (workflow.graph || { nodes: [], edges: [] }) as Graph;
+  const graph = graphForLiveRun({
+    graph: workflow.graph,
+    publishedGraph: workflow.publishedGraph,
+    publishedVersion: workflow.publishedVersion,
+  }) as Graph;
   const query = str(input.query) || str(input.prompt) || str(input.text) || "";
+  const vars = parseVariables(workflow.variables);
 
   const hasSearch = (graph.nodes || []).some((n) => {
     const t = toolType(n);
@@ -262,9 +277,32 @@ workflowsRouter.post("/:id/run", async (c) => {
       continue;
     }
     if (type === "condition") {
-      const needle = str(node.data?.contains) || str(node.data?.equals);
-      const passed = needle ? lastText.toLowerCase().includes(needle.toLowerCase()) : Boolean(lastText);
-      steps.push({ nodeId: node.id, type, status: "ok", text: passed ? "true" : "false" });
+      const expr = interpolate(str(node.data?.condition) || str(node.data?.contains) || str(node.data?.equals), {
+        input: lastText,
+        query: lastText,
+        vars,
+        steps: {},
+      });
+      const result = evaluateCondition(expr, lastText);
+      const passed = result.ok ? result.passed : Boolean(lastText);
+      steps.push({ nodeId: node.id, type, status: result.ok ? "ok" : "error", text: passed ? "true" : "false", error: result.ok ? undefined : result.error });
+      continue;
+    }
+    if (type === "transform" || type === "set_variable") {
+      const template = str(node.data?.template) || str(node.data?.value) || lastText;
+      lastText = interpolate(template, { input: lastText, query: lastText, vars, steps: {} });
+      const name = str(node.data?.name);
+      if (name) vars[name] = lastText;
+      steps.push({ nodeId: node.id, type, status: "ok", text: lastText });
+      continue;
+    }
+    if (type === "assign" || type === "wait" || type === "loop" || type === "http" || type === "subflow" || type === "human_review") {
+      steps.push({
+        nodeId: node.id,
+        type,
+        status: "skipped",
+        text: `Node type "${type}" runs on the dashboard engine (approvals, timers, HTTPS, subflows).`,
+      });
       continue;
     }
     steps.push({
@@ -289,6 +327,82 @@ workflowsRouter.post("/:id/run", async (c) => {
     .returning();
 
   return c.json({ object: "workflow.run", ...run, output: lastText }, failed ? 502 : 200);
+});
+
+workflowsRouter.post("/:id/publish", async (c) => {
+  const tenant = requireTenant(c);
+  if (!tenant) return c.json({ error: "Unauthorized" }, 401);
+  const existing = await ownedWorkflow(c.req.param("id"), tenant.organization.id);
+  if (!existing) return c.json({ error: "Workflow not found" }, 404);
+  const body = await c.req.json().catch(() => ({}));
+  const version = nextPublishedVersion(existing.publishedVersion);
+  const now = new Date();
+  const [updated] = await db
+    .update(workflows)
+    .set({
+      publishedGraph: existing.graph,
+      publishedVersion: version,
+      publishedAt: now,
+      status: existing.status === "archived" ? existing.status : "active",
+      updatedAt: now,
+    })
+    .where(eq(workflows.id, existing.id))
+    .returning();
+  const [snapshot] = await db
+    .insert(workflowVersions)
+    .values({
+      workflowId: existing.id,
+      organizationId: tenant.organization.id,
+      version,
+      graph: existing.graph || { nodes: [], edges: [] },
+      trigger: normalizeTrigger(existing.trigger),
+      variables: parseVariables(existing.variables),
+      note: asString(body.note) || null,
+      publishedAt: now,
+    })
+    .returning();
+  await writeAudit({
+    organizationId: tenant.organization.id,
+    action: "workflow.published",
+    entityType: "workflow",
+    entityId: existing.id,
+    metadata: { version },
+  });
+  return c.json({ object: "workflow", ...updated, version: snapshot });
+});
+
+workflowsRouter.get("/:id/versions", async (c) => {
+  const tenant = requireTenant(c);
+  if (!tenant) return c.json({ error: "Unauthorized" }, 401);
+  const existing = await ownedWorkflow(c.req.param("id"), tenant.organization.id);
+  if (!existing) return c.json({ error: "Workflow not found" }, 404);
+  const rows = await db
+    .select({
+      id: workflowVersions.id,
+      version: workflowVersions.version,
+      note: workflowVersions.note,
+      publishedAt: workflowVersions.publishedAt,
+    })
+    .from(workflowVersions)
+    .where(
+      and(eq(workflowVersions.workflowId, existing.id), eq(workflowVersions.organizationId, tenant.organization.id))
+    )
+    .orderBy(desc(workflowVersions.version))
+    .limit(25);
+  return c.json({ object: "list", data: rows });
+});
+
+workflowsRouter.post("/:id/trigger", async (c) => {
+  const tenant = requireTenant(c);
+  if (!tenant) return c.json({ error: "Unauthorized" }, 401);
+  const existing = await ownedWorkflow(c.req.param("id"), tenant.organization.id);
+  if (!existing) return c.json({ error: "Workflow not found" }, 404);
+  if ((existing.publishedVersion || 0) < 1) return c.json({ error: "Publish this workflow first." }, 409);
+  return workflowsRouter.request(`/${existing.id}/run`, {
+    method: "POST",
+    headers: c.req.raw.headers,
+    body: await c.req.raw.clone().text(),
+  });
 });
 
 export default workflowsRouter;

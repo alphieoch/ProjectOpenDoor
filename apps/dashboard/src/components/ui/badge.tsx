@@ -3,20 +3,20 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const badgeVariants = cva(
-  "inline-flex items-center gap-1 font-medium transition-colors focus:outline-none",
+  "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none",
   {
     variants: {
       variant: {
-        default:    "md-badge md-badge-primary",
-        secondary:  "md-badge md-badge-secondary",
-        tertiary:   "md-badge md-badge-tertiary",
-        destructive:"md-badge md-badge-error",
-        outline:    "md-badge md-badge-surface border border-[var(--md-outline-variant)]",
-        success:    "md-badge md-badge-tertiary",
-        warning:    "md-badge" + " [background:var(--yellow-soft)] [color:var(--yellow)]",
-        error:      "md-badge md-badge-error",
-        neutral:    "md-badge md-badge-surface",
-        info:       "md-badge md-badge-primary",
+        default: "bg-primary text-primary-foreground",
+        secondary: "bg-secondary text-secondary-foreground",
+        destructive: "bg-destructive text-destructive-foreground",
+        outline: "border border-input bg-background text-foreground",
+        success: "bg-success-soft text-success",
+        warning: "bg-warning-soft text-warning",
+        info: "bg-info-soft text-info",
+        tertiary: "bg-success-soft text-success",
+        error: "bg-destructive-soft text-destructive",
+        neutral: "bg-muted text-muted-foreground",
       },
     },
     defaultVariants: { variant: "default" },

@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { AGENT_PUBLIC_ROUTES } from "../lib/agent-public.js";
 import { requireTenant } from "../lib/platform.js";
 
 const catalogRouter = new Hono();
@@ -35,7 +36,9 @@ export const PLATFORM_ENDPOINTS = [
   { method: "POST", path: "/v1/batches", group: "files", summary: "Create a batch" },
   { method: "GET", path: "/v1/batches", group: "files", summary: "List batches" },
   { method: "GET", path: "/v1/batches/:id", group: "files", summary: "Get a batch" },
-  { method: "POST", path: "/v1/plugins/web-search", group: "plugins", summary: "Live web search (add-on)" },
+  { method: "POST", path: "/v1/plugins/web-search", group: "plugins", summary: "OpenDoor Search (Vertex grounding + citations)" },
+  { method: "POST", path: "/v1/plugins/search", group: "plugins", summary: "OpenDoor Search alias (same Vertex RAG engine)" },
+  { method: "GET", path: "/v1/tools", group: "plugins", summary: "First-party tools catalog and org enablement" },
   { method: "GET", path: "/v1/assistants", group: "assistants", summary: "List assistants" },
   { method: "POST", path: "/v1/assistants", group: "assistants", summary: "Create an assistant" },
   { method: "GET", path: "/v1/assistants/:id", group: "assistants", summary: "Get an assistant" },
@@ -49,6 +52,9 @@ export const PLATFORM_ENDPOINTS = [
   { method: "DELETE", path: "/v1/workflows/:id", group: "workflows", summary: "Delete a workflow" },
   { method: "POST", path: "/v1/workflows/:id/run", group: "workflows", summary: "Run a workflow (usage-billed)" },
   { method: "GET", path: "/v1/workflows/:id/runs", group: "workflows", summary: "List workflow runs" },
+  { method: "POST", path: "/v1/workflows/:id/publish", group: "workflows", summary: "Publish a workflow version" },
+  { method: "GET", path: "/v1/workflows/:id/versions", group: "workflows", summary: "List published workflow versions" },
+  { method: "POST", path: "/v1/workflows/:id/trigger", group: "workflows", summary: "Fire a published workflow trigger" },
   { method: "GET", path: "/v1/training/datasets", group: "training", summary: "List datasets" },
   { method: "POST", path: "/v1/training/datasets", group: "training", summary: "Create a dataset" },
   { method: "GET", path: "/v1/training/jobs", group: "training", summary: "List training jobs" },
@@ -60,10 +66,7 @@ export const PLATFORM_ENDPOINTS = [
   { method: "DELETE", path: "/v1/deployments/:id", group: "capacity", summary: "Stop a deployment" },
   { method: "GET", path: "/v1/premium/rentals", group: "capacity", summary: "List private GPU rentals" },
   { method: "POST", path: "/v1/premium/rentals", group: "capacity", summary: "Start a rental" },
-  { method: "GET", path: "/v1/agents", group: "agents", summary: "List workspace agents" },
-  { method: "POST", path: "/v1/agents", group: "agents", summary: "Create a workspace agent" },
-  { method: "GET", path: "/v1/agents/:id", group: "agents", summary: "Get an agent" },
-  { method: "DELETE", path: "/v1/agents/:id", group: "agents", summary: "Delete an agent" },
+  ...AGENT_PUBLIC_ROUTES,
   { method: "GET", path: "/v1/byok", group: "byok", summary: "List org provider keys" },
   { method: "POST", path: "/v1/byok", group: "byok", summary: "Add a provider key" },
   { method: "DELETE", path: "/v1/byok/:id", group: "byok", summary: "Revoke a provider key" },

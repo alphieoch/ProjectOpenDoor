@@ -20,7 +20,13 @@ export class DeepSeekProvider implements ProviderAdapter {
 
   /** DeepSeek retired `deepseek-coder`; the chat model covers code + general. */
   private upstreamModel(modelId: string): string {
-    if (modelId === "deepseek-coder") return "deepseek-chat";
+    if (
+      modelId === "deepseek-coder" ||
+      modelId === "deepseek-v3" ||
+      modelId === "deepseek-v3.2"
+    ) {
+      return "deepseek-chat";
+    }
     return modelId;
   }
 

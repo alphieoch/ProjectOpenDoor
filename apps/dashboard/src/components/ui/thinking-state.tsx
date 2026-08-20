@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { ThinkingOrb } from "thinking-orbs";
+import { AiCrest } from "@/components/ui/ai-crest";
 
 /* ─────────────────────────────────────────────────────────
  * THINKING — expandable agent trace, four variants
@@ -150,15 +150,14 @@ export default function ThinkingState({
       >
         {working ? (
           <span className="flex size-5 shrink-0 items-center justify-center">
-            <ThinkingOrb
-              state={variant === "Search" ? "searching" : variant === "Coding" ? "weaving" : "solving"}
+            <AiCrest
+              mood={variant === "Search" ? "searching" : variant === "Coding" ? "acting" : "thinking"}
+              surface="agent"
               size={20}
             />
           </span>
         ) : (
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="var(--ink-3)">
-            <path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z" />
-          </svg>
+          <AiCrest mood="ready" surface="agent" size={15} />
         )}
         <span role="status" className="contents">
           {working ? (

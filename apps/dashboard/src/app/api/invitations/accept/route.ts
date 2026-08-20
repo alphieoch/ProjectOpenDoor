@@ -3,7 +3,11 @@ import { getDb } from "@/lib/db";
 import { invitations, users } from "@opendoor/database";
 import { eq, and, isNull, gt } from "drizzle-orm";
 import { createToken } from "@/lib/auth";
+import { applySessionCookies, cookieSecureFromRequest } from "@/lib/session-cookie";
+import { publicErrorMessage } from "@/lib/client-error";
 import { logAuditEvent } from "@/lib/audit";
+import { evaluateSeatInvite } from "@opendoor/shared";
+import { loadOrgSeatState } from "@/lib/seat-allocation";
 
 export async function POST(req: NextRequest) {
   try {
@@ -37,6 +41,24 @@ export async function POST(req: NextRequest) {
     const existingUser = await db.query.users.findFirst({
       where: eq(users.email, invite.email),
     });
+
+    const alreadyInOrg = existingUser?.organizationId === invite.organizationId;
+    if (!alreadyInOrg) {
+      const seats = await loadOrgSeatState(invite.organizationId);
+      if (seats) {
+        const decision = evaluateSeatInvite({
+          memberCount: seats.memberCount,
+          pendingInviteCount: Math.max(0, seats.pendingInviteCount - 1),
+          maxSeats: seats.maxSeats,
+        });
+        if (!decision.ok) {
+          return NextResponse.json(
+            { error: decision.error, code: decision.code, useBilling: true },
+            { status: 400 },
+          );
+        }
+      }
+    }
 
     let user = existingUser;
 
@@ -88,19 +110,13 @@ export async function POST(req: NextRequest) {
     });
 
     const response = NextResponse.json({ success: true });
-    response.cookies.set("session", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 60 * 60 * 24 * 7,
-      path: "/",
-    });
+    applySessionCookies(response, token, 60 * 60 * 24 * 7, cookieSecureFromRequest(req));
 
     return response;
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Accept invitation error:", error);
     return NextResponse.json(
-      { error: error.message || "Failed to accept invitation" },
+      { error: publicErrorMessage(error, "Failed to accept invitation") },
       { status: 500 }
     );
   }

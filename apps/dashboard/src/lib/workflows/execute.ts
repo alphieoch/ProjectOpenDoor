@@ -1,4 +1,16 @@
 import {
+  interpolate,
+  MAX_LOOP_ITEMS,
+  MAX_SUBFLOW_DEPTH,
+  parseLoopItems,
+  resolveAssignee,
+  retryPolicy,
+  slaDueAt,
+  SYNC_WAIT_LIMIT_MS,
+  waitDurationMs,
+  type TemplateContext,
+} from "@opendoor/shared";
+import {
   runWebSearch,
   WebSearchNotConfiguredError,
   WebSearchProviderError,
@@ -10,6 +22,8 @@ import {
   gatewayJson,
   type WorkflowGatewayContext,
 } from "@/lib/workflows/gateway";
+import { runWorkflowHttp } from "@/lib/workflows/http";
+import { ragSearch, RagSearchNotConfiguredError } from "@/lib/tools/rag-search";
 
 export type WorkflowGraphNode = {
   id: string;
@@ -33,7 +47,7 @@ export type WorkflowStepResult = {
   nodeId: string;
   type: string;
   toolType?: string;
-  status: "ok" | "error" | "skipped" | "awaiting_review";
+  status: "ok" | "error" | "skipped" | "awaiting_review" | "awaiting_wait";
   code?: "unsupported" | "not_configured";
   query?: string;
   provider?: string;
@@ -45,17 +59,79 @@ export type WorkflowStepResult = {
   exitCode?: number | null;
   passed?: boolean;
   embedding?: { model: string; dimensions: number };
+  assignedTo?: string;
+  dueAt?: string;
+  resumeAt?: string;
+  attempt?: number;
+  variable?: string;
+  httpStatus?: number;
+  items?: number;
   error?: string;
+};
+
+export type WorkflowPause = {
+  nodeId: string;
+  reason: "review" | "wait";
+  resumeAt?: string;
+  dueAt?: string;
+  assignedTo?: string;
 };
 
 export type ExecuteWorkflowOptions = {
   resumeAfterNodeId?: string;
   initialText?: string;
   existingSteps?: WorkflowStepResult[];
+  variables?: Record<string, string>;
+  payload?: Record<string, unknown>;
+  resolveSubflow?: (id: string) => Promise<{ graph: WorkflowGraph; name?: string } | null>;
+  subflowDepth?: number;
+  now?: Date;
+  sleep?: (ms: number) => Promise<void>;
+  fetchHttp?: typeof fetch;
 };
 
 function str(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
+}
+
+function templateCtx(opts: {
+  lastText: string;
+  query: string;
+  vars: Record<string, string>;
+  steps: WorkflowStepResult[];
+  payload?: Record<string, unknown>;
+  item?: string;
+  index?: number;
+}): TemplateContext {
+  const steps: TemplateContext["steps"] = {};
+  for (const step of opts.steps) {
+    steps[step.nodeId] = { text: step.text, status: step.status, passed: step.passed };
+  }
+  return {
+    input: opts.query || opts.lastText,
+    query: opts.query || opts.lastText,
+    vars: opts.vars,
+    steps,
+    payload: opts.payload,
+    item: opts.item,
+    index: opts.index,
+  };
+}
+
+async function withRetry(
+  node: WorkflowGraphNode,
+  run: () => Promise<WorkflowStepResult>,
+  sleep: (ms: number) => Promise<void>
+): Promise<WorkflowStepResult> {
+  const policy = retryPolicy(node.data);
+  let last: WorkflowStepResult | undefined;
+  for (let attempt = 0; attempt <= policy.retries; attempt++) {
+    last = await run();
+    last.attempt = attempt + 1;
+    if (last.status !== "error") return last;
+    if (attempt < policy.retries && policy.delayMs) await sleep(policy.delayMs);
+  }
+  return last!;
 }
 
 function toolTypeOf(node: WorkflowGraphNode): string {
@@ -67,7 +143,7 @@ export function graphHasWebSearch(graph: WorkflowGraph): boolean {
   return (graph.nodes || []).some((node) => {
     if (node.type !== "tool" && node.type !== "web_search") return false;
     const tool = toolTypeOf(node);
-    return tool === "web_search" || node.type === "web_search";
+    return tool === "web_search" || tool === "search" || node.type === "web_search";
   });
 }
 
@@ -83,9 +159,10 @@ function inputQuery(graph: WorkflowGraph): string {
   );
 }
 
-function nodeQuery(node: WorkflowGraphNode, fallback: string): string {
+function nodeQuery(node: WorkflowGraphNode, fallback: string, ctx?: TemplateContext): string {
   const data = node.data || {};
-  return str(data.query) || str(data.searchQuery) || str(data.prompt) || fallback;
+  const raw = str(data.query) || str(data.searchQuery) || str(data.prompt) || fallback;
+  return ctx ? interpolate(raw, ctx) : raw;
 }
 
 function topologicalNodes(graph: WorkflowGraph): WorkflowGraphNode[] {
@@ -511,6 +588,46 @@ async function runTool(
     }
   }
 
+  if (toolType === "search") {
+    const query = nodeQuery(node, fallback) || str(node.data?.description);
+    const limit = typeof node.data?.maxResults === "number" ? node.data.maxResults : maxResults;
+    if (!query) {
+      return {
+        nodeId: node.id,
+        type: "tool",
+        toolType,
+        status: "error",
+        error: "No search query. Set Query on the Search node, or pass { query } when running.",
+      };
+    }
+    try {
+      const result = await ragSearch({
+        query,
+        maxResults: limit,
+      });
+      return {
+        nodeId: node.id,
+        type: "tool",
+        toolType,
+        status: "ok",
+        query,
+        provider: result.provider,
+        results: result.citations,
+        text: result.answer,
+      };
+    } catch (err) {
+      return {
+        nodeId: node.id,
+        type: "tool",
+        toolType,
+        status: "error",
+        code: err instanceof RagSearchNotConfiguredError ? "not_configured" : undefined,
+        query,
+        error: err instanceof Error ? err.message : "Search failed",
+      };
+    }
+  }
+
   if (toolType === "code_execution") {
     return runCodeExecution(node, fallback);
   }
@@ -567,16 +684,23 @@ async function runTool(
   };
 }
 
-export async function executeWorkflowGraph(
-  graph: WorkflowGraph,
-  input?: { query?: string; maxResults?: number },
-  ctx?: WorkflowGatewayContext,
-  opts?: ExecuteWorkflowOptions
-): Promise<{
+export type ExecuteWorkflowResult = {
   steps: WorkflowStepResult[];
   search: WebSearchResult | null;
-  paused?: { nodeId: string };
-}> {
+  paused?: WorkflowPause;
+  halted?: boolean;
+  vars: Record<string, string>;
+  assignedTo?: string;
+  dueAt?: string;
+  resumeAt?: string;
+};
+
+export async function executeWorkflowGraph(
+  graph: WorkflowGraph,
+  input?: { query?: string; maxResults?: number; payload?: Record<string, unknown> },
+  ctx?: WorkflowGatewayContext,
+  opts?: ExecuteWorkflowOptions
+): Promise<ExecuteWorkflowResult> {
   const nodes = topologicalNodes(graph);
   if (!nodes.length) {
     throw new Error("This workflow has no nodes.");
@@ -584,10 +708,32 @@ export async function executeWorkflowGraph(
 
   const fallback = str(input?.query) || inputQuery(graph);
   const steps: WorkflowStepResult[] = [...(opts?.existingSteps || [])];
+  const vars: Record<string, string> = { ...(opts?.variables || {}) };
+  const payload = opts?.payload || input?.payload;
+  const now = opts?.now || new Date();
+  const sleep = opts?.sleep || ((ms: number) => new Promise((resolve) => setTimeout(resolve, ms)));
   let lastSearch: WebSearchResult | null = null;
   let lastText = opts?.initialText || fallback;
   let skippingResume = Boolean(opts?.resumeAfterNodeId);
+  let assignedTo: string | undefined;
+  let dueAt: string | undefined;
+  let resumeAt: string | undefined;
   const skipBranch = new Set<string>();
+  const gateway = ctx || {
+    organizationId: "",
+    url: "",
+    headers: {},
+    configured: false,
+  };
+
+  const ctxNow = () =>
+    templateCtx({ lastText, query: fallback, vars, steps, payload });
+
+  const finishError = (step: WorkflowStepResult): ExecuteWorkflowResult | null => {
+    if (step.status !== "error") return null;
+    if (retryPolicy(nodes.find((n) => n.id === step.nodeId)?.data).onError !== "fail") return null;
+    return { steps, search: lastSearch, halted: true, vars, assignedTo, dueAt, resumeAt };
+  };
 
   for (const node of nodes) {
     if (skippingResume) {
@@ -608,40 +754,281 @@ export async function executeWorkflowGraph(
     }
 
     if (type === "input") {
-      const text = fallback || str(node.data?.label);
+      const text = interpolate(fallback || str(node.data?.label) || lastText, ctxNow());
       lastText = text || lastText;
       steps.push({ nodeId: node.id, type, status: "ok", text: lastText });
       continue;
     }
 
     if (type === "output") {
-      steps.push({ nodeId: node.id, type, status: "ok", text: lastText });
+      const template = str(node.data?.template);
+      const text = template ? interpolate(template, ctxNow()) : lastText;
+      lastText = text;
+      steps.push({ nodeId: node.id, type, status: "ok", text });
       continue;
     }
 
     if (type === "human_review") {
-      const note = str(node.data?.reviewNote);
+      const note = interpolate(str(node.data?.reviewNote), ctxNow());
+      const due = slaDueAt(node.data?.dueMinutes, now);
+      const assignee = resolveAssignee(node.data, ctxNow());
+      assignedTo = assignee || assignedTo;
+      dueAt = due?.toISOString() || dueAt;
       steps.push({
         nodeId: node.id,
         type,
         status: "awaiting_review",
         text: lastText,
+        assignedTo: assignee || undefined,
+        dueAt: due?.toISOString(),
         error: note || "Paused for human review. Approve or reject this run.",
       });
-      return { steps, search: lastSearch, paused: { nodeId: node.id } };
+      return {
+        steps,
+        search: lastSearch,
+        paused: {
+          nodeId: node.id,
+          reason: "review",
+          dueAt: due?.toISOString(),
+          assignedTo: assignee || undefined,
+        },
+        vars,
+        assignedTo,
+        dueAt,
+      };
+    }
+
+    if (type === "wait") {
+      const ms = waitDurationMs(node.data);
+      if (ms <= SYNC_WAIT_LIMIT_MS) {
+        if (ms > 0) await sleep(ms);
+        steps.push({
+          nodeId: node.id,
+          type,
+          status: "ok",
+          text: lastText,
+          query: `${ms}ms`,
+        });
+        continue;
+      }
+      resumeAt = new Date(now.getTime() + ms).toISOString();
+      steps.push({
+        nodeId: node.id,
+        type,
+        status: "awaiting_wait",
+        text: lastText,
+        resumeAt,
+        error: `Waiting until ${resumeAt}`,
+      });
+      return {
+        steps,
+        search: lastSearch,
+        paused: { nodeId: node.id, reason: "wait", resumeAt },
+        vars,
+        assignedTo,
+        dueAt,
+        resumeAt,
+      };
+    }
+
+    if (type === "loop") {
+      const src = interpolate(str(node.data?.items) || lastText, ctxNow());
+      const max = Number(node.data?.maxIterations ?? MAX_LOOP_ITEMS);
+      const items = parseLoopItems(src, Number.isFinite(max) ? max : MAX_LOOP_ITEMS);
+      const template = str(node.data?.template) || "{{item}}";
+      const mapped = items.map((item, index) =>
+        interpolate(template, templateCtx({ lastText, query: fallback, vars, steps, payload, item, index }))
+      );
+      const text = mapped.join(str(node.data?.join) || "\n");
+      lastText = text || lastText;
+      steps.push({
+        nodeId: node.id,
+        type,
+        status: "ok",
+        text: lastText,
+        items: items.length,
+        query: `${items.length} items`,
+      });
+      continue;
+    }
+
+    if (type === "assign") {
+      const assignee = resolveAssignee(node.data, ctxNow());
+      assignedTo = assignee || assignedTo;
+      steps.push({
+        nodeId: node.id,
+        type,
+        status: assignee ? "ok" : "error",
+        assignedTo: assignee || undefined,
+        text: assignee,
+        error: assignee ? undefined : "Set assignee or queue on the assign node.",
+      });
+      const halted = finishError(steps[steps.length - 1]);
+      if (halted) return halted;
+      continue;
+    }
+
+    if (type === "set_variable") {
+      const name = str(node.data?.name);
+      const value = interpolate(str(node.data?.value) || lastText, ctxNow());
+      if (!name) {
+        const step: WorkflowStepResult = {
+          nodeId: node.id,
+          type,
+          status: "error",
+          error: "Set a variable name.",
+        };
+        steps.push(step);
+        const halted = finishError(step);
+        if (halted) return halted;
+        continue;
+      }
+      vars[name] = value;
+      lastText = value || lastText;
+      steps.push({
+        nodeId: node.id,
+        type,
+        status: "ok",
+        variable: name,
+        text: value,
+      });
+      continue;
+    }
+
+    if (type === "transform") {
+      const template = str(node.data?.template) || str(node.data?.expression) || "{{input}}";
+      const text = interpolate(template, ctxNow());
+      lastText = text;
+      steps.push({ nodeId: node.id, type, status: "ok", text });
+      continue;
+    }
+
+    if (type === "http") {
+      const step = await withRetry(node, async () => {
+        const url = interpolate(str(node.data?.url), ctxNow());
+        const body = interpolate(str(node.data?.body) || lastText, ctxNow());
+        const result = await runWorkflowHttp({
+          method: str(node.data?.method) || "POST",
+          url,
+          headers: node.data?.headers,
+          body,
+          fetchImpl: opts?.fetchHttp,
+        });
+        return {
+          nodeId: node.id,
+          type,
+          status: result.ok ? "ok" : "error",
+          query: url,
+          httpStatus: result.status,
+          text: result.text,
+          error: result.ok ? undefined : result.error || `HTTP ${result.status}`,
+        } satisfies WorkflowStepResult;
+      }, sleep);
+      steps.push(step);
+      if (step.text) lastText = step.text;
+      const halted = finishError(step);
+      if (halted) return halted;
+      continue;
+    }
+
+    if (type === "subflow") {
+      const id = interpolate(str(node.data?.workflowId), ctxNow());
+      if ((opts?.subflowDepth || 0) >= MAX_SUBFLOW_DEPTH) {
+        const step: WorkflowStepResult = {
+          nodeId: node.id,
+          type,
+          status: "error",
+          error: "Subflow depth limit reached.",
+        };
+        steps.push(step);
+        const halted = finishError(step);
+        if (halted) return halted;
+        continue;
+      }
+      if (!id || !opts?.resolveSubflow) {
+        const step: WorkflowStepResult = {
+          nodeId: node.id,
+          type,
+          status: "error",
+          error: id ? "Subflow resolver is not configured." : "Set Workflow ID on the subflow node.",
+        };
+        steps.push(step);
+        const halted = finishError(step);
+        if (halted) return halted;
+        continue;
+      }
+      const child = await opts.resolveSubflow(id);
+      if (!child) {
+        const step: WorkflowStepResult = {
+          nodeId: node.id,
+          type,
+          status: "error",
+          query: id,
+          error: "Subflow was not found or is not published.",
+        };
+        steps.push(step);
+        const halted = finishError(step);
+        if (halted) return halted;
+        continue;
+      }
+      const nested = await executeWorkflowGraph(child.graph, input, gateway, {
+        ...opts,
+        existingSteps: [],
+        resumeAfterNodeId: undefined,
+        initialText: lastText,
+        variables: vars,
+        subflowDepth: (opts.subflowDepth || 0) + 1,
+      });
+      const prefixed = nested.steps.map((s) => ({ ...s, nodeId: `${node.id}/${s.nodeId}` }));
+      steps.push({
+        nodeId: node.id,
+        type,
+        status: nested.halted ? "error" : nested.paused ? nested.paused.reason === "wait" ? "awaiting_wait" : "awaiting_review" : "ok",
+        text: prefixed.filter((s) => s.text).at(-1)?.text || lastText,
+        query: child.name || id,
+        error: nested.halted ? "Subflow halted on error." : undefined,
+      });
+      steps.push(...prefixed);
+      Object.assign(vars, nested.vars);
+      assignedTo = nested.assignedTo || assignedTo;
+      dueAt = nested.dueAt || dueAt;
+      resumeAt = nested.resumeAt || resumeAt;
+      if (nested.paused) {
+        return {
+          steps,
+          search: nested.search || lastSearch,
+          paused: {
+            ...nested.paused,
+            nodeId: `${node.id}/${nested.paused.nodeId}`,
+          },
+          vars,
+          assignedTo,
+          dueAt,
+          resumeAt,
+        };
+      }
+      if (nested.halted) {
+        return { steps, search: lastSearch, halted: true, vars, assignedTo, dueAt, resumeAt };
+      }
+      const nestedText = prefixed.filter((s) => s.text).at(-1)?.text;
+      if (nestedText) lastText = nestedText;
+      continue;
     }
 
     if (type === "condition") {
-      const expr = str(node.data?.condition);
+      const expr = interpolate(str(node.data?.condition), ctxNow());
       const result = evaluateCondition(expr, lastText);
       if (!result.ok) {
-        steps.push({
+        const step: WorkflowStepResult = {
           nodeId: node.id,
           type,
           status: "error",
           text: lastText,
           error: result.error,
-        });
+        };
+        steps.push(step);
+        const halted = finishError(step);
+        if (halted) return halted;
         continue;
       }
       for (const id of branchSkipSet(graph, node.id, result.passed)) skipBranch.add(id);
@@ -656,25 +1043,30 @@ export async function executeWorkflowGraph(
       continue;
     }
 
-    if (type === "transform") {
-      steps.push({ nodeId: node.id, type, status: "ok", text: lastText });
-      continue;
-    }
-
     if (type === "llm") {
-      const step = await runLlm(node, lastText, ctx || {
-        organizationId: "",
-        url: "",
-        headers: {},
-        configured: false,
-      });
+      const step = await withRetry(
+        node,
+        () => runLlm({ ...node, data: { ...node.data, prompt: nodeQuery(node, lastText, ctxNow()) } }, lastText, gateway),
+        sleep
+      );
       steps.push(step);
       if (step.text) lastText = step.text;
+      const halted = finishError(step);
+      if (halted) return halted;
       continue;
     }
 
     if (type === "tool" || type === "web_search") {
-      const step = await runTool(node, lastText, input?.maxResults, ctx);
+      const step = await withRetry(
+        node,
+        () => runTool(
+          { ...node, data: { ...node.data, query: nodeQuery(node, lastText, ctxNow()), prompt: nodeQuery(node, lastText, ctxNow()) } },
+          lastText,
+          input?.maxResults,
+          gateway
+        ),
+        sleep
+      );
       steps.push(step);
       if (step.toolType === "web_search" && step.status === "ok" && step.results) {
         lastSearch = {
@@ -685,6 +1077,8 @@ export async function executeWorkflowGraph(
         };
       }
       if (step.text) lastText = step.text;
+      const halted = finishError(step);
+      if (halted) return halted;
       continue;
     }
 
@@ -697,5 +1091,5 @@ export async function executeWorkflowGraph(
     });
   }
 
-  return { steps, search: lastSearch };
+  return { steps, search: lastSearch, vars, assignedTo, dueAt, resumeAt };
 }

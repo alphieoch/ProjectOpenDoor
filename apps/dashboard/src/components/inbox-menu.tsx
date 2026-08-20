@@ -3,10 +3,16 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Bell } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 type Item = { id: string; kind: string; title: string; href: string; at: string };
 
-export function InboxMenu() {
+export function InboxMenu({
+  placement = "right-end",
+}: {
+  placement?: "bottom-end" | "right-end" | "top-end";
+}) {
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<Item[]>([]);
   const [unread, setUnread] = useState(0);
@@ -27,66 +33,36 @@ export function InboxMenu() {
   }, []);
 
   return (
-    <div style={{ position: "relative" }}>
-      <button
+    <div className="relative">
+      <Button
         type="button"
+        variant="ghost"
+        size="icon"
         aria-label="Notifications"
         title="Notifications"
         onClick={() => setOpen((v) => !v)}
-        style={{
-          width: 34,
-          height: 34,
-          display: "grid",
-          placeItems: "center",
-          borderRadius: 999,
-          border: "1px solid transparent",
-          background: open ? "var(--paper-3)" : "transparent",
-          color: "var(--ink-3)",
-          cursor: "pointer",
-          position: "relative",
-        }}
+        className="relative h-8 w-8"
       >
-        <Bell style={{ width: 16, height: 16 }} />
+        <Bell className="h-4 w-4" />
         {unread > 0 && (
-          <span
-            style={{
-              position: "absolute",
-              top: 4,
-              right: 4,
-              minWidth: 14,
-              height: 14,
-              padding: "0 3px",
-              borderRadius: 999,
-              background: "var(--md-error)",
-              color: "white",
-              fontSize: 9,
-              fontWeight: 700,
-              display: "grid",
-              placeItems: "center",
-            }}
-          >
+          <span className="absolute right-1 top-1 grid min-w-[14px] place-items-center rounded-full bg-destructive px-1 text-[9px] font-bold leading-[14px] text-destructive-foreground">
             {unread > 9 ? "9+" : unread}
           </span>
         )}
-      </button>
+      </Button>
       {open && (
         <div
-          className="od-card"
-          style={{
-            position: "absolute",
-            right: 0,
-            top: "calc(100% + 8px)",
-            width: 320,
-            zIndex: 50,
-            overflow: "hidden",
-          }}
+          className={cn(
+            "z-50 w-80 overflow-hidden rounded-lg border border-border bg-card text-card-foreground shadow-lg",
+            placement === "right-end" && "absolute bottom-0 left-full ml-2",
+            placement === "top-end" && "absolute right-0 bottom-[calc(100%+8px)]",
+            placement === "bottom-end" && "absolute right-0 top-[calc(100%+8px)]",
+          )}
         >
-          <div style={{ padding: "10px 14px", borderBottom: "1px solid var(--line)", fontSize: 12, fontWeight: 600 }}>
-            Inbox
-          </div>
-          <div style={{ maxHeight: 320, overflowY: "auto" }}>
+          <div className="border-b border-border px-3.5 py-2.5 text-xs font-semibold">Inbox</div>
+          <div className="max-h-80 overflow-y-auto">
             {items.length === 0 && (
-              <div style={{ padding: 18, fontSize: 13, color: "var(--ink-4)" }}>
+              <div className="px-4 py-5 text-sm text-muted-foreground">
                 No open violations or pending approvals.
               </div>
             )}
@@ -95,17 +71,12 @@ export function InboxMenu() {
                 key={item.id}
                 href={item.href}
                 onClick={() => setOpen(false)}
-                style={{
-                  display: "block",
-                  padding: "10px 14px",
-                  textDecoration: "none",
-                  borderBottom: "1px solid var(--line-soft)",
-                  color: "var(--ink)",
-                }}
-                className="hover:bg-[var(--paper)]"
+                className={cn(
+                  "block border-b border-border px-3.5 py-2.5 text-foreground last:border-0 hover:bg-accent",
+                )}
               >
-                <div style={{ fontSize: 13, fontWeight: 500 }}>{item.title}</div>
-                <div className="od-mono" style={{ fontSize: 10, color: "var(--ink-4)", marginTop: 3 }}>
+                <div className="text-sm font-medium">{item.title}</div>
+                <div className="mt-0.5 font-mono text-[10px] text-muted-foreground">
                   {new Date(item.at).toLocaleString()}
                 </div>
               </Link>

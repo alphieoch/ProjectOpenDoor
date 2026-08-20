@@ -52,6 +52,9 @@ secret_bindings() {
   if gcloud secrets describe opendoor-qwen-api-key --project="$PROJECT" >/dev/null 2>&1; then
     secrets="${secrets},QWEN_API_KEY=opendoor-qwen-api-key:latest"
   fi
+  if gcloud secrets describe opendoor-openbot-computer-token --project="$PROJECT" >/dev/null 2>&1; then
+    secrets="${secrets},OPENBOT_COMPUTER_TOKEN=opendoor-openbot-computer-token:latest"
+  fi
   secrets="${secrets},INTERNAL_API_KEY=opendoor-internal-api-key:latest,GATEWAY_INTERNAL_KEY=opendoor-internal-api-key:latest"
   printf '%s' "$secrets"
 }
@@ -71,12 +74,14 @@ deploy_run_services() {
     --port=3001 \
     --memory=1Gi \
     --cpu=1 \
-    --min-instances=1 \
+    --min-instances=2 \
     --max-instances=20 \
     --timeout=300 \
     --add-cloudsql-instances="$connection_name" \
-    --vpc-connector="$vpc_path" \
+    --network=default \
+    --subnet=default \
     --vpc-egress=private-ranges-only \
+    --clear-vpc-connector \
     --set-env-vars="$(opendoor_gateway_env "$PROJECT" "$REGION" "$connection_name")" \
     --set-secrets="${secrets}" \
     --project="$PROJECT"
@@ -90,12 +95,14 @@ deploy_run_services() {
     --port=3000 \
     --memory=1Gi \
     --cpu=1 \
-    --min-instances=0 \
+    --min-instances=2 \
     --max-instances=20 \
     --timeout=300 \
     --add-cloudsql-instances="$connection_name" \
-    --vpc-connector="$vpc_path" \
+    --network=default \
+    --subnet=default \
     --vpc-egress=private-ranges-only \
+    --clear-vpc-connector \
     --set-env-vars="$(opendoor_dashboard_env "$PROJECT" "$REGION" "$connection_name" "$PUBLIC_URL")" \
     --set-secrets="${secrets}" \
     --project="$PROJECT"
@@ -180,5 +187,11 @@ if [[ -n "$SANDBOX_URL" ]]; then
 else
   echo "  Sandbox Run:       (not deployed — workflow code_execution uses local subprocess)"
   echo "  Deploy jail:       gcloud builds submit --config=infra/gcp/cloudbuild.sandbox.yaml"
+fi
+COMPUTER_URL=$(gcloud run services describe opendoor-openbot-computer --region="$REGION" --project="$PROJECT" --format='value(status.url)' 2>/dev/null || true)
+if [[ -n "$COMPUTER_URL" ]]; then
+  echo "  OpenBot computer:  ${COMPUTER_URL}"
+else
+  echo "  OpenBot computer:  (not deployed — live click/screenshot stays local)"
 fi
 echo "  Studio images:     OpenDoor /v1/images/generations (Comfy retired; not wired)"

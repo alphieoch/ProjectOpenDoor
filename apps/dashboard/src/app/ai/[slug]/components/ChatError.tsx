@@ -1,6 +1,7 @@
 "use client";
 
-import { AlertCircle, RotateCcw } from "lucide-react";
+import { RotateCcw } from "lucide-react";
+import { AiCrest } from "@/components/ui/ai-crest";
 
 interface ChatErrorProps {
   message: string;
@@ -20,7 +21,7 @@ export function ChatError({ message, href, hrefLabel, onRetry }: ChatErrorProps)
           color: "var(--md-on-error-container)",
         }}
       >
-        <AlertCircle className="w-4 h-4 shrink-0" />
+        <AiCrest mood="error" size={16} />
         <div className="flex-1 min-w-0">
           <p className="text-sm">{message}</p>
           {href && (

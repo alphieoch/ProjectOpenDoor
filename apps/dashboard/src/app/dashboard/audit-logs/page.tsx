@@ -9,7 +9,7 @@ interface AuditLog {
   action: string;
   entityType: string | null;
   entityId: string | null;
-  metadata: any;
+  metadata: unknown;
   ipAddress: string | null;
   createdAt: string;
   userName: string | null;
@@ -47,18 +47,29 @@ function getActionBadgeClass(action: string): string {
 export default function AuditLogsPage() {
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchLogs() {
       setLoading(true);
-      const res = await fetch("/api/audit-logs");
-      if (res.ok) {
-        const data = await res.json();
-        setLogs(data.logs || []);
+      setError(null);
+      try {
+        const res = await fetch("/api/audit-logs", { credentials: "include" });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          setError(data.error || "Failed to load audit logs.");
+          setLogs([]);
+        } else {
+          setLogs(data.logs || []);
+        }
+      } catch {
+        setError("Failed to load audit logs.");
+        setLogs([]);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     }
-    fetchLogs();
+    void fetchLogs();
   }, []);
 
   return (
@@ -69,10 +80,16 @@ export default function AuditLogsPage() {
         description="Track all administrative actions across your organization."
       />
 
+      {error && (
+        <div className="mb-6 alert-error">
+          <p className="font-medium">{error}</p>
+        </div>
+      )}
+
       <div className="card overflow-hidden">
         <table className="min-w-full">
           <thead>
-            <tr className="border-b border-[var(--line)]">
+            <tr className="border-b border-border">
               <th className="table-header-cell">Action</th>
               <th className="table-header-cell">User</th>
               <th className="table-header-cell">Details</th>
@@ -84,15 +101,15 @@ export default function AuditLogsPage() {
             {loading ? (
               <tr>
                 <td colSpan={5} className="px-4 py-10 text-center">
-                  <Loader2 className="mx-auto h-5 w-5 animate-spin" style={{ color: "var(--ink-4)" }} />
+                  <Loader2 className="mx-auto h-5 w-5 animate-spin" style={{ color: "hsl(var(--muted-foreground))" }} />
                 </td>
               </tr>
             ) : logs.length === 0 ? (
               <tr>
                 <td colSpan={5} className="px-4 py-12 text-center">
-                  <ClipboardList className="mx-auto mb-3 h-8 w-8" style={{ color: "var(--ink-4)" }} />
-                  <p className="text-sm" style={{ color: "var(--ink-4)" }}>
-                    No audit logs yet. Actions will appear here as they happen.
+                  <ClipboardList className="mx-auto mb-3 h-8 w-8" style={{ color: "hsl(var(--muted-foreground))" }} />
+                  <p className="text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
+                    No audit events yet. Invites, billing, and settings changes will appear here.
                   </p>
                 </td>
               </tr>
@@ -104,25 +121,25 @@ export default function AuditLogsPage() {
                       {formatAction(log.action)}
                     </span>
                   </td>
-                  <td className="table-cell whitespace-nowrap" style={{ color: "var(--ink-2)" }}>
+                  <td className="table-cell whitespace-nowrap" style={{ color: "hsl(var(--muted-foreground))" }}>
                     {log.userName || log.userEmail || "System"}
                   </td>
-                  <td className="table-cell" style={{ color: "var(--ink-3)" }}>
+                  <td className="table-cell" style={{ color: "hsl(var(--muted-foreground))" }}>
                     {log.entityType && (
-                      <span className="text-xs" style={{ color: "var(--ink-4)" }}>
+                      <span className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
                         {log.entityType}:{log.entityId?.slice(0, 8)}
                       </span>
                     )}
                     {log.metadata && (
-                      <pre className="mt-1 max-w-xs overflow-hidden text-xs" style={{ color: "var(--ink-4)" }}>
+                      <pre className="mt-1 max-w-xs overflow-hidden text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
                         {JSON.stringify(log.metadata, null, 2).slice(0, 100)}
                       </pre>
                     )}
                   </td>
-                  <td className="table-cell text-xs whitespace-nowrap" style={{ color: "var(--ink-4)" }}>
+                  <td className="table-cell text-xs whitespace-nowrap" style={{ color: "hsl(var(--muted-foreground))" }}>
                     {log.ipAddress || "—"}
                   </td>
-                  <td className="table-cell text-xs whitespace-nowrap" style={{ color: "var(--ink-3)" }}>
+                  <td className="table-cell text-xs whitespace-nowrap" style={{ color: "hsl(var(--muted-foreground))" }}>
                     {new Date(log.createdAt).toLocaleString()}
                   </td>
                 </tr>

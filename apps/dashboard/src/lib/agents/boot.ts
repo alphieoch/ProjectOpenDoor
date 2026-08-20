@@ -3,8 +3,9 @@ import { workspaceAgents } from "@opendoor/database";
 import { eq } from "drizzle-orm";
 import { decryptAgentSecret } from "@/lib/agents/crypto";
 import { provisionAgentKey } from "@/lib/agents/provision";
-import { getAgentRuntime } from "@/lib/agents/runtimes";
+import { getAgentRuntime, type AgentRuntimeId } from "@/lib/agents/runtimes";
 import { gatewayBaseUrl } from "@/lib/public-urls";
+import { attachOpenBotComputer, detachOpenBotIsolation, isolationStatusSuffix } from "@opendoor/shared";
 import { readWorkspace, seedSkills, type AgentProbe } from "@/lib/agents/state";
 
 function gatewayUrl() {
@@ -80,7 +81,7 @@ export async function bootAgent(row: typeof workspaceAgents.$inferSelect) {
   const apiKey = await unlockAgentKey(current);
   const probe = await probeGateway(apiKey);
   const ws = readWorkspace(current.config);
-  if (ws.skills.length === 0) ws.skills = seedSkills(current.runtime as "openclaw" | "hermes" | "nemoclaw");
+  if (ws.skills.length === 0) ws.skills = seedSkills(current.runtime as AgentRuntimeId);
   ws.probe = probe;
 
   if (!probe.ok) {
@@ -97,11 +98,15 @@ export async function bootAgent(row: typeof workspaceAgents.$inferSelect) {
     return failed;
   }
 
+  if (current.runtime === "openbot") {
+    Object.assign(ws, await attachOpenBotComputer(ws, current.id));
+  }
+
   const [ready] = await db
     .update(workspaceAgents)
     .set({
       status: "running",
-      statusMessage: `${runtime?.name ?? current.runtime} is live on ${current.modelId} · gateway ${probe.latencyMs}ms · ${probe.modelsSeen ?? 0} models`,
+      statusMessage: `${runtime?.name ?? current.runtime} is live on ${current.modelId} · gateway ${probe.latencyMs}ms · ${probe.modelsSeen ?? 0} models${current.runtime === "openbot" ? isolationStatusSuffix(ws.computer.isolation) : ""}`,
       config: ws,
       startedAt: new Date(),
       stoppedAt: null,
@@ -114,6 +119,9 @@ export async function bootAgent(row: typeof workspaceAgents.$inferSelect) {
 
 export async function stopAgent(row: typeof workspaceAgents.$inferSelect) {
   const db = getDb();
+  if (row.runtime === "openbot") {
+    await detachOpenBotIsolation(row.id);
+  }
   const runtime = getAgentRuntime(row.runtime);
   const [stopped] = await db
     .update(workspaceAgents)

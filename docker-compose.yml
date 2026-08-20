@@ -48,5 +48,80 @@ services:
     # Cachet requires a PostgreSQL database. Ensure your local Postgres has a
     # 'cachet' database created, or run: CREATE DATABASE cachet;
 
+  # Image the supervisor launches once per OpenBot. A shared instance is optional
+  # (`--profile shared-computer`) when you want one browser for every agent.
+  openbot-computer:
+    build:
+      context: ./apps/openbot-computer
+      dockerfile: Dockerfile
+    image: opendoor-openbot-computer:latest
+    profiles: ["shared-computer"]
+    ports:
+      - "127.0.0.1:4100:4100"
+    environment:
+      COMPUTER_TOKEN: ${OPENBOT_COMPUTER_TOKEN:-opendoor-openbot-dev}
+    volumes:
+      - openbot_workspace:/workspace
+      - openbot_profiles:/profiles
+    stop_grace_period: 30s
+    healthcheck:
+      test: ["CMD-SHELL", "bun -e \"await fetch('http://localhost:4100/health')\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Builds the computer image so the supervisor can create one container per Bot.
+  openbot-computer-image:
+    build:
+      context: ./apps/openbot-computer
+      dockerfile: Dockerfile
+    image: opendoor-openbot-computer:latest
+    command: ["bun", "-e", "console.log('openbot-computer image ready')"]
+    restart: "no"
+
+  # One Chromium + /workspace per OpenBot. This is the only process with the Docker socket.
+  openbot-supervisor:
+    build:
+      context: ./apps/openbot-supervisor
+      dockerfile: Dockerfile
+    image: opendoor-openbot-supervisor:latest
+    depends_on:
+      openbot-computer-image:
+        condition: service_completed_successfully
+    ports:
+      - "127.0.0.1:4300:4300"
+    environment:
+      PORT: "4300"
+      SUPERVISOR_TOKEN: ${OPENBOT_SUPERVISOR_TOKEN:-opendoor-openbot-supervisor-dev}
+      COMPUTER_TOKEN: ${OPENBOT_COMPUTER_TOKEN:-opendoor-openbot-dev}
+      COMPUTER_IMAGE: ${OPENBOT_COMPUTER_IMAGE:-opendoor-openbot-computer:latest}
+      COMPUTER_NAMESPACE: ${OPENBOT_COMPUTER_NAMESPACE:-opendoor}
+      COMPUTER_RUNTIME: ${OPENBOT_COMPUTER_RUNTIME:-}
+      COMPUTER_MEMORY_BYTES: ${OPENBOT_COMPUTER_MEMORY_BYTES:-1073741824}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    healthcheck:
+      test: ["CMD-SHELL", "bun -e \"await fetch('http://localhost:4300/health')\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Optional AG-UI Bot. Models are answered by the OpenDoor gateway, not CopilotKit Intelligence.
+  openbot-bot:
+    build:
+      context: ./apps/openbot-bot
+      dockerfile: Dockerfile
+    image: opendoor-openbot-bot:latest
+    ports:
+      - "127.0.0.1:4200:4200"
+    environment:
+      OPENAI_API_KEY: ${OPENDOOR_API_KEY:-}
+      OPENAI_BASE_URL: ${OPENDOOR_BASE_URL:-http://host.docker.internal:3001/v1}
+      BOT_MODEL: ${OPENBOT_MODEL:-llama-3.1-8b-instruct}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
 volumes:
   postgres_data:
+  openbot_workspace:
+  openbot_profiles:

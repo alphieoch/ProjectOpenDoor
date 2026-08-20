@@ -1,0 +1,138 @@
+{
+  "common": {
+    "language": "语言",
+    "region": "地区",
+    "country": "国家/地区",
+    "countryOptional": "国家/地区（可选）",
+    "countryNone": "暂时跳过",
+    "save": "保存",
+    "continue": "继续",
+    "skip": "跳过",
+    "home": "首页",
+    "signIn": "登录",
+    "getStarted": "开始使用",
+    "openDashboard": "打开控制台"
+  },
+  "auth": {
+    "welcomeBack": "欢迎回来",
+    "createAccount": "创建账户",
+    "signInSubtitle": "登录你的 LLM 网关",
+    "signupSubtitle": "开始使用 LLM 网关",
+    "educationSubtitle": "以学校路径开始",
+    "email": "邮箱",
+    "password": "密码",
+    "fullName": "姓名",
+    "organization": "组织",
+    "organizationOptional": "可选",
+    "signIn": "登录",
+    "signingIn": "正在登录…",
+    "createAccountCta": "创建账户",
+    "creatingAccount": "正在创建账户…",
+    "noAccount": "没有账户？",
+    "signUpFree": "免费注册",
+    "haveAccount": "已有账户？",
+    "enterpriseSso": "企业 SSO",
+    "orgSlug": "组织标识",
+    "continueSso": "使用 SSO 继续",
+    "choosePlan": "选择方案",
+    "enterpriseSales": "企业销售",
+    "loginFailed": "登录失败",
+    "signupFailed": "注册失败",
+    "passwordHint": "至少 10 个字符"
+  },
+  "onboarding": {
+    "eyebrow": "你的工作区",
+    "title": "OpenDoor 如何工作",
+    "body": "一次登录。浏览器里聊天、一栋 OpenBot 同事之家、共享额度池。选择地区——我们不封锁任何国家。",
+    "pickRegion": "你在哪里？",
+    "pickRegionHint": "这只改变文案和默认项。所有地区都可以注册。",
+    "productChatTitle": "聊天",
+    "productChatBody": "打开聊天，用手机或电脑与模型对话。开始时不需要 API 密钥。",
+    "productHouseTitle": "这栋房子",
+    "productHouseBody": "OpenBot 是一栋同事之家——一位主管加上你添加的专家。他们共享同一工作区。",
+    "productPoolTitle": "共享额度",
+    "productPoolBody": "家庭与团队共享一个额度池。一张账单，而不是每人一把封闭 API 密钥。",
+    "saveWorld": "保存语言和地区",
+    "saved": "已保存",
+    "africa": {
+      "school": "学校：手机上的轻量页面、课堂或作业的学生席位，不必为访问模型多耗流量。",
+      "family": "家庭：全家一个额度池。父母和孩子共用积分——比四张账单更省，并考虑移动流量成本。",
+      "team": "团队：实验室、NGO 或店铺一个工作区。用邮箱邀请。所有人共享额度池。"
+    },
+    "europe": {
+      "school": "学校：班级或实验室的学生引导，路径与 Pro 相同。",
+      "family": "家庭：带结转的家庭额度——一个会员覆盖全家。",
+      "team": "团队：SSO 与共享管控。企业版走销售。"
+    },
+    "americas": {
+      "school": "学校：学生方案面向作业和实验室。模型与 Pro 相同。",
+      "family": "家庭：家庭额度池，比四个 Pro 席位更便宜。",
+      "team": "团队：自助席位。企业版：数据驻留、SCIM 与销售。"
+    },
+    "asia_pacific": {
+      "school": "学校：从手机开始。学生方案覆盖席位；token 仍是仓库价。",
+      "family": "家庭：全家一个额度池，不必把流量和席位买四遍。",
+      "team": "团队：一个工作区，邀请同事，共享额度。"
+    },
+    "middle_east": {
+      "school": "学校：面向课堂与研究的学生路径。阿拉伯语是一等公民语言。",
+      "family": "家庭：家庭额度——全家一张账单。",
+      "team": "团队：共享工作区，需要时用 SSO。企业版走销售。"
+    }
+  },
+  "getStarted": {
+    "eyebrow": "开始使用",
+    "title": "选择你的路径。",
+    "body": "OpenDoor 适配学校、家庭和团队。先选地区也可以——没有人会被地理封锁。",
+    "startFree": "免费开始",
+    "startFreeBody": "个人或小团队自助开通。用邮箱继续。",
+    "education": "教育",
+    "educationBody": "面向学校、实验室和学生。引导保持学校形态。",
+    "enterprise": "企业",
+    "enterpriseBody": "已有组织用 SSO 登录。新部署从销售开始。",
+    "continueEmail": "用邮箱继续",
+    "continueEducation": "继续教育注册",
+    "joinSso": "通过 SSO 加入",
+    "talkSales": "联系销售"
+  },
+  "gettingStarted": {
+    "eyebrow": "入门",
+    "title": "欢迎来到 OpenDoor",
+    "coreDone": "核心设置已完成。可选步骤在你需要时仍在。",
+    "coreTodo": "聊天和一位同事就能进入产品。其余都是可选。",
+    "hide": "隐藏设置"
+  },
+  "pricing": {
+    "audienceStudent": "学生",
+    "audienceFamily": "家庭",
+    "audienceTeam": "团队",
+    "audienceEnterprise": "企业",
+    "singleLabel": "学生",
+    "familyLabel": "家庭",
+    "enterpriseLabel": "团队 / 企业",
+    "singleHeadline": "个人方案",
+    "familyHeadline": "全家共享额度",
+    "enterpriseHeadline": "团队与组织方案",
+    "compare": "比较方案"
+  },
+  "tools": {
+    "searchOneLiner": "提出问题。OpenDoor Search 在我们的栈上带着引用来回答——从你的额度扣费，无需第三方搜索密钥。"
+  },
+  "openbot": {
+    "houseTitle": "这栋房子是什么？",
+    "houseBody": "房子是你的 OpenBot 工作区：一位主管同事加上你添加的专家。他们共享频道、技能和组织额度池。开一个频道即可对话；需要具名角色时再加同事。",
+    "houseGotIt": "知道了",
+    "startChannel": "开始新频道"
+  },
+  "settings": {
+    "languageRegion": "语言和地区",
+    "languageRegionHint": "用于登录、引导和首次界面。控制台其余部分暂时仍为英文。"
+  },
+  "regions": {
+    "africa": "非洲",
+    "europe": "欧洲",
+    "americas": "美洲",
+    "asia_pacific": "亚太",
+    "middle_east": "中东"
+  }
+}

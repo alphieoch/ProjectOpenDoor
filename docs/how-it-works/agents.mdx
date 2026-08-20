@@ -1,10 +1,10 @@
 ---
 title: "Agents"
-description: "Create OpenClaw, Hermes, or NemoClaw agents that call the live gateway and spend this workspace's quota."
+description: "Create OpenClaw, Hermes, NemoClaw, or OpenBot agents that call the live gateway and spend this workspace's quota."
 showPageTitle: true
 ---
 
-**Dashboard → Agents** lets a workspace stand up its own agent runtime. Agents is a **$20/month add-on** (included on Enterprise). Pick **OpenClaw**, **Hermes**, or **NemoClaw**, choose a catalog model, and spin it up. Completions use a dedicated API key, so spend hits the same prepaid quota as Playground and `/v1/chat/completions`.
+**Dashboard → Agents** or the [gateway Agents API](/api-reference/agents) lets a workspace stand up its own agent runtime. Agents is a **$20/month add-on** (included on Enterprise and Family Max). Pick **OpenClaw**, **Hermes**, **NemoClaw**, or **OpenBot**, choose a catalog model, and spin it up. Completions use a dedicated API key, so spend hits the same prepaid quota as Playground and `/v1/chat/completions`.
 
 ## Pricing
 
@@ -17,6 +17,7 @@ The add-on unlocks the hosted runtimes. It is a separate Stripe subscription fro
 | **OpenClaw** | Multi-channel gateway agent (Slack, Discord, Telegram) |
 | **Hermes** | One self-improving agent with durable memory |
 | **NemoClaw** | NVIDIA's sandboxed OpenClaw for a tighter production runtime |
+| **OpenBot** | CopilotKit coworker with a browser, `/workspace` files, and take-the-wheel |
 
 ## What create / start does
 
@@ -28,10 +29,28 @@ The add-on unlocks the hosted runtimes. It is a separate Stripe subscription fro
 
 ## Hosted runtime
 
-`POST /api/agents/:id/chat` runs the agent loop (tools + memory + outbox), persists the thread, then streams tool events and the reply. Stop pauses spend. Delete revokes the key.
+Dashboard `POST /api/agents/:id/chat` and gateway `POST /v1/agents/:id/chat` run the same loop (tools + memory + outbox + OpenBot computer). The dashboard streams events; the API returns JSON `{ reply, events, workspace, agent }`. Stop pauses spend. Delete removes the agent.
+
+OpenBot opens from **Dashboard → Agents → OpenBot** inside the usual dashboard chrome (sidebar, search, mobile nav). The coworker shell adds a retractable channel rail, “Start a new channel”, Ask anything, and explore cards. A channel is chat plus the live screen. You can take the wheel, type a secret that never enters the transcript, and hand the browser back. Screenshots and control go through `/api/agents/:id/computer`.
+
+OpenBot is the MIT coworker stack from [CopilotKit/openbot](https://github.com/CopilotKit/openbot), not CopilotKit Intelligence. The computer is `apps/openbot-computer` (Playwright Chromium, `/workspace`, take-the-wheel). The supervisor (`apps/openbot-supervisor`) starts **one container per agent** so two OpenBots never share a browser or `/workspace`. Point the gateway at it with `OPENBOT_SUPERVISOR_URL` and `OPENBOT_SUPERVISOR_TOKEN`. `docker compose up -d openbot-supervisor` builds the image and starts the supervisor.
+
+A shared single computer (`OPENBOT_COMPUTER_URL`) is the laptop fallback. Without either, navigate/read/files still run in-process so CLI and SDK keep working. Set `OPENBOT_COMPUTER_RUNTIME=runsc` when the host has gVisor.
+
+Computer actions are fail-closed: public `http(s)` only, `/workspace` paths only, snapshot-then-click, and `computer_request_help` on a login wall. `PATCH /v1/agents/:id` with `{ "computerControl": "take" }` lets a person take the wheel. `POST /v1/agents/:id/ag-ui` speaks AG-UI.
+
+## CLI and SDK
+
+Same objects from a workspace API key — see [SDK & CLI](/sdk), [CLI](/getting-started/cli), and [TypeScript SDK](/getting-started/sdk).
+
+```bash
+bun run od -- agents create --name Desk --runtime openbot --model llama-3.1-8b-instruct
+bun run od -- agents chat --id "$AGENT_ID" --message "Open https://example.com and summarize the page."
+```
 
 ## Related
 
+- [Agents API](/api-reference/agents)
 - [Playground](/how-it-works/playground)
 - [API keys](/how-it-works/api-keys)
 - [Chat completions](/api-reference/chat-completions)

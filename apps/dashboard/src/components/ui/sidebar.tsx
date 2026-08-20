@@ -2,23 +2,14 @@
 
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
-  LayoutDashboard, Key, BarChart3, Calculator, Server, CreditCard,
-  Play, Users, Settings, ClipboardList, LogOut, ShieldCheck, Gavel, LifeBuoy,
-  Gem,
-  Aperture,
-  Image as ImageIcon,
-  AlertTriangle, FileCheck, BookOpen, Building2, Bot,
-  ChevronsUpDown, ChevronDown, UserPlus, UserCog, Blocks, Plus, UserCircle,
-  Lock,
-  GitBranch, List, FlaskConical, ScrollText, Sparkles, MessageSquare,
+  LogOut, ChevronsUpDown, ChevronDown, UserPlus, UserCog, Blocks, Plus, UserCircle, Lock,
 } from "lucide-react";
-import { Avatar, Badge } from "@heroui/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
+import { useEffect, useMemo, useState } from "react";
+import { buttonVariants } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,27 +17,33 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Separator } from "@/components/ui/separator";
 import posthog from "posthog-js";
+import {
+  isNavActive,
+  navGroupsForViewer,
+  type DashboardNavItem,
+} from "@/lib/dashboard-nav";
+import { OchiengLogoSimple } from "@/components/logos/OchiengLogoSimple";
 
-/* ── Motion config (from template) ── */
 const sidebarVariants = {
-  open:   { width: "15rem" },
-  closed: { width: "3.05rem" },
+  open: { width: "15rem" },
+  closed: { width: "4rem" },
 };
 
 const contentVariants = {
-  open:   { display: "block", opacity: 1 },
+  open: { display: "block", opacity: 1 },
   closed: { display: "block", opacity: 1 },
 };
 
 const variants = {
   open: {
-    x: 0, opacity: 1,
+    x: 0,
+    opacity: 1,
     transition: { x: { stiffness: 1000, velocity: -100 } },
   },
   closed: {
-    x: -20, opacity: 0,
+    x: -20,
+    opacity: 0,
     transition: { x: { stiffness: 100 } },
   },
 };
@@ -62,54 +59,6 @@ const staggerVariants = {
   open: { transition: { staggerChildren: 0.03, delayChildren: 0.02 } },
 };
 
-/* ── Nav data ── */
-const navItems = [
-  { href: "/dashboard", label: "Overview",   icon: LayoutDashboard },
-  { href: "/dashboard/api-keys",   label: "API Keys",    icon: Key },
-  { href: "/dashboard/usage",      label: "Usage",       icon: BarChart3 },
-  { href: "/dashboard/logs",       label: "Logs",        icon: ScrollText },
-  { href: "/dashboard/pricing",    label: "Pricing",     icon: Calculator },
-  { href: "/dashboard/deployments",label: "Deployments", icon: Server, badgeKey: "deployments" as const },
-  { href: "/dashboard/training",   label: "Training",    icon: FlaskConical },
-  { href: "/dashboard/billing",    label: "Billing",     icon: CreditCard },
-  { href: "/dashboard/chat",          label: "Chat",          icon: MessageSquare },
-  { href: "/dashboard/playground",    label: "Playground",    icon: Play },
-  { href: "/dashboard/premium",       label: "Premium",       icon: Gem },
-  { href: "/dashboard/studio",        label: "Studio", icon: Aperture },
-  { href: "/dashboard/playground/media", label: "Media",      icon: ImageIcon },
-  { href: "/dashboard/workflow",      label: "Workflow",      icon: GitBranch },
-  { href: "/dashboard/models",        label: "Models",        icon: List },
-  { href: "/dashboard/agents",        label: "Agents",        icon: Sparkles, badgeKey: "agents" as const },
-  { href: "/dashboard/ai-assistants", label: "AI Assistants", icon: Bot },
-  { href: "/dashboard/team",          label: "Team",          icon: Users },
-  { href: "/dashboard/support",       label: "Support",       icon: LifeBuoy },
-  { href: "/dashboard/settings",   label: "Settings",    icon: Settings },
-  { href: "/dashboard/audit-logs", label: "Audit Logs",  icon: ClipboardList },
-];
-
-const governanceItems = [
-  { href: "/dashboard/governance",                  label: "Trust Center", icon: ShieldCheck },
-  { href: "/dashboard/governance/policies",         label: "Policies",     icon: Gavel },
-  { href: "/dashboard/governance/violations",       label: "Violations",   icon: AlertTriangle, badgeKey: "openViolations" as const },
-  { href: "/dashboard/governance/approvals",        label: "Approvals",    icon: FileCheck, badgeKey: "pendingApprovals" as const },
-  { href: "/dashboard/governance/compliance",       label: "Compliance",   icon: BookOpen },
-  { href: "/dashboard/governance/sector-templates", label: "Sector Packs", icon: Building2 },
-];
-
-function isNavActive(pathname: string | null, href: string, siblings: { href: string }[]) {
-  if (!pathname) return false;
-  if (href === "/dashboard") return pathname === "/dashboard";
-  const matches = pathname === href || pathname.startsWith(`${href}/`);
-  if (!matches) return false;
-  return !siblings.some(
-    (s) =>
-      s.href !== href &&
-      s.href.startsWith(`${href}/`) &&
-      (pathname === s.href || pathname.startsWith(`${s.href}/`)),
-  );
-}
-
-/* ── Stable NavItem (must be outside SessionNavBar so React never remounts it) ── */
 function NavItem({
   item,
   layoutId,
@@ -117,7 +66,7 @@ function NavItem({
   active,
   animateLayout,
 }: {
-  item: { href: string; label: string; icon: typeof navItems[0]["icon"]; badge?: string; locked?: boolean };
+  item: DashboardNavItem & { badge?: string; locked?: boolean };
   layoutId: string;
   isCollapsed: boolean;
   active: boolean;
@@ -129,54 +78,42 @@ function NavItem({
       href={item.href}
       prefetch={true}
       className={cn(
-        "flex h-8 w-full flex-row items-center rounded-md px-2 py-1.5 transition-colors",
-        "relative",
-        active ? "text-white" : "text-[var(--ink-2)] hover:bg-[var(--paper-3)] hover:text-[var(--ink)]",
+        "relative flex h-8 w-full flex-row items-center rounded-md px-2 py-1.5 transition-colors",
+        active
+          ? "bg-primary text-primary-foreground"
+          : "text-muted-foreground hover:bg-accent hover:text-foreground",
       )}
     >
-      {active && (
-        animateLayout ? (
+      {active &&
+        (animateLayout ? (
           <motion.div
             layoutId={layoutId}
-            className="absolute inset-0 rounded-md bg-[var(--ink)]"
-            style={{ zIndex: 0 }}
+            className="absolute inset-0 z-0 rounded-md bg-primary"
             transition={{ type: "spring", stiffness: 400, damping: 32 }}
           />
         ) : (
-          <div className="absolute inset-0 rounded-md bg-[var(--ink)]" style={{ zIndex: 0 }} />
-        )
-      )}
+          <div className="absolute inset-0 z-0 rounded-md bg-primary" />
+        ))}
       <Icon
-        className="h-4 w-4 shrink-0"
-        style={{
-          color: active ? "var(--brand-tint)" : "var(--ink-3)",
-          position: "relative", zIndex: 1,
-        }}
+        className={cn("relative z-[1] h-4 w-4 shrink-0", active ? "text-primary-foreground" : "text-muted-foreground")}
       />
-      <motion.div variants={variants} style={{ position: "relative", zIndex: 1 }}>
+      <motion.div variants={variants} className="relative z-[1]">
         {!isCollapsed && (
           <div className="ml-2 flex items-center gap-2">
-            <p className="text-sm font-medium" style={{ fontWeight: active ? 500 : 400 }}>
+            <p className={cn("text-sm", active ? "font-medium text-primary-foreground" : "font-normal")}>
               {item.label}
             </p>
             {item.badge && (
               <span
-                className="rounded-full px-1.5 py-0.5 text-[10px] font-semibold"
-                style={{
-                  fontFamily: "var(--font-mono)",
-                  background: active ? "var(--paper-3)" : "var(--brand)",
-                  color: active ? "var(--ink)" : "white",
-                }}
+                className={cn(
+                  "rounded-full px-1.5 py-0.5 font-mono text-[10px] font-semibold",
+                  active ? "bg-primary-foreground/20 text-primary-foreground" : "bg-primary text-primary-foreground",
+                )}
               >
                 {item.badge}
               </span>
             )}
-            {item.locked && (
-              <Lock
-                className="h-3 w-3 shrink-0"
-                style={{ color: active ? "var(--brand-tint)" : "var(--ink-4)" }}
-              />
-            )}
+            {item.locked && <Lock className="h-3 w-3 shrink-0 opacity-70" />}
           </div>
         )}
       </motion.div>
@@ -205,18 +142,31 @@ export function SessionNavBar({
 }) {
   const [isCollapsed, setIsCollapsed] = useState(true);
   const [hydrated, setHydrated] = useState(false);
-  const [openGroups, setOpenGroups] = useState({ workspace: true, governance: true });
-  const [counts, setCounts] = useState({ deployments: 0, openViolations: 0, pendingApprovals: 0, agents: 0 });
+  const [openGroups, setOpenGroups] = useState({
+    main: true,
+    build: true,
+    account: true,
+    governance: true,
+    admin: true,
+  });
+  const [counts, setCounts] = useState({
+    deployments: 0,
+    openViolations: 0,
+    pendingApprovals: 0,
+    agents: 0,
+  });
+  const reduceMotion = useReducedMotion();
+  const pathname = usePathname();
 
-  const CHILD_HIDDEN = new Set([
-    "/dashboard/playground",
-    "/dashboard/playground/media",
-    "/dashboard/studio",
-    "/dashboard/premium",
-  ]);
-  const workspaceNav = protectedChild
-    ? navItems.filter((i) => !CHILD_HIDDEN.has(i.href))
-    : navItems;
+  const groups = useMemo(
+    () =>
+      navGroupsForViewer({
+        isSiteAdmin,
+        protectedChild,
+        hasEnterpriseTools: !enterpriseLocked,
+      }),
+    [isSiteAdmin, protectedChild, enterpriseLocked],
+  );
 
   useEffect(() => {
     setHydrated(true);
@@ -237,78 +187,57 @@ export function SessionNavBar({
       .catch(() => {});
   }, []);
 
-  function withBadge<T extends { href: string; badgeKey?: keyof typeof counts }>(item: T) {
+  function withBadge(item: DashboardNavItem) {
     const n = item.badgeKey ? counts[item.badgeKey] : 0;
     return { ...item, badge: n > 0 ? String(n) : undefined };
   }
-  const toggleGroup = (k: "workspace" | "governance") =>
-    setOpenGroups((s) => ({ ...s, [k]: !s[k] }));
-  const pathname = usePathname();
 
   async function logout() {
-    try { posthog.capture("user_logged_out"); posthog.reset(); } catch {}
+    try {
+      posthog.capture("user_logged_out");
+      posthog.reset();
+    } catch {}
     await fetch("/api/auth/logout", { method: "POST" });
     window.location.href = "/login";
   }
 
-  const isActive = (href: string, siblings: { href: string }[]) =>
-    isNavActive(pathname, href, siblings);
+  const animateLayout = hydrated && !reduceMotion;
 
   return (
     <motion.div
-      className="fixed left-0 z-40 h-full shrink-0"
-      style={{ borderRight: "1px solid var(--line)" }}
+      className="fixed left-0 z-40 h-full shrink-0 border-r border-border bg-background text-muted-foreground"
       initial={isCollapsed ? "closed" : "open"}
       animate={isCollapsed ? "closed" : "open"}
       variants={sidebarVariants}
-      transition={transitionProps}
+      transition={reduceMotion ? { duration: 0 } : transitionProps}
       onMouseEnter={() => setIsCollapsed(false)}
       onMouseLeave={() => setIsCollapsed(true)}
     >
-      <motion.div
-        className="relative z-40 flex h-full shrink-0 flex-col transition-all"
-        style={{ background: "var(--paper-2)", color: "var(--ink-2)" }}
-        variants={contentVariants}
-      >
+      <motion.div className="relative z-40 flex h-full shrink-0 flex-col bg-background" variants={contentVariants}>
         <motion.div variants={staggerVariants} className="flex h-full flex-col">
           <div className="flex grow flex-col items-center">
-
-            {/* ── Brand + org ── */}
-            <div
-              className="flex h-[54px] w-full shrink-0 items-center p-2"
-              style={{ borderBottom: "1px solid var(--line)" }}
-            >
+            <div className="flex h-[54px] w-full shrink-0 items-center border-b border-border p-2">
               <DropdownMenu modal={false}>
-                <DropdownMenuTrigger className="w-full" asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="flex w-fit items-center gap-2 px-2 hover:bg-[var(--paper-3)] hover:text-[var(--ink)]"
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    className={cn(
+                      buttonVariants({ variant: "ghost", size: "sm" }),
+                      "flex w-fit items-center gap-2 px-2",
+                    )}
                   >
-                    {/* Mini OpenDoor logo */}
-                    <div
-                      className="relative shrink-0 overflow-hidden rounded"
-                      style={{ width: 18, height: 18, background: "var(--ink)", display: "grid", placeItems: "center" }}
-                    >
-                      <div
-                        style={{
-                          position: "absolute", inset: 0, background: "var(--brand)",
-                          clipPath: "polygon(100% 0, 100% 100%, 55% 100%, 55% 0)",
-                        }}
-                      />
-                      <span style={{ fontFamily: "var(--font-serif)", fontSize: 11, color: "white", position: "relative", zIndex: 1 }}>O</span>
+                    <div className="relative grid size-[18px] shrink-0 place-items-center overflow-hidden rounded bg-primary">
+                      <span className="relative z-[1] font-garamond text-[11px] text-primary-foreground">O</span>
                     </div>
                     <motion.div variants={variants} className="flex w-fit items-center gap-2">
                       {!isCollapsed && (
                         <>
-                          <span className="text-sm font-medium" style={{ color: "var(--ink)", fontFamily: "var(--font-serif)" }}>
-                            OpenDoor
-                          </span>
-                          <ChevronsUpDown className="h-4 w-4" style={{ color: "var(--ink-4)" }} />
+                          <span className="text-sm font-medium text-foreground">OpenDoor</span>
+                          <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />
                         </>
                       )}
                     </motion.div>
-                  </Button>
+                  </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start">
                   <DropdownMenuItem asChild className="flex items-center gap-2">
@@ -330,193 +259,123 @@ export function SessionNavBar({
               </DropdownMenu>
             </div>
 
-            {/* ── Nav ── */}
             <div className="flex h-full w-full flex-col">
               <div className="flex grow flex-col">
                 <ScrollArea className="h-16 grow p-2">
                   <div className="flex w-full flex-col gap-1">
-
-                    {/* ── Workspace section ── */}
-                    <motion.div variants={variants}>
-                      {!isCollapsed && (
-                        <button
-                          type="button"
-                          onClick={() => toggleGroup("workspace")}
-                          className="flex w-full items-center justify-between px-2 pb-1 pt-2 transition-colors hover:text-[var(--ink)]"
-                        >
-                          <span
-                            className="text-[10px] font-semibold uppercase tracking-[0.14em]"
-                            style={{ color: "var(--ink-4)", fontFamily: "var(--font-mono)" }}
-                          >
-                            Workspace
-                          </span>
-                          <motion.div
-                            animate={{ rotate: openGroups.workspace ? 0 : -90 }}
-                            transition={{ duration: 0.18, ease: "easeOut" }}
-                          >
-                            <ChevronDown className="h-3 w-3" style={{ color: "var(--ink-4)" }} />
-                          </motion.div>
-                        </button>
-                      )}
-                    </motion.div>
-
-                    <AnimatePresence initial={false}>
-                      {(isCollapsed || openGroups.workspace) && (
-                        <motion.div
-                          key="workspace-items"
-                          initial={isCollapsed ? false : { height: 0, opacity: 0 }}
-                          animate={{ height: "auto", opacity: 1 }}
-                          exit={{ height: 0, opacity: 0 }}
-                          transition={{ duration: 0.2, ease: "easeOut" }}
-                          style={{ overflow: "hidden" }}
-                        >
-                          <div className="flex flex-col gap-1">
-                            {workspaceNav.map((item) => (
-                              <NavItem
-                                key={item.href}
-                                item={withBadge(item)}
-                                layoutId="sidebar-active-workspace"
-                                isCollapsed={isCollapsed}
-                                active={isActive(item.href, workspaceNav)}
-                                animateLayout={hydrated}
-                              />
-                            ))}
-                          </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-
-                    <Separator className="my-1 bg-[var(--line)]" />
-
-                    {/* ── Governance section ── */}
-                    <motion.div variants={variants}>
-                      {!isCollapsed && (
-                        <button
-                          type="button"
-                          onClick={() => toggleGroup("governance")}
-                          className="flex w-full items-center justify-between px-2 pb-1 pt-1 transition-colors hover:text-[var(--ink)]"
-                        >
-                          <span className="flex items-center gap-1.5">
-                            <span
-                              className="text-[10px] font-semibold uppercase tracking-[0.14em]"
-                              style={{ color: "var(--ink-4)", fontFamily: "var(--font-mono)" }}
+                    {groups.map((group) => (
+                      <div key={group.id}>
+                        <motion.div variants={variants}>
+                          {!isCollapsed && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setOpenGroups((s) => ({ ...s, [group.id]: !s[group.id] }))
+                              }
+                              className="flex w-full items-center justify-between px-2 pb-1 pt-2 text-muted-foreground transition-colors hover:text-foreground"
                             >
-                              Governance
-                            </span>
-                            {enterpriseLocked && (
-                              <Lock className="h-3 w-3" style={{ color: "var(--ink-4)" }} />
-                            )}
-                          </span>
-                          <motion.div
-                            animate={{ rotate: openGroups.governance ? 0 : -90 }}
-                            transition={{ duration: 0.18, ease: "easeOut" }}
-                          >
-                            <ChevronDown className="h-3 w-3" style={{ color: "var(--ink-4)" }} />
-                          </motion.div>
-                        </button>
-                      )}
-                    </motion.div>
-
-                    <AnimatePresence initial={false}>
-                      {(isCollapsed || openGroups.governance) && (
-                        <motion.div
-                          key="governance-items"
-                          initial={isCollapsed ? false : { height: 0, opacity: 0 }}
-                          animate={{ height: "auto", opacity: 1 }}
-                          exit={{ height: 0, opacity: 0 }}
-                          transition={{ duration: 0.2, ease: "easeOut" }}
-                          style={{ overflow: "hidden" }}
-                        >
-                          <div className="flex flex-col gap-1">
-                            {governanceItems.map((item) => (
-                              <NavItem
-                                key={item.href}
-                                item={{ ...withBadge(item), locked: enterpriseLocked }}
-                                layoutId="sidebar-active-governance"
-                                isCollapsed={isCollapsed}
-                                active={isActive(item.href, governanceItems)}
-                                animateLayout={hydrated}
-                              />
-                            ))}
-                          </div>
+                              <span className="flex items-center gap-1.5 font-mono text-[10px] font-semibold uppercase tracking-[0.14em]">
+                                {group.label}
+                                {group.id === "governance" && enterpriseLocked && (
+                                  <Lock className="h-3 w-3" />
+                                )}
+                              </span>
+                              <motion.div
+                                animate={{ rotate: openGroups[group.id] ? 0 : -90 }}
+                                transition={reduceMotion ? { duration: 0 } : { duration: 0.18, ease: "easeOut" }}
+                              >
+                                <ChevronDown className="h-3 w-3" />
+                              </motion.div>
+                            </button>
+                          )}
                         </motion.div>
-                      )}
-                    </AnimatePresence>
 
+                        <AnimatePresence initial={false}>
+                          {(isCollapsed || openGroups[group.id]) && (
+                            <motion.div
+                              key={`${group.id}-items`}
+                              initial={isCollapsed || reduceMotion ? false : { height: 0, opacity: 0 }}
+                              animate={{ height: "auto", opacity: 1 }}
+                              exit={reduceMotion ? undefined : { height: 0, opacity: 0 }}
+                              transition={reduceMotion ? { duration: 0 } : { duration: 0.2, ease: "easeOut" }}
+                              className="overflow-hidden"
+                            >
+                              <div className="flex flex-col gap-1">
+                                {group.items.map((item) => (
+                                  <NavItem
+                                    key={item.href}
+                                    item={{
+                                      ...withBadge(item),
+                                      locked: group.id === "governance" ? enterpriseLocked : undefined,
+                                    }}
+                                    layoutId={`sidebar-active-${group.id}`}
+                                    isCollapsed={isCollapsed}
+                                    active={isNavActive(pathname, item.href, group.items)}
+                                    animateLayout={animateLayout}
+                                  />
+                                ))}
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                    ))}
                   </div>
                 </ScrollArea>
               </div>
 
-              {/* ── Bottom: invite card (expanded only) + settings + user ── */}
-              <div className="flex flex-col p-2">
-
-                {/* Invite card — only when expanded */}
+              <div className="flex flex-col gap-2 p-2">
                 <motion.div variants={variants}>
                   {!isCollapsed && (
-                    <div className="od-invite-card mb-2">
-                      <h4 style={{ margin: 0, fontSize: 12, fontWeight: 600, color: "var(--ink)", position: "relative" }}>
-                        Invite your team
-                      </h4>
-                      <p style={{ margin: "4px 0 8px", fontSize: 11, color: "var(--ink-2)", lineHeight: 1.5, position: "relative" }}>
+                    <div className="mb-1 rounded-lg border border-border bg-muted/40 p-3">
+                      <h4 className="text-xs font-semibold text-foreground">Invite your team</h4>
+                      <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
                         New members get access to API keys, usage, and audit trails.
                       </p>
                       <Link
                         href="/dashboard/team"
-                        style={{
-                          position: "relative", display: "inline-flex", alignItems: "center", gap: 5,
-                          padding: "5px 12px", borderRadius: 999, background: "var(--ink)", color: "white",
-                          fontSize: 11, fontWeight: 500, textDecoration: "none",
-                        }}
-                        className="hover:opacity-90"
+                        className={cn(
+                          buttonVariants({ size: "sm" }),
+                          "mt-2 h-7 rounded-full px-3 text-[11px]",
+                        )}
                       >
-                        <UserPlus style={{ width: 11, height: 11 }} /> Invite people
+                        <UserPlus className="h-3 w-3" /> Invite people
                       </Link>
                     </div>
                   )}
                 </motion.div>
 
-                <Link
-                  href="/dashboard/settings"
-                  prefetch={true}
-                  className="flex h-8 w-full flex-row items-center rounded-md px-2 py-1.5 transition-colors hover:bg-[var(--paper-3)] hover:text-[var(--ink)]"
-                  style={{ color: "var(--ink-2)" }}
-                >
-                  <Settings className="h-4 w-4 shrink-0" style={{ color: "var(--ink-3)" }} />
-                  <motion.div variants={variants}>
-                    {!isCollapsed && <p className="ml-2 text-sm font-medium">Settings</p>}
-                  </motion.div>
-                </Link>
-
                 <DropdownMenu modal={false}>
-                  <DropdownMenuTrigger className="w-full">
-                    <div
-                      className="flex h-8 w-full flex-row items-center gap-2 rounded-md px-2 py-1.5 transition-colors hover:bg-[var(--paper-3)] hover:text-[var(--ink)]"
-                      style={{ color: "var(--ink-2)" }}
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      type="button"
+                      className="flex h-8 w-full flex-row items-center gap-2 rounded-md px-2 py-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
                     >
-                      <Badge.Anchor className="shrink-0">
-                        <Avatar className="size-5" size="sm">
-                          <Avatar.Fallback>{accountInitials(displayName)}</Avatar.Fallback>
-                        </Avatar>
-                        <Badge
-                          color={isSiteAdmin ? "accent" : "success"}
-                          placement="bottom-right"
-                          size="sm"
+                      <span className="relative shrink-0">
+                        <span className="grid size-5 place-items-center rounded-full bg-muted text-[9px] font-semibold text-foreground">
+                          {accountInitials(displayName)}
+                        </span>
+                        <span
+                          className={cn(
+                            "absolute -bottom-0.5 -right-0.5 size-2 rounded-full border border-background",
+                            isSiteAdmin ? "bg-violet-500" : "bg-emerald-500",
+                          )}
                         />
-                      </Badge.Anchor>
+                      </span>
                       <motion.div variants={variants} className="flex w-full items-center gap-2">
                         {!isCollapsed && (
                           <>
                             <div className="min-w-0 flex-1 text-left">
-                              <p className="truncate text-sm font-medium" style={{ color: "var(--ink)" }}>{displayName}</p>
+                              <p className="truncate text-sm font-medium text-foreground">{displayName}</p>
                               {displayName !== email && (
-                                <p className="truncate text-[10px]" style={{ color: "var(--ink-4)" }}>{email}</p>
+                                <p className="truncate text-[10px] text-muted-foreground">{email}</p>
                               )}
                             </div>
-                            <ChevronsUpDown className="ml-auto h-4 w-4 shrink-0" style={{ color: "var(--ink-4)" }} />
+                            <ChevronsUpDown className="ml-auto h-4 w-4 shrink-0 text-muted-foreground" />
                           </>
                         )}
                       </motion.div>
-                    </div>
+                    </button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent sideOffset={5}>
                     <DropdownMenuSeparator />
@@ -525,18 +384,29 @@ export function SessionNavBar({
                         <UserCircle className="h-4 w-4" /> Profile
                       </Link>
                     </DropdownMenuItem>
-                    <DropdownMenuItem
-                      className="flex items-center gap-2 text-red-600 focus:text-red-600"
-                      onClick={logout}
-                    >
+                    <DropdownMenuItem className="flex items-center gap-2 text-red-600 focus:text-red-600" onClick={logout}>
                       <LogOut className="h-4 w-4" /> Sign out
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
 
+                <a
+                  href="https://ochiengandco.com"
+                  target="_blank"
+                  rel="noreferrer"
+                  className={cn(
+                    "flex items-center justify-center rounded-md p-1 text-foreground",
+                    isCollapsed ? "mx-auto" : "justify-start gap-2 px-2",
+                  )}
+                  aria-label="Ochieng & Co"
+                >
+                  <OchiengLogoSimple size={isCollapsed ? 18 : 22} className="dark:invert" />
+                  {!isCollapsed && (
+                    <span className="text-[10px] font-medium text-muted-foreground">Ochieng & Co</span>
+                  )}
+                </a>
               </div>
             </div>
-
           </div>
         </motion.div>
       </motion.div>

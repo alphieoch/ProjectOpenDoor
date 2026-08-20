@@ -1,0 +1,92 @@
+---
+title: "API overview"
+description: "OpenAI-compatible /v1 routes on the OpenDoor gateway. Auth with OPENDOOR_API_KEY."
+showPageTitle: true
+---
+
+# API overview
+
+Base URL: **`{{GATEWAY_URL}}`**. Auth: `Authorization: Bearer $OPENDOOR_API_KEY`.
+
+`GET /v1/catalog` returns every API-key endpoint the gateway actually mounts. Use that list — do not guess paths.
+
+```bash
+export OPENDOOR_API_KEY=opd_…
+export OPENDOOR_BASE_URL={{GATEWAY_URL}}
+
+curl "$OPENDOOR_BASE_URL/v1/catalog" \
+  -H "Authorization: Bearer $OPENDOOR_API_KEY"
+```
+
+## Call first
+
+| Method | Path | Docs |
+|--------|------|------|
+| `GET` | `/v1/models` | [Models](/api-reference/models) |
+| `GET` | `/v1/models/:model` | One routed model |
+| `POST` | `/v1/chat/completions` | [Chat](/api-reference/chat-completions) |
+| `POST` | `/v1/plugins/web-search` | [Search](/api-reference/web-search) |
+| `POST` | `/v1/plugins/search` | Same Search engine (alias) |
+| `GET` | `/v1/tools` | First-party tools + org enablement |
+| `GET` | `/v1/account` | Org, plan, add-ons, this key |
+| `GET` | `/v1/account/balance` | Spendable credit buckets |
+| `GET` | `/v1/usage` | Usage totals |
+| `GET` | `/v1/usage/rate-limits` | Live RPM / TPM remaining |
+
+## Chat
+
+```bash
+curl "$OPENDOOR_BASE_URL/v1/chat/completions" \
+  -H "Authorization: Bearer $OPENDOOR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "{{EXAMPLE_MODEL}}",
+    "messages": [{"role":"user","content":"Hello"}]
+  }'
+```
+
+## Search
+
+Vertex AI Grounding with Google Search on OpenDoor’s GCP. **$0.10 per query** on prepaid credits. **Included on Enterprise** (and the $20/month Web Search add-on). Enable the tool on [Dashboard → Tools]({{APP_URL}}/dashboard/tools) or subscribe on Billing.
+
+```bash
+curl "$OPENDOOR_BASE_URL/v1/plugins/web-search" \
+  -H "Authorization: Bearer $OPENDOOR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"query":"OpenDoor LLM gateway","max_results":5}'
+```
+
+## Agents (OpenBot)
+
+Public on the same key. Needs the **Agents add-on** ($20/month; included on Enterprise and Family Max). `runtime` is `openclaw`, `hermes`, `nemoclaw`, or `openbot`.
+
+```
+GET    /v1/agents
+POST   /v1/agents
+GET    /v1/agents/:id
+PATCH  /v1/agents/:id
+POST   /v1/agents/:id/chat
+POST   /v1/agents/:id/ag-ui
+POST   /v1/agents/:id/restore
+DELETE /v1/agents/:id
+```
+
+See [OpenBot / Agents](/api-reference/agents).
+
+## Also mounted
+
+These are real `/v1` routes from the gateway catalog. Details live on the pages below.
+
+| Group | Paths |
+|-------|--------|
+| Completions | `POST /v1/completions`, `POST /v1/responses` |
+| Embeddings / rerank | `POST /v1/embeddings`, `POST /v1/rerank` |
+| Media | `/v1/images/generations`, `/v1/videos/generations`, `/v1/audio/*` |
+| Files / batches | `/v1/files`, `/v1/batches` |
+| Assistants | `/v1/assistants`, `POST /v1/assistants/:id/chat` |
+| Workflows | `/v1/workflows`, `POST /v1/workflows/:id/run` |
+| Keys | `GET/POST /v1/keys`, `DELETE /v1/keys/:id` |
+| BYOK | `GET/POST /v1/byok`, `DELETE /v1/byok/:id` |
+| Account | `/v1/requests`, `/v1/generation/:id` |
+
+[Errors](/api-reference/errors) · [JavaScript SDK](/getting-started/sdk) · [Python SDK](/getting-started/python)

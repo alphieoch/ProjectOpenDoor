@@ -1,0 +1,138 @@
+---
+title: "Agents"
+description: "Create hosted OpenClaw, Hermes, NemoClaw, or OpenBot runtimes and chat with them over the same API key as the rest of the gateway."
+showPageTitle: true
+---
+
+# Agents
+
+Workspace agents are first-class API objects. Create one, it boots against the live gateway, then `POST /v1/agents/:id/chat` runs the runtime tool loop. Completions use a dedicated agent key, so spend hits the same prepaid quota as Playground and `/v1/chat/completions`.
+
+Agents is a **$20/month add-on** (included on Enterprise and Family Max). Without it these routes return `402` with `code: addon_required`.
+
+```
+GET    /v1/agents
+POST   /v1/agents
+GET    /v1/agents/:id
+PATCH  /v1/agents/:id
+POST   /v1/agents/:id/chat
+POST   /v1/agents/:id/ag-ui
+POST   /v1/agents/:id/restore
+DELETE /v1/agents/:id
+```
+
+These are the same operations as the dashboard Agents / OpenBot desk: list, spawn a coworker or Leaderbot, start/stop, chat, and 7-day soft delete. Computer CDP (screenshot, click, secret field) stays on the dashboard cookie routes and the existing computer token — it is not exposed on `/v1/agents/:id/computer`.
+
+## Create and boot
+
+```bash
+export OPENDOOR_API_KEY=opd_…
+export OPENDOOR_BASE_URL={{GATEWAY_URL}}
+
+curl "$OPENDOOR_BASE_URL/v1/agents" \
+  -H "Authorization: Bearer $OPENDOOR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Desk",
+    "runtime": "openbot",
+    "modelId": "{{EXAMPLE_MODEL}}"
+  }'
+```
+
+`runtime` must be `openclaw`, `hermes`, `nemoclaw`, or `openbot`. `modelId` is a live catalog id. Optional `systemPrompt` overrides the runtime default. Optional `kind` is `leader` or `coworker`. `kind: "leader"` (or the name `Leaderbot`) is idempotent: if Leaderbot already exists the existing row is returned; if it is in the 7-day recovery window it is restored and booted.
+
+Create mints a scoped API key, probes `GET /v1/models`, seeds runtime skills, and marks the agent **running**. If the gateway is unreachable the row is still created with `status: "failed"` — call `PATCH` with `{ "status": "running" }` to retry.
+
+Plan seat caps apply: `maxApiKeys` is the bot cap and `maxActiveDeployments` is the concurrent running cap. Hitting either returns `402` with `code: at_bot_cap` or `at_concurrent_cap`.
+
+`GET /v1/agents` also returns `deleted` (recoverable rows), `addon`, and `capacity`. `GET /v1/agents/:id` includes recent `messages`.
+
+The response is a public agent object: id, runtime, `kind`, model, status, and a `workspace` snapshot (memory, skills, outbox, computer). Secrets are never returned.
+
+## Chat
+
+```bash
+curl "$OPENDOOR_BASE_URL/v1/agents/$AGENT_ID/chat" \
+  -H "Authorization: Bearer $OPENDOOR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"message":"Open https://example.com and summarize the page."}'
+```
+
+Returns `{ object: "agent.turn", reply, events, workspace, agent }`. The agent must be `running` (409 otherwise). Tool events are the same loop the dashboard Agents page uses.
+
+### OpenBot computer tools
+
+OpenBot (`runtime: "openbot"`) uses the MIT OpenBot computer contract. Set `OPENBOT_SUPERVISOR_URL` + `OPENBOT_SUPERVISOR_TOKEN` so each agent gets its own Chromium container (`apps/openbot-supervisor` launching `apps/openbot-computer`). `OPENBOT_COMPUTER_URL` is a shared-computer fallback.
+
+The dashboard coworker desk at `/dashboard/agents/:id` is the OpenBot UI: live screen, take-the-wheel, and a secret field that never enters the transcript. It calls `/api/agents/:id/computer/screenshot` and `/control`.
+
+| Tool | What it does |
+| --- | --- |
+| `computer_navigate` | Open a public `http(s)` page |
+| `computer_read` | Read the current page as text |
+| `computer_snapshot` | List fields/buttons with refs (`e1`…) |
+| `computer_click` / `computer_type` / `computer_key` / `computer_scroll` | Act using `ref` + `snapshotId` |
+| `computer_screenshot` | PNG for the person watching |
+| `computer_list_files` / `computer_read_file` / `computer_write_file` | `/workspace` files |
+| `computer_request_help` | Stop at a login, 2FA, or captcha wall |
+| `computer_request_secret` | One masked value into a field; the Bot never sees it |
+| `render_component` | Structured UI the dashboard can show |
+
+`computer_read_page` and `request_help` remain aliases. Every computer action is decided and audited before it runs. `POST /v1/agents/:id/ag-ui` streams the same turn as AG-UI.
+
+## Start, stop, take the wheel
+
+```bash
+curl -X PATCH "$OPENDOOR_BASE_URL/v1/agents/$AGENT_ID" \
+  -H "Authorization: Bearer $OPENDOOR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"status":"stopped"}'
+```
+
+```bash
+curl -X PATCH "$OPENDOOR_BASE_URL/v1/agents/$AGENT_ID" \
+  -H "Authorization: Bearer $OPENDOOR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"computerControl":"take"}'
+```
+
+`status` is `running` or `stopped`. `computerControl` is `take` or `release` (OpenBot). You can send both in one PATCH. Optional `name`, `systemPrompt`, and `modelId` update the row the same way as the dashboard.
+
+## Restore (7-day soft delete)
+
+```bash
+curl -X POST "$OPENDOOR_BASE_URL/v1/agents/$AGENT_ID/restore" \
+  -H "Authorization: Bearer $OPENDOOR_API_KEY"
+```
+
+`DELETE` stops the agent and keeps the row for 7 days (`recoverUntil` is in the response). Restore returns the agent as `stopped` — call `PATCH` with `{ "status": "running" }` to attach the computer again. After the window, purge is permanent.
+
+## CLI and SDK
+
+```bash
+export OPENDOOR_BASE_URL={{GATEWAY_URL}}
+bun run od -- agents create --name Desk --runtime openbot --model {{EXAMPLE_MODEL}} --kind coworker
+bun run od -- agents chat --id "$AGENT_ID" --message "Hello"
+bun run od -- agents computer --id "$AGENT_ID" --take
+bun run od -- agents restore --id "$AGENT_ID"
+```
+
+```ts
+const agent = await client.agents.create({
+  name: "Desk",
+  runtime: "openbot",
+  modelId: "{{EXAMPLE_MODEL}}",
+  kind: "coworker",
+});
+const turn = await client.agents.chat(agent.id, { message: "Hello" });
+await client.agents.computer(agent.id, "take");
+await client.agents.restore(agent.id);
+```
+
+## Related
+
+- [Marketing SDK page](/sdk) — how to get a key and work from the terminal
+- [CLI](/getting-started/cli)
+- [TypeScript SDK](/getting-started/sdk)
+- [Agents in the product](/how-it-works/agents)
+- [Platform API](/api-reference/platform)

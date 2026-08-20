@@ -10,6 +10,7 @@
  * JS uses Node's permission model when available (no network). Python uses
  * resource limits; network is not disabled on macOS.
  */
+import { privateImageAuthHeaders } from "@opendoor/shared";
 import { execFile } from "node:child_process";
 import { existsSync, realpathSync } from "node:fs";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
@@ -295,11 +296,14 @@ async function runRemoteSandbox(opts: {
   const ac = new AbortController();
   const timer = setTimeout(() => ac.abort(), REMOTE_TIMEOUT_MS);
   try {
+    const iam = await privateImageAuthHeaders(base);
     const res = await fetch(`${base}/internal/sandbox/exec`, {
       method: "POST",
       headers: {
         "content-type": "application/json",
-        authorization: `Bearer ${token}`,
+        ...(iam.Authorization
+          ? { "x-code-sandbox-token": token, ...iam }
+          : { authorization: `Bearer ${token}` }),
       },
       body: JSON.stringify({
         language: opts.language,

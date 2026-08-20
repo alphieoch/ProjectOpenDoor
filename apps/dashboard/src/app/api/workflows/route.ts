@@ -4,10 +4,13 @@ import { workflows } from "@opendoor/database";
 import { eq, desc } from "drizzle-orm";
 import { requireAuth } from "@/lib/auth";
 import { logAuditEvent } from "@/lib/audit";
+import { normalizeTrigger, parseVariables } from "@opendoor/shared";
+import { ensureWorkflowSchema } from "@/lib/workflows/ensure-schema";
 
 export async function GET() {
   const session = await requireAuth();
   const orgId = session.orgId as string;
+  await ensureWorkflowSchema();
 
   const db = getDb();
   const items = await db
@@ -23,6 +26,7 @@ export async function POST(req: NextRequest) {
   const session = await requireAuth();
   const orgId = session.orgId as string;
   const body = await req.json();
+  await ensureWorkflowSchema();
 
   if (!body.name?.trim()) {
     return NextResponse.json({ error: "name is required" }, { status: 400 });
@@ -39,6 +43,8 @@ export async function POST(req: NextRequest) {
       status: "draft",
       graph: body.graph ?? { nodes: [], edges: [] },
       tags: body.tags ?? [],
+      trigger: normalizeTrigger(body.trigger),
+      variables: parseVariables(body.variables),
       createdBy: session.sub as string,
     })
     .returning();

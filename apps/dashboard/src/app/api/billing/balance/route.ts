@@ -7,12 +7,12 @@ import {
   creditTransactions,
 } from "@opendoor/database";
 import { and, desc, eq, gte, sql } from "drizzle-orm";
-import { expireWelcomeIfNeeded, getMonthCreditActivity } from "@/lib/credits";
-import { creditWaterfall, includedCreditCents } from "@opendoor/shared";
+import { expireWelcomeIfNeeded, getMonthCreditActivity, orgHasUnlimitedSpend } from "@/lib/credits";
+import { billingIsUnlimited, creditWaterfall, getPlan, includedCreditCents } from "@opendoor/shared";
 
 const FOUR_HOURS_MS = 4 * 60 * 60 * 1000;
 
-function getPlanBudgetLimitCents(_plan: string): number {
+function getPlanBudgetLimitCents(): number {
   return 0;
 }
 
@@ -44,13 +44,19 @@ export async function GET() {
       return NextResponse.json({ error: "Organization not found" }, { status: 404 });
     }
 
+    const unlimited = await orgHasUnlimitedSpend(orgId, { isSiteAdmin: session.isSiteAdmin });
+    const unlimitedReason = session.isSiteAdmin
+      ? "site_admin"
+      : billingIsUnlimited({ plan: org.plan })
+        ? "plan"
+        : null;
     const buckets = await expireWelcomeIfNeeded(org);
     const activity = await getMonthCreditActivity(orgId);
     const waterfall = creditWaterfall({ buckets, ...activity });
 
     const now = Date.now();
     const windowStart = getWindowStart(now);
-    const limitCents = getPlanBudgetLimitCents(org.plan);
+    const limitCents = getPlanBudgetLimitCents();
 
     const planUsageRows = await db
       .select({
@@ -75,13 +81,18 @@ export async function GET() {
     });
 
     return NextResponse.json({
+      plan: org.plan,
+      planName: getPlan(org.plan).name,
+      unlimited,
+      unlimitedReason,
+      isSiteAdmin: Boolean(session.isSiteAdmin),
       creditsUsdCents: buckets.totalCents,
       welcomeCreditsUsdCents: buckets.welcomeCents,
       paidCreditsUsdCents: buckets.paidCents,
       includedQuotaCents: waterfall.quotaCents,
       prepaidCreditsUsdCents: waterfall.prepaidCents,
       includedMonthlyCents: includedCreditCents(org.plan, 1),
-      cutOff: waterfall.cutOff,
+      cutOff: unlimited ? false : waterfall.cutOff,
       welcomeExpiresAt: buckets.expiresAt ? buckets.expiresAt.toISOString() : null,
       planBudget: {
         usedCents,
@@ -96,11 +107,9 @@ export async function GET() {
       },
       recentTransactions,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Failed to fetch billing balance";
     console.error("Billing balance error:", error);
-    return NextResponse.json(
-      { error: error.message || "Failed to fetch billing balance" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

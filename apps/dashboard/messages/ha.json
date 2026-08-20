@@ -1,0 +1,138 @@
+{
+  "common": {
+    "language": "Harshe",
+    "region": "Yanki",
+    "country": "Ƙasa",
+    "countryOptional": "Ƙasa (na zaɓi)",
+    "countryNone": "Tsallake yanzu",
+    "save": "Ajiye",
+    "continue": "Ci gaba",
+    "skip": "Tsallake",
+    "home": "Gida",
+    "signIn": "Shiga",
+    "getStarted": "Fara",
+    "openDashboard": "Buɗe dashibodi"
+  },
+  "auth": {
+    "welcomeBack": "Barka da dawowa",
+    "createAccount": "Ƙirƙiri asusun ka",
+    "signInSubtitle": "Shiga ƙofar LLM ɗinka",
+    "signupSubtitle": "Fara da ƙofar LLM",
+    "educationSubtitle": "Fara da tsarin makaranta",
+    "email": "Imel",
+    "password": "Kalmar sirri",
+    "fullName": "Cikakken suna",
+    "organization": "Ƙungiya",
+    "organizationOptional": "na zaɓi",
+    "signIn": "Shiga",
+    "signingIn": "Ana shiga…",
+    "createAccountCta": "Ƙirƙiri asusu",
+    "creatingAccount": "Ana ƙirƙirar asusu…",
+    "noAccount": "Babu asusu?",
+    "signUpFree": "Yi rajista kyauta",
+    "haveAccount": "Kana da asusu?",
+    "enterpriseSso": "SSO na kamfani",
+    "orgSlug": "Alamar ƙungiya",
+    "continueSso": "Ci gaba da SSO",
+    "choosePlan": "Zaɓi tsari",
+    "enterpriseSales": "Tallace-tallace na Enterprise",
+    "loginFailed": "Shiga ya gaza",
+    "signupFailed": "Rajista ta gaza",
+    "passwordHint": "Aƙalla haruffa 10"
+  },
+  "onboarding": {
+    "eyebrow": "Wurin aiki",
+    "title": "Yadda OpenDoor ke aiki",
+    "body": "Shiga ɗaya. Tattaunawa a burauza, gida na abokan aiki na OpenBot, da ramin kuɗi na haɗin gwiwa. Zaɓi yanki — ba mu kange ƙasa.",
+    "pickRegion": "Ina kake?",
+    "pickRegionHint": "Wannan yana canza rubutu da tsohuwar saiti kawai. Kowane yanki na iya yin rajista.",
+    "productChatTitle": "Tattaunawa",
+    "productChatBody": "Buɗe Tattaunawa ka yi magana da ƙirar a waya ko kwamfuta. Ba ka buƙatar maɓallin API don farawa.",
+    "productHouseTitle": "Gida",
+    "productHouseBody": "OpenBot gida ne na abokan aiki — shugaba da ƙwararrun da ka ƙara. Suna raba wuri ɗaya.",
+    "productPoolTitle": "Ramin haɗin gwiwa",
+    "productPoolBody": "Iyali da Ƙungiya suna raba rami ɗaya. Lissafi ɗaya, ba maɓalli ga kowane mutum ba.",
+    "saveWorld": "Ajiye harshe da yanki",
+    "saved": "An ajiye",
+    "africa": {
+      "school": "Makaranta: shafuka masu sauƙi a waya, kujerar Ɗalibi don aji ko aikin gida, ba tare da ƙarin data don isa ga ƙira ba.",
+      "family": "Iyali: rami ɗaya na gida. Iyaye da yara suna amfani da kuɗin ɗaya — ya fi arha fiye da lissafai huɗu, an gina shi don farashin data.",
+      "team": "Ƙungiya: wuri ɗaya ga dakin gwaje-gwaje, NGO, ko kanti. Gayyata ta imel. Kowa yana raba ramin."
+    },
+    "europe": {
+      "school": "Makaranta: farawa ta Ɗalibi don aji ko dakin gwaje-gwaje, hanya ɗaya da Pro.",
+      "family": "Iyali: ramin gida da jujjuyawar salio — zama ɗaya ga gida.",
+      "team": "Ƙungiya: SSO da sarrafa haɗin gwiwa. Enterprise tana magana da tallace-tallace."
+    },
+    "americas": {
+      "school": "Makaranta: Ɗalibi shine zama don aikin gida da dakunan gwaje-gwaje. Ƙirar Pro ɗaya.",
+      "family": "Iyali: ramin gida, ya fi arha fiye da kujeru huɗu na Pro.",
+      "team": "Ƙungiya: kujeru na kai. Enterprise: zama na bayanai, SCIM, da tallace-tallace."
+    },
+    "asia_pacific": {
+      "school": "Makaranta: fara a waya. Ɗalibi yana rufe kujera; alamu suna ci gaba da farashin sito.",
+      "family": "Iyali: rami ɗaya na gida domin kada a sayi data da kujeru sau huɗu.",
+      "team": "Ƙungiya: wuri ɗaya, gayyaci abokan aiki, raba kuɗi."
+    },
+    "middle_east": {
+      "school": "Makaranta: tsarin Ɗalibi don aji da bincike. Larabci harshe ne na farko.",
+      "family": "Iyali: ramin gida — lissafi ɗaya ga gida.",
+      "team": "Ƙungiya: wuri na haɗin gwiwa da SSO idan ana buƙata. Enterprise ta tallace-tallace."
+    }
+  },
+  "getStarted": {
+    "eyebrow": "Fara",
+    "title": "Zaɓi hanyarka.",
+    "body": "OpenDoor ya dace da makaranta, iyali, da ƙungiya. Zaɓi yanki — babu wanda ake kangewa.",
+    "startFree": "Fara kyauta",
+    "startFreeBody": "Kai ka yi don mutum ɗaya ko ƙaramin ƙungiya. Ci gaba da imel.",
+    "education": "Ilimi",
+    "educationBody": "Don makarantu, dakunan gwaje-gwaje, da ɗalibai. Farawa ta kasance ta makaranta.",
+    "enterprise": "Kamfani",
+    "enterpriseBody": "Ƙungiyoyi da suke nan suna shiga da SSO. Sabbin aikace-aikace suna farawa da tallace-tallace.",
+    "continueEmail": "Ci gaba da imel",
+    "continueEducation": "Ci gaba da rajistar ilimi",
+    "joinSso": "Shiga ta SSO",
+    "talkSales": "Yi magana da tallace-tallace"
+  },
+  "gettingStarted": {
+    "eyebrow": "Fara aiki",
+    "title": "Barka da zuwa OpenDoor",
+    "coreDone": "Babban saiti ya ƙare. Matakan zaɓi suna nan idan ka buƙaci.",
+    "coreTodo": "Tattaunawa da abokin aiki ɗaya suna shigar da kai cikin samfurin. Sauran na zaɓi ne.",
+    "hide": "Ɓoye saiti"
+  },
+  "pricing": {
+    "audienceStudent": "Ɗalibi",
+    "audienceFamily": "Iyali",
+    "audienceTeam": "Ƙungiya",
+    "audienceEnterprise": "Kamfani",
+    "singleLabel": "Ɗalibi",
+    "familyLabel": "Iyali",
+    "enterpriseLabel": "Ƙungiya / Kamfani",
+    "singleHeadline": "Tsare-tsare ga mutum ɗaya",
+    "familyHeadline": "Rami na haɗin gwiwa ga gidan ku",
+    "enterpriseHeadline": "Tsare-tsare ga ƙungiyoyi",
+    "compare": "Kwatanta tsare-tsare"
+  },
+  "tools": {
+    "searchOneLiner": "Yi tambaya. OpenDoor Search yana amsawa da tushe a kan stack ɗinmu — ana cire kuɗi daga raminka, babu maɓallan bincike na waje."
+  },
+  "openbot": {
+    "houseTitle": "Menene wannan gida?",
+    "houseBody": "Gida shine wurin OpenBot ɗinka: abokin aiki shugaba da ƙwararrun da ka ƙara. Suna raba tashoshi, ƙwarewa, da ramin kuɗi na ƙungiya. Fara tasha don magana; ƙara abokin aiki idan kana son matsayi mai suna.",
+    "houseGotIt": "Na gane",
+    "startChannel": "Fara sabuwar tasha"
+  },
+  "settings": {
+    "languageRegion": "Harshe da yanki",
+    "languageRegionHint": "Ana amfani da shi a shiga, farawa, da allon farko. Sauran dashibodi na ci gaba da Turanci a yanzu."
+  },
+  "regions": {
+    "africa": "Afirka",
+    "europe": "Turai",
+    "americas": "Amurka",
+    "asia_pacific": "Asiya-Pacific",
+    "middle_east": "Gabas ta Tsakiya"
+  }
+}

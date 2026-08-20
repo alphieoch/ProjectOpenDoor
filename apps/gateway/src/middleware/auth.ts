@@ -1,18 +1,23 @@
 // @ts-nocheck
 import type { Context, Next } from "hono";
 import { db } from "@opendoor/database";
-import { apiKeys, organizations, models, providers } from "@opendoor/database";
+import { apiKeys, organizations, models, providers, users } from "@opendoor/database";
 import { eq, and, isNull } from "drizzle-orm";
 import { createHash, randomBytes } from "crypto";
 import {
   flattenMessageText,
+  getPlan,
+  canCoverEstimatedSpend,
   spendableCents,
   welcomeAllowedForFamily,
   SYSTEM_ASSISTANT_KEY_NAME,
+  chatModeAllowed,
+  isHouseChatFreeTasteMode,
+  type PlanId,
 } from "@opendoor/shared";
 import { estimateTokens } from "../utils/streaming.js";
 import { calculateCost } from "../utils/pricing.js";
-import { expireWelcomeCredits, shouldUsePlanBudget, usdToCents } from "../utils/billing.js";
+import { assertMonthlySeatCap, expireWelcomeCredits, orgHasUnlimitedSpend, shouldUsePlanBudget, usdToCents } from "../utils/billing.js";
 import { applyModelRouting, normalizeAllowlist } from "../lib/model-aliases.js";
 
 function internalGatewaySecret() {
@@ -69,9 +74,8 @@ async function ensureSystemAssistantKey(orgId: string) {
   }
 }
 
-function normalizePlan(plan: string): "free" | "pro" | "team" | "enterprise" {
-  if (plan === "pro" || plan === "team" || plan === "enterprise") return plan;
-  return "free";
+function normalizePlan(plan: string): PlanId {
+  return getPlan(plan).id;
 }
 
 function inferFamilyFromModel(modelId: string, providerSlug?: string): "closed" | "open_weight" {
@@ -111,7 +115,12 @@ export async function authMiddleware(c: Context, next: Next) {
 
   const houseChat =
     isInternalGatewayKey(apiKey) && c.req.header("X-OpenDoor-House-Chat") === "1";
-  if (houseChat) c.set("skipBilling", true);
+  const houseChatMode = c.req.header("X-OpenDoor-House-Chat-Mode") || "auto";
+  const houseChatUserId = c.req.header("X-OpenDoor-User-Id") || "";
+  c.set("houseChat", houseChat);
+  if (houseChat) {
+    c.set("skipBilling", isHouseChatFreeTasteMode(houseChatMode));
+  }
 
   let keyRecord;
 
@@ -171,7 +180,29 @@ export async function authMiddleware(c: Context, next: Next) {
     useFromPlan: false,
     useFromCredits: true,
     estimatedCostUsd: 0,
+    userId: houseChatUserId || null,
   });
+
+  if (!c.get("skipBilling") && (await orgHasUnlimitedSpend(org, houseChatUserId || null))) {
+    c.set("skipBilling", true);
+  }
+
+  if (houseChat && houseChatUserId) {
+    const member = await db.query.users.findFirst({
+      where: and(eq(users.id, houseChatUserId), eq(users.organizationId, org.id)),
+      columns: { allowedChatModes: true, monthlyCreditSubCapCents: true },
+    });
+    if (member && !chatModeAllowed(member.allowedChatModes, houseChatMode)) {
+      return c.json({ error: "This chat mode is disabled for your seat.", mode: houseChatMode }, 403);
+    }
+  }
+
+  if (!c.get("skipBilling") && houseChatUserId) {
+    const seatCap = await assertMonthlySeatCap(org.id, houseChatUserId);
+    if (!seatCap.ok) {
+      return c.json(seatCap.body, seatCap.status);
+    }
+  }
 
   if (c.req.method === "POST" && c.req.path.endsWith("/chat/completions") && !c.get("skipBilling")) {
     try {
@@ -227,7 +258,11 @@ export async function authMiddleware(c: Context, next: Next) {
           const buckets = await expireWelcomeCredits(org);
           const allowWelcome = welcomeAllowedForFamily(family);
           const credits = spendableCents(buckets, allowWelcome);
-          const canUseCredits = credits >= estimatedCostCents;
+          const canUseCredits = canCoverEstimatedSpend({
+            plan,
+            spendableCents: credits,
+            estimatedCostCents,
+          });
 
           // Check per-key spend cap
           const keySpendLimit = Number(keyRecord.spendLimitUsdCents || 0);
@@ -276,6 +311,7 @@ export async function authMiddleware(c: Context, next: Next) {
             useFromPlan: canUsePlan,
             useFromCredits: !canUsePlan,
             estimatedCostUsd: estimatedCost.totalCost,
+            userId: houseChatUserId || null,
           });
         } catch {
           // Pricing may be missing for new models; fallback to allowing request.
@@ -286,6 +322,7 @@ export async function authMiddleware(c: Context, next: Next) {
             useFromPlan: false,
             useFromCredits: true,
             estimatedCostUsd: 0,
+            userId: houseChatUserId || null,
           });
         }
       }

@@ -1,12 +1,12 @@
 "use client";
 
 import {
-  Sparkles,
   Zap,
   MessageSquare,
   Lightbulb,
   HelpCircle,
 } from "lucide-react";
+import { AiCrest } from "@/components/ui/ai-crest";
 
 interface ChatWelcomeProps {
   assistantName: string;
@@ -37,8 +37,6 @@ export function ChatWelcome({
   assistantDescription,
   welcomeMessage,
   primaryColor,
-  avatarLetter,
-  logoUrl,
   onSelectPrompt,
 }: ChatWelcomeProps) {
   const greeting = getGreeting();
@@ -59,22 +57,7 @@ export function ChatWelcome({
 
   return (
     <div className="flex flex-col items-center justify-center h-full gap-6 px-4 py-16">
-      {/* Avatar */}
-      <div
-        className="w-14 h-14 rounded-2xl flex items-center justify-center text-white text-xl font-bold shadow-md"
-        style={{ background: primaryColor }}
-      >
-        {logoUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={logoUrl}
-            alt={assistantName}
-            className="w-full h-full object-cover rounded-2xl"
-          />
-        ) : (
-          avatarLetter
-        )}
-      </div>
+      <AiCrest mood="idle" size={45} />
 
       {/* Greeting */}
       <div className="text-center space-y-1">
@@ -114,7 +97,7 @@ export function ChatWelcome({
           }}
         >
           <div className="flex items-center gap-2 mb-2">
-            <Sparkles className="w-4 h-4" style={{ color: primaryColor }} />
+            <AiCrest mood="ready" size={16} />
             <span
               className="font-semibold text-xs uppercase tracking-wide"
               style={{ color: "var(--ink-3)" }}

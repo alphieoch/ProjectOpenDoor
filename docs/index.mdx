@@ -1,65 +1,111 @@
 ---
-title: "What OpenDoor is"
-description: "One OpenAI-compatible gateway for open-weight and optional closed models, with a dashboard that reads your live catalog, keys, and usage."
+title: "Get started"
+description: "Create an API key and call OpenDoor chat completions in five steps."
 showPageTitle: true
 ---
 
-OpenDoor sits between your app and the models you actually run: local Ollama, vendor APIs (DeepSeek, Qwen, Mistral, and optional GPT/Claude/Gemini), or a GPU you request on this machine or GCP.
+# Get started
 
-You do not get a mock catalog or a fake playground. The dashboard lists models from Postgres (plus running deployments), keys you create, and usage you have already billed.
+OpenDoor is an OpenAI-compatible gateway. You authenticate with a workspace key (`opd_…`), then call `/v1/chat/completions` on the hosted gateway.
 
-## What you get
+| | URL |
+|---|---|
+| Dashboard | [https://opendoor-gcp.web.app](https://opendoor-gcp.web.app) |
+| Gateway | `https://opendoor-gateway-u5ojp4qjiq-uc.a.run.app` |
+| These docs | [https://opendoor-gcp.web.app/docs](https://opendoor-gcp.web.app/docs) |
 
-- **One API** — `POST /v1/chat/completions` and the rest of the OpenAI-shaped surface
-- **Open-weight first** — ingest Hugging Face / Ollama; statuses are `live`, `warming`, `dedicated`, or `available_on_request`
-- **A real console** — keys, playground, usage, billing, governance, deployments
-- **These docs** — markdown in this repo, served on the OpenDoor site at `/docs`
+Copy-paste blocks below use **`{{GATEWAY_URL}}`**. On this site that is `NEXT_PUBLIC_GATEWAY_URL` when the dashboard is running, otherwise the Cloud Run gateway.
 
-## Quick start
+## Five steps
 
-```bash
-git clone https://github.com/alphieoch/ProjectOpenDoor.git
-cd ProjectOpenDoor
-bun install
-
-# Postgres + Redis up, then:
-bun --env-file=.env run scripts/seed.ts
-bun run ingest:open-models
-
-bun --filter @opendoor/gateway dev    # :3001
-bun --filter @opendoor/dashboard dev  # :3010
-```
-
-Open the docs on the dashboard while it is running: [http://localhost:3010/docs](http://localhost:3010/docs).
-
-## How a call looks
+1. **Create a workspace** at [{{APP_URL}}/get-started]({{APP_URL}}/get-started) (or [sign in]({{APP_URL}}/login)).
+2. **Mint a key** in [Dashboard → API keys]({{APP_URL}}/dashboard/api-keys). The secret is shown once. It starts with `opd_`.
+3. **Export the key and base URL** (gateway origin, no `/v1` suffix).
+4. **List live models** with `GET /v1/models`. Pick an id with `deployment_status: "live"`.
+5. **Send a chat completion** to `POST /v1/chat/completions`.
 
 ```bash
-curl http://localhost:3001/v1/chat/completions \
-  -H "Authorization: Bearer YOUR_OPENDOOR_KEY" \
+export OPENDOOR_API_KEY=opd_…
+export OPENDOOR_BASE_URL={{GATEWAY_URL}}
+
+curl "$OPENDOOR_BASE_URL/v1/models" \
+  -H "Authorization: Bearer $OPENDOOR_API_KEY"
+
+curl "$OPENDOOR_BASE_URL/v1/chat/completions" \
+  -H "Authorization: Bearer $OPENDOOR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "YOUR_MODEL_ID",
-    "messages": [{"role":"user","content":"Hello"}]
+    "model": "{{EXAMPLE_MODEL}}",
+    "messages": [{"role":"user","content":"Hello from OpenDoor"}]
   }'
 ```
 
-Create the key in **Dashboard → API keys**. Copy a model id from **Models** (or the playground picker). Both lists come from `/api/models/available`.
+`{{EXAMPLE_MODEL}}` is a Vertex MaaS id on the hosted catalog. Always prefer an id from `GET /v1/models` for your workspace.
 
-## Model statuses
+Local gateway is `http://localhost:3001` when you run this repo. Same paths, same `OPENDOOR_API_KEY`.
 
-| Status | Meaning |
-|--------|---------|
-| **live** | Callable now (vendor API, local Ollama, or a running deployment) |
-| **warming** | Listed from Hugging Face; serving path not ready yet |
-| **dedicated** | Needs a GPU request (Dashboard → Deployments) |
-| **available_on_request** | Closed / marketplace models only |
+## Auth
 
-## Read next
+Every `/v1/*` route needs:
 
-- **[A request, end to end](/how-it-works/request-path)** — Auth, policy, routing, usage — what the gateway does on every call.
-- **[Dashboard](/how-it-works/dashboard)** — Which page reads which API. Nothing on the console is decorative.
-- **[TypeScript SDK](/getting-started/sdk)** — Official `@opendoor/sdk` client, including `provider` routing.
-- **[CLI](/getting-started/cli)** — `bun run od --` for chat, images, audio, and batches.
-- **[Chat completions](/api-reference/chat-completions)** — Headers, body, streaming, tools, and vision parts.
-- **[Model catalog](/model-catalog/overview)** — How models get listed, priced, and marked live.
+```
+Authorization: Bearer $OPENDOOR_API_KEY
+```
+
+Keys are hashed. The dashboard never stores the full secret after create. Revoke from the same [API keys]({{APP_URL}}/dashboard/api-keys) page.
+
+## SDKs
+
+**JavaScript** (`@opendoor/sdk` in this repo) — base URL is the gateway **origin** (no `/v1`):
+
+```ts
+import { OpenDoor } from "@opendoor/sdk";
+
+const client = new OpenDoor({
+  apiKey: process.env.OPENDOOR_API_KEY,
+  baseURL: process.env.OPENDOOR_BASE_URL, // {{GATEWAY_URL}}
+});
+
+const chat = await client.chat.completions.create({
+  model: "{{EXAMPLE_MODEL}}",
+  messages: [{ role: "user", content: "Hello from OpenDoor" }],
+});
+console.log(chat.choices[0]?.message.content);
+```
+
+**Python** (`packages/python-sdk`) — same env vars:
+
+```python
+from opendoor import OpenDoor
+
+client = OpenDoor()  # OPENDOOR_API_KEY + OPENDOOR_BASE_URL
+out = client.chat.completions.create(
+    model="{{EXAMPLE_MODEL}}",
+    messages=[{"role": "user", "content": "Hello from OpenDoor"}],
+)
+print(out["choices"][0]["message"]["content"])
+```
+
+**OpenAI SDK** — set `base_url` to the gateway **plus `/v1`**:
+
+```python
+import os
+from openai import OpenAI
+
+client = OpenAI(
+    api_key=os.environ["OPENDOOR_API_KEY"],
+    base_url="{{GATEWAY_URL}}/v1",
+)
+```
+
+## What you can call next
+
+- [Chat](/api-reference/chat-completions) — streaming, tools, provider routing
+- [Models](/api-reference/models) — live catalog
+- [Errors](/api-reference/errors) — 401 / 402 / 403 / 429 / 502
+- [Search](/api-reference/web-search) — Vertex grounding, **$0.10 / query**, included on Enterprise
+- [OpenBot / Agents](/api-reference/agents) — hosted agents on the same key (Agents add-on)
+- [BYOK](/how-it-works/byok) — org provider keys (encrypted; never returned)
+- [API overview](/api) — `GET /v1/catalog` is the live endpoint list
+
+Do not invent paths. `GET /v1/catalog` is the source of truth for what this key can hit.

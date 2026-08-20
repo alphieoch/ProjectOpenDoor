@@ -1,0 +1,138 @@
+{
+  "common": {
+    "language": "Lugha",
+    "region": "Eneo",
+    "country": "Nchi",
+    "countryOptional": "Nchi (si lazima)",
+    "countryNone": "Ruka kwa sasa",
+    "save": "Hifadhi",
+    "continue": "Endelea",
+    "skip": "Ruka",
+    "home": "Nyumbani",
+    "signIn": "Ingia",
+    "getStarted": "Anza",
+    "openDashboard": "Fungua dashibodi"
+  },
+  "auth": {
+    "welcomeBack": "Karibu tena",
+    "createAccount": "Fungua akaunti yako",
+    "signInSubtitle": "Ingia kwenye lango lako la LLM",
+    "signupSubtitle": "Anza na lango la LLM",
+    "educationSubtitle": "Anza kwa mpangilio wa shule",
+    "email": "Barua pepe",
+    "password": "Nenosiri",
+    "fullName": "Jina kamili",
+    "organization": "Shirika",
+    "organizationOptional": "si lazima",
+    "signIn": "Ingia",
+    "signingIn": "Inaingia…",
+    "createAccountCta": "Fungua akaunti",
+    "creatingAccount": "Inafungua akaunti…",
+    "noAccount": "Huna akaunti?",
+    "signUpFree": "Jisajili bure",
+    "haveAccount": "Tayari una akaunti?",
+    "enterpriseSso": "SSO ya biashara",
+    "orgSlug": "Kitambulisho cha shirika",
+    "continueSso": "Endelea kwa SSO",
+    "choosePlan": "Chagua mpango",
+    "enterpriseSales": "Mauzo ya Enterprise",
+    "loginFailed": "Kuingia kumeshindikana",
+    "signupFailed": "Usajili umeshindikana",
+    "passwordHint": "Angalau herufi 10"
+  },
+  "onboarding": {
+    "eyebrow": "Nafasi yako",
+    "title": "OpenDoor inafanya kazi vipi",
+    "body": "Kuingia moja. Soga kwenye kivinjari, nyumba ya wenzako wa OpenBot, na dimbwi la mikopo. Chagua eneo — hatuzuii nchi yoyote.",
+    "pickRegion": "Uko wapi?",
+    "pickRegionHint": "Hii inabadilisha maneno na chaguo-msingi tu. Kila eneo linaweza kujisajili.",
+    "productChatTitle": "Soga",
+    "productChatBody": "Fungua Soga uongee na modeli kwenye simu au kompyuta. Huhitaji ufunguo wa API kuanza.",
+    "productHouseTitle": "Nyumba",
+    "productHouseBody": "OpenBot ni nyumba ya wenzako — kiongozi pamoja na wataalamu unaowaongeza. Wanashiriki nafasi moja.",
+    "productPoolTitle": "Dimbwi la pamoja",
+    "productPoolBody": "Familia na Timu wanashiriki dimbwi moja la mikopo. Bili moja, si ufunguo kwa kila mtu.",
+    "saveWorld": "Hifadhi lugha na eneo",
+    "saved": "Imehifadhiwa",
+    "africa": {
+      "school": "Shule: kurasa nyepesi kwenye simu, kiti cha Mwanafunzi kwa darasa au kazi za nyumbani, bila data ya ziada kufikia modeli.",
+      "family": "Familia: dimbwi moja la nyumba. Wazazi na watoto wanatumia mikopo ileile — nafuu kuliko bili nne, na inazingatia gharama za data.",
+      "team": "Timu: nafasi moja kwa maabara, NGO, au duka. Alika kwa barua pepe. Wote wanashiriki dimbwi."
+    },
+    "europe": {
+      "school": "Shule: uanzishaji wa Mwanafunzi kwa darasa au maabara, njia ileile ya Pro.",
+      "family": "Familia: dimbwi la nyumba lenye kubeba salio — uanachama mmoja kwa nyumba.",
+      "team": "Timu: SSO na udhibiti wa pamoja. Enterprise inazungumza na mauzo."
+    },
+    "americas": {
+      "school": "Shule: Mwanafunzi ni uanachama wa kazi za nyumbani na maabara. Modeli zilezile za Pro.",
+      "family": "Familia: dimbwi la nyumba, nafuu kuliko viti vinne vya Pro.",
+      "team": "Timu: viti vya kujihudumia. Enterprise: makazi ya data, SCIM, na mauzo."
+    },
+    "asia_pacific": {
+      "school": "Shule: anza kwenye simu. Mwanafunzi anashughulikia kiti; tokeni zinabaki bei ya ghala.",
+      "family": "Familia: dimbwi moja la nyumba ili data na viti visinunuliwe mara nne.",
+      "team": "Timu: nafasi moja, alika wenzako, shiriki mikopo."
+    },
+    "middle_east": {
+      "school": "Shule: mpangilio wa Mwanafunzi kwa darasa na utafiti. Kiarabu ni lugha ya kwanza.",
+      "family": "Familia: dimbwi la nyumba — bili moja kwa nyumba.",
+      "team": "Timu: nafasi ya pamoja na SSO unapohitaji. Enterprise kupitia mauzo."
+    }
+  },
+  "getStarted": {
+    "eyebrow": "Anza",
+    "title": "Chagua njia yako.",
+    "body": "OpenDoor inafaa shule, familia, na timu. Chagua eneo — hakuna anayezuiliwa kwa jiografia.",
+    "startFree": "Anza bure",
+    "startFreeBody": "Jihudumie mwenyewe kwa mtu au timu ndogo. Endelea kwa barua pepe.",
+    "education": "Elimu",
+    "educationBody": "Kwa shule, maabara, na wanafunzi. Uanzishaji unabaki wa shule.",
+    "enterprise": "Biashara kubwa",
+    "enterpriseBody": "Mashirika yaliyopo yanaingia kwa SSO. Usambazaji mpya unaanza na mauzo.",
+    "continueEmail": "Endelea kwa barua pepe",
+    "continueEducation": "Endelea kwa usajili wa elimu",
+    "joinSso": "Jiunge kwa SSO",
+    "talkSales": "Zungumza na mauzo"
+  },
+  "gettingStarted": {
+    "eyebrow": "Hatua za kwanza",
+    "title": "Karibu OpenDoor",
+    "coreDone": "Mambo makuu yamekamilika. Hatua za hiari zipo unapohitaji.",
+    "coreTodo": "Soga na mwenzako mmoja vinakuingiza kwenye bidhaa. Mengine ni hiari.",
+    "hide": "Ficha uanzishaji"
+  },
+  "pricing": {
+    "audienceStudent": "Mwanafunzi",
+    "audienceFamily": "Familia",
+    "audienceTeam": "Timu",
+    "audienceEnterprise": "Biashara kubwa",
+    "singleLabel": "Mwanafunzi",
+    "familyLabel": "Familia",
+    "enterpriseLabel": "Timu / Biashara kubwa",
+    "singleHeadline": "Mipango ya mtu mmoja",
+    "familyHeadline": "Dimbwi la pamoja la nyumba yako",
+    "enterpriseHeadline": "Mipango ya timu na mashirika",
+    "compare": "Linganisha mipango"
+  },
+  "tools": {
+    "searchOneLiner": "Uliza swali. OpenDoor Search inajibu na vyanzo kwenye stack yetu — inatozwa kwenye mikopo yako, bila funguo za utafutaji za watu wengine."
+  },
+  "openbot": {
+    "houseTitle": "Nyumba hii ni nini?",
+    "houseBody": "Nyumba ni nafasi yako ya OpenBot: mwenzako kiongozi pamoja na wataalamu unaowaongeza. Wanashiriki vituo, stadi, na dimbwi la mikopo la shirika. Anza kituo kuzungumza; ongeza mwenzako unapotaka jukumu lenye jina.",
+    "houseGotIt": "Nimeelewa",
+    "startChannel": "Anza kituo kipya"
+  },
+  "settings": {
+    "languageRegion": "Lugha na eneo",
+    "languageRegionHint": "Inatumika kuingia, kuanza, na skrini ya kwanza. Dashibodi nyingine inabaki Kiingereza kwa sasa."
+  },
+  "regions": {
+    "africa": "Afrika",
+    "europe": "Ulaya",
+    "americas": "Marekani",
+    "asia_pacific": "Asia-Pasifiki",
+    "middle_east": "Mashariki ya Kati"
+  }
+}

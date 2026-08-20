@@ -62,7 +62,7 @@ export function SecurityControls() {
 
   return (
     <section className="mx-auto max-w-7xl px-6 pb-16 lg:px-8">
-      <div className="flex flex-wrap gap-2 border-b border-slate-200">
+      <div className="flex flex-wrap gap-2 border-b border-border">
         {TABS.map((item) => (
           <button
             key={item.id}
@@ -71,8 +71,8 @@ export function SecurityControls() {
             className={cn(
               "-mb-px border-b-2 px-4 py-3 text-sm font-semibold transition",
               active === item.id
-                ? "border-blue-600 text-blue-700"
-                : "border-transparent text-slate-500 hover:text-slate-900"
+                ? "border-blue-600 text-foreground"
+                : "border-transparent text-muted-foreground hover:text-foreground"
             )}
           >
             {item.label}
@@ -81,8 +81,8 @@ export function SecurityControls() {
       </div>
 
       <div className="mt-8 grid gap-8 lg:grid-cols-2">
-        <div className="rounded-[2rem] border border-slate-200 bg-white p-7 shadow-sm">
-          <div className="flex items-center gap-3 text-sm font-semibold text-slate-500">
+        <div className="rounded-2xl border border-border bg-white p-7 shadow-sm">
+          <div className="flex items-center gap-3 text-sm font-semibold text-muted-foreground">
             <span className="grid h-10 w-10 place-items-center rounded-2xl bg-slate-950 text-white">
               <Icon className="h-5 w-5" />
             </span>
@@ -92,7 +92,7 @@ export function SecurityControls() {
             {tab.points.map((point) => (
               <li
                 key={point}
-                className="rounded-2xl border border-slate-100 bg-[#F6F5F1] px-4 py-3 text-sm leading-6 text-slate-700"
+                className="rounded-2xl border border-border bg-background px-4 py-3 text-sm leading-6 text-muted-foreground"
               >
                 {point}
               </li>
@@ -100,8 +100,8 @@ export function SecurityControls() {
           </ul>
         </div>
         <div className="flex flex-col justify-center">
-          <h2 className="text-3xl font-semibold tracking-tight text-slate-950">{tab.title}</h2>
-          <p className="mt-4 text-lg leading-8 text-slate-600">{tab.body}</p>
+          <h2 className="text-3xl font-semibold tracking-tight text-foreground">{tab.title}</h2>
+          <p className="mt-4 text-lg leading-8 text-muted-foreground">{tab.body}</p>
         </div>
       </div>
     </section>

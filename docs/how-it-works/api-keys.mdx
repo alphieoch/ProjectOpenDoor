@@ -1,47 +1,59 @@
 ---
 title: "API keys"
-description: "Create a real OpenDoor key, optionally lock it to catalog models, and use it from any OpenAI client."
+description: "Create an opd_ key in the dashboard and call the gateway with Authorization: Bearer."
 showPageTitle: true
 ---
 
-Keys live in `api_keys`. The raw secret is shown **once** at create time (prefix `opd_`). The dashboard never stores the full key after that — only a hash and prefix.
+# API keys
 
-## Create one
+Workspace keys authenticate every `/v1` call. The raw secret is shown **once**. OpenDoor stores a SHA-256 hash and a 16-character prefix (`opd_…`).
 
-1. Open **Dashboard → API keys**.
-2. Name it (for example `Production` or `Playground`).
-3. Leave **full access** on, or tick models from the **live catalog** (same list as Models).
-4. Copy the secret immediately.
+## Create a key
 
-The create response also writes `localStorage.od_playground_api_key` in this browser so **Open playground with this key** works without pasting.
+1. Open **[Dashboard → API keys]({{APP_URL}}/dashboard/api-keys)**.
+2. Name it (`Production`, `CI`, `Playground`).
+3. Leave **full access** on, or tick models from the live catalog.
+4. Copy the secret immediately. It looks like `opd_` plus hex.
 
-The playground, if it finds no stored key, `POST`s `/api/keys` with the name `Playground` and keeps that secret in the same `localStorage` key.
+The create form can also write `localStorage.od_playground_api_key` in that browser so Playground can reuse it.
+
+You need an existing session to mint the first key. After that, `POST /v1/keys` works with a Bearer key. Dashboard `POST /api/keys` and the gateway both enforce `getPlan(org.plan).maxApiKeys` (**402** at the cap). The page shows used/max for the current plan. The secret is in `key` on the create body and is never returned again.
+
+```bash
+export OPENDOOR_API_KEY=opd_…
+export OPENDOOR_BASE_URL={{GATEWAY_URL}}
+
+curl "$OPENDOOR_BASE_URL/v1/keys" \
+  -H "Authorization: Bearer $OPENDOOR_API_KEY"
+
+curl "$OPENDOOR_BASE_URL/v1/keys" \
+  -H "Authorization: Bearer $OPENDOOR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"CI"}'
+```
+
+`DELETE /v1/keys/:id` revokes a key. You cannot revoke the key used for that request.
 
 ## Call the gateway
 
-```python
-from openai import OpenAI
-
-client = OpenAI(
-  base_url="http://localhost:3001/v1",  # or your deployed gateway
-  api_key="YOUR_OPENDOOR_KEY",
-)
-r = client.chat.completions.create(
-  model="YOUR_MODEL_ID",
-  messages=[{"role": "user", "content": "Hello"}],
-)
+```bash
+curl "$OPENDOOR_BASE_URL/v1/chat/completions" \
+  -H "Authorization: Bearer $OPENDOOR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "{{EXAMPLE_MODEL}}",
+    "messages": [{"role":"user","content":"Hello"}]
+  }'
 ```
 
-`base_url` must be the **gateway**, not the dashboard. Overview copies this snippet with `NEXT_PUBLIC_GATEWAY_URL` and the first enabled catalog model id.
+`OPENDOOR_BASE_URL` is the **gateway origin** (no `/v1`). The OpenAI SDK wants `{{GATEWAY_URL}}/v1` instead. See [Get started](/).
 
-## Limits that are real
+## Limits that are enforced
 
-- **Allowed models** — if you restricted the key, other ids 403
-- **RPM / TPM** — per-key rate limits
-- **Spend** — optional cents cap on the key; org credits and plan budget still apply
+- **Allowed models** — other ids return **403**
+- **RPM / TPM** — per-key; **429** when exceeded ([Errors](/api-reference/errors))
+- **Spend cap** — optional cents limit on the key; org credits still apply (**402**)
 
-Revoke from the same page. Revoked keys fail auth immediately.
+## Provider keys (BYOK)
 
-Org-owned *upstream* keys (OpenAI, Groq, …) live under [Bring your own keys](/how-it-works/byok), not this page.
-
-See [Chat completions](/api-reference/chat-completions) and [A request, end to end](/how-it-works/request-path).
+Org-owned *upstream* keys (Vertex, Together, OpenAI, …) are a different object. Add them on the same API keys page or **[Settings → Provider Keys]({{APP_URL}}/dashboard/settings/byok)**. The secret is encrypted and never shown again. See [Bring your own keys](/how-it-works/byok).

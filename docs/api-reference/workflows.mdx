@@ -1,6 +1,6 @@
 ---
 title: "Workflows"
-description: "Create and run workflow graphs over the same API key. LLM nodes bill usage."
+description: "Create, publish, and run workflow graphs over the same API key. LLM nodes bill usage."
 showPageTitle: true
 ---
 
@@ -15,17 +15,30 @@ DELETE /v1/workflows/:id
 POST   /v1/workflows/:id/run
 GET    /v1/workflows/:id/runs
 GET    /v1/workflows/:id/runs/:runId
+POST   /v1/workflows/:id/publish
+GET    /v1/workflows/:id/versions
+POST   /v1/workflows/:id/trigger
 ```
 
-`graph` is `{ nodes, edges }`. Node types the gateway runner executes:
+`graph` is `{ nodes, edges }`. Draft edits stay on `graph`. `POST /publish` snapshots `published_graph` and increments `published_version`. Live `/run` and `/trigger` use the published snapshot when one exists.
+
+Dashboard inbound hooks (webhook / inbound / agent event / record) are `POST /api/public/workflows/:id/hook` with `x-workflow-secret`.
+
+Node types the dashboard runner executes:
 
 | Type | Behavior |
 |------|----------|
 | `input` / `output` | Pass the current text through |
-| `llm` / `chat` / `generate` | `runBilledChat` on `data.model` or `opendoor/auto` |
-| `web_search` | Live search (Web Search add-on) |
-| `condition` | String contains check |
-| other | Recorded as `skipped` (code jail / human review stay on the dashboard runner) |
+| `llm` / `chat` / `generate` | Chat completion on `data.model` |
+| `tool` / `web_search` | Live search, code, files, images, embeddings |
+| `condition` | Safe string check + True/False branch |
+| `transform` / `set_variable` | `{{input}}` / `{{vars.x}}` / `{{steps.id.text}}` |
+| `wait` | Delay or pause until due |
+| `loop` | Map items through a template |
+| `assign` | Queue / assignee on the run |
+| `http` | HTTPS integration (public hosts only) |
+| `subflow` | Run another published workflow |
+| `human_review` | Pause for approve/reject, optional SLA |
 
 ```bash
 curl http://localhost:3001/v1/workflows/$ID/run \

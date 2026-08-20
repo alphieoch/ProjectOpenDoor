@@ -1,7 +1,7 @@
 import { getDb } from "@/lib/db";
 import { organizations } from "@opendoor/database";
 import { eq, sql } from "drizzle-orm";
-import { WEB_SEARCH_ADDON, workspaceHasWebSearchAddon } from "@opendoor/shared";
+import { WEB_SEARCH_ADDON, workspaceHasEnterpriseTools, workspaceHasWebSearchAddon } from "@opendoor/shared";
 import type { SessionPayload } from "@/lib/auth";
 import { webSearchAddonPriceId } from "@/lib/stripe";
 
@@ -26,17 +26,23 @@ export async function loadWebSearchEntitlement(orgId: string, session?: SessionP
       stripeWebSearchSubscriptionId: true,
     },
   });
+  const enterpriseTools = workspaceHasEnterpriseTools({
+    plan: org?.plan,
+    isSiteAdmin: session?.isSiteAdmin,
+  });
   const active = Boolean(
-    session?.isSiteAdmin ||
     workspaceHasWebSearchAddon({
       plan: org?.plan,
       webSearchAddonStatus: org?.webSearchAddonStatus,
+      isSiteAdmin: session?.isSiteAdmin,
     }),
   );
   return {
     active,
     status: org?.webSearchAddonStatus || "inactive",
-    includedInPlan: org?.plan === "enterprise",
+    includedInPlan: enterpriseTools,
+    enterpriseTools,
+    plan: org?.plan || "free",
     amountUsd: WEB_SEARCH_ADDON.amountUsd,
     amountCents: WEB_SEARCH_ADDON.amountCents,
     configured: Boolean(webSearchAddonPriceId()),
@@ -48,7 +54,7 @@ export function webSearchAddonRequiredResponse(
   entitlement: Awaited<ReturnType<typeof loadWebSearchEntitlement>>,
 ) {
   return {
-    error: `Web Search is a $${entitlement.amountUsd}/month add-on. Subscribe on Billing to unlock live Google results via Vertex AI Grounding.`,
+    error: `OpenDoor Search is metered on credits, or a $${entitlement.amountUsd}/month add-on. Enable it on Tools or subscribe on Billing.`,
     code: "addon_required" as const,
     addon: "web_search" as const,
     amountUsd: entitlement.amountUsd,

@@ -84,7 +84,7 @@ export default function DeploymentDetailPage() {
   if (loading || !deployment) {
     return (
       <div className="flex h-64 items-center justify-center">
-        <Loader2 className="h-6 w-6 animate-spin" style={{ color: "var(--ink-4)" }} />
+        <Loader2 className="h-6 w-6 animate-spin" style={{ color: "hsl(var(--muted-foreground))" }} />
       </div>
     );
   }
@@ -94,7 +94,7 @@ export default function DeploymentDetailPage() {
       <Link
         href="/dashboard/deployments"
         className="mb-4 inline-flex items-center gap-1 text-sm"
-        style={{ color: "var(--ink-3)" }}
+        style={{ color: "hsl(var(--muted-foreground))" }}
       >
         <ArrowLeft className="h-4 w-4" /> Back
       </Link>
@@ -111,29 +111,29 @@ export default function DeploymentDetailPage() {
 
       <div className="mt-6 grid gap-4 md:grid-cols-2">
         <div className="card p-4 text-sm space-y-2">
-          <p className="font-medium" style={{ color: "var(--ink)" }}>Fleet</p>
-          <p style={{ color: "var(--ink-3)" }}>Status: {deployment.status}</p>
-          <p style={{ color: "var(--ink-3)" }}>
+          <p className="font-medium" style={{ color: "hsl(var(--foreground))" }}>Fleet</p>
+          <p style={{ color: "hsl(var(--muted-foreground))" }}>Status: {deployment.status}</p>
+          <p style={{ color: "hsl(var(--muted-foreground))" }}>
             Target: {deployment.target} · precision {deployment.precision || "fp16"}
           </p>
-          <p style={{ color: "var(--ink-3)" }}>
+          <p style={{ color: "hsl(var(--muted-foreground))" }}>
             Replicas min/max: {deployment.minReplicas ?? 0}/{deployment.maxReplicas ?? 1}
             {deployment.scaleToZero ? " · scale-to-zero" : ""}
             {deployment.reserved ? " · reserved" : ""}
           </p>
           {deployment.weightsUri && (
-            <p style={{ color: "var(--ink-3)" }}>Weights: {deployment.weightsUri}</p>
+            <p style={{ color: "hsl(var(--muted-foreground))" }}>Weights: {deployment.weightsUri}</p>
           )}
-          <code className="block text-xs mt-2" style={{ color: "var(--ink-3)" }}>
+          <code className="block text-xs mt-2" style={{ color: "hsl(var(--muted-foreground))" }}>
             model: &quot;custom:{deployment.id}&quot;
           </code>
         </div>
 
         <div className="card p-4">
-          <p className="font-medium text-sm" style={{ color: "var(--ink)" }}>
+          <p className="font-medium text-sm" style={{ color: "hsl(var(--foreground))" }}>
             Load LoRA adapter
           </p>
-          <p className="mt-1 text-xs" style={{ color: "var(--ink-3)" }}>
+          <p className="mt-1 text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
             GCP / vLLM only. Then call <code>custom:{id}/&lt;name&gt;</code>.
           </p>
           <form onSubmit={addLora} className="mt-3 space-y-2">
@@ -160,11 +160,11 @@ export default function DeploymentDetailPage() {
       </div>
 
       <div className="mt-6">
-        <h2 className="text-sm font-medium" style={{ color: "var(--ink)" }}>
+        <h2 className="text-sm font-medium" style={{ color: "hsl(var(--foreground))" }}>
           Loaded adapters
         </h2>
         {loras.length === 0 ? (
-          <p className="mt-2 text-sm" style={{ color: "var(--ink-3)" }}>
+          <p className="mt-2 text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
             No LoRAs yet.
           </p>
         ) : (
@@ -173,22 +173,22 @@ export default function DeploymentDetailPage() {
               <div
                 key={l.id}
                 className="flex items-center justify-between rounded-lg border p-3 text-sm"
-                style={{ borderColor: "var(--line)" }}
+                style={{ borderColor: "hsl(var(--border))" }}
               >
                 <div>
-                  <p style={{ color: "var(--ink)" }}>
+                  <p style={{ color: "hsl(var(--foreground))" }}>
                     {l.name} · <span className="text-xs">{l.status}</span>
                   </p>
-                  <p className="text-xs" style={{ color: "var(--ink-3)" }}>
+                  <p className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
                     {l.adapterUri}
                   </p>
                   {l.status === "loaded" && (
-                    <code className="text-xs" style={{ color: "var(--ink-3)" }}>
+                    <code className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
                       custom:{id}/{l.name}
                     </code>
                   )}
                   {l.metadata?.detail && (
-                    <p className="text-xs mt-1" style={{ color: "var(--ink-3)" }}>
+                    <p className="text-xs mt-1" style={{ color: "hsl(var(--muted-foreground))" }}>
                       {l.metadata.detail}
                     </p>
                   )}

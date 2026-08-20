@@ -6,8 +6,8 @@ import { useEffect, useRef, useState } from "react";
 import { ChatMessage, type ToolInvocation } from "./components/ChatMessage";
 import { ChatPrompt } from "./components/ChatPrompt";
 import { ChatWelcome } from "./components/ChatWelcome";
-import { ChatIndicator } from "./components/ChatIndicator";
 import { ChatError } from "./components/ChatError";
+import { AiCrest } from "@/components/ui/ai-crest";
 
 interface ChatInterfaceProps {
   slug: string;
@@ -148,19 +148,16 @@ export function ChatInterface({
 
           {isLoading && messages[messages.length - 1]?.role !== "assistant" && (
             <div className="flex gap-3 items-start">
-              <div
-                className="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold text-white overflow-hidden mt-0.5"
-                style={{ background: primaryColor }}
-              >
+              <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center mt-0.5">
                 {logoUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={logoUrl} alt="logo" className="w-full h-full object-cover" />
+                  <img src={logoUrl} alt="" className="w-8 h-8 rounded-lg object-cover" />
                 ) : (
-                  avatarLetter
+                  <AiCrest mood="thinking" size="sm" />
                 )}
               </div>
               <div className="flex items-center gap-2 py-2">
-                <ChatIndicator />
+                <AiCrest mood="thinking" size={16} />
                 <span
                   className="text-sm font-medium shimmer-text"
                   style={{ color: "var(--ink-3)" }}
@@ -196,7 +193,15 @@ export function ChatInterface({
       </div>
 
       {/* Input */}
-      <div className="flex-shrink-0 px-4 pb-4 pt-2">
+      <div className="flex-shrink-0 px-4 pb-4 pt-2 relative">
+        {messages.length > 0 && (
+          <div className="pointer-events-none absolute right-6 bottom-16">
+            <AiCrest
+              mood={errorMessage ? "error" : isLoading ? "thinking" : "ready"}
+              size="sm"
+            />
+          </div>
+        )}
         <div className="max-w-3xl mx-auto">
           {cutOff ? (
             <div className="text-center py-4">

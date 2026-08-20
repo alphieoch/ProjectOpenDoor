@@ -5,11 +5,16 @@ const ALGO = "aes-256-gcm";
 const IV_LEN = 16;
 
 function getKey(): Buffer {
-  const envKey =
-    process.env.API_SECRET_KEY ||
-    process.env.AUTH_SECRET ||
-    "opendoor-default-secret-change-me";
-  return crypto.createHash("sha256").update(envKey).digest();
+  const envKey = process.env.API_SECRET_KEY || process.env.AUTH_SECRET || "";
+  const fallback = "opendoor-default-secret-change-me";
+  if (
+    process.env.NODE_ENV === "production" &&
+    process.env.NEXT_PHASE !== "phase-production-build" &&
+    (!envKey || envKey === fallback || envKey.length < 16)
+  ) {
+    throw new Error("API_SECRET_KEY or AUTH_SECRET must be set to a unique value in production");
+  }
+  return crypto.createHash("sha256").update(envKey || fallback).digest();
 }
 
 export function encryptAgentSecret(plaintext: string): EncryptedSecret {

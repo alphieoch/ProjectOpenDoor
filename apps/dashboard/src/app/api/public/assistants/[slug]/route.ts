@@ -136,7 +136,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ slu
     enabled: assistant.enabled,
     visibility: assistant.visibility,
     publishedAt: assistant.publishedAt,
-    primaryColor: assistant.primaryColor ?? "#1A73E8",
+    primaryColor: assistant.primaryColor ?? "#0F172A",
     avatarLetter: assistant.avatarLetter ?? assistant.name.charAt(0).toUpperCase(),
     logoUrl: assistant.logoUrl,
     welcomeMessage: assistant.welcomeMessage,

@@ -37,13 +37,18 @@ function statusBadge(status: string) {
 export default function DeploymentsPage() {
   const [deployments, setDeployments] = useState<Deployment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   async function fetchDeployments() {
     setLoading(true);
     const res = await fetch("/api/deployments");
+    const data = await res.json().catch(() => ({}));
     if (res.ok) {
-      const data = await res.json();
-      setDeployments(data.deployments);
+      setDeployments(Array.isArray(data.deployments) ? data.deployments : []);
+      setError(null);
+    } else {
+      setDeployments([]);
+      setError(data.error || "Failed to load deployments");
     }
     setLoading(false);
   }
@@ -57,13 +62,17 @@ export default function DeploymentsPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status: newStatus }),
     });
+    const data = await res.json().catch(() => ({}));
     if (res.ok) fetchDeployments();
+    else setError(data.error || "Could not update deployment");
   }
 
   async function deleteDeployment(id: string) {
     if (!confirm("Are you sure you want to delete this deployment?")) return;
     const res = await fetch(`/api/deployments/${id}`, { method: "DELETE" });
+    const data = await res.json().catch(() => ({}));
     if (res.ok) fetchDeployments();
+    else setError(data.error || "Could not delete deployment");
   }
 
   return (
@@ -85,15 +94,21 @@ export default function DeploymentsPage() {
         }
       />
 
+      {error ? (
+        <div className="alert-error mb-4 text-sm" role="alert">
+          {error}
+        </div>
+      ) : null}
+
       {loading ? (
         <div className="flex h-64 items-center justify-center">
-          <Loader2 className="h-6 w-6 animate-spin" style={{ color: "var(--ink-4)" }} />
+          <Loader2 className="h-6 w-6 animate-spin" style={{ color: "hsl(var(--muted-foreground))" }} />
         </div>
       ) : deployments.length === 0 ? (
         <div className="card p-16 text-center">
-          <Server className="mx-auto h-10 w-10" style={{ color: "var(--ink-4)" }} />
-          <h3 className="mt-4 font-medium" style={{ color: "var(--ink)" }}>No deployments yet</h3>
-          <p className="mt-1 text-sm" style={{ color: "var(--ink-3)" }}>
+          <Server className="mx-auto h-10 w-10" style={{ color: "hsl(var(--muted-foreground))" }} />
+          <h3 className="mt-4 font-medium" style={{ color: "hsl(var(--foreground))" }}>No deployments yet</h3>
+          <p className="mt-1 text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
             Request a GPU on this Mac or GCP and run a catalog model.
           </p>
           <Link href="/dashboard/deployments/new" className="btn-primary mt-5 inline-flex">
@@ -104,30 +119,30 @@ export default function DeploymentsPage() {
       ) : (
         <div className="grid gap-4">
           {deployments.map((d) => (
-            <div key={d.id} className="od-card od-lift p-6">
+            <div key={d.id} className="rounded-lg border border-border bg-card text-card-foreground shadow-sm transition-shadow hover:shadow-lg p-6">
               <div className="flex items-start justify-between">
                 <div>
                   <div className="flex items-center gap-3">
                     <Link
                       href={`/dashboard/deployments/${d.id}`}
                       className="font-semibold hover:underline"
-                      style={{ color: "var(--ink)" }}
+                      style={{ color: "hsl(var(--foreground))" }}
                     >
                       {d.name}
                     </Link>
                     <span className={statusBadge(d.status)}>{d.status}</span>
                   </div>
-                  <p className="mt-1 text-sm" style={{ color: "var(--ink-3)" }}>
+                  <p className="mt-1 text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
                     {d.sourceType === "image" ? `Image: ${d.sourceValue}` : `Catalog: ${d.sourceValue}`}
                   </p>
-                  <div className="mt-2 flex flex-wrap gap-4 text-sm" style={{ color: "var(--ink-3)" }}>
+                  <div className="mt-2 flex flex-wrap gap-4 text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
                     <span>{d.target === "local" ? "This Mac" : d.target === "gcp" ? "GCP" : "Azure"}</span>
                     <span>{d.gpuType && d.gpuType !== "none" ? `GPU: ${d.gpuType}` : `${d.cpu} CPU`}</span>
                     {d.runtimeModel && <span>{d.runtimeModel}</span>}
                     <span>{d.replicas} replica{d.replicas !== 1 ? "s" : ""}</span>
                   </div>
                   {d.statusMessage && (
-                    <p className="mt-2 text-xs" style={{ color: "var(--ink-3)" }}>{d.statusMessage}</p>
+                    <p className="mt-2 text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>{d.statusMessage}</p>
                   )}
                 </div>
                 <div className="flex items-center gap-1">
@@ -168,9 +183,9 @@ export default function DeploymentsPage() {
               </div>
 
               {d.status === "running" && (
-                <div className="mt-4 rounded-lg border p-3 text-sm" style={{ borderColor: "var(--line)", background: "var(--paper)" }}>
-                  <p className="font-medium" style={{ color: "var(--ink-2)" }}>API Usage</p>
-                  <code className="mt-1 block text-xs" style={{ color: "var(--ink-3)" }}>
+                <div className="mt-4 rounded-lg border p-3 text-sm" style={{ borderColor: "hsl(var(--border))", background: "hsl(var(--background))" }}>
+                  <p className="font-medium" style={{ color: "hsl(var(--muted-foreground))" }}>API Usage</p>
+                  <code className="mt-1 block text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
                     model: &quot;custom:{d.id}&quot;
                   </code>
                 </div>

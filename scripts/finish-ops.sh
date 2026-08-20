@@ -39,10 +39,10 @@ echo "==> Firebase Hosting (optional, preferred commercial URL)"
 if firebase hosting:sites:list --project="$PROJECT" 2>/dev/null | grep -q opendoor-gcp; then
   firebase deploy --only hosting --project="$PROJECT"
 else
-  echo "Still blocked until Firebase is linked:"
-  echo "  1. Open https://console.firebase.google.com/ → Add project → select $PROJECT → accept ToS"
-  echo "  2. firebase login && firebase hosting:sites:create opendoor-gcp --project $PROJECT"
-  echo "  3. firebase deploy --only hosting --project $PROJECT"
+  echo "Firebase site opendoor-gcp not listed in this CLI session."
+  echo "  Live URL is https://opendoor-gcp.web.app — run firebase login if deploy is needed."
+  echo "  firebase hosting:sites:create opendoor-gcp --project $PROJECT"
+  echo "  firebase deploy --only hosting --project $PROJECT"
 fi
 
 echo ""

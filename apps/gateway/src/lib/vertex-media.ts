@@ -129,7 +129,7 @@ export function vertexMediaConfigured(): boolean {
 }
 
 export function defaultImageModel(): string {
-  return env("VERTEX_IMAGE_MODEL") || env("VERTEX_IMAGEN_MODEL") || "gemini-2.5-flash-image";
+  return env("VERTEX_IMAGE_MODEL") || env("VERTEX_IMAGEN_MODEL") || "gemini-3.1-flash-image";
 }
 
 export function defaultVideoModel(): string {
@@ -148,12 +148,26 @@ export function isOpenAiImageModel(model: string): boolean {
   return /^(dall-e|gpt-image)/i.test(model);
 }
 
+const IMAGE_MODEL_ALIASES: Record<string, string> = {
+  "nano-banana": "gemini-3.1-flash-image",
+  "nano-banana-2": "gemini-3.1-flash-image",
+  "google-nano-banana": "gemini-3.1-flash-image",
+  "gemini-3.1-flash-image-preview": "gemini-3.1-flash-image",
+  "nano-banana-pro": "gemini-3-pro-image",
+  "gemini-3-pro-image-preview": "gemini-3-pro-image",
+};
+
 export function isImagenModel(model: string): boolean {
   return /^imagen/i.test(model) || /^imagegeneration@/i.test(model);
 }
 
 export function isGeminiImageModel(model: string): boolean {
   return /gemini-.*-image/i.test(model);
+}
+
+export function isVertexImageRequest(model: string): boolean {
+  const resolved = IMAGE_MODEL_ALIASES[model] || model;
+  return isGeminiImageModel(resolved) || isImagenModel(resolved) || /^google-imagen/i.test(resolved);
 }
 
 export function isVeoModel(model: string): boolean {
@@ -180,34 +194,48 @@ function videoLocation(model: MediaModelInfo | { location?: string }): string {
 }
 
 function resolveImageModel(modelId: string): MediaModelInfo {
-  const found = VERTEX_IMAGE_MODELS.find((m) => m.id === modelId);
+  const resolved = IMAGE_MODEL_ALIASES[modelId] || modelId;
+  const found = VERTEX_IMAGE_MODELS.find((m) => m.id === resolved);
   if (found) return found;
-  if (isImagenModel(modelId)) {
+  if (isImagenModel(resolved) || /^google-imagen/i.test(resolved)) {
     return {
-      id: modelId,
+      id: resolved,
       kind: "imagen",
       location: env("VERTEX_IMAGEN_LOCATION") || "us-central1",
       listed: false,
-      display_name: modelId,
+      display_name: resolved,
     };
   }
   return {
-    id: modelId,
+    id: resolved,
     kind: "gemini-image",
     location: env("VERTEX_IMAGE_LOCATION") || "global",
     listed: false,
-    display_name: modelId,
+    display_name: resolved,
   };
 }
 
+const VIDEO_MODEL_ALIASES: Record<string, string> = {
+  "luma-dream-machine": "veo-3.1-fast-generate-001",
+  "google-veo-2": "veo-3.1-generate-001",
+  "opendoor-veo-cinematic": "veo-3.1-generate-001",
+  "wan-2-1-video": "veo-3.1-fast-generate-001",
+  "ltx-video-fast": "veo-3.1-fast-generate-001",
+  "animatediff-v3": "veo-3.1-fast-generate-001",
+  "opendoor-runway-motion-v3": "veo-3.1-fast-generate-001",
+  "veo-3.1-fast": "veo-3.1-fast-generate-001",
+  "veo-3.1": "veo-3.1-generate-001",
+};
+
 function resolveVideoModel(modelId: string): MediaModelInfo {
+  const resolved = VIDEO_MODEL_ALIASES[modelId] || modelId;
   return (
-    VERTEX_VIDEO_MODELS.find((m) => m.id === modelId) || {
-      id: modelId,
+    VERTEX_VIDEO_MODELS.find((m) => m.id === resolved) || {
+      id: resolved,
       kind: "veo",
       location: env("VERTEX_VEO_LOCATION") || "us-central1",
       listed: false,
-      display_name: modelId,
+      display_name: resolved,
     }
   );
 }
@@ -358,6 +386,8 @@ export async function generateVertexImage(opts: {
   n?: number;
   size?: string;
   aspect_ratio?: string;
+  image_size?: "1K" | "2K" | "4K";
+  quality?: string;
   image?: unknown;
   mask?: unknown;
 }): Promise<{ model: string; images: GeneratedImage[] }> {
@@ -372,7 +402,19 @@ export async function generateVertexImage(opts: {
   if (model.kind === "imagen") {
     return generateImagen({ ...opts, model, image, mask });
   }
-  return generateGeminiImage({ ...opts, model, image });
+  return generateGeminiImage({
+    ...opts,
+    model,
+    image,
+    image_size: geminiImageSize(opts.image_size, opts.quality),
+  });
+}
+
+function geminiImageSize(imageSize?: "1K" | "2K" | "4K", quality?: string): "1K" | "2K" | "4K" {
+  if (imageSize === "1K" || imageSize === "2K" || imageSize === "4K") return imageSize;
+  if (quality === "high" || quality === "4k" || quality === "4K") return "4K";
+  if (quality === "medium" || quality === "1080p" || quality === "2K") return "2K";
+  return "1K";
 }
 
 async function generateImagen(opts: {
@@ -448,11 +490,13 @@ async function generateGeminiImage(opts: {
   n?: number;
   size?: string;
   aspect_ratio?: string;
+  image_size?: "1K" | "2K" | "4K";
   image?: DecodedImage | null;
 }): Promise<{ model: string; images: GeneratedImage[] }> {
   const loc = imageLocation(opts.model);
   const n = Math.min(Math.max(opts.n ?? 1, 1), 4);
   const aspectRatio = aspectRatioFromSize(opts.size, opts.aspect_ratio) || "1:1";
+  const imageSize = opts.image_size || "1K";
   const images: GeneratedImage[] = [];
   for (let i = 0; i < n; i++) {
     const parts: Array<Record<string, unknown>> = [];
@@ -475,7 +519,10 @@ async function generateGeminiImage(opts: {
         contents: { role: "user", parts },
         generationConfig: {
           responseModalities: ["TEXT", "IMAGE"],
-          imageConfig: { aspectRatio },
+          imageConfig: {
+            aspectRatio,
+            ...(opts.model.id.includes("gemini-3") ? { imageSize } : {}),
+          },
         },
       },
       90_000
@@ -487,7 +534,7 @@ async function generateGeminiImage(opts: {
           r.status,
           r.json,
           r.text,
-          "Enable this Gemini image model in Vertex Model Garden, or use gemini-2.5-flash-image."
+          "Enable this Gemini image model in Vertex Model Garden, or use gemini-3.1-flash-image."
         )
       );
     }

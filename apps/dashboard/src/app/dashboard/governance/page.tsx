@@ -61,18 +61,18 @@ interface GovernanceModel {
 }
 
 const RISK_CONFIG: Record<string, { label: string; tagClass: string; dotClass: string }> = {
-  low:      { label: "Low",      tagClass: "od-tag od-tag-green",   dotClass: "od-dot od-dot-green"  },
-  medium:   { label: "Medium",   tagClass: "od-tag od-tag-yellow",  dotClass: "od-dot od-dot-yellow" },
-  high:     { label: "High",     tagClass: "od-tag od-tag-red",     dotClass: "od-dot od-dot-red"    },
-  critical: { label: "Critical", tagClass: "od-tag od-tag-red",     dotClass: "od-dot od-dot-red"    },
+  low:      { label: "Low",      tagClass: "inline-flex items-center rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-700 dark:text-emerald-400",   dotClass: "inline-block size-1.5 rounded-full bg-emerald-500"  },
+  medium:   { label: "Medium",   tagClass: "inline-flex items-center rounded-full bg-amber-500/10 px-2 py-0.5 text-[11px] font-medium text-amber-700 dark:text-amber-400",  dotClass: "inline-block size-1.5 rounded-full bg-amber-500" },
+  high:     { label: "High",     tagClass: "inline-flex items-center rounded-full bg-destructive/10 px-2 py-0.5 text-[11px] font-medium text-destructive",     dotClass: "inline-block size-1.5 rounded-full bg-destructive"    },
+  critical: { label: "Critical", tagClass: "inline-flex items-center rounded-full bg-destructive/10 px-2 py-0.5 text-[11px] font-medium text-destructive",     dotClass: "inline-block size-1.5 rounded-full bg-destructive"    },
 };
 
 const STATUS_CONFIG: Record<string, { label: string; icon: React.ReactNode; tagClass: string }> = {
-  approved:   { label: "Approved",   icon: <CheckCircle2 className="h-3.5 w-3.5" />, tagClass: "od-tag od-tag-green"   },
-  pending:    { label: "Pending",    icon: <Clock className="h-3.5 w-3.5" />,         tagClass: "od-tag od-tag-yellow"  },
-  in_review:  { label: "In Review",  icon: <Clock className="h-3.5 w-3.5" />,         tagClass: "od-tag od-tag-blue"    },
-  rejected:   { label: "Rejected",   icon: <XCircle className="h-3.5 w-3.5" />,       tagClass: "od-tag od-tag-red"     },
-  deprecated: { label: "Deprecated", icon: <AlertTriangle className="h-3.5 w-3.5" />, tagClass: "od-tag od-tag-neutral" },
+  approved:   { label: "Approved",   icon: <CheckCircle2 className="h-3.5 w-3.5" />, tagClass: "inline-flex items-center rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-700 dark:text-emerald-400"   },
+  pending:    { label: "Pending",    icon: <Clock className="h-3.5 w-3.5" />,         tagClass: "inline-flex items-center rounded-full bg-amber-500/10 px-2 py-0.5 text-[11px] font-medium text-amber-700 dark:text-amber-400"  },
+  in_review:  { label: "In Review",  icon: <Clock className="h-3.5 w-3.5" />,         tagClass: "inline-flex items-center rounded-full bg-blue-500/10 px-2 py-0.5 text-[11px] font-medium text-blue-700 dark:text-blue-400"    },
+  rejected:   { label: "Rejected",   icon: <XCircle className="h-3.5 w-3.5" />,       tagClass: "inline-flex items-center rounded-full bg-destructive/10 px-2 py-0.5 text-[11px] font-medium text-destructive"     },
+  deprecated: { label: "Deprecated", icon: <AlertTriangle className="h-3.5 w-3.5" />, tagClass: "inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground" },
 };
 
 type SortKey = "name" | "risk" | "status" | "reviewed";
@@ -184,13 +184,13 @@ export default function TrustCenterPage() {
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center">
-        <Loader2 className="h-5 w-5 animate-spin" style={{ color: "var(--ink-3)" }} />
+        <Loader2 className="h-5 w-5 animate-spin" style={{ color: "hsl(var(--muted-foreground))" }} />
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 od-stagger">
+    <div className="space-y-6">
       <PageHeader
         eyebrow="Governance"
         title="Trust Center"
@@ -203,69 +203,69 @@ export default function TrustCenterPage() {
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <button
           onClick={clearFilters}
-          className="od-numberblock od-lift text-left focus:outline-none"
+          className="rounded-lg border border-border bg-card p-4 text-card-foreground shadow-sm transition-shadow hover:shadow-lg transition-shadow hover:shadow-lg text-left focus:outline-none"
         >
-          <div className="od-numberblock__label">Total Models</div>
-          <div className="od-display mt-2">{stats.total}</div>
-          <div className="mt-2 text-xs" style={{ color: "var(--md-on-surface-variant)" }}>Show all →</div>
+          <div className="text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">Total Models</div>
+          <div className="text-3xl font-semibold tracking-tight text-foreground mt-2">{stats.total}</div>
+          <div className="mt-2 text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>Show all →</div>
         </button>
 
         <button
           onClick={() => setActiveStatuses(new Set(["approved"]))}
-          className="od-numberblock od-lift text-left focus:outline-none"
+          className="rounded-lg border border-border bg-card p-4 text-card-foreground shadow-sm transition-shadow hover:shadow-lg transition-shadow hover:shadow-lg text-left focus:outline-none"
           style={activeStatuses.size === 1 && activeStatuses.has("approved")
             ? { outline: "2px solid var(--green)", outlineOffset: "2px" } : {}}
         >
-          <div className="od-numberblock__label">Approved</div>
-          <div className="od-display mt-2" style={{ color: "var(--green)" }}>{stats.approved}</div>
-          <div className="mt-2 text-xs" style={{ color: "var(--md-on-surface-variant)" }}>Filter →</div>
+          <div className="text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">Approved</div>
+          <div className="text-3xl font-semibold tracking-tight text-foreground mt-2" style={{ color: "var(--green)" }}>{stats.approved}</div>
+          <div className="mt-2 text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>Filter →</div>
         </button>
 
         <button
           onClick={() => setActiveStatuses(new Set(["pending", "in_review"]))}
-          className="od-numberblock od-lift text-left focus:outline-none"
+          className="rounded-lg border border-border bg-card p-4 text-card-foreground shadow-sm transition-shadow hover:shadow-lg transition-shadow hover:shadow-lg text-left focus:outline-none"
           style={(activeStatuses.has("pending") || activeStatuses.has("in_review"))
             ? { outline: "2px solid var(--yellow)", outlineOffset: "2px" } : {}}
         >
-          <div className="od-numberblock__label">Pending / Review</div>
-          <div className="od-display mt-2" style={{ color: "var(--yellow)" }}>{stats.pending}</div>
-          <div className="mt-2 text-xs" style={{ color: "var(--md-on-surface-variant)" }}>Filter →</div>
+          <div className="text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">Pending / Review</div>
+          <div className="text-3xl font-semibold tracking-tight text-foreground mt-2" style={{ color: "var(--yellow)" }}>{stats.pending}</div>
+          <div className="mt-2 text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>Filter →</div>
         </button>
 
         <button
           onClick={() => setActiveRisks(new Set(["high", "critical"]))}
-          className="od-numberblock od-lift text-left focus:outline-none"
+          className="rounded-lg border border-border bg-card p-4 text-card-foreground shadow-sm transition-shadow hover:shadow-lg transition-shadow hover:shadow-lg text-left focus:outline-none"
           style={(activeRisks.has("high") || activeRisks.has("critical"))
             ? { outline: "2px solid var(--red)", outlineOffset: "2px" } : {}}
         >
-          <div className="od-numberblock__label">High / Critical Risk</div>
-          <div className="od-display mt-2" style={{ color: "var(--red)" }}>{stats.highRisk}</div>
-          <div className="mt-2 text-xs" style={{ color: "var(--md-on-surface-variant)" }}>Filter →</div>
+          <div className="text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">High / Critical Risk</div>
+          <div className="text-3xl font-semibold tracking-tight text-foreground mt-2" style={{ color: "var(--red)" }}>{stats.highRisk}</div>
+          <div className="mt-2 text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>Filter →</div>
         </button>
       </div>
 
       {/* Filter toolbar */}
-      <div className="od-card p-4 space-y-3">
+      <div className="rounded-lg border border-border bg-card text-card-foreground shadow-sm p-4 space-y-3">
         {/* Search + sort + view toggle */}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-2.5 h-4 w-4" style={{ color: "var(--md-on-surface-variant)" }} />
+            <Search className="absolute left-3 top-2.5 h-4 w-4" style={{ color: "hsl(var(--muted-foreground))" }} />
             <input
               type="text"
               placeholder="Search models, teams, labels…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="od-input py-2 pl-9 pr-3 text-sm"
+              className="flex h-9 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm py-2 pl-9 pr-3 text-sm"
               style={{ fontSize: "14px", padding: "8px 12px 8px 36px" }}
             />
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
-            <SortAsc className="h-4 w-4" style={{ color: "var(--md-on-surface-variant)" }} />
+            <SortAsc className="h-4 w-4" style={{ color: "hsl(var(--muted-foreground))" }} />
             <select
               value={sort}
               onChange={(e) => setSort(e.target.value as SortKey)}
-              className="od-input text-sm"
+              className="flex h-9 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-sm"
               style={{ fontSize: "13px", padding: "7px 10px", width: "auto" }}
             >
               {SORT_OPTIONS.map((o) => (
@@ -274,14 +274,14 @@ export default function TrustCenterPage() {
             </select>
 
             {/* View toggle */}
-            <div className="flex overflow-hidden rounded-lg border" style={{ borderColor: "var(--md-outline-variant)" }}>
+            <div className="flex overflow-hidden rounded-lg border" style={{ borderColor: "hsl(var(--border))" }}>
               <button
                 onClick={() => setView("card")}
                 title="Card view"
                 className="px-2.5 py-2 transition-colors"
                 style={view === "card"
-                  ? { background: "var(--md-primary)", color: "var(--md-on-primary)" }
-                  : { background: "transparent", color: "var(--md-on-surface-variant)" }}
+                  ? { background: "hsl(var(--primary))", color: "var(--md-on-primary)" }
+                  : { background: "transparent", color: "hsl(var(--muted-foreground))" }}
               >
                 <LayoutGrid className="h-4 w-4" />
               </button>
@@ -290,8 +290,8 @@ export default function TrustCenterPage() {
                 title="Compact view"
                 className="px-2.5 py-2 transition-colors"
                 style={view === "compact"
-                  ? { background: "var(--md-primary)", color: "var(--md-on-primary)" }
-                  : { background: "transparent", color: "var(--md-on-surface-variant)" }}
+                  ? { background: "hsl(var(--primary))", color: "var(--md-on-primary)" }
+                  : { background: "transparent", color: "hsl(var(--muted-foreground))" }}
               >
                 <LayoutList className="h-4 w-4" />
               </button>
@@ -301,7 +301,7 @@ export default function TrustCenterPage() {
 
         {/* Chip filter row */}
         <div className="flex flex-wrap items-center gap-2">
-          <span className="od-eyebrow">Status</span>
+          <span className="text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">Status</span>
           {Object.entries(STATUS_CONFIG).map(([key, cfg]) => (
             <button
               key={key}
@@ -313,7 +313,7 @@ export default function TrustCenterPage() {
             </button>
           ))}
 
-          <span className="od-eyebrow ml-3">Risk</span>
+          <span className="text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground ml-3">Risk</span>
           {Object.entries(RISK_CONFIG).map(([key, cfg]) => (
             <button
               key={key}
@@ -330,7 +330,7 @@ export default function TrustCenterPage() {
             <button
               onClick={clearFilters}
               className="md-chip ml-auto"
-              style={{ height: "28px", padding: "0 12px", fontSize: "12px", color: "var(--md-error)" }}
+              style={{ height: "28px", padding: "0 12px", fontSize: "12px", color: "hsl(var(--destructive))" }}
             >
               <X className="h-3 w-3" /> Clear
             </button>
@@ -339,26 +339,26 @@ export default function TrustCenterPage() {
       </div>
 
       {/* Results count */}
-      <p className="text-sm" style={{ color: "var(--md-on-surface-variant)" }}>
-        Showing <span className="font-semibold" style={{ color: "var(--md-on-surface)" }}>{filtered.length}</span> of {models.length} models
+      <p className="text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
+        Showing <span className="font-semibold" style={{ color: "hsl(var(--foreground))" }}>{filtered.length}</span> of {models.length} models
       </p>
 
       {/* Model list */}
-      <div className={view === "card" ? "space-y-3" : "od-card overflow-hidden"}>
+      <div className={view === "card" ? "space-y-3" : "rounded-lg border border-border bg-card text-card-foreground shadow-sm overflow-hidden"}>
         {models.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-16 text-center od-card">
+          <div className="flex flex-col items-center justify-center py-16 text-center rounded-lg border border-border bg-card text-card-foreground shadow-sm">
             <Shield className="h-10 w-10 mb-3" style={{ color: "var(--md-outline)" }} />
-            <p className="text-sm font-medium" style={{ color: "var(--md-on-surface-variant)" }}>No models in the Trust Center yet</p>
-            <p className="mt-1 max-w-sm text-xs" style={{ color: "var(--md-on-surface-variant)" }}>
+            <p className="text-sm font-medium" style={{ color: "hsl(var(--muted-foreground))" }}>No models in the Trust Center yet</p>
+            <p className="mt-1 max-w-sm text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
               Refresh this page after signing in — the workspace registry loads automatically.
             </p>
           </div>
         )}
 
         {models.length > 0 && filtered.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-16 text-center od-card">
+          <div className="flex flex-col items-center justify-center py-16 text-center rounded-lg border border-border bg-card text-card-foreground shadow-sm">
             <Shield className="h-10 w-10 mb-3" style={{ color: "var(--md-outline)" }} />
-            <p className="text-sm font-medium" style={{ color: "var(--md-on-surface-variant)" }}>No models match your filters</p>
+            <p className="text-sm font-medium" style={{ color: "hsl(var(--muted-foreground))" }}>No models match your filters</p>
             <button onClick={clearFilters} className="md-btn-text mt-2 text-sm" style={{ height: "auto", padding: "4px 8px" }}>
               Clear filters
             </button>
@@ -383,32 +383,32 @@ function CardView({ model, index }: { model: GovernanceModel; index: number }) {
 
   return (
     <div
-      className="od-card od-lift p-5"
+      className="rounded-lg border border-border bg-card text-card-foreground shadow-sm transition-shadow hover:shadow-lg p-5"
       style={{ animationDelay: `${index * 0.04}s` }}
     >
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
           {/* Top row */}
           <div className="flex flex-wrap items-center gap-2">
-            <span className={risk?.dotClass ?? "od-dot"} />
-            <h3 className="text-sm font-semibold truncate" style={{ color: "var(--md-on-surface)" }}>
+            <span className={risk?.dotClass ?? "inline-block size-1.5 rounded-full bg-muted-foreground"} />
+            <h3 className="text-sm font-semibold truncate" style={{ color: "hsl(var(--foreground))" }}>
               {model.displayName}
             </h3>
-            <span className={risk?.tagClass ?? "od-tag od-tag-neutral"}>{model.riskLevel.toUpperCase()}</span>
-            <span className={status?.tagClass ?? "od-tag od-tag-neutral"}>
+            <span className={risk?.tagClass ?? "inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground"}>{model.riskLevel.toUpperCase()}</span>
+            <span className={status?.tagClass ?? "inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground"}>
               {status?.icon}{status?.label ?? model.approvalStatus}
             </span>
             {model.pendingApproval && (
-              <span className="od-tag od-tag-yellow"><Clock className="h-3 w-3" /> Approval pending</span>
+              <span className="inline-flex items-center rounded-full bg-amber-500/10 px-2 py-0.5 text-[11px] font-medium text-amber-700 dark:text-amber-400"><Clock className="h-3 w-3" /> Approval pending</span>
             )}
           </div>
 
-          <p className="mt-1.5 text-sm line-clamp-2" style={{ color: "var(--md-on-surface-variant)" }}>
+          <p className="mt-1.5 text-sm line-clamp-2" style={{ color: "hsl(var(--muted-foreground))" }}>
             {model.description}
           </p>
 
           {/* Meta */}
-          <div className="mt-2 flex flex-wrap gap-4 text-xs" style={{ color: "var(--md-on-surface-variant)" }}>
+          <div className="mt-2 flex flex-wrap gap-4 text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
             {model.ownerTeam && (
               <span className="inline-flex items-center gap-1"><Users className="h-3 w-3" /> {model.ownerTeam}</span>
             )}
@@ -430,10 +430,10 @@ function CardView({ model, index }: { model: GovernanceModel; index: number }) {
           {(model.businessLabels?.length > 0 || model.sectorTags?.length > 0) && (
             <div className="mt-3 flex flex-wrap gap-1.5">
               {model.businessLabels?.map((label) => (
-                <span key={label} className="od-tag od-tag-brand">{label}</span>
+                <span key={label} className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">{label}</span>
               ))}
               {model.sectorTags?.map((tag) => (
-                <span key={tag} className="od-tag od-tag-neutral">{tag}</span>
+                <span key={tag} className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">{tag}</span>
               ))}
             </div>
           )}
@@ -441,20 +441,20 @@ function CardView({ model, index }: { model: GovernanceModel; index: number }) {
           {/* Detail grid */}
           <div className="mt-4 grid grid-cols-3 gap-2">
             <div className="rounded-lg p-2.5" style={{ background: "var(--md-surface-container-high)" }}>
-              <div className="od-eyebrow mb-1.5">Allowed Data</div>
+              <div className="text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground mb-1.5">Allowed Data</div>
               <div className="flex flex-wrap gap-1">
                 {model.dataClassesAllowed?.map((dc) => (
-                  <span key={dc} className="od-tag od-tag-green" style={{ fontSize: "11px" }}>{dc}</span>
+                  <span key={dc} className="inline-flex items-center rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-700 dark:text-emerald-400" style={{ fontSize: "11px" }}>{dc}</span>
                 ))}
               </div>
             </div>
             <div className="rounded-lg p-2.5" style={{ background: "var(--md-surface-container-high)" }}>
-              <div className="od-eyebrow mb-1.5">License</div>
-              <div className="text-xs font-medium" style={{ color: "var(--md-on-surface)" }}>{model.licenseType || "Unknown"}</div>
+              <div className="text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground mb-1.5">License</div>
+              <div className="text-xs font-medium" style={{ color: "hsl(var(--foreground))" }}>{model.licenseType || "Unknown"}</div>
             </div>
             <div className="rounded-lg p-2.5" style={{ background: "var(--md-surface-container-high)" }}>
-              <div className="od-eyebrow mb-1.5">Context</div>
-              <div className="text-xs font-medium od-mono" style={{ color: "var(--md-on-surface)" }}>
+              <div className="text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground mb-1.5">Context</div>
+              <div className="text-xs font-medium font-mono" style={{ color: "hsl(var(--foreground))" }}>
                 {model.contextWindow?.toLocaleString() || "N/A"}
               </div>
             </div>
@@ -466,7 +466,9 @@ function CardView({ model, index }: { model: GovernanceModel; index: number }) {
               {model.latestEvaluations.map((ev) => (
                 <span
                   key={ev.id}
-                  className={`od-tag ${ev.passed ? "od-tag-green" : "od-tag-red"}`}
+                  className={ev.passed
+                    ? "inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-700 dark:text-emerald-400"
+                    : "inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-0.5 text-[11px] font-medium text-destructive"}
                 >
                   {ev.passed ? <CheckCircle2 className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
                   {ev.evaluationName}{ev.score ? ` · ${ev.score}%` : ""}
@@ -479,7 +481,7 @@ function CardView({ model, index }: { model: GovernanceModel; index: number }) {
           {model.complianceSummary && Object.keys(model.complianceSummary).length > 0 && (
             <div className="mt-3 flex flex-wrap gap-2">
               {Object.entries(model.complianceSummary).map(([framework, counts]) => (
-                <div key={framework} className="od-tag od-tag-neutral" style={{ gap: "6px" }}>
+                <div key={framework} className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground" style={{ gap: "6px" }}>
                   <span className="font-bold">{framework.replace("_", " ").toUpperCase()}</span>
                   <span style={{ color: "var(--green)" }}>{counts.compliant}/{counts.total}</span>
                   {counts.partial > 0 && <span style={{ color: "var(--yellow)" }}>·{counts.partial}p</span>}
@@ -492,10 +494,10 @@ function CardView({ model, index }: { model: GovernanceModel; index: number }) {
           {/* Violations */}
           {model.recentViolations && model.recentViolations.length > 0 && (
             <div className="mt-3 rounded-lg px-3 py-2" style={{ background: "var(--md-error-container)" }}>
-              <div className="od-eyebrow mb-1" style={{ color: "var(--md-on-error-container)" }}>Recent Violations</div>
+              <div className="text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground mb-1" style={{ color: "var(--md-on-error-container)" }}>Recent Violations</div>
               <div className="flex flex-wrap gap-1.5">
                 {model.recentViolations.map((v) => (
-                  <span key={v.id} className="od-tag od-tag-red">{v.violationType} · {v.severity}</span>
+                  <span key={v.id} className="inline-flex items-center rounded-full bg-destructive/10 px-2 py-0.5 text-[11px] font-medium text-destructive">{v.violationType} · {v.severity}</span>
                 ))}
               </div>
             </div>
@@ -521,29 +523,29 @@ function CompactRow({ model }: { model: GovernanceModel }) {
   return (
     <div
       className="flex items-center gap-4 px-4 py-3 transition-colors"
-      style={{ borderBottom: "1px solid var(--md-outline-variant)" }}
-      onMouseEnter={(e) => (e.currentTarget.style.background = "color-mix(in srgb, var(--md-on-surface) 4%, transparent)")}
+      style={{ borderBottom: "1px solid hsl(var(--border))" }}
+      onMouseEnter={(e) => (e.currentTarget.style.background = "color-mix(in srgb, hsl(var(--foreground)) 4%, transparent)")}
       onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
     >
-      <span className={risk?.dotClass ?? "od-dot"} />
+      <span className={risk?.dotClass ?? "inline-block size-1.5 rounded-full bg-muted-foreground"} />
 
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          <span className="text-sm font-semibold" style={{ color: "var(--md-on-surface)" }}>{model.displayName}</span>
+          <span className="text-sm font-semibold" style={{ color: "hsl(var(--foreground))" }}>{model.displayName}</span>
           {model.ownerTeam && (
-            <span className="text-xs" style={{ color: "var(--md-on-surface-variant)" }}>{model.ownerTeam}</span>
+            <span className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>{model.ownerTeam}</span>
           )}
         </div>
-        <p className="od-mono text-xs truncate" style={{ color: "var(--md-on-surface-variant)" }}>{model.modelId}</p>
+        <p className="font-mono text-xs truncate" style={{ color: "hsl(var(--muted-foreground))" }}>{model.modelId}</p>
       </div>
 
       <div className="hidden sm:flex items-center gap-2 shrink-0">
-        <span className={risk?.tagClass ?? "od-tag od-tag-neutral"}>{model.riskLevel.toUpperCase()}</span>
-        <span className={status?.tagClass ?? "od-tag od-tag-neutral"}>
+        <span className={risk?.tagClass ?? "inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground"}>{model.riskLevel.toUpperCase()}</span>
+        <span className={status?.tagClass ?? "inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground"}>
           {status?.icon}{status?.label ?? model.approvalStatus}
         </span>
         {model.recentViolations?.length > 0 && (
-          <span className="od-tag od-tag-red">
+          <span className="inline-flex items-center rounded-full bg-destructive/10 px-2 py-0.5 text-[11px] font-medium text-destructive">
             {model.recentViolations.length} violation{model.recentViolations.length > 1 ? "s" : ""}
           </span>
         )}

@@ -7,7 +7,7 @@ import {
   ClipboardList, Users, LogOut, Zap, Server, Calculator,
   ShieldCheck, Gavel, AlertTriangle, FileCheck, BookOpen, LifeBuoy,
   Image as ImageIcon,
-  Building2, UserCog, Coins, ShieldAlert, GitBranch, List, FlaskConical,
+  Building2, UserCog, Coins, ShieldAlert, GitBranch, List, FlaskConical, Wrench,
   ScrollText, Cpu, Gem, Aperture, MessageSquare,
 } from "lucide-react";
 import posthog from "posthog-js";
@@ -28,6 +28,7 @@ const navItems = [
   { href: "/dashboard/studio", label: "Studio", icon: Aperture },
   { href: "/dashboard/playground/media", label: "Media", icon: ImageIcon },
   { href: "/dashboard/workflow", label: "Workflow", icon: GitBranch },
+  { href: "/dashboard/tools", label: "Tools", icon: Wrench },
   { href: "/dashboard/models", label: "Models", icon: List },
   { href: "/dashboard/team", label: "Team", icon: Users },
   { href: "/dashboard/support", label: "Support", icon: LifeBuoy },
@@ -45,7 +46,7 @@ const governanceItems = [
 ];
 
 const adminNavItems = [
-  { href: "/admin", label: "Platform", icon: Building2 },
+  { href: "/dashboard/admin", label: "Platform", icon: Building2 },
   { href: "/admin/orgs", label: "Organizations", icon: Building2 },
   { href: "/admin/users", label: "All Users", icon: UserCog },
   { href: "/admin/credits", label: "Credits", icon: Coins },
@@ -89,7 +90,7 @@ export default function Sidebar({ isSiteAdmin = false }: { isSiteAdmin?: boolean
             gap: 12,
             height: 48,
             padding: "0 24px 0 16px",
-            borderRadius: 9999,
+            borderRadius: 8,
             margin: "1px 12px",
             fontSize: 14,
             fontWeight: active ? 500 : 400,
@@ -98,7 +99,7 @@ export default function Sidebar({ isSiteAdmin = false }: { isSiteAdmin?: boolean
             transition: "background 0.15s, color 0.15s",
             background: active
               ? isAdmin
-                ? "rgba(26, 115, 232, 0.12)"
+                ? "color-mix(in srgb, hsl(var(--primary)) 12%, transparent)"
                 : "var(--md-secondary-container)"
               : "transparent",
             color: active
@@ -210,7 +211,7 @@ export default function Sidebar({ isSiteAdmin = false }: { isSiteAdmin?: boolean
             width: "100%",
             height: 48,
             padding: "0 24px 0 16px",
-            borderRadius: 9999,
+            borderRadius: 8,
             border: "none",
             background: "transparent",
             fontSize: 14,

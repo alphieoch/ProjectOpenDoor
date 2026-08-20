@@ -1,0 +1,165 @@
+# GitHub → Jules. Official App path: label `jules`.
+# Actions path: label `agent` / `self-heal`, or workflow_dispatch.
+# Official action: google-labs-code/jules-action@v1.0.0 (needs JULES_API_KEY).
+name: Self-heal Jules
+
+on:
+  issues:
+    types: [labeled]
+  pull_request:
+    types: [labeled]
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: GitHub issue or PR number to comment on
+        required: false
+        type: string
+      prompt:
+        description: Extra task prompt when issue_number is empty
+        required: false
+        type: string
+      starting_branch:
+        description: Branch Jules starts from
+        required: false
+        default: main
+        type: string
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  jules:
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.head.repo.full_name == github.repository || github.event_name != 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Gate
+        id: gate
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          LABEL: ${{ github.event.label.name }}
+          ACTOR: ${{ github.actor }}
+          ISSUE_USER: ${{ github.event.issue.user.login }}
+          PR_USER: ${{ github.event.pull_request.user.login }}
+          ALLOWLIST: ${{ vars.JULES_ALLOWLIST || 'alphieoch' }}
+          HAS_JULES_KEY: ${{ secrets.JULES_API_KEY != '' }}
+        run: |
+          set -euo pipefail
+          allowed=false
+          IFS=',' read -ra users <<< "$ALLOWLIST"
+          for u in "${users[@]}"; do
+            u="$(echo "$u" | tr -d '[:space:]')"
+            if [ "$ACTOR" = "$u" ] || [ "${ISSUE_USER:-}" = "$u" ] || [ "${PR_USER:-}" = "$u" ]; then
+              allowed=true
+            fi
+          done
+          if [ "$allowed" != true ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "mode=none" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          trigger=false
+          mode=none
+          case "$EVENT_NAME" in
+            issues|pull_request)
+              case "${LABEL:-}" in
+                agent|self-heal)
+                  trigger=true
+                  if [ "$HAS_JULES_KEY" = "true" ]; then mode=api; else mode=label; fi
+                  ;;
+                jules)
+                  trigger=true
+                  mode=app
+                  ;;
+              esac
+              ;;
+            workflow_dispatch)
+              trigger=true
+              if [ "$HAS_JULES_KEY" = "true" ]; then mode=api; else mode=label; fi
+              ;;
+          esac
+          echo "skip=$([ "$trigger" = true ] && echo false || echo true)" >> "$GITHUB_OUTPUT"
+          echo "mode=$mode" >> "$GITHUB_OUTPUT"
+
+      - name: Context
+        if: steps.gate.outputs.skip != 'true'
+        id: ctx
+        env:
+          ISSUE_NUMBER: ${{ github.event.issue.number || github.event.pull_request.number || inputs.issue_number }}
+          ISSUE_TITLE: ${{ github.event.issue.title || github.event.pull_request.title }}
+          ISSUE_BODY: ${{ github.event.issue.body || github.event.pull_request.body }}
+          DISPATCH_PROMPT: ${{ inputs.prompt }}
+          STARTING_BRANCH: ${{ inputs.starting_branch || 'main' }}
+        run: |
+          set -euo pipefail
+          {
+            echo "number=${ISSUE_NUMBER:-}"
+            echo "title=${ISSUE_TITLE:-Self-heal Jules task}"
+            echo "starting_branch=${STARTING_BRANCH}"
+            echo "body<<OPD_EOF"
+            printf '%s\n' "${DISPATCH_PROMPT:-}"
+            printf '%s\n' "${ISSUE_BODY:-}"
+            echo "OPD_EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Invoke official Jules Action
+        if: steps.gate.outputs.skip != 'true' && steps.gate.outputs.mode == 'api'
+        uses: google-labs-code/jules-action@v1.0.0
+        with:
+          jules_api_key: ${{ secrets.JULES_API_KEY }}
+          starting_branch: ${{ steps.ctx.outputs.starting_branch }}
+          prompt: |
+            GitHub self-heal task for ${{ github.repository }}.
+
+            ## ${{ steps.ctx.outputs.title }}
+
+            ${{ steps.ctx.outputs.body }}
+
+            Start from `${{ steps.ctx.outputs.starting_branch }}`. Open a PR (AUTO_CREATE_PR).
+            If the body mentions OCH-*, put that id in the PR title.
+            Do not force-push. Do not change Armor/HA unless the issue asks.
+
+      - name: Apply official jules label
+        if: steps.gate.outputs.skip != 'true' && steps.gate.outputs.mode == 'label' && steps.ctx.outputs.number != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh issue edit "${{ steps.ctx.outputs.number }}" --repo "${{ github.repository }}" --add-label jules
+
+      - name: Comment on GitHub
+        if: steps.gate.outputs.skip != 'true' && steps.ctx.outputs.number != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MODE: ${{ steps.gate.outputs.mode }}
+        run: |
+          set -euo pipefail
+          case "$MODE" in
+            api)
+              body="Jules requested via official \`google-labs-code/jules-action@v1.0.0\` (AUTO_CREATE_PR). Watch https://jules.google.com and this thread for the PR."
+              ;;
+            label)
+              body="Applied official \`jules\` label. The Jules GitHub App starts a session and comments the PR when ready. Optional: \`gh secret set JULES_API_KEY\` for the Actions invoke path."
+              ;;
+            app)
+              body="Official Jules GitHub App trigger (\`jules\` label). Jules should comment here with the session, then the PR. https://jules.google/docs/running-tasks/"
+              ;;
+            *)
+              body="Self-heal Jules workflow ran."
+              ;;
+          esac
+          gh issue comment "${{ steps.ctx.outputs.number }}" --repo "${{ github.repository }}" --body "$body"
+
+      - name: Optional Linear comment
+        if: steps.gate.outputs.skip != 'true' && secrets.LINEAR_API_KEY != ''
+        env:
+          LINEAR_API_KEY: ${{ secrets.LINEAR_API_KEY }}
+          TITLE: ${{ steps.ctx.outputs.title }}
+          BODY: ${{ steps.ctx.outputs.body }}
+          NUMBER: ${{ steps.ctx.outputs.number }}
+        run: |
+          set -euo pipefail
+          id="$(printf '%s\n%s\n' "$TITLE" "$BODY" | grep -oE 'OCH-[0-9]+' | head -n1 || true)"
+          [ -n "$id" ] || { echo "No OCH-* id"; exit 0; }
+          bun scripts/self-heal/linear-comment.ts --issue "$id" --body "GitHub #${NUMBER} triggered Jules: https://github.com/${{ github.repository }}/issues/${NUMBER}"

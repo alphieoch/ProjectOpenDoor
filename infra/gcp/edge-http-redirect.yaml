@@ -1,0 +1,11 @@
+# HTTP → HTTPS redirect to Firebase Hosting (the public HTTPS edge).
+# Do not serve the app or API over plaintext on the leftover edge IP.
+#
+# Apply: ./scripts/setup-gcp-security.sh
+name: opendoor-edge-http-redirect
+description: Redirect HTTP on opendoor-edge-ip to https://opendoor-gcp.web.app
+defaultUrlRedirect:
+  hostRedirect: opendoor-gcp.web.app
+  httpsRedirect: true
+  redirectResponseCode: MOVED_PERMANENTLY_DEFAULT
+  stripQuery: false

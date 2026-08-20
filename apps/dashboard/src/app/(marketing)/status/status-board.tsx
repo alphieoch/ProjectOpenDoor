@@ -93,11 +93,11 @@ export function StatusBoard({ externalStatusUrl }: { externalStatusUrl?: string 
     <section className="mx-auto max-w-3xl px-6 py-16 lg:px-8">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="text-sm font-semibold uppercase tracking-[0.25em] text-blue-600">Status</p>
+          <p className="text-sm font-semibold uppercase tracking-[0.25em] text-muted-foreground">Status</p>
           <h1 className="mt-4 text-4xl font-semibold tracking-tight sm:text-5xl">System status</h1>
-          <p className="mt-3 max-w-xl text-lg leading-8 text-slate-600">
+          <p className="mt-3 max-w-xl text-lg leading-8 text-muted-foreground">
             Live checks against{" "}
-            <span className="font-mono text-sm text-slate-800">{gatewayBaseUrl()}</span>
+            <span className="font-mono text-sm text-foreground">{gatewayBaseUrl()}</span>
             {data?.source ? (
               <span className="text-slate-400"> · {data.source.replace(/_/g, " ")}</span>
             ) : null}
@@ -107,7 +107,7 @@ export function StatusBoard({ externalStatusUrl }: { externalStatusUrl?: string 
         <button
           type="button"
           onClick={load}
-          className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+          className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-sm font-semibold text-muted-foreground transition hover:bg-slate-50"
         >
           <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
           Refresh
@@ -117,7 +117,7 @@ export function StatusBoard({ externalStatusUrl }: { externalStatusUrl?: string 
       {externalStatusUrl && (
         <a
           href={externalStatusUrl}
-          className="mt-3 inline-block text-sm font-medium text-blue-700 underline-offset-2 hover:underline"
+          className="mt-3 inline-block text-sm font-medium text-foreground underline-offset-2 hover:underline"
           target="_blank"
           rel="noreferrer"
         >
@@ -143,21 +143,21 @@ export function StatusBoard({ externalStatusUrl }: { externalStatusUrl?: string 
         </div>
       )}
 
-      {!data && !error && <p className="mt-10 text-sm text-slate-500">Checking gateway…</p>}
+      {!data && !error && <p className="mt-10 text-sm text-muted-foreground">Checking gateway…</p>}
 
       {data && (
-        <div className="mt-6 overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white shadow-sm">
+        <div className="mt-6 overflow-hidden rounded-[1.75rem] border border-border bg-white shadow-sm">
           <ul>
             {components.map((row) => (
               <li
                 key={row.name}
-                className="flex items-center justify-between gap-4 border-b border-slate-100 px-5 py-4 last:border-b-0"
+                className="flex items-center justify-between gap-4 border-b border-border px-5 py-4 last:border-b-0"
               >
                 <div className="flex items-center gap-3">
                   <StatusIcon status={row.status} />
                   <div>
-                    <p className="font-medium text-slate-950">{row.name}</p>
-                    <p className="text-xs text-slate-500">
+                    <p className="font-medium text-foreground">{row.name}</p>
+                    <p className="text-xs text-muted-foreground">
                       {typeof row.latencyMs === "number" ? `${row.latencyMs}ms` : "No latency yet"}
                     </p>
                   </div>
@@ -165,7 +165,7 @@ export function StatusBoard({ externalStatusUrl }: { externalStatusUrl?: string 
                 <span
                   className={cn(
                     "text-sm font-semibold capitalize",
-                    isUp(row.status) ? "text-emerald-600" : "text-slate-500"
+                    isUp(row.status) ? "text-emerald-600" : "text-muted-foreground"
                   )}
                 >
                   {statusLabel(row.status)}
@@ -177,12 +177,12 @@ export function StatusBoard({ externalStatusUrl }: { externalStatusUrl?: string 
       )}
 
       {data && (
-        <div className="mt-6 overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white shadow-sm">
-          <div className="border-b border-slate-100 px-5 py-3 text-sm font-semibold text-slate-950">
+        <div className="mt-6 overflow-hidden rounded-[1.75rem] border border-border bg-white shadow-sm">
+          <div className="border-b border-border px-5 py-3 text-sm font-semibold text-foreground">
             Providers
           </div>
           {data.providers.length === 0 ? (
-            <p className="px-5 py-6 text-sm text-slate-500">
+            <p className="px-5 py-6 text-sm text-muted-foreground">
               No provider rows returned from the gateway.
             </p>
           ) : (
@@ -190,19 +190,19 @@ export function StatusBoard({ externalStatusUrl }: { externalStatusUrl?: string 
               {data.providers.map((p) => (
                 <li
                   key={p.slug}
-                  className="flex items-center justify-between gap-4 border-t border-slate-100 px-5 py-3.5 first:border-t-0"
+                  className="flex items-center justify-between gap-4 border-t border-border px-5 py-3.5 first:border-t-0"
                 >
                   <div className="flex items-center gap-3">
                     <StatusIcon status={p.status} />
                     <div>
-                      <p className="text-sm font-medium text-slate-950">{p.name}</p>
+                      <p className="text-sm font-medium text-foreground">{p.name}</p>
                       <p className="font-mono text-xs text-slate-400">{p.slug}</p>
                     </div>
                   </div>
                   <span
                     className={cn(
                       "text-sm font-semibold capitalize",
-                      isUp(p.status) ? "text-emerald-600" : "text-slate-500"
+                      isUp(p.status) ? "text-emerald-600" : "text-muted-foreground"
                     )}
                   >
                     {statusLabel(p.status)}
@@ -220,7 +220,7 @@ export function StatusBoard({ externalStatusUrl }: { externalStatusUrl?: string 
       )}
 
       {data && (
-        <p className="mt-6 text-sm text-slate-500">
+        <p className="mt-6 text-sm text-muted-foreground">
           Last checked {new Date(data.timestamp).toLocaleString()}. These are live probes — we do
           not invent a 90-day uptime bar.
         </p>
