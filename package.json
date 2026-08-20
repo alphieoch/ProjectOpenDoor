@@ -26,6 +26,10 @@
     "gcp:sql-proxy": "bash scripts/cloud-sql-proxy.sh",
     "gcp:secret": "bash scripts/upsert-gcp-secret.sh",
     "gcp:finish-ops": "bash scripts/finish-ops.sh",
+    "self-heal:status": "bun scripts/self-heal/status.ts",
+    "self-heal:jules": "bun --env-file=.env scripts/self-heal/jules-run.ts",
+    "self-heal:dispatch": "bun --env-file=.env scripts/self-heal/dispatch.ts",
+    "self-heal:comment-pr": "bun --env-file=.env scripts/self-heal/comment-pr.ts",
     "gcp:edge-lb": "bash scripts/setup-edge-lb.sh",
     "typecheck": "turbo run typecheck"
   },

@@ -1,4 +1,4 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { authkitMiddleware } from "@workos-inc/authkit-nextjs";
 import { LOCALE_COOKIE, persistWorldPreference, resolveLocale } from "@opendoor/shared";
 import { applyWorldCookies } from "@/lib/i18n/cookies";
