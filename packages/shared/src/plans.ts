@@ -64,6 +64,28 @@ export function spendableCents(buckets: CreditBuckets, allowWelcome: boolean) {
   return allowWelcome ? buckets.paidCents + buckets.welcomeCents : buckets.paidCents;
 }
 
+/**
+ * Site admins and the explicit `unlimited` plan skip prepaid/quota gates.
+ * Enterprise and other paid plans still spend included stipend + top-ups.
+ */
+export function billingIsUnlimited(opts: {
+  isSiteAdmin?: boolean | null;
+  plan?: string | null;
+}): boolean {
+  if (opts.isSiteAdmin) return true;
+  return (opts.plan || "").toLowerCase() === "unlimited";
+}
+
+export function canCoverEstimatedSpend(opts: {
+  isSiteAdmin?: boolean | null;
+  plan?: string | null;
+  spendableCents: number;
+  estimatedCostCents: number;
+}): boolean {
+  if (billingIsUnlimited(opts)) return true;
+  return opts.spendableCents >= Math.max(0, opts.estimatedCostCents);
+}
+
 /** Hidden key used by AI Assistants to bill the owner org through the gateway. */
 export const SYSTEM_ASSISTANT_KEY_NAME = "__opendoor_system_assistants__";
 

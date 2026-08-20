@@ -6,8 +6,10 @@ import { PageHeader } from "@/components/ui/page-header";
 import {
   GitBranch, Plus, Loader2, MoreVertical,
   Archive, Trash2, Copy, ArrowRight, Bot, Wrench,
-  CheckSquare, UserCheck, Shuffle,
+  CheckSquare, UserCheck, Shuffle, Timer, Repeat, Globe, Layers,
 } from "lucide-react";
+import { ConfirmDialog } from "@/components/workflow/confirm-dialog";
+import { TRIGGER_LABELS } from "@/components/workflow/node-meta";
 
 interface WorkflowNode {
   id: string;
@@ -24,6 +26,9 @@ interface Workflow {
   status: string;
   graph: { nodes: WorkflowNode[]; edges: unknown[] };
   tags: string[];
+  trigger?: { type?: string; cron?: string };
+  publishedVersion?: number;
+  nextRunAt?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -35,15 +40,16 @@ const CATEGORY_LABELS: Record<string, string> = {
 };
 
 const STATUS_STYLE: Record<string, { bg: string; color: string; label: string }> = {
-  draft:    { bg: "hsl(var(--accent))",    color: "hsl(var(--muted-foreground))",  label: "Draft"    },
-  active:   { bg: "var(--green-soft)", color: "var(--green)",  label: "Active"   },
-  archived: { bg: "#E9EBF2",           color: "#43474E",       label: "Archived" },
+  draft:    { bg: "hsl(var(--accent))", color: "hsl(var(--muted-foreground))", label: "Draft" },
+  active:   { bg: "var(--green-soft)", color: "var(--green)", label: "Active" },
+  archived: { bg: "hsl(var(--muted))", color: "hsl(var(--muted-foreground))", label: "Archived" },
 };
 
 const NODE_TYPE_ICONS: Record<string, React.ElementType> = {
   input: ArrowRight, llm: Bot, tool: Wrench,
   condition: GitBranch, transform: Shuffle,
   output: CheckSquare, human_review: UserCheck,
+  wait: Timer, loop: Repeat, http: Globe, subflow: Layers,
 };
 
 function timeAgo(iso: string) {
@@ -175,6 +181,16 @@ function WorkflowCard({
               style={{ background: st.bg, color: st.color }}>{st.label}</span>
             <span className="inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium capitalize"
               style={{ background: "hsl(var(--accent))", color: "hsl(var(--muted-foreground))" }}>{CATEGORY_LABELS[wf.category] ?? wf.category}</span>
+            <span className="inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium"
+              style={{ background: "hsl(var(--accent))", color: "hsl(var(--muted-foreground))" }}>
+              {TRIGGER_LABELS[wf.trigger?.type || "manual"] ?? "Manual"}
+            </span>
+            {(wf.publishedVersion || 0) > 0 && (
+              <span className="inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium"
+                style={{ background: "hsl(var(--accent))", color: "hsl(var(--muted-foreground))" }}>
+                v{wf.publishedVersion}
+              </span>
+            )}
           </div>
           <h3 className="text-sm font-semibold" style={{ color: "hsl(var(--foreground))" }}>{wf.name}</h3>
           {wf.description && (
@@ -235,6 +251,7 @@ function WorkflowCard({
         <div className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
           {nodeCount} node{nodeCount !== 1 ? "s" : ""}
           {model && <> · <code className="text-[11px]">{model}</code></>}
+          {wf.nextRunAt ? <> · next {timeAgo(wf.nextRunAt)}</> : null}
           {" · "}{timeAgo(wf.updatedAt)}
         </div>
         <button onClick={onOpen}
@@ -255,6 +272,8 @@ export default function WorkflowsPage() {
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
   const [category, setCategory] = useState("all");
+  const [pendingDelete, setPendingDelete] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   async function load() {
     const res = await fetch("/api/workflows");
@@ -263,7 +282,10 @@ export default function WorkflowsPage() {
     setLoading(false);
   }
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+    fetch("/api/workflows/tick", { method: "POST", credentials: "include" }).catch(() => undefined);
+  }, []);
 
   async function duplicate(wf: Workflow) {
     await fetch("/api/workflows", {
@@ -289,8 +311,10 @@ export default function WorkflowsPage() {
   }
 
   async function deleteWorkflow(id: string) {
-    if (!confirm("Delete this workflow? This cannot be undone.")) return;
+    setDeleting(true);
     await fetch(`/api/workflows/${id}`, { method: "DELETE" });
+    setDeleting(false);
+    setPendingDelete(null);
     load();
   }
 
@@ -318,7 +342,7 @@ export default function WorkflowsPage() {
       <PageHeader
         eyebrow="Build"
         title="Workflows"
-        description="Design and manage node-based LLM pipelines with models, tools, and approvals."
+        description="Design, publish, and run automations with triggers, approvals, timers, and an audit trail."
         actions={
           <button onClick={() => setShowCreate(true)}
             className="md-btn-filled shrink-0 flex items-center gap-2 px-4 py-2">
@@ -354,13 +378,13 @@ export default function WorkflowsPage() {
                 className="flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-medium transition-all"
                 style={{
                   background: category === c ? "hsl(var(--foreground))" : "hsl(var(--accent))",
-                  color: category === c ? "#fff" : "hsl(var(--muted-foreground))",
+                  color: category === c ? "hsl(var(--background))" : "hsl(var(--muted-foreground))",
                 }}>
                 {CATEGORY_LABELS[c]}
                 <span className="rounded-full px-1.5 text-[10px] font-semibold tabular-nums"
                   style={{
-                    background: category === c ? "rgba(255,255,255,0.2)" : "hsl(var(--card))",
-                    color: category === c ? "#fff" : "hsl(var(--muted-foreground))",
+                    background: category === c ? "hsl(var(--background) / 0.18)" : "hsl(var(--card))",
+                    color: category === c ? "hsl(var(--background))" : "hsl(var(--muted-foreground))",
                   }}>{count}</span>
               </button>
             );
@@ -378,7 +402,7 @@ export default function WorkflowsPage() {
           <div>
             <p className="text-base font-semibold" style={{ color: "hsl(var(--foreground))" }}>No workflows yet</p>
             <p className="mt-1 max-w-sm text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
-              Build node-based LLM pipelines — chain models, tools, conditions, and human review steps visually.
+              Chain models, tools, approvals, waits, loops, and HTTPS steps. Publish a version, then fire it from a webhook, schedule, or agent event.
             </p>
           </div>
           <button onClick={() => setShowCreate(true)}
@@ -399,7 +423,7 @@ export default function WorkflowsPage() {
               onOpen={() => router.push(`/dashboard/workflow/${wf.id}`)}
               onDuplicate={() => duplicate(wf)}
               onArchive={() => archive(wf)}
-              onDelete={() => deleteWorkflow(wf.id)}
+              onDelete={() => setPendingDelete(wf.id)}
             />
           ))}
         </div>
@@ -411,6 +435,16 @@ export default function WorkflowsPage() {
           onCreate={(id) => router.push(`/dashboard/workflow/${id}`)}
         />
       )}
+      <ConfirmDialog
+        open={Boolean(pendingDelete)}
+        title="Delete this workflow?"
+        description="This cannot be undone. Run history for this workflow will be removed."
+        confirmLabel="Delete"
+        destructive
+        busy={deleting}
+        onClose={() => setPendingDelete(null)}
+        onConfirm={() => { if (pendingDelete) deleteWorkflow(pendingDelete); }}
+      />
     </div>
   );
 }

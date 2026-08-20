@@ -4,7 +4,9 @@ import {
   WebSearchNotConfiguredError,
   WebSearchProviderError,
 } from "../lib/web-search.js";
-import { orgHasWebSearchAddon, webSearchAddonRequiredBody } from "../lib/web-search-entitlement.js";
+import { webSearchAccess, webSearchAddonRequiredBody } from "../lib/web-search-entitlement.js";
+import { getPlatformTool, usageCostCents } from "@opendoor/shared";
+import { centsToUsd, debitUsage, orgHasUnlimitedSpend } from "../utils/billing.js";
 
 const pluginsRouter = new Hono();
 
@@ -18,7 +20,10 @@ pluginsRouter.post("/web-search", async (c) => {
   }
 
   const organization = c.get("organization");
-  if (!organization || !(await orgHasWebSearchAddon(organization.id, organization.plan))) {
+  const access = organization
+    ? await webSearchAccess(organization.id, organization.plan)
+    : { ok: false, via: null };
+  if (!organization || !access.ok) {
     return c.json(webSearchAddonRequiredBody(), 402);
   }
 
@@ -38,6 +43,19 @@ pluginsRouter.post("/web-search", async (c) => {
 
   try {
     const result = await runWebSearch(body.query, maxResults);
+    if (access.via === "usage" && !(await orgHasUnlimitedSpend(organization))) {
+      const tool = getPlatformTool("web_search");
+      const cents = tool ? usageCostCents(tool, 1) : 0;
+      if (cents > 0) {
+        await debitUsage(organization.id, centsToUsd(cents), undefined, {
+          plan: organization.plan,
+          family: "closed",
+          providerSlug: "vertex",
+          useFromPlan: false,
+          useFromCredits: true,
+        });
+      }
+    }
     return c.json(result);
   } catch (err) {
     if (err instanceof WebSearchNotConfiguredError) {

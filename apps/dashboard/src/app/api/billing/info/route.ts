@@ -6,6 +6,8 @@ import { requireAuth } from "@/lib/auth";
 import { checkoutPlanConfigured } from "@/lib/stripe";
 import { loadAgentsEntitlement } from "@/lib/agents/entitlement";
 import { loadWebSearchEntitlement } from "@/lib/web-search/entitlement";
+import { billingIsUnlimited, getPlan } from "@opendoor/shared";
+import { orgHasUnlimitedSpend } from "@/lib/credits";
 
 export async function GET() {
   try {
@@ -40,12 +42,27 @@ export async function GET() {
       loadAgentsEntitlement(orgId, session),
       loadWebSearchEntitlement(orgId, session),
     ]);
+    const unlimited = await orgHasUnlimitedSpend(orgId, { isSiteAdmin: session.isSiteAdmin });
 
     return NextResponse.json({
-      org,
+      org: {
+        ...org,
+        planName: getPlan(org.plan).name,
+      },
+      unlimited,
+      unlimitedReason: session.isSiteAdmin
+        ? "site_admin"
+        : billingIsUnlimited({ plan: org.plan })
+          ? "plan"
+          : null,
+      isSiteAdmin: Boolean(session.isSiteAdmin),
       seatCount: Math.max(1, Number(seatRow?.n || 1)),
       checkout: {
+        student: checkoutPlanConfigured("student"),
         pro: checkoutPlanConfigured("pro"),
+        ultra: checkoutPlanConfigured("ultra"),
+        family: checkoutPlanConfigured("family"),
+        family_max: checkoutPlanConfigured("family_max"),
         team: checkoutPlanConfigured("team"),
         agents: addon.configured,
         webSearch: webSearchAddon.configured,
@@ -53,11 +70,9 @@ export async function GET() {
       addon,
       webSearchAddon,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Failed to fetch billing info";
     console.error("Billing info error:", error);
-    return NextResponse.json(
-      { error: error.message || "Failed to fetch billing info" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

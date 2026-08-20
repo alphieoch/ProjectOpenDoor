@@ -8,7 +8,11 @@ import { cn } from "@/lib/utils";
 
 type Item = { id: string; kind: string; title: string; href: string; at: string };
 
-export function InboxMenu() {
+export function InboxMenu({
+  placement = "right-end",
+}: {
+  placement?: "bottom-end" | "right-end" | "top-end";
+}) {
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<Item[]>([]);
   const [unread, setUnread] = useState(0);
@@ -47,7 +51,14 @@ export function InboxMenu() {
         )}
       </Button>
       {open && (
-        <div className="absolute right-0 top-[calc(100%+8px)] z-50 w-80 overflow-hidden rounded-lg border border-border bg-card text-card-foreground shadow-lg">
+        <div
+          className={cn(
+            "z-50 w-80 overflow-hidden rounded-lg border border-border bg-card text-card-foreground shadow-lg",
+            placement === "right-end" && "absolute bottom-0 left-full ml-2",
+            placement === "top-end" && "absolute right-0 bottom-[calc(100%+8px)]",
+            placement === "bottom-end" && "absolute right-0 top-[calc(100%+8px)]",
+          )}
+        >
           <div className="border-b border-border px-3.5 py-2.5 text-xs font-semibold">Inbox</div>
           <div className="max-h-80 overflow-y-auto">
             {items.length === 0 && (

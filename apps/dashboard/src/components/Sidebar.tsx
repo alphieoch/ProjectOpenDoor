@@ -7,7 +7,7 @@ import {
   ClipboardList, Users, LogOut, Zap, Server, Calculator,
   ShieldCheck, Gavel, AlertTriangle, FileCheck, BookOpen, LifeBuoy,
   Image as ImageIcon,
-  Building2, UserCog, Coins, ShieldAlert, GitBranch, List, FlaskConical,
+  Building2, UserCog, Coins, ShieldAlert, GitBranch, List, FlaskConical, Wrench,
   ScrollText, Cpu, Gem, Aperture, MessageSquare,
 } from "lucide-react";
 import posthog from "posthog-js";
@@ -28,6 +28,7 @@ const navItems = [
   { href: "/dashboard/studio", label: "Studio", icon: Aperture },
   { href: "/dashboard/playground/media", label: "Media", icon: ImageIcon },
   { href: "/dashboard/workflow", label: "Workflow", icon: GitBranch },
+  { href: "/dashboard/tools", label: "Tools", icon: Wrench },
   { href: "/dashboard/models", label: "Models", icon: List },
   { href: "/dashboard/team", label: "Team", icon: Users },
   { href: "/dashboard/support", label: "Support", icon: LifeBuoy },

@@ -1,6 +1,6 @@
 ---
 title: "CLI"
-description: "Thin OpenDoor CLI for models, chat, embeddings, images, audio, and batches."
+description: "Thin OpenDoor CLI for models, chat, embeddings, images, audio, batches, and hosted agents including OpenBot."
 showPageTitle: true
 ---
 
@@ -27,6 +27,13 @@ workflows list | run --id <id> --query <text>
 training jobs
 deployments list
 agents list
+agents create --name <name> --runtime openbot|openclaw|hermes|nemoclaw --model <id>
+agents get --id <id>
+agents start --id <id>
+agents stop --id <id>
+agents chat --id <id> --message <text>
+agents computer --id <id> --take|--release
+agents delete --id <id>
 byok list
 keys list
 requests [--limit 20]
@@ -67,7 +74,18 @@ bun run od -- generation get --id gen_…
 
 These hit `/v1/images/generations`, `/v1/videos/generations`, `/v1/audio/transcriptions` (multipart), and `/v1/generation/:id`.
 
+## Agents and OpenBot
+
+Needs the Agents add-on. Create boots the runtime (OpenBot by default). Chat runs the MIT OpenBot tool loop. With `OPENBOT_SUPERVISOR_URL` each OpenBot gets its own Chromium container. A shared `OPENBOT_COMPUTER_URL` is the fallback; without either, navigate/read/files still run. `--take` / `--release` hand the computer to a person and back.
+
+```bash
+bun run od -- agents create --name Desk --runtime openbot --model llama-3.1-8b-instruct
+bun run od -- agents chat --id "$AGENT_ID" --message "Open https://example.com and summarize the page."
+bun run od -- agents computer --id "$AGENT_ID" --take
+```
+
 ## Related
 
 - [TypeScript SDK](/getting-started/sdk)
+- [Agents API](/api-reference/agents)
 - [Batches](/api-reference/batches)

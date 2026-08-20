@@ -9,6 +9,8 @@ import { PageHeader } from "@/components/ui/page-header";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { AGENT_RUNTIME_CATALOG, agentRuntimeList, type AgentRuntimeId } from "@/lib/agents/runtimes";
+import { partitionAgentRuntimes } from "@/lib/openbot-house";
+import { OpenBotHousePanel } from "@/components/openbot/house-panel";
 
 type Agent = {
   id: string;
@@ -18,6 +20,13 @@ type Agent = {
   modelId: string;
   status: string;
   statusMessage?: string | null;
+  lastMessage?: string | null;
+  lastMessageAt?: string | null;
+  kind?: "leader" | "coworker" | null;
+  workspace?: {
+    kind?: "leader" | "coworker";
+    computer?: { backend?: string; isolation?: { mode?: string }; status?: string };
+  };
   createdAt: string;
 };
 
@@ -150,7 +159,11 @@ export default function AgentsPage() {
       return;
     }
     setOpen(false);
-    router.push(`/dashboard/agents/${data.agent.id}`);
+    router.push(
+      data.agent?.runtime === "openbot"
+        ? `/dashboard/openbot/${data.agent.id}`
+        : `/dashboard/agents/${data.agent.id}`,
+    );
   }
 
   const selected = AGENT_RUNTIME_CATALOG.find((r) => r.id === runtime);
@@ -162,7 +175,7 @@ export default function AgentsPage() {
       <PageHeader
         eyebrow="Workspace"
         title="Agents"
-        description={`Create your own agent. Pick ${agentRuntimeList("or")}, choose the LLM, and spin it up on this workspace's quota.`}
+        description={`Create your own agent. Pick ${agentRuntimeList("or")}, choose the LLM, and spin it up on this workspace's quota. OpenBot coworkers share one house under Leaderbot. Other runtimes stay on their own cards.`}
         actions={
           locked ? (
             <button
@@ -260,40 +273,7 @@ export default function AgentsPage() {
           )}
         </div>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2">
-          {agents.map((agent) => {
-            return (
-              <Link
-                key={agent.id}
-                href={`/dashboard/agents/${agent.id}`}
-                className="rounded-lg border border-border bg-card text-card-foreground shadow-sm transition-shadow hover:shadow-lg p-6"
-                style={{ textDecoration: "none" }}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <div className="grid h-10 w-10 place-items-center">
-                      <AiCrest
-                        mood={agent.status === "failed" ? "error" : agent.status === "running" ? "ready" : "idle"}
-                        surface="agent"
-                        size={22}
-                      />
-                    </div>
-                    <div>
-                      <p className="font-semibold" style={{ color: "hsl(var(--foreground))" }}>{agent.name}</p>
-                      <p className="text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
-                        {agent.runtimeName} · {agent.modelId}
-                      </p>
-                    </div>
-                  </div>
-                  <span className={statusBadge(agent.status)}>{agent.status}</span>
-                </div>
-                {agent.statusMessage && (
-                  <p className="mt-3 text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>{agent.statusMessage}</p>
-                )}
-              </Link>
-            );
-          })}
-        </div>
+        <AgentsList agents={agents} />
       )}
 
       <Dialog open={open} onOpenChange={setOpen}>
@@ -400,6 +380,54 @@ export default function AgentsPage() {
           </form>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+function AgentsList({ agents }: { agents: Agent[] }) {
+  const { house, others } = partitionAgentRuntimes(agents);
+
+  return (
+    <div className="space-y-4">
+      {house.length > 0 ? (
+        <OpenBotHousePanel
+          agents={house}
+          hrefFor={(agent) => `/dashboard/openbot/${agent.id}`}
+        />
+      ) : null}
+      {others.length > 0 ? (
+        <div className="grid gap-4 md:grid-cols-2">
+          {others.map((agent) => (
+            <Link
+              key={agent.id}
+              href={`/dashboard/agents/${agent.id}`}
+              className="rounded-lg border border-border bg-card p-6 text-card-foreground shadow-sm no-underline transition-shadow hover:shadow-lg"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="grid h-10 w-10 place-items-center">
+                    <AiCrest
+                      mood={agent.status === "failed" ? "error" : agent.status === "running" ? "ready" : "idle"}
+                      surface="agent"
+                      size={22}
+                    />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-foreground">{agent.name}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {agent.runtimeName} · {agent.modelId}
+                    </p>
+                  </div>
+                </div>
+                <span className={statusBadge(agent.status)}>{agent.status}</span>
+              </div>
+              {agent.statusMessage ? (
+                <p className="mt-3 text-sm text-muted-foreground">{agent.statusMessage}</p>
+              ) : null}
+            </Link>
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }

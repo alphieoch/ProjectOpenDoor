@@ -331,18 +331,26 @@ export async function GET(req: NextRequest) {
       gcp: live.gcp,
     },
   });
-  } catch (err: any) {
-    return NextResponse.json({
-      markupDefault: 15,
-      markupMin: 10,
-      markupMax: 20,
-      rules: [],
-      availableModels: [],
-      gpus: [],
-      gpuLive: {
-        local: { hasGpu: false, ollamaRunning: false, activeModels: [] },
-        gcp: { ready: false, activeDeployments: [] },
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Failed to load pricing";
+    if (message === "Unauthorized") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    return NextResponse.json(
+      {
+        error: message,
+        markupDefault: 15,
+        markupMin: 10,
+        markupMax: 20,
+        rules: [],
+        availableModels: [],
+        gpus: [],
+        gpuLive: {
+          local: { hasGpu: false, ollamaRunning: false, activeModels: [] },
+          gcp: { ready: false, activeDeployments: [] },
+        },
       },
-    });
+      { status: 500 },
+    );
   }
 }

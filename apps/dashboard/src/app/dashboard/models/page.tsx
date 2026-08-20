@@ -429,7 +429,9 @@ export default function ModelsPage() {
           ))}
           {filtered.length === 0 && (
             <div className="rounded-lg border border-border bg-card text-card-foreground shadow-sm" style={{ gridColumn: "1 / -1", padding: 40, textAlign: "center", color: "hsl(var(--muted-foreground))" }}>
-              No models match your filter.
+              {models.length === 0
+                ? "No models in the catalog yet. Seed or ingest — this list is not invented."
+                : "No models match your filter."}
             </div>
           )}
         </div>
@@ -448,6 +450,15 @@ export default function ModelsPage() {
               </tr>
             </thead>
             <tbody>
+              {filtered.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="px-4 py-10 text-center text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
+                    {models.length === 0
+                      ? "No models in the catalog yet. Seed or ingest — this list is not invented."
+                      : "No models match your filter."}
+                  </td>
+                </tr>
+              ) : null}
               {filtered.map((m) => (
                 <tr key={m.id} className="table-row" onClick={() => setSelected(m)} style={{ cursor: "pointer" }}>
                   <td className="table-cell font-mono text-sm" style={{ color: "hsl(var(--foreground))" }}>

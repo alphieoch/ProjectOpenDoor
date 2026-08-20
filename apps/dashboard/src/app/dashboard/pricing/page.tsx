@@ -17,13 +17,21 @@ export default function PricingPage() {
   const [rules, setRules] = useState<PricingRule[]>([]);
   const [models, setModels] = useState<PricingAvailableModel[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     fetch("/api/pricing", { credentials: "include" })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => {
-        if (cancelled || !data) return;
+      .then(async (r) => {
+        const data = await r.json().catch(() => null);
+        if (cancelled) return;
+        if (!r.ok || !data) {
+          setError(data?.error || "Failed to load pricing from the catalog.");
+          setRules([]);
+          setModels([]);
+          return;
+        }
+        setError(null);
         const nextRules: PricingRule[] = Array.isArray(data.rules) ? data.rules : [];
         const nextModels: PricingAvailableModel[] = Array.isArray(data.availableModels)
           ? data.availableModels
@@ -38,6 +46,7 @@ export default function PricingPage() {
       })
       .catch(() => {
         if (!cancelled) {
+          setError("Failed to load pricing from the catalog.");
           setRules([]);
           setModels([]);
         }
@@ -48,6 +57,8 @@ export default function PricingPage() {
     return () => {
       cancelled = true;
     };
+    // selectedModel is only seeded once when empty
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
@@ -73,6 +84,11 @@ export default function PricingPage() {
           </Link>
         }
       />
+      {error && (
+        <div className="mb-4 shrink-0 alert-error">
+          <p className="font-medium">{error}</p>
+        </div>
+      )}
       <div
         className="grid w-full min-h-0 flex-1 gap-5 lg:grid-cols-2"
         style={{ overflow: "hidden" }}

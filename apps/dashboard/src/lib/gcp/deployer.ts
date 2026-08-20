@@ -34,10 +34,12 @@ export async function deployGpuToGcp(opts: {
   maxReplicas?: number;
   scaleToZero?: boolean;
   precision?: string;
+  gpuType?: string;
 }): Promise<GcpGpuResult> {
   const service = `opendoor-${opts.deploymentId.replace(/-/g, "").slice(0, 18)}`.toLowerCase();
   const image = process.env.GCP_VLLM_IMAGE || "vllm/vllm-openai:latest";
   const model = opts.huggingFaceRepo;
+  const resolvedGpu = opts.gpuType || gpuType();
   const minInstances =
     opts.scaleToZero === false
       ? Math.max(1, opts.minReplicas ?? 1)
@@ -59,7 +61,7 @@ export async function deployGpuToGcp(opts: {
     `--project=${projectId()}`,
     `--region=${region()}`,
     "--gpu=1",
-    `--gpu-type=${gpuType()}`,
+    `--gpu-type=${resolvedGpu}`,
     "--cpu=4",
     "--memory=16Gi",
     "--no-cpu-throttling",
@@ -105,7 +107,7 @@ export async function deployGpuToGcp(opts: {
     fqdn,
     gcpResourceId: `projects/${projectId()}/locations/${region()}/services/${service}`,
     runtimeModel: "default",
-    gpuType: gpuType(),
+    gpuType: resolvedGpu,
   };
 }
 

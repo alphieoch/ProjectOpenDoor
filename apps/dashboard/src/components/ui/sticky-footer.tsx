@@ -189,6 +189,7 @@ const footerLinkGroups = [
     label: "Developers",
     links: [
       { title: "Get started", href: "/get-started" },
+      { title: "SDK & CLI", href: "/sdk" },
       { title: "API keys", href: "/dashboard/api-keys" },
       { title: "Usage", href: "/dashboard/usage" },
       { title: "System status", href: "/status" },

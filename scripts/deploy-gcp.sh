@@ -52,6 +52,9 @@ secret_bindings() {
   if gcloud secrets describe opendoor-qwen-api-key --project="$PROJECT" >/dev/null 2>&1; then
     secrets="${secrets},QWEN_API_KEY=opendoor-qwen-api-key:latest"
   fi
+  if gcloud secrets describe opendoor-openbot-computer-token --project="$PROJECT" >/dev/null 2>&1; then
+    secrets="${secrets},OPENBOT_COMPUTER_TOKEN=opendoor-openbot-computer-token:latest"
+  fi
   secrets="${secrets},INTERNAL_API_KEY=opendoor-internal-api-key:latest,GATEWAY_INTERNAL_KEY=opendoor-internal-api-key:latest"
   printf '%s' "$secrets"
 }
@@ -184,5 +187,11 @@ if [[ -n "$SANDBOX_URL" ]]; then
 else
   echo "  Sandbox Run:       (not deployed — workflow code_execution uses local subprocess)"
   echo "  Deploy jail:       gcloud builds submit --config=infra/gcp/cloudbuild.sandbox.yaml"
+fi
+COMPUTER_URL=$(gcloud run services describe opendoor-openbot-computer --region="$REGION" --project="$PROJECT" --format='value(status.url)' 2>/dev/null || true)
+if [[ -n "$COMPUTER_URL" ]]; then
+  echo "  OpenBot computer:  ${COMPUTER_URL}"
+else
+  echo "  OpenBot computer:  (not deployed — live click/screenshot stays local)"
 fi
 echo "  Studio images:     OpenDoor /v1/images/generations (Comfy retired; not wired)"

@@ -8,6 +8,7 @@ All production traffic is Google-managed:
 | App | Cloud Run `opendoor-dashboard` |
 | API | Cloud Run `opendoor-gateway` |
 | Code jail | Cloud Run `opendoor-sandbox` (gVisor, no egress) |
+| OpenBot computer | Cloud Run `opendoor-openbot-computer` (shared Chromium). Per-Bot supervisor stays local (Docker socket). |
 | Private image GPU | Retired `opendoor-comfy` (do not wire apps to it). Studio uses the gateway image path. |
 | DB | Cloud SQL Postgres 16 `opendoor-pg` |
 | Cache | Memorystore Redis `opendoor-redis` |
@@ -69,6 +70,7 @@ firebase deploy --only hosting --project project-800192c2-3ecc-4889-8f7
 | `STRIPE_WEB_SEARCH_ADDON_PRICE_ID` | `price_1U5OPSBZaqY5cS2ZgTgkHNDX` (test; dashboard) |
 | `PRIVATE_IMAGE_GEN_URL` | Optional OpenAI-compatible image server. Unset by default. Never `opendoor-comfy`. |
 | `PRIVATE_IMAGE_GEN_KIND` | `openai` when URL is set. `comfy` is off by default and undocumented. |
+| `OPENBOT_COMPUTER_URL` | Cloud Run URL of `opendoor-openbot-computer` when that service exists. Shared Chromium; not the local Docker supervisor. |
 
 Files bucket: `gs://opendoor-files-800192c2` in `us-central1`. Cloud Run runtime SA `930761303874-compute@developer.gserviceaccount.com` has `roles/storage.objectAdmin`. See `DEPLOY_PERSIST.md`.
 

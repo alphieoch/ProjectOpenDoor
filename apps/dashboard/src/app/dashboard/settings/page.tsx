@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   User,
   CreditCard,
@@ -33,13 +33,14 @@ import {
   Moon,
   ListOrdered,
   Receipt,
+  type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
 import { Avatar, Badge } from "@heroui/react";
 import { cn } from "@/lib/utils";
 import { PageHeader } from "@/components/ui/page-header";
 import { EnterpriseGate } from "@/components/enterprise-gate";
-import { isEnterprisePlan } from "@opendoor/shared";
+import { formatPlanPriceUsd, formatUsd, getPlan, isEnterprisePlan } from "@opendoor/shared";
 
 /* ── Compute Execution Modes ── */
 export type ExecutionMode = "on-demand" | "off-peak" | "batch";
@@ -304,7 +305,7 @@ type Rental = {
 interface TabItem {
   id: "profile" | "billing" | "sso" | "domain" | "email";
   label: string;
-  icon: any;
+  icon: LucideIcon;
   enterprise?: boolean;
 }
 
@@ -344,15 +345,14 @@ const ALL_PLAN_TIERS = [
     id: "starter",
     category: "individual",
     name: "Starter",
-    price: "$0",
+    price: formatPlanPriceUsd(getPlan("starter").amountUsd),
     period: "forever",
     seatsText: "1 Person",
-    description: "Essential tools for personal experimentation and prompt exploration.",
+    description: "Log in and top up to use the API. No included inference stipend.",
     features: [
-      "Standard generation queue",
-      "500 monthly compute credits",
-      "Text-to-image synthesis",
-      "Community support",
+      `${formatUsd(getPlan("starter").includedCreditsCents)} included inference credit`,
+      `${getPlan("starter").maxApiKeys} API keys`,
+      `${getPlan("starter").maxActiveDeployments} dedicated deployment`,
     ],
     badge: null,
   },
@@ -360,17 +360,14 @@ const ALL_PLAN_TIERS = [
     id: "pro",
     category: "individual",
     name: "Pro",
-    price: "$20",
+    price: formatPlanPriceUsd(getPlan("pro").amountUsd),
     period: "per month",
     seatsText: "1 Person",
-    description: "High-speed real-time canvas, video timeline editor & Google Imagen 3.",
+    description: getPlan("pro").name,
     features: [
-      "Sub-second Flux Canvas v2",
-      "Google Imagen 3 & Veo 2 video",
-      "Interactive video timeline editor",
-      "ComfyUI node graph pipeline",
-      "5,000 monthly compute credits",
-      "Priority GPU synthesis queue",
+      `${formatUsd(getPlan("pro").includedCreditsCents)} included inference credit every month`,
+      `${getPlan("pro").maxApiKeys} API keys`,
+      `${getPlan("pro").maxActiveDeployments} concurrent dedicated deployments`,
     ],
     badge: "Solo Creator",
   },
@@ -378,17 +375,14 @@ const ALL_PLAN_TIERS = [
     id: "ultra",
     category: "individual",
     name: "Ultra",
-    price: "$45",
+    price: formatPlanPriceUsd(getPlan("ultra").amountUsd),
     period: "per month",
-    seatsText: "1 Person (Power Artist)",
-    description: "Maximum performance with Google Imagen 3 Ultra, Veo 2 Cinematic & 4K upscaling.",
+    seatsText: "1 Person",
+    description: getPlan("ultra").name,
     features: [
-      "Google Imagen 3 Ultra 8K & Veo 2",
-      "15,000 monthly compute credits",
-      "Unlimited 4K Super-Resolution",
-      "Dedicated high-speed GPU tier",
-      "Early access to new foundation models",
-      "Priority 24/7 support",
+      `${formatUsd(getPlan("ultra").includedCreditsCents)} included inference credit every month`,
+      `${getPlan("ultra").maxApiKeys} API keys`,
+      `${getPlan("ultra").maxActiveDeployments} concurrent dedicated deployments`,
     ],
     badge: "Power Artist",
   },
@@ -396,18 +390,14 @@ const ALL_PLAN_TIERS = [
     id: "family",
     category: "family",
     name: "Family",
-    price: "$60",
+    price: formatPlanPriceUsd(getPlan("family").amountUsd),
     period: "per month",
-    seatsText: "Up to 4 Family Members",
-    description: "Shared credit pool, 4-month credit rollover, private galleries & anti-abuse quotas.",
+    seatsText: `Up to ${getPlan("family").maxSeats} members`,
+    description: "Shared household credit pool and seat caps.",
     features: [
-      "4 Family Member Seats included",
-      "25,000 Shared Family Credit Pool",
-      "4-Month Rollover Vault (unused credits never expire for 4 months)",
-      "Per-member monthly credit limits (prevent overspend)",
-      "Private individual member galleries & prompt history",
-      "Parental content safety filters",
-      "Sub-second Flux Canvas & Google Imagen 3",
+      `${getPlan("family").maxSeats} seats included`,
+      `${formatUsd(getPlan("family").includedCreditsCents)} shared monthly stipend`,
+      `${getPlan("family").rolloverMonths}-month unused stipend rollover`,
     ],
     badge: "Best for Families",
     isFamily: true,
@@ -416,17 +406,14 @@ const ALL_PLAN_TIERS = [
     id: "family_max",
     category: "family",
     name: "Family Max",
-    price: "$99",
+    price: formatPlanPriceUsd(getPlan("family_max").amountUsd),
     period: "per month",
-    seatsText: "Up to 5 Family Members",
-    description: "Five household seats, $75 shared pool, Agents included, 4-month rollover.",
+    seatsText: `Up to ${getPlan("family_max").maxSeats} members`,
+    description: "Larger household pool and more seats.",
     features: [
-      "5 Family Member Seats included",
-      "$75 Shared Family Credit Pool",
-      "4-Month Rollover Vault (accumulate unused credits)",
-      "Agents add-on included",
-      "Pooled OpenDoor Chat (225 messages / 5h)",
-      "Highest priority GPU queue across all family seats",
+      `${getPlan("family_max").maxSeats} seats included`,
+      `${formatUsd(getPlan("family_max").includedCreditsCents)} shared monthly stipend`,
+      `${getPlan("family_max").rolloverMonths}-month unused stipend rollover`,
       "Organizer anti-abuse spending caps & seat management",
     ],
     badge: "Maximum Family Power",
@@ -436,6 +423,7 @@ const ALL_PLAN_TIERS = [
 
 /* ── Page ── */
 export default function SettingsPage() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const initialTab = (searchParams?.get("tab") as Tab) || "profile";
   const [activeTab, setActiveTab] = useState<Tab>(initialTab);
@@ -448,51 +436,27 @@ export default function SettingsPage() {
   const [inspectModalTier, setInspectModalTier] = useState<GpuTier | null>(null);
   const [durationHours, setDurationHours] = useState<number>(12);
   const [selectedModel, setSelectedModel] = useState("flux-1-dev");
-  const [gpuStarting, setGpuStarting] = useState(false);
+  const gpuStarting = false;
 
-  const [rentals, setRentals] = useState<Rental[]>([
-    {
-      id: "rent-1",
-      model: "premium:flux-1-dev-pro",
-      customModel: null,
-      deploymentId: "dep-1",
-      sku: "pro-gpu-24gb",
-      gpuTierName: "Pro GPU (24GB Ultra-Fast · RTX 4090 Class)",
-      status: "active",
-      hourlyRate: 0.89,
-      hours: 12,
-      executionMode: "off-peak",
-      modelId: "flux-1-dev",
-      weightsUri: "black-forest-labs/FLUX.1-dev",
-      startedAt: new Date(Date.now() - 45 * 60000).toISOString(),
-      endedAt: null,
-      deployment: {
-        id: "dep-1",
-        name: "Dedicated Pro GPU Node",
-        target: "cloud",
-        status: "running",
-        fqdn: "gpu-node-us-central1.opendoor.ai",
-      },
-    },
-  ]);
+  const [rentals, setRentals] = useState<Rental[]>([]);
 
   const [userProfile, setUserProfile] = useState<UserProfile>({
-    id: "user-1",
-    name: "Alphonce Ochieng",
-    email: "alphonce@ochiengandco.com",
-    role: "admin",
-    isSiteAdmin: true,
+    id: "",
+    name: "",
+    email: "",
+    role: "member",
+    isSiteAdmin: false,
     avatarUrl: null,
   });
 
   const [settings, setSettings] = useState<OrgSettings>({
-    id: "default-workspace",
-    name: "OpenDoor Workspace",
-    slug: "opendoor",
-    plan: "family",
-    creditsUsdCents: 36500,
+    id: "",
+    name: "",
+    slug: "",
+    plan: "free",
+    creditsUsdCents: 0,
     ssoEnabled: false,
-    ssoDefaultRole: "admin",
+    ssoDefaultRole: "member",
     workosOrganizationId: null,
     workosConnectionId: null,
     customDomain: null,
@@ -503,45 +467,24 @@ export default function SettingsPage() {
   });
 
   const [familyData, setFamilyData] = useState<FamilyPoolData>({
-    isFamilyPlan: true,
-    planId: "family",
-    planName: "Family Pool",
-    maxSeats: 4,
-    seatsUsed: 3,
-    totalPoolCreditsCents: 36500,
-    rolledOverCreditsCents: 11500,
-    rolloverMonthsActive: 3,
-    rolloverMaxMonths: 4,
-    members: [
-      {
-        id: "fam-1",
-        name: "Alphonce Ochieng",
-        email: "alphonce@ochiengandco.com",
-        role: "organizer",
-        joinedAt: new Date(Date.now() - 30 * 86400000).toISOString(),
-        monthlyQuotaCents: null,
-        currentMonthSpentCents: 4200,
-      },
-      {
-        id: "fam-2",
-        name: "Sarah Ochieng",
-        email: "sarah@ochiengandco.com",
-        role: "member",
-        joinedAt: new Date(Date.now() - 15 * 86400000).toISOString(),
-        monthlyQuotaCents: 8000,
-        currentMonthSpentCents: 2150,
-      },
-      {
-        id: "fam-3",
-        name: "Leo Ochieng",
-        email: "leo@ochiengandco.com",
-        role: "member",
-        joinedAt: new Date(Date.now() - 7 * 86400000).toISOString(),
-        monthlyQuotaCents: 5000,
-        currentMonthSpentCents: 1800,
-      },
-    ],
+    isFamilyPlan: false,
+    planId: "free",
+    planName: "",
+    maxSeats: 1,
+    seatsUsed: 0,
+    totalPoolCreditsCents: 0,
+    rolledOverCreditsCents: 0,
+    rolloverMonthsActive: 0,
+    rolloverMaxMonths: 0,
+    members: [],
   });
+  const [pinDialog, setPinDialog] = useState<{
+    mode: "set" | "child";
+    memberId?: string;
+    protectedChild?: boolean;
+  } | null>(null);
+  const [pinValue, setPinValue] = useState("");
+  const [pinCurrent, setPinCurrent] = useState("");
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -587,14 +530,15 @@ export default function SettingsPage() {
 
   useEffect(() => {
     Promise.all([
-      fetch("/api/settings/profile").then((r) => r.json()).catch(() => ({})),
-      fetch("/api/settings/sso").then((r) => r.json()).catch(() => ({})),
-      fetch("/api/billing/balance").then((r) => r.json()).catch(() => ({})),
+      fetch("/api/settings/profile", { credentials: "include" }).then((r) => r.json()).catch(() => ({})),
+      fetch("/api/settings/sso", { credentials: "include" }).then((r) => r.json()).catch(() => ({})),
+      fetch("/api/billing/balance", { credentials: "include" }).then((r) => r.json()).catch(() => ({})),
+      fetch("/api/deployments", { credentials: "include" }).then((r) => r.json()).catch(() => ({})),
       fetchFamily(),
     ])
-      .then(([profileData, ssoData, balanceData]) => {
+      .then(([profileData, ssoData, balanceData, deployData]) => {
         if (profileData.user) {
-          setUserProfile(profileData.user);
+          setUserProfile((prev) => ({ ...prev, ...profileData.user }));
         }
         if (profileData.org || ssoData.org) {
           const org = profileData.org || ssoData.org;
@@ -603,6 +547,44 @@ export default function SettingsPage() {
             ...org,
             creditsUsdCents: balanceData?.creditsUsdCents ?? org.creditsUsdCents ?? prev.creditsUsdCents,
           }));
+        }
+        if (Array.isArray(deployData.deployments)) {
+          setRentals(
+            deployData.deployments.map((d: {
+              id: string;
+              name: string;
+              status: string;
+              gpuType: string;
+              sourceValue?: string;
+              runtimeModel?: string | null;
+              startedAt?: string | null;
+              target?: string;
+              fqdn?: string | null;
+              computeCostUsd?: string | null;
+            }) => ({
+              id: d.id,
+              model: d.runtimeModel || d.sourceValue || d.name,
+              customModel: null,
+              deploymentId: d.id,
+              sku: d.gpuType,
+              gpuTierName: d.name,
+              status: d.status,
+              hourlyRate: Number(d.computeCostUsd || 0),
+              hours: null,
+              executionMode: "on-demand" as const,
+              modelId: d.runtimeModel || d.sourceValue || null,
+              weightsUri: null,
+              startedAt: d.startedAt || null,
+              endedAt: null,
+              deployment: {
+                id: d.id,
+                name: d.name,
+                target: d.target || "gcp",
+                status: d.status,
+                fqdn: d.fqdn || null,
+              },
+            })),
+          );
         }
         setLoading(false);
       })
@@ -678,22 +660,24 @@ export default function SettingsPage() {
       const res = await fetch("/api/billing/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan: planId }),
+        body: JSON.stringify({ planId }),
       });
       const data = await res.json().catch(() => ({}));
       if (data.url) {
         window.location.href = data.url;
-      } else if (data.usePortal) {
+        return;
+      }
+      if (data.usePortal) {
         const portalRes = await fetch("/api/billing/portal", { method: "POST" });
         const portalData = await portalRes.json().catch(() => ({}));
-        if (portalData.url) window.location.href = portalData.url;
-      } else {
-        setSettings((prev) => ({ ...prev, plan: planId }));
-        setSaved(true);
-        setTimeout(() => setSaved(false), 3000);
+        if (portalData.url) {
+          window.location.href = portalData.url;
+          return;
+        }
       }
+      setError(data.error || "Checkout is not configured for this plan.");
     } catch {
-      setSettings((prev) => ({ ...prev, plan: planId }));
+      setError("Failed to start checkout.");
     } finally {
       setCheckoutLoading(null);
     }
@@ -710,13 +694,11 @@ export default function SettingsPage() {
       const data = await res.json().catch(() => ({}));
       if (data.url) {
         window.location.href = data.url;
-      } else {
-        setSettings((prev) => ({ ...prev, creditsUsdCents: prev.creditsUsdCents + cents }));
-        setSaved(true);
-        setTimeout(() => setSaved(false), 3000);
+        return;
       }
+      setError(data.error || "Top-up checkout is not configured.");
     } catch {
-      setSettings((prev) => ({ ...prev, creditsUsdCents: prev.creditsUsdCents + cents }));
+      setError("Failed to start top-up.");
     } finally {
       setTopupLoading(null);
     }
@@ -738,14 +720,16 @@ export default function SettingsPage() {
         }),
       });
       const data = await res.json();
-      if (data.members) {
-        setFamilyData((prev) => ({ ...prev, members: data.members, seatsUsed: data.members.length }));
-        setShowInviteModal(false);
-        setInviteEmail("");
-        setInviteName("");
+      if (!res.ok) {
+        setError(data.error || "Failed to invite member.");
+        return;
       }
+      setShowInviteModal(false);
+      setInviteEmail("");
+      setInviteName("");
+      await fetchFamily();
     } catch {
-      // fallback
+      setError("Failed to invite member.");
     } finally {
       setInviteLoading(false);
     }
@@ -759,18 +743,24 @@ export default function SettingsPage() {
         body: JSON.stringify({ action: "remove", memberId }),
       });
       const data = await res.json();
-      if (data.members) {
-        setFamilyData((prev) => ({ ...prev, members: data.members, seatsUsed: data.members.length }));
+      if (!res.ok) {
+        setError(data.error || "Failed to remove member.");
+        return;
       }
+      await fetchFamily();
     } catch {
-      // ignore
+      setError("Failed to remove member.");
     }
   };
 
-  const handleSetChild = async (memberId: string, protectedChild: boolean) => {
-    const pin = familyData.hasParentPin
-      ? window.prompt("Enter parent PIN to change child protection") || ""
-      : undefined;
+  const handleSetChild = async (memberId: string, protectedChild: boolean, pinOverride?: string) => {
+    if (familyData.hasParentPin && pinOverride == null) {
+      setPinDialog({ mode: "child", memberId, protectedChild });
+      setPinValue("");
+      setPinCurrent("");
+      return;
+    }
+    const pin = pinOverride;
     try {
       const res = await fetch("/api/settings/family", {
         method: "POST",
@@ -779,78 +769,56 @@ export default function SettingsPage() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        window.alert(data.error || "Could not update child protection");
+        setError(data.error || "Could not update child protection");
         return;
       }
-      setFamilyData((prev) => ({
-        ...prev,
-        members: prev.members.map((m) =>
-          m.id === memberId ? { ...m, protectedChild } : m
-        ),
-      }));
+      await fetchFamily();
     } catch {
-      window.alert("Could not update child protection");
+      setError("Could not update child protection");
     }
   };
 
-  const handleSetParentPin = async () => {
-    const newPin = window.prompt("Set a 4–8 digit parent PIN") || "";
-    if (!/^\d{4,8}$/.test(newPin)) {
-      window.alert("PIN must be 4–8 digits");
-      return;
-    }
-    const pin = familyData.hasParentPin
-      ? window.prompt("Enter current parent PIN") || ""
-      : undefined;
-    try {
+  const handleSetParentPin = () => {
+    setPinDialog({ mode: "set" });
+    setPinValue("");
+    setPinCurrent("");
+  };
+
+  async function submitPinDialog(e: React.FormEvent) {
+    e.preventDefault();
+    if (!pinDialog) return;
+    if (pinDialog.mode === "set") {
+      if (!/^\d{4,8}$/.test(pinValue)) {
+        setError("PIN must be 4–8 digits");
+        return;
+      }
       const res = await fetch("/api/settings/family", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "set_parent_pin", newPin, pin }),
+        body: JSON.stringify({
+          action: "set_parent_pin",
+          newPin: pinValue,
+          pin: familyData.hasParentPin ? pinCurrent : undefined,
+        }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        window.alert(data.error || "Could not set parent PIN");
+        setError(data.error || "Could not set parent PIN");
         return;
       }
       setFamilyData((prev) => ({ ...prev, hasParentPin: true }));
-    } catch {
-      window.alert("Could not set parent PIN");
+      setPinDialog(null);
+      return;
     }
-  };
+    if (pinDialog.memberId) {
+      await handleSetChild(pinDialog.memberId, Boolean(pinDialog.protectedChild), pinCurrent || pinValue);
+      setPinDialog(null);
+    }
+  }
 
-  async function startGpuRental(e: React.FormEvent) {
+  function startGpuRental(e: React.FormEvent) {
     e.preventDefault();
-    setGpuStarting(true);
-
-    try {
-      const newRental: Rental = {
-        id: `rent-${Date.now()}`,
-        model: `premium:${selectedModel}`,
-        customModel: null,
-        deploymentId: null,
-        sku: activeGpuTier.id,
-        gpuTierName: `${activeGpuTier.name} (${activeGpuTier.classEquivalent})`,
-        status: "active",
-        hourlyRate: effectiveGpuHourlyRate,
-        hours: durationHours,
-        executionMode: executionMode,
-        modelId: selectedModel,
-        weightsUri: null,
-        startedAt: new Date().toISOString(),
-        endedAt: null,
-        deployment: {
-          id: `dep-${Date.now()}`,
-          name: `${activeGpuTier.name} Node`,
-          target: "cloud",
-          status: "running",
-          fqdn: `gpu-${activeGpuTier.id}.opendoor.ai`,
-        },
-      };
-      setRentals((prev) => [newRental, ...prev]);
-    } finally {
-      setGpuStarting(false);
-    }
+    router.push("/dashboard/deployments/new");
   }
 
   const isCurrentFamily = settings.plan === "family" || settings.plan === "family_max";
@@ -1154,7 +1122,7 @@ export default function SettingsPage() {
                           <button
                             key={sub.id}
                             type="button"
-                            onClick={() => setBillingSubTab(sub.id as any)}
+                            onClick={() => setBillingSubTab(sub.id as "plans" | "gpus" | "family" | "credits")}
                             className={cn(
                               "flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-all",
                               billingSubTab === sub.id
@@ -1197,7 +1165,7 @@ export default function SettingsPage() {
                             <button
                               key={btn.id}
                               type="button"
-                              onClick={() => setPlanCategoryView(btn.id as any)}
+                              onClick={() => setPlanCategoryView(btn.id as "all" | "individual" | "family")}
                               className={cn(
                                 "px-3 py-1 text-xs font-medium rounded-lg transition-all",
                                 planCategoryView === btn.id
@@ -1371,9 +1339,7 @@ export default function SettingsPage() {
 
                               <div className="mt-2 border-t border-border pt-1.5 flex justify-between text-[9px] font-mono text-muted-foreground">
                                 <span>Slots:</span>
-                                <span className={tier.availableAllocations <= 2 ? "text-warning" : "text-success"}>
-                                  {tier.availableAllocations}/{tier.totalAllocations} Left
-                                </span>
+                                <span className="text-muted-foreground">Estimator</span>
                               </div>
                             </div>
                           );
@@ -1430,13 +1396,17 @@ export default function SettingsPage() {
                             className="btn-primary text-xs px-4 py-2 flex items-center gap-1.5"
                           >
                             {gpuStarting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
-                            <span>Rent {activeGpuTier.name}</span>
+                            <span>Provision on Deployments</span>
                           </button>
                         </div>
                       </div>
 
                       {/* Active GPU Nodes if any */}
-                      {rentals.length > 0 && (
+                      {rentals.length === 0 ? (
+                        <div className="card p-4 text-sm text-muted-foreground">
+                          No deployments on this workspace. Provision one from Deployments — this list is live, not a sample.
+                        </div>
+                      ) : (
                         <div className="card p-4 space-y-2">
                           <span className="text-xs font-semibold text-foreground block">Active GPU Leases ({rentals.length})</span>
                           <div className="space-y-2">
@@ -1444,10 +1414,12 @@ export default function SettingsPage() {
                               <div key={r.id} className="flex items-center justify-between p-2.5 rounded-xl bg-muted border border-border text-xs">
                                 <div>
                                   <p className="font-semibold text-foreground">{r.gpuTierName || r.model}</p>
-                                  <p className="text-[10px] text-muted-foreground font-mono">${r.hourlyRate.toFixed(2)}/hr · {r.hours}h lease ({r.executionMode})</p>
+                                  <p className="text-[10px] text-muted-foreground font-mono">
+                                    {r.sku} · {r.deployment?.target || "gcp"}
+                                  </p>
                                 </div>
-                                <span className="rounded-full bg-success/15 px-2 py-0.5 text-[9px] font-mono text-success">
-                                  Running
+                                <span className="rounded-full bg-muted px-2 py-0.5 text-[9px] font-mono text-foreground">
+                                  {r.status}
                                 </span>
                               </div>
                             ))}
@@ -1474,7 +1446,7 @@ export default function SettingsPage() {
                             </div>
 
                             <h2 className="mt-2 text-2xl font-bold text-foreground tracking-tight">
-                              {settings.plan === "family_max" ? "Family Max Plan (5 Seats)" : "Family Plan (4 Seats)"}
+                              {familyData.planName || getPlan(settings.plan).name}
                             </h2>
                             <p className="mt-1 text-xs text-muted-foreground max-w-xl">
                               All family members share this centralized credit pool with private individual libraries, anti-abuse quotas, and automatic 4-month rollover.
@@ -1510,18 +1482,10 @@ export default function SettingsPage() {
                             </span>
                           </div>
 
-                          <div className="grid grid-cols-4 gap-2 pt-1">
-                            {[
-                              { month: "Month 1 (Current)", status: "Active Grant ($60.00)", color: "border-info/40 bg-info/10 text-info" },
-                              { month: "Month 2 Rollover", status: "Preserved ($45.00)", color: "border-success/30 bg-success/10 text-success" },
-                              { month: "Month 3 Rollover", status: "Preserved ($40.00)", color: "border-success/30 bg-success/10 text-success" },
-                              { month: "Month 4 Vault Cap", status: "Protected ($30.00)", color: "border-border bg-muted text-muted-foreground" },
-                            ].map((slot, idx) => (
-                              <div key={idx} className={cn("rounded-xl border p-2.5 text-center", slot.color)}>
-                                <p className="text-[11px] font-semibold">{slot.month}</p>
-                                <p className="text-[10px] font-mono opacity-80 mt-0.5">{slot.status}</p>
-                              </div>
-                            ))}
+                          <div className="rounded-xl border border-border bg-muted/40 p-3 text-sm text-muted-foreground">
+                            {familyData.rolledOverCreditsCents > 0
+                              ? `${(familyData.rolledOverCreditsCents / 100).toFixed(2)} USD remaining from earlier stipend grants.`
+                              : "No rolled-over stipend this month. Unused included credit appears here after a grant month closes."}
                           </div>
                         </div>
                       </div>
@@ -2009,6 +1973,59 @@ export default function SettingsPage() {
               </div>
             </form>
           </div>
+        </div>
+      )}
+
+      {pinDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <button
+            type="button"
+            className="absolute inset-0 bg-background/80"
+            aria-label="Close PIN dialog"
+            onClick={() => setPinDialog(null)}
+          />
+          <form
+            onSubmit={submitPinDialog}
+            className="relative z-10 w-full max-w-sm rounded-xl border border-border bg-card p-6 shadow-xl"
+          >
+            <h3 className="text-base font-semibold text-foreground">
+              {pinDialog.mode === "set" ? "Parent PIN" : "Confirm parent PIN"}
+            </h3>
+            {pinDialog.mode === "set" && familyData.hasParentPin && (
+              <div className="mt-4">
+                <label className="mb-1 block text-xs text-muted-foreground">Current PIN</label>
+                <input
+                  type="password"
+                  inputMode="numeric"
+                  value={pinCurrent}
+                  onChange={(e) => setPinCurrent(e.target.value)}
+                  className="input w-full"
+                />
+              </div>
+            )}
+            <div className="mt-4">
+              <label className="mb-1 block text-xs text-muted-foreground">
+                {pinDialog.mode === "set" ? "New 4–8 digit PIN" : "Parent PIN"}
+              </label>
+              <input
+                type="password"
+                inputMode="numeric"
+                value={pinDialog.mode === "set" ? pinValue : pinCurrent}
+                onChange={(e) =>
+                  pinDialog.mode === "set" ? setPinValue(e.target.value) : setPinCurrent(e.target.value)
+                }
+                className="input w-full"
+              />
+            </div>
+            <div className="mt-4 flex justify-end gap-2">
+              <button type="button" className="btn-secondary" onClick={() => setPinDialog(null)}>
+                Cancel
+              </button>
+              <button type="submit" className="btn-primary">
+                Save
+              </button>
+            </div>
+          </form>
         </div>
       )}
     </div>

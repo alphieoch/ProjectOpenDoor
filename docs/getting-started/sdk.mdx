@@ -70,12 +70,25 @@ await client.images.generate({ model: "gemini-2.5-flash-image", prompt: "a red d
 await client.videos.generate({ model: "veo-3.1-fast-generate-001", prompt: "a red cube" });
 await client.audio.transcribe({ model: "whisper-1", file });
 await client.batches.list();
+
+const agent = await client.agents.create({
+  name: "Desk",
+  runtime: "openbot",
+  modelId: "llama-3.1-8b-instruct",
+});
+const turn = await client.agents.chat(agent.id, {
+  message: "Open https://example.com and summarize the page.",
+});
+await client.agents.computer(agent.id, "take");
 ```
 
-The same key covers assistants, workflows, training, deployments, agents, BYOK, policies, files, and premium rentals. See [Platform API](/api-reference/platform).
+When `OPENBOT_SUPERVISOR_URL` is set, `create` starts a dedicated Chromium container for that agent. See [Agents](/api-reference/agents).
+
+The same key covers assistants, workflows, training, deployments, agents (including OpenBot), BYOK, policies, files, and premium rentals. See [Platform API](/api-reference/platform) and [Agents](/api-reference/agents).
 
 ## Related
 
 - [CLI](/getting-started/cli)
+- [Agents API](/api-reference/agents)
 - [Chat completions](/api-reference/chat-completions)
 - [Playground](/how-it-works/playground)

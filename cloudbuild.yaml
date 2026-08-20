@@ -85,6 +85,8 @@ steps:
         if gcloud secrets describe opendoor-qwen-api-key >/dev/null 2>&1; then
           SECRETS="$${SECRETS},QWEN_API_KEY=opendoor-qwen-api-key:latest"
         fi
+        # Shared OpenBot computer token. Always bind; Cloud Build SA often cannot GET secrets.
+        SECRETS="$${SECRETS},OPENBOT_COMPUTER_TOKEN=opendoor-openbot-computer-token:latest"
         SECRETS="$${SECRETS},INTERNAL_API_KEY=opendoor-internal-api-key:latest,GATEWAY_INTERNAL_KEY=opendoor-internal-api-key:latest"
         gcloud run deploy opendoor-gateway \
           --image=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/gateway:${_TAG} \
@@ -132,6 +134,8 @@ steps:
         if gcloud secrets describe opendoor-qwen-api-key >/dev/null 2>&1; then
           SECRETS="$${SECRETS},QWEN_API_KEY=opendoor-qwen-api-key:latest"
         fi
+        # Shared OpenBot computer token. Always bind; Cloud Build SA often cannot GET secrets.
+        SECRETS="$${SECRETS},OPENBOT_COMPUTER_TOKEN=opendoor-openbot-computer-token:latest"
         SECRETS="$${SECRETS},INTERNAL_API_KEY=opendoor-internal-api-key:latest,GATEWAY_INTERNAL_KEY=opendoor-internal-api-key:latest"
         gcloud run deploy opendoor-dashboard \
           --image=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/dashboard:${_TAG} \

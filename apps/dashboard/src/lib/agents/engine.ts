@@ -1,11 +1,16 @@
 import { getDb } from "@/lib/db";
 import { agentRuns, workspaceAgentMessages, workspaceAgents } from "@opendoor/database";
+import { embeddingsClientFromEnv, formatRecallHits, nextAgentCompletionMode, recallWorkspace } from "@opendoor/shared";
 import { desc, eq } from "drizzle-orm";
 import { gatewayBaseUrl } from "@/lib/public-urls";
 import { formatGatewayError } from "@/lib/models/modality";
 import { getAgentRuntime, type AgentRuntimeId } from "@/lib/agents/runtimes";
 import { unlockAgentKey } from "@/lib/agents/boot";
+import { formatTurnFailureReply, messagesForModel } from "@/lib/agents/chat-thread";
+import { executeLeaderTool, formatLeaderContext, isLeaderTool, leaderToolDefinitions, loadOpenBotResources } from "@/lib/agents/openbot-orchestrate";
 import { executeTool, toolsForRuntime, type ToolEvent } from "@/lib/agents/tools";
+import { isLeaderbotRecord, withLeaderbotTurnGuidance } from "@/lib/openbot-leader";
+import { loadHouseManagement } from "@/lib/openbot-settings";
 import { readWorkspace } from "@/lib/agents/state";
 
 function gatewayUrl() {
@@ -19,17 +24,26 @@ type LoopMessage = {
   tool_call_id?: string;
 };
 
-function systemPrompt(row: typeof workspaceAgents.$inferSelect) {
+function systemPrompt(
+  row: typeof workspaceAgents.$inferSelect,
+  extra?: string,
+  memoryBlock?: string,
+  opts?: { leader?: boolean },
+) {
   const runtime = getAgentRuntime(row.runtime);
   const ws = readWorkspace(row.config);
-  const memory = ws.memory.slice(-8).map((m) => `- [${m.kind}] ${m.content}`).join("\n") || "(empty)";
-  const skills = ws.skills.map((s) => `- ${s.name}`).join("\n") || "(none)";
+  const memory = memoryBlock || "(empty)";
+  const skills = ws.skills.length
+    ? ws.skills.map((s) => `- ${s.name}: ${s.body.replace(/\s+/g, " ").trim()}`).join("\n")
+    : "(none)";
+  const stored = row.systemPrompt || runtime?.defaultPrompt || "";
   const parts = [
-    row.systemPrompt || runtime?.defaultPrompt || "",
+    opts?.leader ? withLeaderbotTurnGuidance(stored) : stored,
     `Runtime: ${runtime?.name ?? row.runtime}. Model: ${row.modelId}.`,
     "You are the hosted runtime for this workspace. Use your tools when they help. Do not claim you lack tools.",
+    extra,
     `Installed skills:\n${skills}`,
-    `Recent memory:\n${memory}`,
+    `Memory:\n${memory}`,
   ];
   if (row.runtime === "openbot") {
     const files = ws.computer.files.map((f) => `- ${f.path}`).join("\n") || "(empty)";
@@ -123,8 +137,21 @@ export async function runAgentTurn(opts: {
   const db = getDb();
   const apiKey = await unlockAgentKey(opts.agent);
   const runtime = opts.agent.runtime as AgentRuntimeId;
-  const tools = toolsForRuntime(runtime);
+  const leader = runtime === "openbot" && isLeaderbotRecord(opts.agent);
+  const houseManagement = leader ? await loadHouseManagement(opts.agent.organizationId) : false;
+  const tools = leader
+    ? [...toolsForRuntime(runtime), ...leaderToolDefinitions({ houseManagement })]
+    : toolsForRuntime(runtime);
+  const embeddings = embeddingsClientFromEnv({ baseUrl: gatewayUrl(), apiKey });
   let workspace = readWorkspace(opts.agent.config);
+  const recalled = await recallWorkspace(workspace, { query: opts.userText, includeFiles: false }, embeddings);
+  workspace = recalled.workspace;
+  const memoryBlock = formatRecallHits(recalled.hits) || "(empty)";
+  const leaderContext = leader
+    ? formatLeaderContext(await loadOpenBotResources(opts.agent.organizationId, opts.agent.modelId), {
+        houseManagement,
+      })
+    : "";
 
   await appendMessage({
     agentId: opts.agent.id,
@@ -135,16 +162,19 @@ export async function runAgentTurn(opts: {
 
   const history = await loadThread(opts.agent.id, 30);
   const messages: LoopMessage[] = [
-    { role: "system", content: systemPrompt({ ...opts.agent, config: workspace }) },
-    ...history
-      .filter((m) => m.role === "user" || m.role === "assistant")
-      .map((m) => ({ role: m.role as "user" | "assistant", content: m.content })),
+    {
+      role: "system",
+      content: systemPrompt({ ...opts.agent, config: workspace }, leaderContext, memoryBlock, { leader }),
+    },
+    ...messagesForModel(history),
   ];
 
   const events: ToolEvent[] = [];
   let reply = "";
   let useTools = true;
+  let retriedProviders = false;
 
+  try {
   for (let step = 0; step < 8; step += 1) {
     let data;
     try {
@@ -157,7 +187,12 @@ export async function runAgentTurn(opts: {
       });
     } catch (err) {
       const message = err instanceof Error ? err.message : "Gateway error";
-      if (useTools && /tool/i.test(message)) {
+      const next = nextAgentCompletionMode(message, useTools, retriedProviders);
+      if (next === "retry-tools") {
+        retriedProviders = true;
+        continue;
+      }
+      if (next === "drop-tools") {
         useTools = false;
         continue;
       }
@@ -173,8 +208,23 @@ export async function runAgentTurn(opts: {
         tool_calls: calls,
       });
       for (const call of calls) {
-        const executed = await executeTool(runtime, call.function.name, call.function.arguments, workspace);
+        const executed =
+          leader && isLeaderTool(call.function.name)
+            ? await executeLeaderTool(call.function.name, call.function.arguments, workspace, {
+                organizationId: opts.agent.organizationId,
+                leaderId: opts.agent.id,
+                modelId: opts.agent.modelId,
+                createdBy: opts.agent.createdBy,
+              })
+            : await executeTool(runtime, call.function.name, call.function.arguments, workspace, {
+                botId: opts.agent.id,
+                embeddings,
+              });
         workspace = executed.workspace;
+        const display =
+          "display" in executed && typeof executed.display === "string" && executed.display.trim()
+            ? executed.display
+            : executed.result;
         events.push(executed.event);
         messages.push({
           role: "tool",
@@ -185,7 +235,7 @@ export async function runAgentTurn(opts: {
           agentId: opts.agent.id,
           organizationId: opts.agent.organizationId,
           role: "tool",
-          content: executed.result,
+          content: display,
           toolName: call.function.name,
           metadata: { ok: executed.event.ok, detail: executed.event.detail },
         });
@@ -235,6 +285,23 @@ export async function runAgentTurn(opts: {
   }
 
   return { reply, events, workspace };
+  } catch (err) {
+    try {
+      await appendMessage({
+        agentId: opts.agent.id,
+        organizationId: opts.agent.organizationId,
+        role: "assistant",
+        content: formatTurnFailureReply(),
+        metadata: {
+          error: true,
+          cause: err instanceof Error ? err.message : "Agent run failed",
+        },
+      });
+    } catch {
+      /* still surface the original failure */
+    }
+    throw err;
+  }
 }
 
 export function encodeAgentSse(reply: string, events: ToolEvent[]) {

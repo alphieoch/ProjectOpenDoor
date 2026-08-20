@@ -6,6 +6,12 @@ const config: Config = {
     "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
+    "./src/lib/**/*.{js,ts,jsx,tsx,mdx}",
+  ],
+  safelist: [
+    "w-12",
+    "w-[260px]",
+    "md:ml-12",
   ],
   theme: {
     container: {
@@ -187,6 +193,17 @@ const config: Config = {
           from: { transform: "translateY(-8px)", opacity: "0" },
           to: { transform: "translateY(0)", opacity: "1" },
         },
+        "openbot-marble-drift": {
+          "0%, 100%": {
+            transform: "translate(-50%, -50%) translate3d(-10%, -8%, 0) scale(1.12) rotate(-2deg)",
+          },
+          "33%": {
+            transform: "translate(-50%, -50%) translate3d(12%, -6%, 0) scale(1.2) rotate(3deg)",
+          },
+          "66%": {
+            transform: "translate(-50%, -50%) translate3d(6%, 10%, 0) scale(1.16) rotate(-3deg)",
+          },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -195,6 +212,7 @@ const config: Config = {
         "fade-out": "fade-out 0.3s ease-out",
         "slide-up": "slide-up 0.3s ease-out",
         "slide-down": "slide-down 0.3s ease-out",
+        "openbot-marble-drift": "openbot-marble-drift 28s ease-in-out infinite",
       },
     },
   },

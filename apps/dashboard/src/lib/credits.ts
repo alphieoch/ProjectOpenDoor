@@ -1,6 +1,7 @@
-import { creditTransactions, organizations } from "@opendoor/database";
+import { creditTransactions, organizations, users } from "@opendoor/database";
 import { spendFifoCredits } from "@/lib/credit-ledger";
 import {
+  billingIsUnlimited,
   creditWaterfall,
   splitCreditBuckets,
   spendableCents,
@@ -110,13 +111,44 @@ export function spendableFromWaterfall(
     : waterfall.spendableClosedCents;
 }
 
+export async function orgHasUnlimitedSpend(
+  orgId: string,
+  opts?: { isSiteAdmin?: boolean | null }
+) {
+  if (billingIsUnlimited({ isSiteAdmin: opts?.isSiteAdmin })) return true;
+  const db = getDb();
+  const org = await db.query.organizations.findFirst({
+    where: eq(organizations.id, orgId),
+    columns: { id: true, plan: true },
+  });
+  if (!org) return false;
+  if (billingIsUnlimited({ plan: org.plan })) return true;
+  const siteAdmin = await db.query.users.findFirst({
+    where: and(eq(users.organizationId, orgId), eq(users.isSiteAdmin, true)),
+    columns: { id: true },
+  });
+  return Boolean(siteAdmin);
+}
+
 export async function assertOrgCanSpend(
   orgId: string,
-  family: "closed" | "open_weight"
+  family: "closed" | "open_weight",
+  opts?: { isSiteAdmin?: boolean | null }
 ): Promise<
-  | { ok: true; waterfall: CreditWaterfall; buckets: CreditBuckets }
+  | { ok: true; waterfall: CreditWaterfall; buckets: CreditBuckets; unlimited?: boolean }
   | { ok: false; status: 402; waterfall: CreditWaterfall; buckets: CreditBuckets; detail: string }
 > {
+  if (await orgHasUnlimitedSpend(orgId, opts)) {
+    const state = await getOrgCreditWaterfall(orgId);
+    const buckets = state?.buckets || splitCreditBuckets({});
+    const waterfall = state?.waterfall || creditWaterfall({
+      buckets,
+      monthPlanGrantCents: 0,
+      monthUsageCents: 0,
+    });
+    return { ok: true, waterfall, buckets, unlimited: true };
+  }
+
   const state = await getOrgCreditWaterfall(orgId);
   if (!state) {
     const empty = creditWaterfall({
@@ -161,6 +193,7 @@ export async function debitOrgUsage(
   options?: { allowWelcome?: boolean; source?: string; userId?: string | null }
 ) {
   if (amountCents <= 0) return 0;
+  if (await orgHasUnlimitedSpend(orgId)) return 0;
   return spendFifoCredits({
     organizationId: orgId,
     amountCents,

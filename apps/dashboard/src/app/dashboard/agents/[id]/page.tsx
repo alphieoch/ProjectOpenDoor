@@ -3,10 +3,11 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Hand, Loader2, Pause, Play, Send, Trash2 } from "lucide-react";
+import { ArrowLeft, Loader2, Pause, Play, Send, Trash2 } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { AiCrest } from "@/components/ui/ai-crest";
 import { getAgentRuntime, type AgentRuntimeId } from "@/lib/agents/runtimes";
+import { DeleteAgentDialog } from "@/components/openbot/lifecycle-dialogs";
 
 type Workspace = {
   memory: Array<{ id: string; kind: string; content: string; createdAt: string }>;
@@ -24,6 +25,10 @@ type Workspace = {
     history: Array<{ id: string; url: string; title: string; status: number; createdAt: string }>;
     files: Array<{ path: string; updatedAt: string; bytes: number }>;
     components: Array<{ id: string; kind: string; title: string; body: string; createdAt: string }>;
+    snapshotId?: number | null;
+    elements?: Array<{ ref: string; role: string; name: string }>;
+    backend?: "live" | "fetch";
+    isolation?: { mode?: "container" | "shared" | "in-process"; container?: string | null };
   };
   probe: { ok: boolean; latencyMs: number; at: string; error?: string; modelsSeen?: number } | null;
   counts: { memory: number; skills: number; outbox: number; files?: number; audit?: number };
@@ -72,6 +77,7 @@ export default function AgentDetailPage() {
   const [chatError, setChatError] = useState<string | null>(null);
   const [addonActive, setAddonActive] = useState(true);
   const [addonAmount, setAddonAmount] = useState(20);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   async function load() {
@@ -98,6 +104,12 @@ export default function AgentDetailPage() {
   }, [id]);
 
   useEffect(() => {
+    if (agent?.runtime === "openbot") {
+      router.replace(`/dashboard/openbot/${id}`);
+    }
+  }, [agent, id, router]);
+
+  useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
@@ -116,25 +128,11 @@ export default function AgentDetailPage() {
   }
 
   async function remove() {
-    if (!confirm("Delete this agent and revoke its key?")) return;
     setBusy(true);
     const res = await fetch(`/api/agents/${id}`, { method: "DELETE", credentials: "include" });
     setBusy(false);
     if (res.ok) router.push("/dashboard/agents");
-  }
-
-  async function setComputerControl(computerControl: "take" | "release") {
-    setBusy(true);
-    const res = await fetch(`/api/agents/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify({ computerControl }),
-    });
-    const data = await res.json().catch(() => ({}));
-    if (res.ok) setAgent(data.agent);
-    else setChatError(data.error || "Could not update computer control");
-    setBusy(false);
+    else setChatError("Could not delete the agent");
   }
 
   async function send(ev: React.FormEvent) {
@@ -213,7 +211,7 @@ export default function AgentDetailPage() {
     }
   }
 
-  if (loading || !agent) {
+  if (loading || !agent || agent.runtime === "openbot") {
     return (
       <div className="flex h-64 items-center justify-center">
         <Loader2 className="h-6 w-6 animate-spin" style={{ color: "hsl(var(--muted-foreground))" }} />
@@ -225,15 +223,11 @@ export default function AgentDetailPage() {
   const ws = agent.workspace;
 
   return (
-    <div>
+    <div className="p-3 md:p-6">
       <PageHeader
         eyebrow="Workspace"
         title={agent.name}
-        description={
-          agent.runtime === "openbot"
-            ? `${agent.runtimeName} on ${agent.modelId}. Browser, /workspace files, and chat go through a decide-then-audit gateway on this workspace quota.`
-            : `${agent.runtimeName} on ${agent.modelId}. Tools, memory, and chat all hit the live gateway on this workspace quota.`
-        }
+        description={`${agent.runtimeName} on ${agent.modelId}. Tools, memory, and chat all hit the live gateway on this workspace quota.`}
         actions={
           <div className="flex gap-2">
             <Link href="/dashboard/agents" className="btn-ghost">
@@ -249,7 +243,7 @@ export default function AgentDetailPage() {
                 Start
               </button>
             )}
-            <button type="button" className="btn-ghost" disabled={busy} onClick={remove}>
+            <button type="button" className="btn-ghost" disabled={busy} onClick={() => setConfirmDelete(true)}>
               <Trash2 className="h-4 w-4" /> Delete
             </button>
           </div>
@@ -289,9 +283,7 @@ export default function AgentDetailPage() {
               <div className="flex flex-col items-center gap-3 py-10 text-center">
                 <AiCrest mood="idle" surface="agent" size={45} />
                 <p className="text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
-                  {agent.runtime === "openbot"
-                    ? "This OpenBot has its own computer. Ask it to open a public page, write a /workspace file, or hand you the wheel at a login wall."
-                    : "This is a live session. Ask it to remember something, use a skill, or (for OpenClaw) queue a channel message."}
+                  This is a live session. Ask it to remember something, use a skill, or (for OpenClaw) queue a channel message.
                 </p>
               </div>
             )}
@@ -344,64 +336,6 @@ export default function AgentDetailPage() {
         </div>
 
         <div className="space-y-4">
-          {agent.runtime === "openbot" && ws.computer && (
-            <div className="overflow-hidden rounded-lg border border-border bg-card text-card-foreground shadow-sm">
-              <div className="flex items-center justify-between gap-2 border-b px-4 py-3" style={{ borderColor: "hsl(var(--border))" }}>
-                <div>
-                  <h3 className="text-sm font-semibold" style={{ color: "hsl(var(--foreground))" }}>Computer</h3>
-                  <p className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
-                    {ws.computer.operator === "human" ? "You have the wheel" : ws.computer.status === "help_requested" ? "Help requested" : "Bot is driving"}
-                  </p>
-                </div>
-                {ws.computer.operator === "human" ? (
-                  <button type="button" className="btn-ghost text-xs" disabled={busy} onClick={() => setComputerControl("release")}>
-                    <Hand className="h-3.5 w-3.5" /> Hand back
-                  </button>
-                ) : (
-                  <button type="button" className="btn-ghost text-xs" disabled={busy} onClick={() => setComputerControl("take")}>
-                    <Hand className="h-3.5 w-3.5" /> Take the wheel
-                  </button>
-                )}
-              </div>
-              <div className="px-4 py-3" style={{ background: "hsl(var(--background))" }}>
-                <p className="truncate font-mono text-[11px]" style={{ color: "hsl(var(--muted-foreground))" }}>
-                  {ws.computer.url || "about:blank"}
-                </p>
-                <p className="mt-2 text-sm font-medium" style={{ color: "hsl(var(--foreground))" }}>
-                  {ws.computer.title || "No page loaded"}
-                </p>
-                <p className="mt-2 max-h-40 overflow-y-auto text-xs leading-5" style={{ color: "hsl(var(--muted-foreground))" }}>
-                  {ws.computer.excerpt || "Ask OpenBot to open a public URL. Every navigation is decided and audited first."}
-                </p>
-              </div>
-              {ws.computer.helpReason && (
-                <p className="border-t px-4 py-2 text-xs" style={{ borderColor: "hsl(var(--border))", color: "hsl(var(--muted-foreground))" }}>
-                  {ws.computer.helpReason}
-                </p>
-              )}
-              {ws.computer.files.length > 0 && (
-                <ul className="border-t px-4 py-3 text-xs" style={{ borderColor: "hsl(var(--border))", color: "hsl(var(--muted-foreground))" }}>
-                  {ws.computer.files.map((f) => (
-                    <li key={f.path}>/workspace · {f.path.replace("/workspace/", "")} ({f.bytes} B)</li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          )}
-          {agent.runtime === "openbot" && ws.computer?.components && ws.computer.components.length > 0 && (
-            <div className="rounded-lg border border-border bg-card text-card-foreground shadow-sm p-5">
-              <h3 className="text-sm font-semibold" style={{ color: "hsl(var(--foreground))" }}>Components</h3>
-              <ul className="mt-3 space-y-3">
-                {ws.computer.components.slice(-4).map((c) => (
-                  <li key={c.id} className="rounded-lg border p-3" style={{ borderColor: "hsl(var(--border))" }}>
-                    <p className="text-[10px] uppercase tracking-wide" style={{ color: "hsl(var(--muted-foreground))" }}>{c.kind}</p>
-                    <p className="mt-1 text-sm font-medium" style={{ color: "hsl(var(--foreground))" }}>{c.title}</p>
-                    <p className="mt-1 whitespace-pre-wrap text-xs leading-5" style={{ color: "hsl(var(--muted-foreground))" }}>{c.body}</p>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
           <div className="rounded-lg border border-border bg-card text-card-foreground shadow-sm p-5">
             <h3 className="text-sm font-semibold" style={{ color: "hsl(var(--foreground))" }}>Live workspace</h3>
             <p className="mt-2 text-sm leading-6" style={{ color: "hsl(var(--muted-foreground))" }}>
@@ -443,7 +377,7 @@ export default function AgentDetailPage() {
           {ws.audit.length > 0 && (
             <div className="rounded-lg border border-border bg-card text-card-foreground shadow-sm p-5">
               <h3 className="text-sm font-semibold" style={{ color: "hsl(var(--foreground))" }}>
-                {agent.runtime === "openbot" ? "Computer audit" : "Sandbox audit"}
+                Sandbox audit
               </h3>
               <ul className="mt-3 space-y-2 text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
                 {ws.audit.slice(-5).map((m) => (
@@ -463,6 +397,14 @@ export default function AgentDetailPage() {
           </div>
         </div>
       </div>
+      <DeleteAgentDialog
+        open={confirmDelete}
+        name={agent.name}
+        busy={busy}
+        description={`${agent.name} will be removed from your agents. You have 7 days to recover it. After that it is permanently deleted.`}
+        onOpenChange={setConfirmDelete}
+        onConfirm={() => void remove()}
+      />
     </div>
   );
 }

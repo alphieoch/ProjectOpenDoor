@@ -1,10 +1,11 @@
 // @ts-nocheck
-import { db, organizations, creditTransactions } from "@opendoor/database";
-import { eq } from "drizzle-orm";
-import { splitCreditBuckets, welcomeAllowedForFamily } from "@opendoor/shared";
+import { db, organizations, creditTransactions, users } from "@opendoor/database";
+import { and, eq } from "drizzle-orm";
+import { billingIsUnlimited, splitCreditBuckets, welcomeAllowedForFamily } from "@opendoor/shared";
 import type { BillingPlan, ModelFamily } from "./pricing.js";
 import { spendFifoCredits } from "./credit-ledger.js";
 import { createRedis } from "../lib/redis.js";
+import { asUuid } from "../lib/provider-id.js";
 
 const redis = createRedis();
 const FOUR_HOURS_MS = 4 * 60 * 60 * 1000;
@@ -28,6 +29,25 @@ export function getPlanBudgetLimitCents(_plan: BillingPlan): number {
 
 export function usdToCents(usd: number): number {
   return Math.max(0, Math.ceil(usd * 100));
+}
+
+export async function orgHasUnlimitedSpend(
+  org: { id: string; plan?: string | null },
+  userId?: string | null
+) {
+  if (billingIsUnlimited({ plan: org.plan })) return true;
+  if (asUuid(userId)) {
+    const member = await db.query.users.findFirst({
+      where: and(eq(users.id, userId), eq(users.organizationId, org.id)),
+      columns: { isSiteAdmin: true },
+    });
+    return billingIsUnlimited({ isSiteAdmin: member?.isSiteAdmin, plan: org.plan });
+  }
+  const siteAdmin = await db.query.users.findFirst({
+    where: and(eq(users.organizationId, org.id), eq(users.isSiteAdmin, true)),
+    columns: { id: true },
+  });
+  return Boolean(siteAdmin);
 }
 
 export function centsToUsd(cents: number): number {

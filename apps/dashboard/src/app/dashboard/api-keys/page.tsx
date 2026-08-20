@@ -23,16 +23,23 @@ export default function ApiKeysPage() {
   const [newKeyValue, setNewKeyValue] = useState("");
   const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [listLoading, setListLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [fullAccess, setFullAccess] = useState(true);
   const [selectedModels, setSelectedModels] = useState<string[]>([]);
   const [catalog, setCatalog] = useState<CatalogOption[]>([]);
 
   async function fetchKeys() {
     const res = await fetch("/api/keys");
+    const data = await res.json().catch(() => ({}));
     if (res.ok) {
-      const data = await res.json();
-      setKeys(data.keys);
+      setKeys(Array.isArray(data.keys) ? data.keys : []);
+      setError(null);
+    } else {
+      setKeys([]);
+      setError(data.error || "Failed to load API keys");
     }
+    setListLoading(false);
   }
 
   useEffect(() => {
@@ -60,8 +67,8 @@ export default function ApiKeysPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name: newKeyName, allowedModels }),
     });
+    const data = await res.json().catch(() => ({}));
     if (res.ok) {
-      const data = await res.json();
       setNewKeyValue(data.key);
       if (data.key) localStorage.setItem("od_playground_api_key", data.key);
       setNewKeyName("");
@@ -71,6 +78,9 @@ export default function ApiKeysPage() {
       posthog.capture("onboarding_step_completed", {
         onboarding_step: "api_key_created",
       });
+      setError(null);
+    } else {
+      setError(data.error || "Could not create API key");
     }
     setLoading(false);
   }
@@ -100,6 +110,12 @@ export default function ApiKeysPage() {
         title="API Keys"
         description="Manage API keys for the OpenDoor gateway. Each key can have full access or be restricted to specific models."
       />
+
+      {error ? (
+        <div className="alert-error mb-4 text-sm" role="alert">
+          {error}
+        </div>
+      ) : null}
 
       {newKeyValue && (
         <div className="mb-6 alert-success flex items-start justify-between gap-4">
@@ -235,7 +251,14 @@ export default function ApiKeysPage() {
             </tr>
           </thead>
           <tbody>
-            {keys.map((key) => (
+            {listLoading ? (
+              <tr>
+                <td colSpan={6} className="px-4 py-10 text-center text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
+                  Loading keys…
+                </td>
+              </tr>
+            ) : null}
+            {!listLoading && keys.map((key) => (
               <tr key={key.id} className="table-row">
                 <td className="table-cell font-medium" style={{ color: "hsl(var(--foreground))" }}>
                   {key.name}
@@ -275,7 +298,7 @@ export default function ApiKeysPage() {
                 </td>
               </tr>
             ))}
-            {keys.length === 0 && (
+            {!listLoading && keys.length === 0 && (
               <tr>
                 <td colSpan={6} className="px-4 py-10 text-center text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
                   No API keys yet. Create one above.

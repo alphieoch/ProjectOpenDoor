@@ -1,5 +1,6 @@
 import { db, requests, providers } from "@opendoor/database";
 import { eq } from "drizzle-orm";
+import { asUuid } from "./provider-id.js";
 
 export function appAttributionFromHeaders(
   header: (name: string) => string | undefined
@@ -35,7 +36,7 @@ export async function logGatewayRequest(opts: {
       .from(providers)
       .where(eq(providers.slug, opts.providerSlug))
       .limit(1);
-    providerId = rows[0]?.id || null;
+    providerId = asUuid(rows[0]?.id);
   } catch {
     /* ignore */
   }

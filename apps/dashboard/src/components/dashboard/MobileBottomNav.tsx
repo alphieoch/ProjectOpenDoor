@@ -7,6 +7,8 @@ import { ChevronDown, LogOut, Menu } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { OchiengLogoSimple } from "@/components/logos/OchiengLogoSimple";
+import { InboxMenu } from "@/components/inbox-menu";
+import { ThemeToggle } from "@/components/theme-toggle";
 import {
   CHILD_HIDDEN_HREFS,
   dashboardNavGroups,
@@ -72,7 +74,10 @@ export function MobileBottomNav({
       >
         {slots.map((item) => {
           const Icon = item.icon;
-          const active = isNavActive(pathname, item.href, slots);
+          const active =
+            (item.href === "/dashboard/agents" &&
+              (pathname?.startsWith("/dashboard/openbot") || pathname?.startsWith("/dashboard/ai-assistants"))) ||
+            isNavActive(pathname, item.href, slots);
           return (
             <Link
               key={item.href}
@@ -139,25 +144,51 @@ export function MobileBottomNav({
                   <div className={cn("overflow-hidden", expanded[group.id] ? "max-h-[32rem]" : "max-h-0")}>
                     {group.items.map((item) => {
                       const Icon = item.icon;
-                      const active = isNavActive(pathname, item.href, group.items);
+                      const childHrefs = (item.children ?? []).map((child) => ({ href: child.href }));
+                      const active = isNavActive(
+                        pathname,
+                        item.href,
+                        item.children?.length ? childHrefs : group.items,
+                      );
                       return (
-                        <Link
-                          key={item.href}
-                          href={item.href}
-                          onClick={() => setSheetOpen(false)}
-                          className={cn(
-                            "flex min-h-11 items-center gap-3 rounded-lg px-3 py-2 text-[15px]",
-                            active
-                              ? "bg-accent text-foreground"
-                              : "text-muted-foreground hover:bg-accent hover:text-foreground",
-                          )}
-                        >
-                          <Icon className="h-[18px] w-[18px]" />
-                          <span>{item.label}</span>
-                          {group.id === "governance" && enterpriseLocked && (
-                            <span className="ml-auto text-[10px] uppercase tracking-wide">Locked</span>
-                          )}
-                        </Link>
+                        <div key={item.href}>
+                          <Link
+                            href={item.href}
+                            onClick={() => setSheetOpen(false)}
+                            className={cn(
+                              "flex min-h-11 items-center gap-3 rounded-lg px-3 py-2 text-[15px]",
+                              active
+                                ? "bg-accent text-foreground"
+                                : "text-muted-foreground hover:bg-accent hover:text-foreground",
+                            )}
+                          >
+                            <Icon className="h-[18px] w-[18px]" />
+                            <span>{item.label}</span>
+                            {group.id === "governance" && enterpriseLocked && (
+                              <span className="ml-auto text-[10px] uppercase tracking-wide">Locked</span>
+                            )}
+                          </Link>
+                          {item.children?.map((child) => {
+                            const ChildIcon = child.icon;
+                            const childActive = isNavActive(pathname, child.href, childHrefs);
+                            return (
+                              <Link
+                                key={child.href}
+                                href={child.href}
+                                onClick={() => setSheetOpen(false)}
+                                className={cn(
+                                  "ml-6 flex min-h-10 items-center gap-3 rounded-lg px-3 py-1.5 text-[14px]",
+                                  childActive
+                                    ? "bg-accent text-foreground"
+                                    : "text-muted-foreground hover:bg-accent hover:text-foreground",
+                                )}
+                              >
+                                <ChildIcon className="h-4 w-4" />
+                                <span>{child.label}</span>
+                              </Link>
+                            );
+                          })}
+                        </div>
                       );
                     })}
                   </div>
@@ -173,16 +204,19 @@ export function MobileBottomNav({
                 <LogOut className="h-[18px] w-[18px]" />
                 Log Out
               </button>
-
+            </div>
+            <div className="mt-auto flex items-center gap-1 border-t border-border/50 px-1 pt-3">
               <a
                 href="https://ochiengandco.com"
                 target="_blank"
                 rel="noreferrer"
-                className="mt-6 mb-2 flex items-center gap-2 px-3 text-foreground"
+                className="flex min-w-0 flex-1 items-center gap-2 px-2 py-2 text-foreground"
               >
                 <OchiengLogoSimple size={28} className="dark:invert" />
                 <span className="text-xs text-muted-foreground">Ochieng & Co</span>
               </a>
+              <InboxMenu placement="top-end" />
+              <ThemeToggle />
             </div>
           </SheetContent>
         </Sheet>

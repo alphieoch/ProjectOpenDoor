@@ -17,6 +17,11 @@ import { PerplexityProvider } from "./perplexity.js";
 import { registerExtraProviders } from "./extras.js";
 import type { ProviderAdapter } from "./base.js";
 import { hasVertexPlatform, isProductionRuntime } from "@opendoor/shared";
+import {
+  catalogModelForProvider,
+  isKeyedProvider,
+  vertexOverflowModel,
+} from "../lib/chat-provider.js";
 
 export type { ProviderAdapter };
 
@@ -277,7 +282,7 @@ export const fallbackChains: Record<string, string[]> = {
   "llama-3.1-70b-instruct": ["together", "groq"],
   "qwen2.5-7b-instruct": ["together", "qwen", "ollama"],
   "qwen2.5-72b-instruct": ["together", "qwen"],
-  "deepseek-v3": ["deepseek", "together"],
+  "deepseek-v3": ["together", "vertex", "deepseek"],
   "mistral-7b-instruct": ["together", "mistral", "ollama"],
   "BAAI/bge-base-en-v1.5": ["together"],
   "phi-4": ["azure-foundry"],
@@ -433,6 +438,7 @@ export async function resolveProvider(
   // Prefer open-weight providers when scanning listModels()
   for (const provider of orderedProviders()) {
     if (provider.slug === "custom") continue;
+    if (!isKeyedProvider(provider.slug, { byokSlugs })) continue;
     const models = await provider.listModels();
     const found = models.find((m: any) => m.id === modelId);
     if (found) {
@@ -441,42 +447,29 @@ export async function resolveProvider(
   }
 
   const slug = directMappings[modelId];
-  if (slug) {
-    const skipUnkeyedTogether =
-      slug === "together" &&
-      !process.env.TOGETHER_API_KEY &&
-      !byokSlugs.has("together") &&
-      isProductionRuntime();
-    const skipUnkeyedVertex =
-      slug === "vertex" &&
-      !hasVertexPlatform() &&
-      !byokSlugs.has("vertex") &&
-      isProductionRuntime();
-    if (!skipUnkeyedTogether && !skipUnkeyedVertex) {
-      const provider = byokSlugs.has(slug)
-        ? instantiateProvider(slug) || providerMap.get(slug)
-        : providerMap.get(slug);
-      if (provider) {
-        return { provider, model: modelId };
-      }
+  if (slug && isKeyedProvider(slug, { byokSlugs })) {
+    const provider = byokSlugs.has(slug)
+      ? instantiateProvider(slug) || providerMap.get(slug)
+      : providerMap.get(slug);
+    if (provider) {
+      return { provider, model: catalogModelForProvider(slug, modelId) };
     }
   }
 
   for (const fb of getFallbackChain(modelId)) {
     if (fb === slug) continue;
+    if (!isKeyedProvider(fb, { byokSlugs })) continue;
     const provider = byokSlugs.has(fb)
       ? instantiateProvider(fb) || providerMap.get(fb)
       : providerMap.get(fb);
     if (!provider) continue;
-    if (fb === "together" && !process.env.TOGETHER_API_KEY && !byokSlugs.has("together")) {
-      continue;
-    }
-    if (fb === "vertex" && !hasVertexPlatform() && !byokSlugs.has("vertex")) {
-      continue;
-    }
-    if (fb === "groq" && !process.env.GROQ_API_KEY && !byokSlugs.has("groq")) continue;
-    if (fb === "xai" && !process.env.XAI_API_KEY && !byokSlugs.has("xai")) continue;
-    return { provider, model: modelId };
+    return { provider, model: catalogModelForProvider(fb, modelId) };
+  }
+
+  const overflow = vertexOverflowModel(modelId);
+  if (overflow && isKeyedProvider("vertex", { byokSlugs })) {
+    const vertex = providerMap.get("vertex");
+    if (vertex) return { provider: vertex, model: overflow };
   }
 
   if (/qwen3\.?8/i.test(modelId)) {

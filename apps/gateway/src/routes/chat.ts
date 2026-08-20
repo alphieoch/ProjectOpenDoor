@@ -4,6 +4,7 @@ import { db, requests, providers, models, apiKeys } from "@opendoor/database";
 import type { ChatCompletionRequest } from "@opendoor/shared";
 import {
   flattenMessageText,
+  canCoverEstimatedSpend,
   spendableCents,
   splitCreditBuckets,
   welcomeAllowedForFamily,
@@ -42,6 +43,14 @@ import {
 import { normalizeServiceTier } from "../lib/service-tier.js";
 import { applyModelRouting, isModelAllowed } from "../lib/model-aliases.js";
 import { applyMessageTransforms } from "../lib/transforms.js";
+import { asUuid } from "../lib/provider-id.js";
+import {
+  catalogModelForProvider,
+  decideProviderLoop,
+  isKeyedProvider,
+  vertexToolOverflowModel,
+} from "../lib/chat-provider.js";
+import { normalizeUsage } from "../utils/usage.js";
 
 const chatRouter = new Hono();
 
@@ -68,6 +77,23 @@ function isAbortOrTimeout(err: unknown): boolean {
     name === "AbortError" ||
     /aborted|timeout|ETIMEDOUT|UND_ERR_CONNECT_TIMEOUT/i.test(message)
   );
+}
+
+async function insertChatRequestLog(
+  values: Record<string, unknown>
+): Promise<string | undefined> {
+  const providerId = asUuid(values.providerId as string | null | undefined);
+  if (!providerId) return undefined;
+  try {
+    const inserted = await db
+      .insert(requests)
+      .values({ ...values, providerId })
+      .returning({ id: requests.id });
+    return inserted[0]?.id;
+  } catch (e) {
+    console.error("[chat] request log failed", e);
+    return undefined;
+  }
 }
 
 async function tryProvider(
@@ -326,7 +352,14 @@ chatRouter.post("/completions", async (c) => {
       welcomeAllowedForFamily(requestFamily)
     );
 
-    if (!canUsePlan && credits < estimatedCostCents) {
+    if (
+      !canUsePlan &&
+      !canCoverEstimatedSpend({
+        plan: billingContext?.plan || organization.plan,
+        spendableCents: credits,
+        estimatedCostCents,
+      })
+    ) {
       return c.json(
         {
           error: "Insufficient balance",
@@ -465,20 +498,21 @@ chatRouter.post("/completions", async (c) => {
   for (let chainIndex = 0; chainIndex < chainSlugs.length; chainIndex++) {
     const slug = chainSlugs[chainIndex];
     const byok = byokKeys.get(slug);
+    if (!isKeyedProvider(slug, { byokSlugs: byokKeys.keys() })) continue;
     const provider = instantiateProvider(slug, byok?.plaintext);
     if (!provider) continue;
     if (byok) touchOrgProviderKeyUsed(byok.id);
 
-    // Lookup provider UUID for FK constraint
+    // Lookup provider UUID for FK constraint. Never store a slug here.
     try {
       const providerRows = await db
         .select({ id: providers.id })
         .from(providers)
         .where(eq(providers.slug as any, slug))
         .limit(1);
-      providerId = providerRows[0]?.id || null;
+      providerId = asUuid(providerRows[0]?.id);
     } catch {
-      providerId = slug;
+      providerId = null;
     }
 
     usedProviderSlug = slug;
@@ -487,22 +521,40 @@ chatRouter.post("/completions", async (c) => {
     }
 
     const providerStartTime = Date.now();
-    const result = await tryProvider(provider, resolved.model, body, !!body.stream);
+    let result = await tryProvider(
+      provider,
+      catalogModelForProvider(slug, body.model),
+      body,
+      !!body.stream
+    );
 
-    if (result.error) {
-      await recordError(slug, result.error);
-      lastError = result.error;
+    const toolOverflow =
+      result.error && body.tools?.length && slug === "vertex"
+        ? vertexToolOverflowModel(catalogModelForProvider(slug, body.model))
+        : null;
+    if (toolOverflow) {
+      result = await tryProvider(provider, toolOverflow, body, !!body.stream);
+    }
+
+    if (decideProviderLoop(result) === "continue") {
+      const err = result.error || new Error("Empty provider response");
+      await recordError(slug, err);
+      lastError = err;
       continue;
     }
 
-    // Provider responded successfully (time-to-first-response)
-    await recordSuccess(slug, Date.now() - providerStartTime);
-    await rememberCacheAffinity({
-      organizationId: organization.id,
-      model: body.model,
-      fingerprint: cacheFp,
-      providerSlug: slug,
-    });
+    // Provider succeeded — metrics/logging/billing must not become a 502.
+    try {
+      await recordSuccess(slug, Date.now() - providerStartTime);
+      await rememberCacheAffinity({
+        organizationId: organization.id,
+        model: body.model,
+        fingerprint: cacheFp,
+        providerSlug: slug,
+      });
+    } catch (sideEffectError) {
+      console.error("[chat] post-success metrics failed", sideEffectError);
+    }
 
     // Success — handle streaming or non-streaming
     try {
@@ -568,13 +620,11 @@ chatRouter.post("/completions", async (c) => {
                 // pricing not configured
               }
 
-              const inserted = await db
-                .insert(requests)
-                .values({
+              const requestId = await insertChatRequestLog({
                 id: generationId,
                 apiKeyId: apiKey.id,
                 organizationId: organization.id,
-                providerId: providerId || usedProviderSlug,
+                providerId,
                 modelId: body.model,
                 requestType: "chat",
                 promptTokens,
@@ -601,12 +651,11 @@ chatRouter.post("/completions", async (c) => {
                   streamed: true,
                   ...(c.get("appAttribution") || {}),
                 },
-                })
-                .returning({ id: requests.id });
+              });
 
               if (costUsd > 0 && !c.get("skipBilling")) {
                 try {
-                  await debitUsage(organization.id, costUsd, inserted[0]?.id, {
+                  await debitUsage(organization.id, costUsd, requestId, {
                     plan: (billingContext?.plan || organization.plan || "free") as
                       | "free"
                       | "pro"
@@ -653,7 +702,7 @@ chatRouter.post("/completions", async (c) => {
                 extra: {
                   organization_id: organization.id,
                   region,
-                  request_id: inserted[0]?.id,
+                  request_id: requestId,
                 },
               });
             } catch (error: any) {
@@ -666,10 +715,10 @@ chatRouter.post("/completions", async (c) => {
 
               await recordError(slug, error);
 
-              await db.insert(requests).values({
+              await insertChatRequestLog({
                 apiKeyId: apiKey.id,
                 organizationId: organization.id,
-                providerId: providerId || usedProviderSlug,
+                providerId,
                 modelId: resolved.model,
                 requestType: "chat",
                 status: "error",
@@ -699,10 +748,11 @@ chatRouter.post("/completions", async (c) => {
         return c.body(stream);
       } else if (result.response) {
         const response = result.response;
-        const promptTokens = response.usage.prompt_tokens;
-        const completionTokens = response.usage.completion_tokens;
-        const totalTokens = response.usage.total_tokens;
-        const cachedTokens = Number(response.usage?.cached_tokens || 0);
+        const usage = normalizeUsage(response.usage);
+        const promptTokens = usage.prompt_tokens;
+        const completionTokens = usage.completion_tokens;
+        const totalTokens = usage.total_tokens;
+        const cachedTokens = usage.cached_tokens;
 
         let costUsd = 0;
         const requestFamily = normalizeFamily(
@@ -730,114 +780,116 @@ chatRouter.post("/completions", async (c) => {
         }
 
         const generationId = randomUUID();
-        const inserted = await db
-          .insert(requests)
-          .values({
-          id: generationId,
-          apiKeyId: apiKey.id,
-          organizationId: organization.id,
-          providerId: providerId || usedProviderSlug,
-          modelId: body.model,
-          requestType: "chat",
-          promptTokens,
-          completionTokens,
-          totalTokens,
-          latencyMs: Date.now() - startTime,
-          costUsd: costUsd.toString(),
-          status: "success",
-          region,
-          dataClass,
-          policyViolationId: policyResult?.violationId || undefined,
-          guardrailOutcome: policyResult?.guardrailResults || undefined,
-          metadata: {
-            fallbackFrom,
-            providerChain: chainSlugs,
-            originalModel: c.get("originalModel"),
-            policyAction: policyResult?.action,
-            governanceModelId: policyResult?.governance?.id,
-            businessUnit: c.get("businessUnit"),
-            clientId: c.get("clientId"),
-            serviceTier,
-            promptCacheKey: body.prompt_cache_key,
-            cachedTokens,
-            ...(c.get("appAttribution") || {}),
-          },
-          })
-          .returning({ id: requests.id });
-
-        if (costUsd > 0 && !c.get("skipBilling")) {
-          try {
-            await debitUsage(organization.id, costUsd, inserted[0]?.id, {
-              plan: (billingContext?.plan || organization.plan || "free") as
-                | "free"
-                | "pro"
-                | "enterprise",
-              family: requestFamily,
-              providerSlug: usedProviderSlug,
-              useFromPlan: Boolean(billingContext?.useFromPlan),
-              useFromCredits: !billingContext?.useFromPlan,
-            });
-            // Update per-key spend tracking
-            const costCents = usdToCents(costUsd);
-            if (costCents > 0) {
-              await db
-                .update(apiKeys)
-                .set({ spendUsedUsdCents: sql`${apiKeys.spendUsedUsdCents} + ${costCents}` })
-                .where(eq(apiKeys.id, apiKey.id));
-            }
-            // Trigger auto-recharge if applicable
-            if (!billingContext?.useFromPlan) {
-              triggerAutoRecharge(organization.id).catch(() => {});
-            }
-          } catch (billingError) {
-            console.error("Failed to debit usage after completion:", billingError);
-          }
-        }
-
-        await recordTokens(apiKey.keyPrefix, totalTokens);
-
-        const latencySec = (Date.now() - startTime) / 1000;
-        const outputChoices =
-          response.choices?.map((c: any) => ({
-            role: c.message?.role,
-            content:
-              typeof c.message?.content === "string"
-                ? c.message.content.slice(0, 8000)
-                : JSON.stringify(c.message?.content ?? "").slice(0, 8000),
-          })) ?? [];
-        captureAiGeneration({
-          distinctId: organization.id,
-          model: body.model,
-          providerSlug: usedProviderSlug,
-          input: sanitizeMessagesForAi(body.messages),
-          outputChoices,
-          inputTokens: promptTokens,
-          outputTokens: completionTokens,
-          latencySeconds: latencySec,
-          stream: false,
-          extra: {
-            organization_id: organization.id,
+        try {
+          const requestId = await insertChatRequestLog({
+            id: generationId,
+            apiKeyId: apiKey.id,
+            organizationId: organization.id,
+            providerId,
+            modelId: body.model,
+            requestType: "chat",
+            promptTokens,
+            completionTokens,
+            totalTokens,
+            latencyMs: Date.now() - startTime,
+            costUsd: costUsd.toString(),
+            status: "success",
             region,
-            request_id: inserted[0]?.id,
-          },
-        });
+            dataClass,
+            policyViolationId: policyResult?.violationId || undefined,
+            guardrailOutcome: policyResult?.guardrailResults || undefined,
+            metadata: {
+              fallbackFrom,
+              providerChain: chainSlugs,
+              originalModel: c.get("originalModel"),
+              policyAction: policyResult?.action,
+              governanceModelId: policyResult?.governance?.id,
+              businessUnit: c.get("businessUnit"),
+              clientId: c.get("clientId"),
+              serviceTier,
+              promptCacheKey: body.prompt_cache_key,
+              cachedTokens,
+              ...(c.get("appAttribution") || {}),
+            },
+          });
+
+          if (costUsd > 0 && !c.get("skipBilling")) {
+            try {
+              await debitUsage(organization.id, costUsd, requestId, {
+                plan: (billingContext?.plan || organization.plan || "free") as
+                  | "free"
+                  | "pro"
+                  | "enterprise",
+                family: requestFamily,
+                providerSlug: usedProviderSlug,
+                useFromPlan: Boolean(billingContext?.useFromPlan),
+                useFromCredits: !billingContext?.useFromPlan,
+              });
+              const costCents = usdToCents(costUsd);
+              if (costCents > 0) {
+                await db
+                  .update(apiKeys)
+                  .set({ spendUsedUsdCents: sql`${apiKeys.spendUsedUsdCents} + ${costCents}` })
+                  .where(eq(apiKeys.id, apiKey.id));
+              }
+              if (!billingContext?.useFromPlan) {
+                triggerAutoRecharge(organization.id).catch(() => {});
+              }
+            } catch (billingError) {
+              console.error("Failed to debit usage after completion:", billingError);
+            }
+          }
+
+          await recordTokens(apiKey.keyPrefix, totalTokens);
+
+          const latencySec = (Date.now() - startTime) / 1000;
+          const outputChoices =
+            response.choices?.map((c: any) => ({
+              role: c.message?.role,
+              content:
+                typeof c.message?.content === "string"
+                  ? c.message.content.slice(0, 8000)
+                  : JSON.stringify(c.message?.content ?? "").slice(0, 8000),
+            })) ?? [];
+          captureAiGeneration({
+            distinctId: organization.id,
+            model: body.model,
+            providerSlug: usedProviderSlug,
+            input: sanitizeMessagesForAi(body.messages),
+            outputChoices,
+            inputTokens: promptTokens,
+            outputTokens: completionTokens,
+            latencySeconds: latencySec,
+            stream: false,
+            extra: {
+              organization_id: organization.id,
+              region,
+              request_id: requestId,
+            },
+          });
+        } catch (persistError) {
+          console.error("[chat] post-success persist failed", persistError);
+        }
 
         c.header("x-generation-id", generationId);
         response.id = generationId;
         return c.json(response);
       }
     } catch (error: any) {
-      await recordError(slug, error);
-      lastError = error;
-      continue;
+      console.error("[chat] post-success delivery failed", error);
+      if (result.response) {
+        return c.json(result.response);
+      }
+      lastError = error instanceof Error ? error : new Error(String(error));
+      break;
     }
   }
 
-  // All providers failed
-  await db.insert(requests).values({
+  // All providers failed — log must not 500 the handler
+  await insertChatRequestLog({
     apiKeyId: apiKey.id,
     organizationId: organization.id,
-    providerId: providerId || chainSlugs[0],
+    providerId,
     modelId: body.model,
     requestType: "chat",
     status: "error",

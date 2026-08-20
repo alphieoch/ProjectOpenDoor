@@ -6,6 +6,7 @@ import {
   CreditCard,
   Layers,
   ShieldCheck,
+  Terminal,
 } from "lucide-react";
 import { StickyFooter } from "@/components/ui/sticky-footer";
 import { getSession } from "@/lib/auth";
@@ -79,8 +80,8 @@ export default async function Home() {
             Each page is its own destination.
           </h2>
           <p className="mt-4 text-lg leading-8 text-muted-foreground">
-            Platform, pricing, how it works, security, and status are separate
-            pages — not sections of this homepage.
+            Platform, pricing, how it works, SDK, security, and status are
+            separate pages — not sections of this homepage.
           </p>
         </div>
         <div className="mt-12 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
@@ -154,6 +155,13 @@ const destinations = [
     href: "/how-it-works",
     icon: BookOpen,
     description: "Auth, policy, routing, and metering — plus a real curl against the gateway.",
+  },
+  {
+    title: "SDK & CLI",
+    href: "/sdk",
+    icon: Terminal,
+    description:
+      "One API key for the CLI and TypeScript SDK — chat, media, assistants, and OpenBot.",
   },
   {
     title: "Security",

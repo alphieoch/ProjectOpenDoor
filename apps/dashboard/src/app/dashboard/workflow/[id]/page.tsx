@@ -22,25 +22,11 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import {
-  ArrowRight, Bot, Wrench, GitBranch, Shuffle,
-  CheckSquare, UserCheck, ChevronLeft, Loader2,
-  Trash2, Plus, Save, Check, Play,
+  GitBranch, ChevronLeft, Loader2,
+  Trash2, Plus, Save, Check, Play, Upload,
 } from "lucide-react";
-
-// ── Node type config ──────────────────────────────────────────────────────────
-
-const NODE_META: Record<string, {
-  label: string; color: string; bg: string;
-  icon: React.ElementType; description: string;
-}> = {
-  input:        { label: "Input",        color: "#fff", bg: "#0F172A", icon: ArrowRight, description: "Workflow entry point" },
-  llm:          { label: "LLM Call",     color: "#fff", bg: "#1E6E4F", icon: Bot,        description: "Call a language model" },
-  tool:         { label: "Tool",         color: "#fff", bg: "#7A5700", icon: Wrench,     description: "Invoke an external tool" },
-  condition:    { label: "Condition",    color: "#fff", bg: "#4B5FBF", icon: GitBranch,  description: "Branch based on output" },
-  transform:    { label: "Transform",    color: "#fff", bg: "#006064", icon: Shuffle,    description: "Reshape or extract data" },
-  output:       { label: "Output",       color: "#fff", bg: "#B3261E", icon: CheckSquare,description: "Workflow result" },
-  human_review: { label: "Human Review", color: "#fff", bg: "#E65100", icon: UserCheck,  description: "Pause for human approval" },
-};
+import { ConfirmDialog } from "@/components/workflow/confirm-dialog";
+import { NODE_META, TRIGGER_LABELS } from "@/components/workflow/node-meta";
 
 const TOOLS = [
   { value: "web_search",        label: "Web Search" },
@@ -52,7 +38,7 @@ const TOOLS = [
 
 // ── Custom node component ─────────────────────────────────────────────────────
 
-function WorkflowNodeComponent({ id, data, selected }: { id: string; data: any; selected: boolean }) {
+function WorkflowNodeComponent({ data, selected }: { id: string; data: any; selected: boolean }) {
   const meta = NODE_META[data.nodeType ?? "llm"] ?? NODE_META.llm;
   const Icon = meta.icon;
   const hasTarget = data.nodeType !== "input";
@@ -64,10 +50,10 @@ function WorkflowNodeComponent({ id, data, selected }: { id: string; data: any; 
       borderRadius: 12,
       overflow: "hidden",
       boxShadow: selected
-        ? `0 0 0 2px ${meta.bg}, 0 4px 16px rgba(0,0,0,0.15)`
-        : "0 2px 8px rgba(0,0,0,0.12)",
-      background: "#fff",
-      border: "1px solid #e0e0e0",
+        ? `0 0 0 2px ${meta.bg}, 0 4px 16px hsl(var(--foreground) / 0.12)`
+        : "0 2px 8px hsl(var(--foreground) / 0.08)",
+      background: "hsl(var(--card))",
+      border: "1px solid hsl(var(--border))",
     }}>
       {/* Header */}
       <div style={{ background: meta.bg, padding: "8px 12px", display: "flex", alignItems: "center", gap: 6 }}>
@@ -78,14 +64,14 @@ function WorkflowNodeComponent({ id, data, selected }: { id: string; data: any; 
       </div>
       {/* Body */}
       <div style={{ padding: "8px 12px 10px" }}>
-        <div style={{ fontSize: 12, fontWeight: 600, color: "#191C20", marginBottom: 2 }}>
+        <div style={{ fontSize: 12, fontWeight: 600, color: "hsl(var(--card-foreground))", marginBottom: 2 }}>
           {data.label || meta.label}
         </div>
         {data.modelId && (
-          <div style={{ fontSize: 11, color: "#73777F", fontFamily: "monospace" }}>{data.modelId}</div>
+          <div style={{ fontSize: 11, color: "hsl(var(--muted-foreground))", fontFamily: "monospace" }}>{data.modelId}</div>
         )}
         {data.toolType && (
-          <div style={{ fontSize: 11, color: "#73777F" }}>
+          <div style={{ fontSize: 11, color: "hsl(var(--muted-foreground))" }}>
             {TOOLS.find((t) => t.value === data.toolType)?.label ?? data.toolType}
             {data.toolType === "web_search" && data.query ? ` · ${data.query}` : ""}
             {data.toolType === "image_generation" && data.prompt ? ` · ${data.prompt}` : ""}
@@ -95,7 +81,7 @@ function WorkflowNodeComponent({ id, data, selected }: { id: string; data: any; 
         )}
         {data.systemPrompt && (
           <div style={{
-            fontSize: 10, color: "#73777F", marginTop: 4,
+            fontSize: 10, color: "hsl(var(--muted-foreground))", marginTop: 4,
             overflow: "hidden", display: "-webkit-box",
             WebkitLineClamp: 2, WebkitBoxOrient: "vertical",
           }}>
@@ -103,29 +89,29 @@ function WorkflowNodeComponent({ id, data, selected }: { id: string; data: any; 
           </div>
         )}
         {data.condition && (
-          <div style={{ fontSize: 11, color: "#73777F", fontStyle: "italic" }}>{data.condition}</div>
+          <div style={{ fontSize: 11, color: "hsl(var(--muted-foreground))", fontStyle: "italic" }}>{data.condition}</div>
         )}
         {data.description && !data.modelId && !data.toolType && (
-          <div style={{ fontSize: 11, color: "#73777F" }}>{data.description}</div>
+          <div style={{ fontSize: 11, color: "hsl(var(--muted-foreground))" }}>{data.description}</div>
         )}
       </div>
       {/* Handles */}
       {hasTarget && (
         <Handle type="target" position={Position.Left}
-          style={{ width: 10, height: 10, background: meta.bg, border: "2px solid #fff" }} />
+          style={{ width: 10, height: 10, background: meta.bg, border: "2px solid hsl(var(--card))" }} />
       )}
       {data.nodeType === "condition" ? (
         <>
           <Handle type="source" id="true" position={Position.Right}
-            style={{ width: 10, height: 10, top: "38%", background: meta.bg, border: "2px solid #fff" }}
+            style={{ width: 10, height: 10, top: "38%", background: meta.bg, border: "2px solid hsl(var(--card))" }}
             title="True" />
           <Handle type="source" id="false" position={Position.Right}
-            style={{ width: 10, height: 10, top: "68%", background: meta.bg, border: "2px solid #fff" }}
+            style={{ width: 10, height: 10, top: "68%", background: meta.bg, border: "2px solid hsl(var(--card))" }}
             title="False" />
         </>
       ) : hasSource ? (
         <Handle type="source" position={Position.Right}
-          style={{ width: 10, height: 10, background: meta.bg, border: "2px solid #fff" }} />
+          style={{ width: 10, height: 10, background: meta.bg, border: "2px solid hsl(var(--card))" }} />
       ) : null}
     </div>
   );
@@ -158,8 +144,8 @@ function ConfigPanel({
       {/* Panel header */}
       <div className="flex items-center gap-2 border-b px-4 py-3"
         style={{ borderColor: "hsl(var(--border))", background: meta.bg }}>
-        <meta.icon size={14} color="#fff" />
-        <span className="text-xs font-semibold uppercase tracking-wider text-white">{meta.label}</span>
+        <meta.icon size={14} color={meta.color} />
+        <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: meta.color }}>{meta.label}</span>
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -372,26 +358,167 @@ function ConfigPanel({
 
         {/* Human review fields */}
         {data.nodeType === "human_review" && (
+          <div className="space-y-3">
+            <div>
+              <label className="mb-1 block text-xs font-medium" style={{ color: "hsl(var(--muted-foreground))" }}>Reviewer Note</label>
+              <textarea value={data.reviewNote ?? ""} onChange={(e) => set("reviewNote", e.target.value)}
+                className="input w-full text-sm" rows={3} placeholder="Instructions for the human reviewer…" />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium" style={{ color: "hsl(var(--muted-foreground))" }}>Assignee / queue</label>
+              <input value={data.assignee ?? data.queue ?? ""} onChange={(e) => set("assignee", e.target.value)}
+                className="input w-full text-sm" placeholder="lee@org or billing-queue" />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium" style={{ color: "hsl(var(--muted-foreground))" }}>SLA minutes</label>
+              <input type="number" min={1} value={data.dueMinutes ?? ""} onChange={(e) => set("dueMinutes", parseInt(e.target.value, 10) || "")}
+                className="input w-full text-sm" placeholder="e.g. 60" />
+            </div>
+          </div>
+        )}
+
+        {data.nodeType === "wait" && (
+          <div className="space-y-3">
+            <div>
+              <label className="mb-1 block text-xs font-medium" style={{ color: "hsl(var(--muted-foreground))" }}>Wait seconds</label>
+              <input type="number" min={0} value={data.waitSeconds ?? 0} onChange={(e) => set("waitSeconds", parseInt(e.target.value, 10) || 0)}
+                className="input w-full text-sm" />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium" style={{ color: "hsl(var(--muted-foreground))" }}>Wait minutes</label>
+              <input type="number" min={0} value={data.waitMinutes ?? 0} onChange={(e) => set("waitMinutes", parseInt(e.target.value, 10) || 0)}
+                className="input w-full text-sm" />
+              <p className="mt-1 text-[11px]" style={{ color: "hsl(var(--muted-foreground))" }}>
+                Under 8 seconds runs inline. Longer waits pause the run until due.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {data.nodeType === "loop" && (
+          <div className="space-y-3">
+            <div>
+              <label className="mb-1 block text-xs font-medium" style={{ color: "hsl(var(--muted-foreground))" }}>Items</label>
+              <textarea value={data.items ?? ""} onChange={(e) => set("items", e.target.value)}
+                className="input w-full text-sm" rows={3} placeholder={'JSON array or one item per line. {{input}} works.'} />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium" style={{ color: "hsl(var(--muted-foreground))" }}>Item template</label>
+              <input value={data.template ?? "{{item}}"} onChange={(e) => set("template", e.target.value)}
+                className="input w-full text-sm" placeholder="{{item}}" />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium" style={{ color: "hsl(var(--muted-foreground))" }}>Max items</label>
+              <input type="number" min={1} max={20} value={data.maxIterations ?? 20}
+                onChange={(e) => set("maxIterations", parseInt(e.target.value, 10))}
+                className="input w-full text-sm" />
+            </div>
+          </div>
+        )}
+
+        {data.nodeType === "assign" && (
+          <div className="space-y-3">
+            <div>
+              <label className="mb-1 block text-xs font-medium" style={{ color: "hsl(var(--muted-foreground))" }}>Assignee</label>
+              <input value={data.assignee ?? ""} onChange={(e) => set("assignee", e.target.value)}
+                className="input w-full text-sm" placeholder="user or {{vars.owner}}" />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium" style={{ color: "hsl(var(--muted-foreground))" }}>Queue</label>
+              <input value={data.queue ?? ""} onChange={(e) => set("queue", e.target.value)}
+                className="input w-full text-sm" placeholder="support" />
+            </div>
+          </div>
+        )}
+
+        {data.nodeType === "http" && (
+          <div className="space-y-3">
+            <div>
+              <label className="mb-1 block text-xs font-medium" style={{ color: "hsl(var(--muted-foreground))" }}>Method</label>
+              <select value={data.method ?? "POST"} onChange={(e) => set("method", e.target.value)} className="input w-full text-sm">
+                {["GET", "POST", "PUT", "PATCH", "DELETE"].map((m) => <option key={m} value={m}>{m}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium" style={{ color: "hsl(var(--muted-foreground))" }}>HTTPS URL</label>
+              <input value={data.url ?? ""} onChange={(e) => set("url", e.target.value)}
+                className="input w-full text-sm" placeholder="https://example.com/hook" />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium" style={{ color: "hsl(var(--muted-foreground))" }}>Body</label>
+              <textarea value={data.body ?? ""} onChange={(e) => set("body", e.target.value)}
+                className="input w-full text-sm" rows={3} placeholder='{"text":"{{input}}"}' />
+            </div>
+          </div>
+        )}
+
+        {data.nodeType === "set_variable" && (
+          <div className="space-y-3">
+            <div>
+              <label className="mb-1 block text-xs font-medium" style={{ color: "hsl(var(--muted-foreground))" }}>Name</label>
+              <input value={data.name ?? ""} onChange={(e) => set("name", e.target.value)}
+                className="input w-full text-sm" placeholder="summary" />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium" style={{ color: "hsl(var(--muted-foreground))" }}>Value</label>
+              <textarea value={data.value ?? ""} onChange={(e) => set("value", e.target.value)}
+                className="input w-full text-sm" rows={3} placeholder="{{input}} or {{steps.llm1.text}}" />
+            </div>
+          </div>
+        )}
+
+        {data.nodeType === "subflow" && (
           <div>
-            <label className="mb-1 block text-xs font-medium" style={{ color: "hsl(var(--muted-foreground))" }}>Reviewer Note</label>
-            <textarea value={data.reviewNote ?? ""} onChange={(e) => set("reviewNote", e.target.value)}
-              className="input w-full text-sm" rows={3} placeholder="Instructions for the human reviewer…" />
-            <p className="mt-1 text-[11px] leading-relaxed" style={{ color: "hsl(var(--muted-foreground))" }}>
-              Run pauses here as awaiting_review. Approve or reject from the results panel to resume.
-            </p>
+            <label className="mb-1 block text-xs font-medium" style={{ color: "hsl(var(--muted-foreground))" }}>Published workflow ID</label>
+            <input value={data.workflowId ?? ""} onChange={(e) => set("workflowId", e.target.value)}
+              className="input w-full text-sm" placeholder="uuid of another workflow" />
+          </div>
+        )}
+
+        {data.nodeType === "transform" && (
+          <div>
+            <label className="mb-1 block text-xs font-medium" style={{ color: "hsl(var(--muted-foreground))" }}>Template</label>
+            <textarea value={data.template ?? "{{input}}"} onChange={(e) => set("template", e.target.value)}
+              className="input w-full text-sm" rows={3} placeholder="{{vars.dept}}: {{input}}" />
           </div>
         )}
 
         {/* Output fields */}
         {data.nodeType === "output" && (
-          <div>
-            <label className="mb-1 block text-xs font-medium" style={{ color: "hsl(var(--muted-foreground))" }}>Output Format</label>
-            <select value={data.outputFormat ?? "text"} onChange={(e) => set("outputFormat", e.target.value)}
-              className="input w-full text-sm">
-              <option value="text">Plain text</option>
-              <option value="json">JSON object</option>
-              <option value="markdown">Markdown</option>
-            </select>
+          <div className="space-y-3">
+            <div>
+              <label className="mb-1 block text-xs font-medium" style={{ color: "hsl(var(--muted-foreground))" }}>Output Format</label>
+              <select value={data.outputFormat ?? "text"} onChange={(e) => set("outputFormat", e.target.value)}
+                className="input w-full text-sm">
+                <option value="text">Plain text</option>
+                <option value="json">JSON object</option>
+                <option value="markdown">Markdown</option>
+              </select>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium" style={{ color: "hsl(var(--muted-foreground))" }}>Template</label>
+              <input value={data.template ?? ""} onChange={(e) => set("template", e.target.value)}
+                className="input w-full text-sm" placeholder="optional {{vars.x}}" />
+            </div>
+          </div>
+        )}
+
+        {["llm", "tool", "http", "assign", "subflow"].includes(data.nodeType) && (
+          <div className="space-y-3 border-t pt-3" style={{ borderColor: "hsl(var(--border))" }}>
+            <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "hsl(var(--muted-foreground))" }}>Error handling</p>
+            <div>
+              <label className="mb-1 block text-xs font-medium" style={{ color: "hsl(var(--muted-foreground))" }}>On error</label>
+              <select value={data.onError ?? "continue"} onChange={(e) => set("onError", e.target.value)} className="input w-full text-sm">
+                <option value="continue">Continue</option>
+                <option value="fail">Halt run</option>
+              </select>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium" style={{ color: "hsl(var(--muted-foreground))" }}>Retries</label>
+              <input type="number" min={0} max={3} value={data.retryCount ?? 0}
+                onChange={(e) => set("retryCount", parseInt(e.target.value, 10) || 0)}
+                className="input w-full text-sm" />
+            </div>
           </div>
         )}
       </div>
@@ -493,6 +620,18 @@ export default function WorkflowEditorPage() {
   } | null>(null);
   const [reviewing, setReviewing] = useState(false);
   const [recentRuns, setRecentRuns] = useState<SavedRun[]>([]);
+  const [triggerType, setTriggerType] = useState("manual");
+  const [triggerCron, setTriggerCron] = useState("");
+  const [triggerEvent, setTriggerEvent] = useState("");
+  const [triggerRecordAction, setTriggerRecordAction] = useState("");
+  const [variablesText, setVariablesText] = useState("");
+  const [webhookSecret, setWebhookSecret] = useState("");
+  const [publishedVersion, setPublishedVersion] = useState(0);
+  const [versions, setVersions] = useState<Array<{ id: string; version: number; note?: string | null; publishedAt?: string }>>([]);
+  const [showPublish, setShowPublish] = useState(false);
+  const [publishNote, setPublishNote] = useState("");
+  const [publishing, setPublishing] = useState(false);
+  const [runPublished, setRunPublished] = useState(false);
 
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
@@ -510,18 +649,32 @@ export default function WorkflowEditorPage() {
       fetch(`/api/workflows/${id}/run`, { credentials: "include" })
         .then((r) => (r.ok ? r.json() : { runs: [] }))
         .catch(() => ({ runs: [] })),
-    ]).then(([wfData, mData, runData]) => {
+      fetch(`/api/workflows/${id}/versions`, { credentials: "include" })
+        .then((r) => (r.ok ? r.json() : { versions: [] }))
+        .catch(() => ({ versions: [] })),
+      fetch("/api/workflows/tick", { method: "POST", credentials: "include" }).catch(() => undefined),
+    ]).then(([wfData, mData, runData, versionData]) => {
       if (wfData.workflow) {
         const wf = wfData.workflow;
         setWorkflow(wf);
         setName(wf.name);
         setStatus(wf.status);
+        setTriggerType(wf.trigger?.type || "manual");
+        setTriggerCron(wf.trigger?.cron || "");
+        setTriggerEvent(wf.trigger?.event || "");
+        setTriggerRecordAction(wf.trigger?.recordAction || "");
+        setVariablesText(
+          Object.entries(wf.variables || {}).map(([k, v]) => `${k}=${v}`).join("\n")
+        );
+        setWebhookSecret(wf.webhookSecret || "");
+        setPublishedVersion(wf.publishedVersion || 0);
         const rfNodes = toRFNodes(wf.graph?.nodes ?? []);
         const rfEdges = toRFEdges(wf.graph?.edges ?? []);
         setNodes(rfNodes);
         setEdges(rfEdges);
         latestGraph.current = { nodes: wf.graph?.nodes ?? [], edges: wf.graph?.edges ?? [] };
       }
+      setVersions(Array.isArray(versionData?.versions) ? versionData.versions : []);
       setModels(
         (mData.models ?? []).map((m: { id?: string; label?: string; modelId?: string; displayName?: string }) => ({
           modelId: m.id || m.modelId || "",
@@ -549,17 +702,48 @@ export default function WorkflowEditorPage() {
     saveTimer.current = setTimeout(() => doSave(latestGraph.current, name, status), 2000);
   }
 
+  function parsedVariables() {
+    const vars: Record<string, string> = {};
+    for (const line of variablesText.split("\n")) {
+      const idx = line.indexOf("=");
+      if (idx <= 0) continue;
+      const key = line.slice(0, idx).trim();
+      if (key) vars[key] = line.slice(idx + 1).trim();
+    }
+    return vars;
+  }
+
+  function currentTrigger() {
+    return {
+      type: triggerType,
+      cron: triggerCron,
+      event: triggerEvent,
+      recordAction: triggerRecordAction,
+    };
+  }
+
   async function doSave(
     graph: { nodes: any[]; edges: any[] },
     wfName: string,
     wfStatus: string
   ) {
     setSaveState("saving");
-    await fetch(`/api/workflows/${id}`, {
+    const res = await fetch(`/api/workflows/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: wfName, status: wfStatus, graph }),
+      body: JSON.stringify({
+        name: wfName,
+        status: wfStatus,
+        graph,
+        trigger: currentTrigger(),
+        variables: parsedVariables(),
+      }),
     });
+    if (res.ok) {
+      const data = await res.json().catch(() => ({}));
+      if (data.workflow?.webhookSecret) setWebhookSecret(data.workflow.webhookSecret);
+      if (data.workflow) setWorkflow(data.workflow);
+    }
     setSaveState("saved");
     setTimeout(() => setSaveState("idle"), 2500);
   }
@@ -647,6 +831,7 @@ export default function WorkflowEditorPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           query: runQuery.trim() || undefined,
+          published: runPublished || undefined,
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -715,6 +900,36 @@ export default function WorkflowEditorPage() {
     }
   }
 
+  async function publishWorkflow() {
+    if (saveTimer.current) {
+      clearTimeout(saveTimer.current);
+      await doSave(latestGraph.current, name, status);
+    }
+    setPublishing(true);
+    const res = await fetch(`/api/workflows/${id}/publish`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ note: publishNote }),
+    });
+    const data = await res.json().catch(() => ({}));
+    setPublishing(false);
+    if (!res.ok) {
+      setRunError(typeof data.error === "string" ? data.error : "Publish failed");
+      return;
+    }
+    setShowPublish(false);
+    setPublishNote("");
+    if (data.workflow) {
+      setWorkflow(data.workflow);
+      setStatus(data.workflow.status);
+      setPublishedVersion(data.workflow.publishedVersion || 0);
+    }
+    fetch(`/api/workflows/${id}/versions`, { credentials: "include" })
+      .then((r) => (r.ok ? r.json() : { versions: [] }))
+      .then((v) => setVersions(Array.isArray(v.versions) ? v.versions : []))
+      .catch(() => undefined);
+  }
+
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center">
@@ -753,16 +968,27 @@ export default function WorkflowEditorPage() {
           <option value="active">Active</option>
           <option value="archived">Archived</option>
         </select>
+        {publishedVersion > 0 && (
+          <span className="text-[11px]" style={{ color: "hsl(var(--muted-foreground))" }}>v{publishedVersion}</span>
+        )}
         <input
           value={runQuery}
           onChange={(e) => setRunQuery(e.target.value)}
           className="input w-52 text-xs py-1"
           placeholder="Run input (optional)"
         />
+        <label className="flex items-center gap-1 text-[11px]" style={{ color: "hsl(var(--muted-foreground))" }}>
+          <input type="checkbox" checked={runPublished} onChange={(e) => setRunPublished(e.target.checked)} />
+          Published
+        </label>
         <button type="button" onClick={runWorkflow} disabled={running}
           className="md-btn-outlined flex items-center gap-1.5 px-3 py-1.5 text-xs">
           {running ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
           {running ? "Running…" : "Run"}
+        </button>
+        <button type="button" onClick={() => setShowPublish(true)}
+          className="md-btn-outlined flex items-center gap-1.5 px-3 py-1.5 text-xs">
+          <Upload className="h-3.5 w-3.5" /> Publish
         </button>
         <button type="button" onClick={saveNow}
           className="md-btn-filled flex items-center gap-1.5 px-3 py-1.5 text-xs">
@@ -810,7 +1036,7 @@ export default function WorkflowEditorPage() {
         </div>
 
         {/* Center: React Flow canvas */}
-        <div className="flex-1" style={{ background: "#F8F9FC" }}>
+        <div className="flex-1" style={{ background: "hsl(var(--background))" }}>
           <ReactFlow
             nodes={nodes}
             edges={edges}
@@ -829,7 +1055,7 @@ export default function WorkflowEditorPage() {
             snapToGrid
             snapGrid={[16, 16]}
           >
-            <Background variant={BackgroundVariant.Dots} gap={16} size={1} color="#D1D5DB" />
+            <Background variant={BackgroundVariant.Dots} gap={16} size={1} color="hsl(var(--border))" />
             <Controls />
             <MiniMap
               nodeColor={(n) => {
@@ -852,15 +1078,86 @@ export default function WorkflowEditorPage() {
               onDelete={deleteNode}
             />
           ) : (
-            <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center">
-              <div className="grid h-12 w-12 place-items-center rounded-xl"
-                style={{ background: "hsl(var(--accent))" }}>
-                <GitBranch className="h-6 w-6" style={{ color: "hsl(var(--muted-foreground))" }} />
-              </div>
+            <div className="flex h-full flex-col overflow-y-auto p-4 space-y-4">
               <div>
-                <p className="text-sm font-medium" style={{ color: "hsl(var(--muted-foreground))" }}>No node selected</p>
-                <p className="mt-1 text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
-                  Click any node on the canvas to configure it here.
+                <p className="mb-2 text-[10px] font-semibold uppercase tracking-widest" style={{ color: "hsl(var(--muted-foreground))" }}>
+                  Trigger
+                </p>
+                <select
+                  value={triggerType}
+                  onChange={(e) => {
+                    const next = e.target.value;
+                    setTriggerType(next);
+                    setSaveState("saving");
+                    fetch(`/api/workflows/${id}`, {
+                      method: "PATCH",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        trigger: { type: next, cron: triggerCron, event: triggerEvent, recordAction: triggerRecordAction },
+                        variables: parsedVariables(),
+                      }),
+                    }).then((res) => res.json().then((data) => {
+                      if (data.workflow?.webhookSecret) setWebhookSecret(data.workflow.webhookSecret);
+                      setSaveState("saved");
+                      setTimeout(() => setSaveState("idle"), 2500);
+                    }).catch(() => setSaveState("idle")));
+                  }}
+                  className="input w-full text-sm"
+                >
+                  {Object.entries(TRIGGER_LABELS).map(([value, label]) => (
+                    <option key={value} value={value}>{label}</option>
+                  ))}
+                </select>
+              </div>
+              {triggerType === "schedule" && (
+                <div>
+                  <label className="mb-1 block text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>Cron (UTC)</label>
+                  <input value={triggerCron} onChange={(e) => setTriggerCron(e.target.value)} onBlur={() => doSave(latestGraph.current, name, status)}
+                    className="input w-full text-sm" placeholder="0 9 * * 1-5" />
+                </div>
+              )}
+              {triggerType === "agent_event" && (
+                <div>
+                  <label className="mb-1 block text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>Event name</label>
+                  <input value={triggerEvent} onChange={(e) => setTriggerEvent(e.target.value)} onBlur={() => doSave(latestGraph.current, name, status)}
+                    className="input w-full text-sm" placeholder="agent.completed" />
+                </div>
+              )}
+              {triggerType === "record" && (
+                <div>
+                  <label className="mb-1 block text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>Record action</label>
+                  <input value={triggerRecordAction} onChange={(e) => setTriggerRecordAction(e.target.value)} onBlur={() => doSave(latestGraph.current, name, status)}
+                    className="input w-full text-sm" placeholder="update" />
+                </div>
+              )}
+              {["webhook", "inbound", "agent_event", "record"].includes(triggerType) && (
+                <div className="space-y-2">
+                  <p className="text-[11px] break-all" style={{ color: "hsl(var(--muted-foreground))" }}>
+                    POST /api/public/workflows/{id}/hook
+                  </p>
+                  {webhookSecret ? (
+                    <p className="text-[11px] break-all font-mono" style={{ color: "hsl(var(--muted-foreground))" }}>
+                      x-workflow-secret: {webhookSecret}
+                    </p>
+                  ) : (
+                    <p className="text-[11px]" style={{ color: "hsl(var(--muted-foreground))" }}>
+                      Save to mint a webhook secret.
+                    </p>
+                  )}
+                </div>
+              )}
+              <div>
+                <label className="mb-1 block text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>Variables (name=value)</label>
+                <textarea
+                  value={variablesText}
+                  onChange={(e) => setVariablesText(e.target.value)}
+                  onBlur={() => doSave(latestGraph.current, name, status)}
+                  className="input w-full text-sm font-mono"
+                  rows={4}
+                  placeholder={"dept=support\nowner=lee"}
+                />
+                <p className="mt-2 text-[11px]" style={{ color: "hsl(var(--muted-foreground))" }}>
+                  Use {"{{input}}"}, {"{{vars.name}}"}, or {"{{steps.nodeId.text}}"} in node fields.
                 </p>
               </div>
             </div>
@@ -984,10 +1281,10 @@ export default function WorkflowEditorPage() {
           {recentRuns.length > 0 && (
             <div className="mt-3 pt-2 border-t" style={{ borderColor: "hsl(var(--border))" }}>
               <p className="mb-1 text-[10px] font-semibold uppercase tracking-widest" style={{ color: "hsl(var(--muted-foreground))" }}>
-                Recent runs
+                Run history
               </p>
               <div className="space-y-1">
-                {recentRuns.slice(0, 8).map((run) => (
+                {recentRuns.slice(0, 12).map((run) => (
                   <p key={run.id} className="text-[11px]" style={{ color: "hsl(var(--muted-foreground))" }}>
                     {run.status}
                     {run.createdAt ? ` · ${new Date(run.createdAt).toLocaleString()}` : ""}
@@ -997,8 +1294,39 @@ export default function WorkflowEditorPage() {
               </div>
             </div>
           )}
+          {versions.length > 0 && (
+            <div className="mt-3 pt-2 border-t" style={{ borderColor: "hsl(var(--border))" }}>
+              <p className="mb-1 text-[10px] font-semibold uppercase tracking-widest" style={{ color: "hsl(var(--muted-foreground))" }}>
+                Published versions
+              </p>
+              {versions.slice(0, 6).map((version) => (
+                <p key={version.id} className="text-[11px]" style={{ color: "hsl(var(--muted-foreground))" }}>
+                  v{version.version}
+                  {version.publishedAt ? ` · ${new Date(version.publishedAt).toLocaleString()}` : ""}
+                  {version.note ? ` · ${version.note}` : ""}
+                </p>
+              ))}
+            </div>
+          )}
         </div>
       )}
+      <ConfirmDialog
+        open={showPublish}
+        title="Publish this version?"
+        description="Live webhook, schedule, inbound, and agent-event triggers will run this snapshot. Draft edits stay editable."
+        confirmLabel="Publish"
+        busy={publishing}
+        onClose={() => setShowPublish(false)}
+        onConfirm={publishWorkflow}
+        extra={
+          <input
+            value={publishNote}
+            onChange={(e) => setPublishNote(e.target.value)}
+            className="input w-full text-sm"
+            placeholder="Optional version note"
+          />
+        }
+      />
     </div>
   );
 }

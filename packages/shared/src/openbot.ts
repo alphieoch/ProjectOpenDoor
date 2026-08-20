@@ -10,6 +10,9 @@ export type ComputerFile = {
   path: string;
   content: string;
   updatedAt: string;
+  embedding?: number[];
+  embeddingModel?: string;
+  embeddingAt?: string;
 };
 
 export type ComputerHistoryItem = {
@@ -33,6 +36,23 @@ export type ComputerComponent = {
   createdAt: string;
 };
 
+export type ComputerSnapshotElement = {
+  ref: string;
+  role: string;
+  name: string;
+  value?: string;
+  type?: string;
+  disabled?: boolean;
+  checked?: boolean;
+};
+
+export type ComputerIsolation = {
+  mode: "container" | "shared" | "in-process";
+  url?: string | null;
+  container?: string | null;
+  runtime?: string | null;
+};
+
 export type AgentComputer = {
   operator: ComputerOperator;
   status: ComputerStatus;
@@ -44,6 +64,10 @@ export type AgentComputer = {
   history: ComputerHistoryItem[];
   files: ComputerFile[];
   components: ComputerComponent[];
+  snapshotId: number | null;
+  elements: ComputerSnapshotElement[];
+  backend: "live" | "fetch";
+  isolation: ComputerIsolation;
 };
 
 export type OpenBotDecision = {
@@ -54,11 +78,22 @@ export type OpenBotDecision = {
 
 const COMPUTER_TOOLS = new Set([
   "computer_navigate",
+  "computer_read",
   "computer_read_page",
+  "computer_screenshot",
+  "computer_snapshot",
+  "computer_click",
+  "computer_move",
+  "computer_type",
+  "computer_key",
+  "computer_scroll",
+  "computer_wait",
   "computer_follow_link",
   "computer_list_files",
   "computer_read_file",
   "computer_write_file",
+  "computer_request_help",
+  "computer_request_secret",
   "request_help",
   "render_component",
 ]);
@@ -75,11 +110,37 @@ export function emptyComputer(): AgentComputer {
     history: [],
     files: [],
     components: [],
+    snapshotId: null,
+    elements: [],
+    backend: "fetch",
+    isolation: { mode: "in-process", url: null, container: null, runtime: null },
   };
 }
 
 function asString(value: unknown): string {
   return typeof value === "string" ? value : "";
+}
+
+function readComputerFile(raw: unknown): ComputerFile {
+  const src = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+  const embedding = Array.isArray(src.embedding)
+    && src.embedding.length > 0
+    && src.embedding.length <= 4096
+    && src.embedding.every((n) => typeof n === "number" && Number.isFinite(n))
+    ? (src.embedding as number[])
+    : undefined;
+  return {
+    path: asString(src.path),
+    content: asString(src.content),
+    updatedAt: asString(src.updatedAt),
+    ...(embedding
+      ? {
+        embedding,
+        embeddingModel: typeof src.embeddingModel === "string" ? src.embeddingModel : undefined,
+        embeddingAt: typeof src.embeddingAt === "string" ? src.embeddingAt : undefined,
+      }
+      : {}),
+  };
 }
 
 export function readComputer(raw: unknown): AgentComputer {
@@ -100,9 +161,31 @@ export function readComputer(raw: unknown): AgentComputer {
     excerpt: asString(src.excerpt),
     links: Array.isArray(src.links) ? (src.links as ComputerLink[]) : [],
     history: Array.isArray(src.history) ? (src.history as ComputerHistoryItem[]) : [],
-    files: Array.isArray(src.files) ? (src.files as ComputerFile[]) : [],
+    files: Array.isArray(src.files) ? src.files.map(readComputerFile) : [],
     components: Array.isArray(src.components) ? (src.components as ComputerComponent[]) : [],
+    snapshotId: typeof src.snapshotId === "number" ? src.snapshotId : null,
+    elements: Array.isArray(src.elements) ? (src.elements as ComputerSnapshotElement[]) : [],
+    backend: src.backend === "live" ? "live" : "fetch",
+    isolation: readIsolation(src.isolation),
   };
+}
+
+function readIsolation(raw: unknown): ComputerIsolation {
+  const src = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+  const mode =
+    src.mode === "container" || src.mode === "shared" || src.mode === "in-process" ? src.mode : "in-process";
+  return {
+    mode,
+    url: typeof src.url === "string" ? src.url : null,
+    container: typeof src.container === "string" ? src.container : null,
+    runtime: typeof src.runtime === "string" ? src.runtime : null,
+  };
+}
+
+export function toRelWorkspacePath(path: string): string | null {
+  const safe = sanitizeWorkspacePath(path);
+  if (!safe) return null;
+  return safe.replace(/^\/workspace\//, "");
 }
 
 export function isBlockedComputerHost(hostname: string) {
@@ -187,11 +270,32 @@ export function decideOpenBotAction(opts: {
     return allow("workspace_file", `${tool === "computer_write_file" ? "Write" : "Read"} ${path}.`);
   }
 
-  if (tool === "computer_list_files" || tool === "computer_read_page") {
+  if (
+    tool === "computer_list_files" ||
+    tool === "computer_read_page" ||
+    tool === "computer_read" ||
+    tool === "computer_screenshot" ||
+    tool === "computer_snapshot" ||
+    tool === "computer_wait"
+  ) {
     return allow("inspect", "Read the current computer snapshot.");
   }
 
-  if (tool === "request_help") {
+  if (
+    tool === "computer_click" ||
+    tool === "computer_move" ||
+    tool === "computer_type" ||
+    tool === "computer_key" ||
+    tool === "computer_scroll"
+  ) {
+    return allow("act", "Act on the current page (text, selector, ref, or screenshot x,y).");
+  }
+
+  if (tool === "computer_request_secret") {
+    return allow("secret", "Ask a person for one value; the Bot never sees it.");
+  }
+
+  if (tool === "request_help" || tool === "computer_request_help") {
     return allow("help", "Ask a person to take the wheel.");
   }
 

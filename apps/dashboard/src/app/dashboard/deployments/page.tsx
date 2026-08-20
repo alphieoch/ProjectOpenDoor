@@ -37,13 +37,18 @@ function statusBadge(status: string) {
 export default function DeploymentsPage() {
   const [deployments, setDeployments] = useState<Deployment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   async function fetchDeployments() {
     setLoading(true);
     const res = await fetch("/api/deployments");
+    const data = await res.json().catch(() => ({}));
     if (res.ok) {
-      const data = await res.json();
-      setDeployments(data.deployments);
+      setDeployments(Array.isArray(data.deployments) ? data.deployments : []);
+      setError(null);
+    } else {
+      setDeployments([]);
+      setError(data.error || "Failed to load deployments");
     }
     setLoading(false);
   }
@@ -57,13 +62,17 @@ export default function DeploymentsPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status: newStatus }),
     });
+    const data = await res.json().catch(() => ({}));
     if (res.ok) fetchDeployments();
+    else setError(data.error || "Could not update deployment");
   }
 
   async function deleteDeployment(id: string) {
     if (!confirm("Are you sure you want to delete this deployment?")) return;
     const res = await fetch(`/api/deployments/${id}`, { method: "DELETE" });
+    const data = await res.json().catch(() => ({}));
     if (res.ok) fetchDeployments();
+    else setError(data.error || "Could not delete deployment");
   }
 
   return (
@@ -84,6 +93,12 @@ export default function DeploymentsPage() {
           </div>
         }
       />
+
+      {error ? (
+        <div className="alert-error mb-4 text-sm" role="alert">
+          {error}
+        </div>
+      ) : null}
 
       {loading ? (
         <div className="flex h-64 items-center justify-center">

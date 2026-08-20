@@ -1,9 +1,9 @@
 import type { ComponentType, CSSProperties } from "react";
 import {
   LayoutDashboard, Key, BarChart3, Calculator, Server, CreditCard,
-  Play, Users, Settings, ClipboardList, ShieldCheck, Gavel, LifeBuoy,
+  Play, Users, Settings, ClipboardList, ShieldCheck, Gavel, LifeBuoy, Monitor,
   Gem, Aperture, AlertTriangle, FileCheck, BookOpen, Building2, Bot,
-  GitBranch, List, FlaskConical, ScrollText, MessageSquare, Image as ImageIcon,
+  GitBranch, List, FlaskConical, ScrollText, MessageSquare, Image as ImageIcon, Wrench,
 } from "lucide-react";
 import { AgentsNavIcon } from "@/components/ui/ai-crest";
 
@@ -14,6 +14,8 @@ export type DashboardNavItem = {
   label: string;
   icon: SidebarIcon;
   badgeKey?: "deployments" | "agents" | "openViolations" | "pendingApprovals";
+  children?: DashboardNavItem[];
+  opensSettings?: boolean;
 };
 
 export type DashboardNavGroup = {
@@ -31,8 +33,16 @@ export const dashboardNavGroups: DashboardNavGroup[] = [
       { href: "/dashboard/chat", label: "Chat", icon: MessageSquare },
       { href: "/dashboard/playground", label: "Playground", icon: Play },
       { href: "/dashboard/studio", label: "Studio", icon: Aperture },
-      { href: "/dashboard/agents", label: "Agents", icon: AgentsNavIcon, badgeKey: "agents" },
-      { href: "/dashboard/ai-assistants", label: "AI Assistants", icon: Bot },
+      {
+        href: "/dashboard/agents",
+        label: "Agents",
+        icon: AgentsNavIcon,
+        badgeKey: "agents",
+        children: [
+          { href: "/dashboard/openbot", label: "OpenBot", icon: Monitor, opensSettings: true },
+          { href: "/dashboard/ai-assistants", label: "AI Assistants", icon: Bot },
+        ],
+      },
     ],
   },
   {
@@ -42,6 +52,7 @@ export const dashboardNavGroups: DashboardNavGroup[] = [
       { href: "/dashboard/models", label: "Models", icon: List },
       { href: "/dashboard/api-keys", label: "API Keys", icon: Key },
       { href: "/dashboard/workflow", label: "Workflow", icon: GitBranch },
+      { href: "/dashboard/tools", label: "Tools", icon: Wrench },
       { href: "/dashboard/deployments", label: "Deployments", icon: Server, badgeKey: "deployments" },
       { href: "/dashboard/training", label: "Training", icon: FlaskConical },
       { href: "/dashboard/playground/media", label: "Media", icon: ImageIcon },

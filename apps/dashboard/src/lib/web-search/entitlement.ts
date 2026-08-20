@@ -48,7 +48,7 @@ export function webSearchAddonRequiredResponse(
   entitlement: Awaited<ReturnType<typeof loadWebSearchEntitlement>>,
 ) {
   return {
-    error: `Web Search is a $${entitlement.amountUsd}/month add-on. Subscribe on Billing to unlock live Google results via Vertex AI Grounding.`,
+    error: `Web Search is a $${entitlement.amountUsd}/month add-on, or enable it on Tools for usage-based cost. Subscribe on Billing or open /dashboard/tools.`,
     code: "addon_required" as const,
     addon: "web_search" as const,
     amountUsd: entitlement.amountUsd,

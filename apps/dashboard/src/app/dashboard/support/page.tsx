@@ -167,7 +167,7 @@ export default function SupportPage() {
         {loading ? (
           <p className="page-desc">Loading tickets…</p>
         ) : tickets.length === 0 ? (
-          <p className="page-desc">No tickets yet for this organization.</p>
+          <p className="page-desc">No tickets yet for this organization. Submit one above and it will list here.</p>
         ) : (
           <ul className="space-y-3">
             {tickets.map((t) => (

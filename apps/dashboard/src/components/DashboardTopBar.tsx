@@ -3,9 +3,7 @@
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { Search } from "lucide-react";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { CommandPalette } from "@/components/command-palette";
-import { InboxMenu } from "@/components/inbox-menu";
 import { Button } from "@/components/ui/button";
 
 export default function DashboardTools() {
@@ -32,7 +30,7 @@ export default function DashboardTools() {
   return (
     <>
       {!isStudio && (
-        <div className="pointer-events-none fixed right-4 top-4 z-30 flex items-center gap-2">
+        <div className="pointer-events-none fixed right-4 top-4 z-30 flex items-center gap-2 md:hidden">
           <Button
             type="button"
             variant="outline"
@@ -47,10 +45,6 @@ export default function DashboardTools() {
               ⌘K
             </kbd>
           </Button>
-          <div className="pointer-events-auto flex items-center gap-1 rounded-lg border border-border bg-white/90 p-0.5 shadow-sm backdrop-blur dark:bg-zinc-900/90">
-            <InboxMenu />
-            <ThemeToggle />
-          </div>
         </div>
       )}
       <CommandPalette open={searchOpen} onClose={() => setSearchOpen(false)} />

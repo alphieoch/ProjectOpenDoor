@@ -54,7 +54,7 @@ opendoor_optional_support_env() {
 # Usage: opendoor_gateway_env PROJECT REGION INSTANCE_CONNECTION_NAME
 opendoor_gateway_env() {
   local project="$1" region="$2" conn="$3"
-  printf '%s' "NODE_ENV=production,GCP_PROJECT_ID=${project},GCP_PROJECT=${project},GOOGLE_CLOUD_PROJECT=${project},GCP_REGION=${region},VERTEX_LOCATION=${VERTEX_LOCATION},VERTEX_IMAGE_LOCATION=${VERTEX_IMAGE_LOCATION},VERTEX_IMAGEN_LOCATION=${VERTEX_IMAGEN_LOCATION},VERTEX_VEO_LOCATION=${VERTEX_VEO_LOCATION},VERTEX_IMAGE_MODEL=${VERTEX_IMAGE_MODEL},VERTEX_VEO_MODEL=${VERTEX_VEO_MODEL},OPENDOOR_FILES_BUCKET=${OPENDOOR_FILES_BUCKET},QWEN_BASE_URL=${QWEN_BASE_URL},GATEWAY_PORT=3001,INSTANCE_CONNECTION_NAME=${conn},DB_NAME=opendoor,DB_USER=opendoor$(opendoor_private_image_env "$project" "$region")$(opendoor_optional_support_env)"
+  printf '%s' "NODE_ENV=production,GCP_PROJECT_ID=${project},GCP_PROJECT=${project},GOOGLE_CLOUD_PROJECT=${project},GCP_REGION=${region},VERTEX_LOCATION=${VERTEX_LOCATION},VERTEX_IMAGE_LOCATION=${VERTEX_IMAGE_LOCATION},VERTEX_IMAGEN_LOCATION=${VERTEX_IMAGEN_LOCATION},VERTEX_VEO_LOCATION=${VERTEX_VEO_LOCATION},VERTEX_IMAGE_MODEL=${VERTEX_IMAGE_MODEL},VERTEX_VEO_MODEL=${VERTEX_VEO_MODEL},OPENDOOR_FILES_BUCKET=${OPENDOOR_FILES_BUCKET},QWEN_BASE_URL=${QWEN_BASE_URL},GATEWAY_PORT=3001,INSTANCE_CONNECTION_NAME=${conn},DB_NAME=opendoor,DB_USER=opendoor$(opendoor_private_image_env "$project" "$region")$(opendoor_openbot_env "$project" "$region")$(opendoor_optional_support_env)"
 }
 
 # Cloud Run URL of opendoor-sandbox (gVisor jail). Empty if the service is not deployed.
@@ -102,6 +102,29 @@ opendoor_gateway_url() {
     --format='value(status.url)' 2>/dev/null || true
 }
 
+# Shared Chromium computer (Cloud Run). Supervisor needs a Docker socket and
+# stays local; this is the cloud-test fallback (one browser for every Bot).
+opendoor_openbot_computer_url() {
+  local project="${1:-$OPENDOOR_GCP_PROJECT}"
+  local region="${2:-us-central1}"
+  gcloud run services describe opendoor-openbot-computer \
+    --project="$project" \
+    --region="$region" \
+    --format='value(status.url)' 2>/dev/null || true
+}
+
+opendoor_openbot_env() {
+  local project="${1:-$OPENDOOR_GCP_PROJECT}"
+  local region="${2:-us-central1}"
+  local url="${OPENBOT_COMPUTER_URL:-}"
+  if [[ -z "$url" ]]; then
+    url="$(opendoor_openbot_computer_url "$project" "$region" || true)"
+  fi
+  if [[ -n "$url" ]]; then
+    printf '%s' ",OPENBOT_COMPUTER_URL=${url}"
+  fi
+}
+
 # Usage: opendoor_dashboard_env PROJECT REGION INSTANCE_CONNECTION_NAME PUBLIC_URL
 opendoor_dashboard_env() {
   local project="$1" region="$2" conn="$3" public_url="$4"
@@ -120,7 +143,7 @@ opendoor_dashboard_env() {
   if [[ -n "$gateway_url" ]]; then
     extra="${extra},GATEWAY_URL=${gateway_url}"
   fi
-  printf '%s' "NODE_ENV=production,GCP_PROJECT_ID=${project},GCP_PROJECT=${project},GOOGLE_CLOUD_PROJECT=${project},GCP_REGION=${region},VERTEX_LOCATION=${VERTEX_LOCATION},VERTEX_IMAGE_LOCATION=${VERTEX_IMAGE_LOCATION},VERTEX_IMAGE_MODEL=${VERTEX_IMAGE_MODEL},NEXT_PUBLIC_APP_URL=${public_url},NEXT_PUBLIC_GATEWAY_URL=${public_url},NEXT_PUBLIC_WORKOS_REDIRECT_URI=${public_url}/callback,HOSTNAME=0.0.0.0,INSTANCE_CONNECTION_NAME=${conn},DB_NAME=opendoor,DB_USER=opendoor,$(opendoor_stripe_env)${extra}$(opendoor_private_image_env "$project" "$region")$(opendoor_optional_support_env)"
+  printf '%s' "NODE_ENV=production,GCP_PROJECT_ID=${project},GCP_PROJECT=${project},GOOGLE_CLOUD_PROJECT=${project},GCP_REGION=${region},VERTEX_LOCATION=${VERTEX_LOCATION},VERTEX_IMAGE_LOCATION=${VERTEX_IMAGE_LOCATION},VERTEX_IMAGE_MODEL=${VERTEX_IMAGE_MODEL},NEXT_PUBLIC_APP_URL=${public_url},NEXT_PUBLIC_GATEWAY_URL=${public_url},NEXT_PUBLIC_WORKOS_REDIRECT_URI=${public_url}/callback,HOSTNAME=0.0.0.0,INSTANCE_CONNECTION_NAME=${conn},DB_NAME=opendoor,DB_USER=opendoor,$(opendoor_stripe_env)${extra}$(opendoor_private_image_env "$project" "$region")$(opendoor_openbot_env "$project" "$region")$(opendoor_optional_support_env)"
 }
 
 # Idempotent: create the files bucket and grant the Cloud Run runtime SA objectAdmin.

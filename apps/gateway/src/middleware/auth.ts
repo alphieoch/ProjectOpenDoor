@@ -7,6 +7,7 @@ import { createHash, randomBytes } from "crypto";
 import {
   flattenMessageText,
   getPlan,
+  canCoverEstimatedSpend,
   spendableCents,
   welcomeAllowedForFamily,
   SYSTEM_ASSISTANT_KEY_NAME,
@@ -16,7 +17,7 @@ import {
 } from "@opendoor/shared";
 import { estimateTokens } from "../utils/streaming.js";
 import { calculateCost } from "../utils/pricing.js";
-import { expireWelcomeCredits, shouldUsePlanBudget, usdToCents } from "../utils/billing.js";
+import { expireWelcomeCredits, orgHasUnlimitedSpend, shouldUsePlanBudget, usdToCents } from "../utils/billing.js";
 import { applyModelRouting, normalizeAllowlist } from "../lib/model-aliases.js";
 
 function internalGatewaySecret() {
@@ -182,6 +183,10 @@ export async function authMiddleware(c: Context, next: Next) {
     userId: houseChatUserId || null,
   });
 
+  if (!c.get("skipBilling") && (await orgHasUnlimitedSpend(org, houseChatUserId || null))) {
+    c.set("skipBilling", true);
+  }
+
   if (houseChat && houseChatUserId) {
     const member = await db.query.users.findFirst({
       where: and(eq(users.id, houseChatUserId), eq(users.organizationId, org.id)),
@@ -280,7 +285,11 @@ export async function authMiddleware(c: Context, next: Next) {
           const buckets = await expireWelcomeCredits(org);
           const allowWelcome = welcomeAllowedForFamily(family);
           const credits = spendableCents(buckets, allowWelcome);
-          const canUseCredits = credits >= estimatedCostCents;
+          const canUseCredits = canCoverEstimatedSpend({
+            plan,
+            spendableCents: credits,
+            estimatedCostCents,
+          });
 
           // Check per-key spend cap
           const keySpendLimit = Number(keyRecord.spendLimitUsdCents || 0);

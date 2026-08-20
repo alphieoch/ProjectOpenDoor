@@ -1,0 +1,17 @@
+OpenBot
+Copyright (c) 2026 CopilotKit
+License: MIT — see LICENSE in this directory
+
+Vendored into ProjectOpenDoor from https://github.com/CopilotKit/openbot
+(commit 93e357ff38fdad51545afd573d35c2686bdb54a4) under the MIT License.
+
+Included here:
+- apps/openbot-computer — Playwright Chromium computer (/workspace, browser, take-the-wheel)
+- apps/openbot-bot — AG-UI Bot (models answered by the OpenDoor gateway)
+- apps/openbot-supervisor — per-Bot container supervisor (Docker socket, four verbs)
+- apps/dashboard/src/components/openbot — coworker computer UI (screen, take-the-wheel)
+- packages/shared/src/openbot-schema.ts
+- packages/shared/src/openbot-target.ts
+
+Not included: CopilotKit Intelligence (separate license), the OpenBot Vite app,
+Better Auth, or SPIRE. gVisor (`COMPUTER_RUNTIME=runsc`) is optional on the host.

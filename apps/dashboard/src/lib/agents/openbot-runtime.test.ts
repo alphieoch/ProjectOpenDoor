@@ -17,13 +17,25 @@ const OPENBOT_TOOLS = [
   "recall",
   "list_skills",
   "use_skill",
+  "author_skill",
   "computer_navigate",
-  "computer_read_page",
+  "computer_read",
+  "computer_screenshot",
+  "computer_snapshot",
+  "computer_click",
+  "computer_move",
+  "computer_type",
+  "computer_key",
+  "computer_scroll",
+  "computer_wait",
   "computer_follow_link",
   "computer_list_files",
   "computer_read_file",
   "computer_write_file",
+  "computer_request_help",
+  "computer_request_secret",
   "request_help",
+  "computer_read_page",
   "render_component",
 ];
 
@@ -51,6 +63,17 @@ describe("OpenBot runtime catalog", () => {
     expect(skills).toContain("browse-and-report");
     expect(skills).toContain("decide-then-act");
     expect(skills).toContain("workspace-files");
+  });
+
+  test("can author a skill onto the workspace", async () => {
+    const written = await executeTool(
+      "openbot",
+      "author_skill",
+      JSON.stringify({ name: "weekly-recap", body: "Write Friday notes under /workspace/drafts/." }),
+      emptyWorkspace(),
+    );
+    expect(written.event.ok).toBe(true);
+    expect(written.workspace.skills[0]?.name).toBe("weekly-recap");
   });
 });
 
@@ -92,6 +115,19 @@ describe("OpenBot computer tools", () => {
     expect(result.workspace.audit.at(-1)?.outcome).toBe("refused");
     expect(result.workspace.computer.files).toHaveLength(0);
   });
+
+  test("snapshot lists page links when the live computer is not attached", async () => {
+    const opened = await executeTool(
+      "openbot",
+      "computer_navigate",
+      JSON.stringify({ url: "https://example.com", intent: "read the title" }),
+      emptyWorkspace(),
+    );
+    const snap = await executeTool("openbot", "computer_snapshot", "{}", opened.workspace);
+    expect(snap.event.ok).toBe(true);
+    expect(snap.result).toContain("snapshotId=");
+    expect(snap.workspace.computer.snapshotId).toBeGreaterThan(0);
+  }, 15000);
 
   test("requests help and renders a component", async () => {
     const help = await executeTool(
@@ -162,6 +198,19 @@ describe("OpenBot computer tools", () => {
   }, 15000);
 });
 
+describe("OpenBot memory recall", () => {
+  test("ranks stored notes by query instead of last-N substring", async () => {
+    const start = emptyWorkspace();
+    start.memory = [
+      { id: "old", kind: "semantic", content: "Ada owns billing", createdAt: "2026-01-01T00:00:00.000Z" },
+      { id: "new", kind: "note", content: "weather is fine", createdAt: "2026-08-20T00:00:00.000Z" },
+    ];
+    const recalled = await executeTool("openbot", "recall", JSON.stringify({ query: "billing" }), start);
+    expect(recalled.result).toContain("Ada owns billing");
+    expect(recalled.result).not.toContain("weather is fine");
+  });
+});
+
 describe("legacy workspace upgrade", () => {
   test("readWorkspace hydrates a computer onto old agent config", () => {
     const ws = readWorkspace({ memory: [], skills: [], outbox: [], audit: [] });
@@ -181,11 +230,75 @@ describe("product wiring", () => {
       join(import.meta.dir, "../../app/dashboard/agents/[id]/page.tsx"),
       "utf8",
     );
+    const home = readFileSync(
+      join(import.meta.dir, "../../app/dashboard/openbot/page.tsx"),
+      "utf8",
+    );
+    const openbotShell = readFileSync(
+      join(import.meta.dir, "../../components/openbot/shell.tsx"),
+      "utf8",
+    );
+    const shell = readFileSync(join(import.meta.dir, "../../components/openbot/home.tsx"), "utf8");
+    const desk = readFileSync(
+      join(import.meta.dir, "../../components/openbot/coworker-workspace.tsx"),
+      "utf8",
+    );
+    const frame = readFileSync(
+      join(import.meta.dir, "../../components/dashboard/dashboard-frame.tsx"),
+      "utf8",
+    );
+    const computerApi = readFileSync(
+      join(import.meta.dir, "../../app/api/agents/[id]/computer/[...path]/route.ts"),
+      "utf8",
+    );
     expect(api).toContain("openbot");
     expect(gateway).toContain("openbot");
+    expect(gateway).toContain("/:id/chat");
+    expect(gateway).toContain("/:id/ag-ui");
+    expect(gateway).toContain("computerControl");
     expect(page).toContain("openbot: Monitor");
     expect(page).toContain("item.badge");
-    expect(detail).toContain("Take the wheel");
-    expect(detail).toContain("computerControl");
+    expect(page).toContain("/dashboard/openbot/");
+    expect(detail).toContain("/dashboard/openbot/");
+    expect(home).toContain("OpenBotHome");
+    expect(openbotShell).toContain("OpenBotRail");
+    expect(openbotShell).toContain("hostedInDashboard: true");
+    expect(shell).toContain("Start a new channel");
+    expect(shell).toContain("Explore agents");
+    expect(desk).toContain("Take the wheel");
+    expect(desk).toContain("ComputerView");
+    expect(frame).toContain("DashboardSidebar");
+    expect(frame).toContain("MobileBottomNav");
+    expect(frame).not.toContain("isOpenBot");
+    expect(computerApi).toContain("/screenshot");
+    expect(computerApi).toContain("/control/take");
+    expect(computerApi).toContain("/attach");
+    const computerView = readFileSync(
+      join(import.meta.dir, "../../components/openbot/computer-view.tsx"),
+      "utf8",
+    );
+    const liveScreen = readFileSync(
+      join(import.meta.dir, "../../components/openbot/live-screen.tsx"),
+      "utf8",
+    );
+    expect(computerView).toContain("z-[100]");
+    expect(computerView).toContain("bg-background");
+    expect(computerView).toContain("Take the wheel");
+    expect(liveScreen).toContain("data-bot-cursor");
+    expect(liveScreen).toContain("viewportToOverlay");
+    const clickTool = toolsForRuntime("openbot").find((t) => t.function.name === "computer_click");
+    expect(clickTool?.function.parameters).toEqual(
+      expect.objectContaining({
+        properties: expect.objectContaining({
+          text: expect.anything(),
+          x: expect.anything(),
+          y: expect.anything(),
+        }),
+      }),
+    );
+    expect(desk).toContain("onComputerReady");
+    const engine = readFileSync(join(import.meta.dir, "./engine.ts"), "utf8");
+    expect(engine).toContain("nextAgentCompletionMode");
+    expect(engine).toContain("toolsForRuntime");
   });
 });

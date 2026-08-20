@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, BookOpen, KeyRound, Rocket, Server } from "lucide-react";
+import { ArrowRight, BookOpen, KeyRound, Rocket, Server, Terminal } from "lucide-react";
 import { MarketingCtaBanner, MarketingHero } from "@/components/marketing-page-shell";
 import { CopyButton } from "@/components/ui/copy-button";
 import { getDb } from "@/lib/db";
@@ -70,6 +70,12 @@ const next = [
     body: "Chat, embeddings, batches, vision, and service tiers — on this site.",
     href: docsHref("/"),
     icon: BookOpen,
+  },
+  {
+    title: "SDK & CLI",
+    body: "One key for the terminal and TypeScript client, including OpenBot.",
+    href: "/sdk",
+    icon: Terminal,
   },
 ];
 

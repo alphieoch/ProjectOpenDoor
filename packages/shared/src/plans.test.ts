@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { familyClubValue, PLANS } from "./plans";
+import { billingIsUnlimited, canCoverEstimatedSpend, familyClubValue, PLANS } from "./plans";
 
 describe("family club math", () => {
   test("Family is cheaper per person than Pro and the pool is bigger than 4 Pro tastes", () => {
@@ -19,5 +19,38 @@ describe("family club math", () => {
     expect(v.poolCents).toBeGreaterThan(familyClubValue("family").poolCents);
     expect(v.extraPoolCents).toBeGreaterThan(0);
     expect(v.soloCreditCents).toBe(PLANS.pro.includedCreditsCents * 5);
+  });
+});
+
+describe("unlimited billing bypass", () => {
+  test("site admins and the unlimited plan skip the prepaid gate", () => {
+    expect(billingIsUnlimited({ isSiteAdmin: true, plan: "free" })).toBe(true);
+    expect(billingIsUnlimited({ isSiteAdmin: false, plan: "unlimited" })).toBe(true);
+    expect(billingIsUnlimited({ isSiteAdmin: false, plan: "enterprise" })).toBe(false);
+    expect(billingIsUnlimited({ isSiteAdmin: false, plan: "pro" })).toBe(false);
+    expect(
+      canCoverEstimatedSpend({
+        isSiteAdmin: true,
+        plan: "enterprise",
+        spendableCents: 0,
+        estimatedCostCents: 250,
+      })
+    ).toBe(true);
+    expect(
+      canCoverEstimatedSpend({
+        isSiteAdmin: false,
+        plan: "enterprise",
+        spendableCents: 0,
+        estimatedCostCents: 250,
+      })
+    ).toBe(false);
+    expect(
+      canCoverEstimatedSpend({
+        isSiteAdmin: false,
+        plan: "pro",
+        spendableCents: 400,
+        estimatedCostCents: 250,
+      })
+    ).toBe(true);
   });
 });

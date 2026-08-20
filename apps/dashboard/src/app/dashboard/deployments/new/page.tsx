@@ -3,7 +3,9 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Server, Box, Cpu, Cloud, Download } from "lucide-react";
+import { SnapCarousel, snapCarouselItemClassName } from "@/components/dashboard/snap-carousel";
 import { PageHeader } from "@/components/ui/page-header";
+import { cn } from "@/lib/utils";
 import { GPU_RATES, gcpStartCreditCents } from "@opendoor/shared";
 
 interface CatalogItem {
@@ -14,6 +16,43 @@ interface CatalogItem {
   defaultCpu: string;
   defaultMemoryGb: string;
   ollamaTag?: string | null;
+  huggingFaceRepo?: string | null;
+  inferenceEngine?: string | null;
+  source?: string | null;
+  serverless?: boolean | null;
+}
+
+const CATALOG_SOURCE_LABELS: Record<string, string> = {
+  ollama: "Ollama",
+  huggingface: "Hugging Face",
+  provider_api: "Provider API",
+};
+
+const CATALOG_ENGINE_LABELS: Record<string, string> = {
+  ollama: "Ollama",
+  huggingface: "Hugging Face",
+  dashscope: "DashScope",
+  together: "Together",
+  vllm: "vLLM",
+};
+
+function catalogProviderLabel(item: CatalogItem): string {
+  const source = (item.source ?? "").trim().toLowerCase();
+  const engine = (item.inferenceEngine ?? "").trim().toLowerCase();
+
+  if (source === "provider_api") {
+    if (engine && CATALOG_ENGINE_LABELS[engine] && engine !== "vllm" && engine !== "ollama") {
+      return CATALOG_ENGINE_LABELS[engine];
+    }
+    if (item.serverless) return "Serverless / open-weight";
+    return "Provider API";
+  }
+  if (source && CATALOG_SOURCE_LABELS[source]) return CATALOG_SOURCE_LABELS[source];
+  if (engine && CATALOG_ENGINE_LABELS[engine]) return CATALOG_ENGINE_LABELS[engine];
+  if (item.ollamaTag) return "Ollama";
+  if (item.huggingFaceRepo) return "Hugging Face";
+  if (item.serverless) return "Serverless / open-weight";
+  return "Catalog";
 }
 
 interface GpuStatus {
@@ -255,36 +294,68 @@ export default function NewDeploymentPage() {
             ) : catalog.length === 0 ? (
               <p className="text-gray-500">No models in catalog yet.</p>
             ) : (
-              <div className="space-y-2">
-                {catalog.map((item) => (
-                  <label
-                    key={item.id}
-                    className={`flex cursor-pointer items-start gap-3 rounded-lg border p-4 ${
-                      selectedCatalogModel === item.id
-                        ? "border-primary-600 bg-primary-50"
-                        : "border-gray-200 hover:bg-gray-50"
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="catalogModel"
-                      value={item.id}
-                      checked={selectedCatalogModel === item.id}
-                      onChange={() => setSelectedCatalogModel(item.id)}
-                      className="mt-1"
-                    />
-                    <div>
-                      <p className="font-medium text-gray-900">{item.displayName}</p>
-                      {item.description && (
-                        <p className="text-sm text-gray-500">{item.description}</p>
+              <SnapCarousel
+                ariaLabel="Model catalog"
+                prevLabel="Previous models"
+                nextLabel="Next models"
+              >
+                {catalog.map((item) => {
+                  const selected = selectedCatalogModel === item.id;
+                  const provider = catalogProviderLabel(item);
+                  return (
+                    <label
+                      key={item.id}
+                      data-carousel-card
+                      className={cn(
+                        snapCarouselItemClassName,
+                        "flex min-h-[11.5rem] cursor-pointer flex-col rounded-xl border p-4 transition-colors",
+                        selected
+                          ? "border-primary bg-primary/5 ring-2 ring-inset ring-primary/40"
+                          : "border-border bg-background hover:bg-muted/40"
                       )}
-                      <p className="mt-1 text-xs text-gray-400">
-                        {item.ollamaTag ? `Ollama: ${item.ollamaTag}` : `Default: ${item.defaultCpu} CPU / ${item.defaultMemoryGb} GB`}
+                    >
+                      <input
+                        type="radio"
+                        name="catalogModel"
+                        value={item.id}
+                        checked={selected}
+                        onChange={() => setSelectedCatalogModel(item.id)}
+                        aria-label={`${item.displayName}, ${provider}`}
+                        className="sr-only"
+                      />
+                      <div className="flex items-start justify-between gap-2">
+                        <span
+                          aria-hidden
+                          className={cn(
+                            "mt-0.5 h-3.5 w-3.5 shrink-0 rounded-full border",
+                            selected
+                              ? "border-primary bg-primary"
+                              : "border-muted-foreground/40 bg-background"
+                          )}
+                        />
+                        {item.serverless && !provider.toLowerCase().includes("serverless") ? (
+                          <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                            Serverless
+                          </span>
+                        ) : null}
+                      </div>
+                      <p className="mt-3 text-base font-semibold leading-snug text-foreground">
+                        {item.displayName}
                       </p>
-                    </div>
-                  </label>
-                ))}
-              </div>
+                      <p className="mt-1 text-sm font-medium text-primary">{provider}</p>
+                      {item.description ? (
+                        <p className="mt-2 line-clamp-2 text-xs text-muted-foreground">
+                          {item.description}
+                        </p>
+                      ) : null}
+                      <p className="mt-auto pt-3 text-xs text-muted-foreground">
+                        {item.defaultCpu} CPU · {item.defaultMemoryGb} GB
+                        {item.ollamaTag ? ` · ${item.ollamaTag}` : ""}
+                      </p>
+                    </label>
+                  );
+                })}
+              </SnapCarousel>
             )}
           </div>
         )}

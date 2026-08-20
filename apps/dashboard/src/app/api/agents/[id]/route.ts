@@ -1,25 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
-import { apiKeys, workspaceAgents } from "@opendoor/database";
-import { and, eq } from "drizzle-orm";
+import { workspaceAgents } from "@opendoor/database";
+import { eq } from "drizzle-orm";
 import { requireAuth, sessionActorId } from "@/lib/auth";
 import { logAuditEvent } from "@/lib/audit";
 import { ensureAgentSchema } from "@/lib/agents/ensure-schema";
+import { loadOwnedAgent, purgeExpiredWorkspaceAgents, softDeleteWorkspaceAgent } from "@/lib/agents/lifecycle";
 import { publicAgent } from "@/lib/agents/provision";
 import { bootAgent, stopAgent } from "@/lib/agents/boot";
 import { agentsAddonRequiredResponse, loadAgentsEntitlement } from "@/lib/agents/entitlement";
+import { collapseConsecutiveDuplicateUserMessages } from "@/lib/agents/chat-thread";
 import { loadThread } from "@/lib/agents/engine";
 import { applyComputerControl, recordOpenBotAudit } from "@/lib/agents/openbot";
 import { readWorkspace } from "@/lib/agents/state";
+import {
+  AGENT_SOFT_DELETE_RETENTION_MS,
+  authorSkillOnWorkspace,
+  enableCatalogSkill,
+  syncLiveComputerControl,
+} from "@opendoor/shared";
 
 async function loadOwned(orgId: string, id: string) {
-  const db = getDb();
-  const [row] = await db
-    .select()
-    .from(workspaceAgents)
-    .where(and(eq(workspaceAgents.id, id), eq(workspaceAgents.organizationId, orgId)))
-    .limit(1);
-  return row;
+  return loadOwnedAgent(orgId, id);
 }
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -28,7 +30,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   const { id } = await params;
   const row = await loadOwned(session.orgId, id);
   if (!row) return NextResponse.json({ error: "Agent not found" }, { status: 404 });
-  const messages = await loadThread(row.id, 80);
+  const messages = collapseConsecutiveDuplicateUserMessages(await loadThread(row.id, 80));
   const addon = await loadAgentsEntitlement(session.orgId, session);
   return NextResponse.json({
     agent: publicAgent(row),
@@ -46,6 +48,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  try {
   const session = await requireAuth();
   await ensureAgentSchema();
   const { id } = await params;
@@ -90,6 +93,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   }
 
   if (computerControl) {
+    try {
+      await syncLiveComputerControl(updated.id, computerControl);
+    } catch {
+      // Workspace state still records the handover if the computer is down.
+    }
     const ws = readWorkspace(updated.config);
     ws.computer = applyComputerControl(ws.computer, computerControl);
     const audited = recordOpenBotAudit(ws, {
@@ -107,6 +115,42 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     if (saved) updated = saved;
   }
 
+  const skillCatalogId = typeof body.skillCatalogId === "string" ? body.skillCatalogId.trim() : "";
+  const skillDraft = body.skill && typeof body.skill === "object" && !Array.isArray(body.skill)
+    ? (body.skill as Record<string, unknown>)
+    : null;
+  let skillName: string | undefined;
+
+  if (skillCatalogId || skillDraft) {
+    if (updated.runtime !== "openbot") {
+      return NextResponse.json({ error: "This catalog can only be added to OpenBot coworkers." }, { status: 400 });
+    }
+    const ws = readWorkspace(updated.config);
+    let nextSkills = ws.skills;
+    if (skillCatalogId) {
+      const enabled = enableCatalogSkill(nextSkills, skillCatalogId);
+      if (enabled.error) return NextResponse.json({ error: enabled.error }, { status: 400 });
+      nextSkills = enabled.skills;
+      skillName = enabled.skill?.name;
+    }
+    if (skillDraft) {
+      const authored = authorSkillOnWorkspace(nextSkills, {
+        name: skillDraft.name,
+        description: skillDraft.description,
+        instructions: skillDraft.instructions ?? skillDraft.body,
+      });
+      if (authored.error) return NextResponse.json({ error: authored.error }, { status: 400 });
+      nextSkills = authored.skills;
+      skillName = authored.skill?.name;
+    }
+    const [saved] = await db
+      .update(workspaceAgents)
+      .set({ config: { ...ws, skills: nextSkills }, updatedAt: new Date() })
+      .where(eq(workspaceAgents.id, updated.id))
+      .returning();
+    if (saved) updated = saved;
+  }
+
   await logAuditEvent({
     organizationId: session.orgId,
     userId: sessionActorId(session),
@@ -115,27 +159,26 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       : nextStatus === "stopped" ? "agent.stopped" : nextStatus === "running" ? "agent.started" : "agent.updated",
     entityType: "workspace_agent",
     entityId: row.id,
-    metadata: { status: updated.status, runtime: updated.runtime, modelId: updated.modelId, computerControl },
+    metadata: { status: updated.status, runtime: updated.runtime, modelId: updated.modelId, computerControl, skillCatalogId: skillCatalogId || undefined, skillName },
   });
 
   return NextResponse.json({ agent: publicAgent(updated) });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Could not update the agent";
+    const status = message === "Unauthorized" ? 401 : 500;
+    return NextResponse.json({ error: message }, { status });
+  }
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await requireAuth();
   await ensureAgentSchema();
+  await purgeExpiredWorkspaceAgents();
   const { id } = await params;
   const row = await loadOwned(session.orgId, id);
   if (!row) return NextResponse.json({ error: "Agent not found" }, { status: 404 });
 
-  const db = getDb();
-  if (row.apiKeyId) {
-    await db
-      .update(apiKeys)
-      .set({ revokedAt: new Date(), updatedAt: new Date() })
-      .where(eq(apiKeys.id, row.apiKeyId));
-  }
-  await db.delete(workspaceAgents).where(eq(workspaceAgents.id, row.id));
+  await softDeleteWorkspaceAgent(row);
 
   await logAuditEvent({
     organizationId: session.orgId,
@@ -143,8 +186,11 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
     action: "agent.deleted",
     entityType: "workspace_agent",
     entityId: row.id,
-    metadata: { name: row.name, runtime: row.runtime },
+    metadata: { name: row.name, runtime: row.runtime, softDelete: true },
   });
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({
+    ok: true,
+    recoverUntil: new Date(Date.now() + AGENT_SOFT_DELETE_RETENTION_MS).toISOString(),
+  });
 }

@@ -23,6 +23,8 @@ const workos = authkitMiddleware({
       "/platform",
       "/pricing",
       "/how-it-works",
+      "/sdk",
+      "/rankings",
       "/security",
       "/status",
       "/terms",

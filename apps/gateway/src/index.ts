@@ -35,6 +35,7 @@ import keysRouter from "./routes/keys.js";
 import requestsRouter from "./routes/requests.js";
 import policiesRouter from "./routes/policies.js";
 import catalogRouter from "./routes/catalog.js";
+import toolsRouter from "./routes/tools.js";
 import { statusHandler } from "./routes/status.js";
 import { cachetSyncHandler } from "./routes/cachet-sync.js";
 import { startBatchWorker } from "./lib/batch-worker.js";
@@ -93,6 +94,7 @@ app.route("/v1/keys", keysRouter);
 app.route("/v1/requests", requestsRouter);
 app.route("/v1/policies", policiesRouter);
 app.route("/v1/catalog", catalogRouter);
+app.route("/v1/tools", toolsRouter);
 
 app.onError((err, c) => {
   const orgId = c.get("organization")?.id || "gateway";

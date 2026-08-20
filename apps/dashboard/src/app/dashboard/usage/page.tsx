@@ -19,6 +19,15 @@ import Link from "next/link";
 import { formatCurrency, formatNumber } from "@/lib/utils";
 import { PageHeader } from "@/components/ui/page-header";
 import { MetricCard } from "@/components/ui/metric-card";
+import {
+  errorRateLabel,
+  formatLatencyMs,
+  periodEmptyCopy,
+  splitModelTokens,
+  summarizeDailyUsage,
+  tokenSplit,
+  unlimitedReasonLabel,
+} from "@/lib/usage-format";
 
 interface DailyUsage {
   date: string;
@@ -36,6 +45,8 @@ interface ModelBreakdownRow {
   modelId: string;
   providerName: string;
   requests: number;
+  promptTokens?: number;
+  completionTokens?: number;
   totalTokens: number;
   costUsd: number;
   avgLatencyMs: number;
@@ -89,12 +100,20 @@ function StatCard({
   );
 }
 
-function EmptyChart() {
+function EmptyChart({ days }: { days: number }) {
+  const copy = periodEmptyCopy(days);
   return (
-    <div className="flex h-64 items-center justify-center">
-      <p className="text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
-        No usage data yet
-      </p>
+    <div className="flex h-64 flex-col items-center justify-center gap-3 px-6 text-center">
+      <p className="text-sm font-medium text-foreground">{copy.title}</p>
+      <p className="text-sm text-muted-foreground">{copy.body}</p>
+      <div className="flex flex-wrap justify-center gap-2">
+        <Link href="/dashboard/playground" className="btn-secondary">
+          Open playground
+        </Link>
+        <Link href="/dashboard/api-keys" className="btn-secondary">
+          Create an API key
+        </Link>
+      </div>
     </div>
   );
 }
@@ -114,6 +133,9 @@ export default function UsagePage() {
   const [overview, setOverview] = useState<OverviewData | null>(null);
   const [days, setDays] = useState(30);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [unlimited, setUnlimited] = useState(false);
+  const [unlimitedReason, setUnlimitedReason] = useState<"site_admin" | "plan" | null>(null);
   const [tab, setTab] = useState<Tab>("overview");
   const [modelSort, setModelSort] = useState<keyof ModelBreakdownRow>("costUsd");
 
@@ -121,74 +143,66 @@ export default function UsagePage() {
     let cancelled = false;
     async function fetchAll() {
       setLoading(true);
-      const [usageRes, overviewRes] = await Promise.all([
-        fetch(`/api/usage?days=${days}`),
-        fetch(`/api/analytics/overview?days=${days}`),
-      ]);
-
-      if (!cancelled) {
-        if (usageRes.ok) {
-          const result = await usageRes.json();
-          setDaily(
-            (result.daily ?? []).map((d: any) => ({
-              date: new Date(d.date).toLocaleDateString("en-US", {
-                month: "short",
-                day: "numeric",
-              }),
-              requests: Number(d.requests ?? 0),
-              promptTokens: Number(d.promptTokens ?? 0),
-              completionTokens: Number(d.completionTokens ?? 0),
-              totalTokens: Number(d.totalTokens ?? 0),
-              costUsd: Number(d.costUsd ?? 0),
-              successCount: d.successCount != null ? Number(d.successCount) : undefined,
-              errorCount: d.errorCount != null ? Number(d.errorCount) : undefined,
-              cachedCount: d.cachedCount != null ? Number(d.cachedCount) : undefined,
-            }))
-          );
+      setError(null);
+      try {
+        const usageRes = await fetch(`/api/usage?days=${days}`, { credentials: "include" });
+        const result = await usageRes.json().catch(() => ({}));
+        if (!usageRes.ok) {
+          if (!cancelled) {
+            setError(result.error || "Failed to load usage.");
+            setDaily([]);
+            setOverview(null);
+          }
+          return;
         }
-        if (overviewRes.ok) {
-          const ov = await overviewRes.json();
-          setOverview(ov);
+        if (cancelled) return;
+        setUnlimited(Boolean(result.unlimited));
+        setUnlimitedReason(result.unlimitedReason || null);
+        setDaily(
+          (result.daily ?? []).map((d: Record<string, unknown>) => ({
+            date: new Date(String(d.date)).toLocaleDateString("en-US", {
+              month: "short",
+              day: "numeric",
+            }),
+            requests: Number(d.requests ?? 0),
+            promptTokens: Number(d.promptTokens ?? 0),
+            completionTokens: Number(d.completionTokens ?? 0),
+            totalTokens: Number(d.totalTokens ?? 0),
+            costUsd: Number(d.costUsd ?? 0),
+            successCount: d.successCount != null ? Number(d.successCount) : undefined,
+            errorCount: d.errorCount != null ? Number(d.errorCount) : undefined,
+            cachedCount: d.cachedCount != null ? Number(d.cachedCount) : undefined,
+          })),
+        );
+        if (result.overview) {
+          setOverview(result.overview);
         } else {
+          const overviewRes = await fetch(`/api/analytics/overview?days=${days}`, { credentials: "include" });
+          setOverview(overviewRes.ok ? await overviewRes.json() : null);
+        }
+      } catch {
+        if (!cancelled) {
+          setError("Failed to load usage.");
+          setDaily([]);
           setOverview(null);
         }
-        setLoading(false);
+      } finally {
+        if (!cancelled) setLoading(false);
       }
     }
-    fetchAll();
+    void fetchAll();
     return () => {
       cancelled = true;
     };
   }, [days]);
 
-  const totals = useMemo(
-    () =>
-      daily.reduce(
-        (acc, d) => ({
-          requests: acc.requests + d.requests,
-          promptTokens: acc.promptTokens + d.promptTokens,
-          completionTokens: acc.completionTokens + d.completionTokens,
-          cost: acc.cost + d.costUsd,
-          errors: acc.errors + (d.errorCount ?? 0),
-          hasStatus: acc.hasStatus || d.errorCount != null,
-        }),
-        { requests: 0, promptTokens: 0, completionTokens: 0, cost: 0, errors: 0, hasStatus: false }
-      ),
-    [daily]
-  );
-
-  const errorRate =
-    totals.hasStatus && totals.requests > 0
-      ? ((totals.errors / totals.requests) * 100).toFixed(1) + "%"
-      : "—";
-
-  const p50 = overview?.percentiles?.p50
-    ? `${Math.round(overview.percentiles.p50)}ms`
-    : "—";
-
-  const tokenTotal = totals.promptTokens + totals.completionTokens;
-  const promptPct = tokenTotal > 0 ? Math.round((totals.promptTokens / tokenTotal) * 100) : 0;
-  const completionPct = 100 - promptPct;
+  const totals = useMemo(() => summarizeDailyUsage(daily), [daily]);
+  const errorRate = errorRateLabel(totals.errors, totals.requests, totals.hasStatus);
+  const p50 = formatLatencyMs(overview?.percentiles?.p50);
+  const split = tokenSplit(totals.promptTokens, totals.completionTokens);
+  const tokenTotal = split.total;
+  const promptPct = split.promptPct;
+  const completionPct = split.completionPct;
 
   const sortedModels = useMemo(() => {
     if (!overview?.topModels) return [];
@@ -227,6 +241,18 @@ export default function UsagePage() {
         }
       />
 
+      {error && (
+        <div className="mb-6 alert-error">
+          <p className="font-medium">{error}</p>
+        </div>
+      )}
+
+      {unlimited && (
+        <div className="mb-6 rounded-lg border border-border bg-card px-4 py-3 text-sm text-foreground">
+          {unlimitedReasonLabel(unlimitedReason)}
+        </div>
+      )}
+
       <div className="mb-6 grid gap-3 sm:grid-cols-3">
         <MetricCard
           label="Requests"
@@ -234,7 +260,7 @@ export default function UsagePage() {
           series={daily.map((d) => d.requests)}
         />
         <MetricCard
-          label="Total cost"
+          label={unlimited ? "Metered cost (not billed)" : "Total cost"}
           value={formatCurrency(totals.cost)}
           series={daily.map((d) => d.costUsd)}
           featured
@@ -276,7 +302,7 @@ export default function UsagePage() {
               {loading ? (
                 <LoadingChart />
               ) : daily.length === 0 ? (
-                <EmptyChart />
+                <EmptyChart days={days} />
               ) : (
                 <ResponsiveContainer width="100%" height={280}>
                   <BarChart data={daily} barSize={16}>
@@ -304,7 +330,7 @@ export default function UsagePage() {
               {loading ? (
                 <LoadingChart />
               ) : daily.length === 0 ? (
-                <EmptyChart />
+                <EmptyChart days={days} />
               ) : (
                 <ResponsiveContainer width="100%" height={240}>
                   <LineChart data={daily}>
@@ -373,7 +399,7 @@ export default function UsagePage() {
               {loading ? (
                 <LoadingChart />
               ) : daily.length === 0 ? (
-                <EmptyChart />
+                <EmptyChart days={days} />
               ) : (
                 <ResponsiveContainer width="100%" height={300}>
                   <AreaChart data={daily}>
@@ -452,11 +478,6 @@ export default function UsagePage() {
                 <div className="flex h-40 items-center justify-center">
                   <p className="text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>Loading…</p>
                 </div>
-              ) : !overview ? (
-                <div className="flex h-40 flex-col items-center justify-center gap-2">
-                  <p className="text-sm font-medium" style={{ color: "hsl(var(--muted-foreground))" }}>Analytics engine unavailable</p>
-                  <p className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>Enable DuckDB analytics to view model breakdowns</p>
-                </div>
               ) : sortedModels.length === 0 ? (
                 <div className="flex h-40 items-center justify-center">
                   <p className="text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>No model data yet</p>
@@ -486,10 +507,26 @@ export default function UsagePage() {
                         </td>
                         <td className="table-cell text-right tabular-nums">{formatNumber(m.requests)}</td>
                         <td className="table-cell text-right tabular-nums" style={{ color: "var(--blue)" }}>
-                          {formatNumber(Math.round(m.totalTokens * (totals.promptTokens / (totals.promptTokens + totals.completionTokens || 1))))}
+                          {formatNumber(
+                            splitModelTokens({
+                              totalTokens: m.totalTokens,
+                              promptTokens: m.promptTokens,
+                              completionTokens: m.completionTokens,
+                              orgPromptTokens: totals.promptTokens,
+                              orgCompletionTokens: totals.completionTokens,
+                            }).promptTokens,
+                          )}
                         </td>
                         <td className="table-cell text-right tabular-nums" style={{ color: "var(--green)" }}>
-                          {formatNumber(Math.round(m.totalTokens * (totals.completionTokens / (totals.promptTokens + totals.completionTokens || 1))))}
+                          {formatNumber(
+                            splitModelTokens({
+                              totalTokens: m.totalTokens,
+                              promptTokens: m.promptTokens,
+                              completionTokens: m.completionTokens,
+                              orgPromptTokens: totals.promptTokens,
+                              orgCompletionTokens: totals.completionTokens,
+                            }).completionTokens,
+                          )}
                         </td>
                         <td className="table-cell text-right tabular-nums font-medium">
                           {formatCurrency(Number(m.costUsd))}
@@ -536,12 +573,9 @@ export default function UsagePage() {
               ))}
             </div>
 
-            {!overview && (
-              <div
-                className="card p-5 text-center text-sm"
-                style={{ color: "hsl(var(--muted-foreground))", background: "hsl(var(--background))" }}
-              >
-                Latency analytics require the DuckDB analytics engine to be enabled.
+            {!overview && !loading && (
+              <div className="card p-5 text-center text-sm text-muted-foreground">
+                No latency samples in this period.
               </div>
             )}
 

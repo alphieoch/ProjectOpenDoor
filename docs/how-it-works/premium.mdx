@@ -1,11 +1,15 @@
 ---
 title: "Premium (private GPU)"
-description: "Rent this Mac or an existing dedicated box and generate images on that GPU — not Vertex Imagen."
+description: "Use this Mac or a GCP GPU, or list your host so others can rent it while you earn."
 ---
 
 # Premium (private GPU)
 
-Premium is a **separate lane** from Playground and serverless Models. It rents **your** private GPU — this Mac (Metal / Ollama) or an existing dedicated deployment (`custom:<id>`) — and runs image generation on that box.
+Premium is a **separate lane** from Playground and serverless Models.
+
+**Use a GPU** (you pay): rent a real GCP Cloud Run SKU (L4 / A100 / H100) or **Use this Mac** locally (Metal / Studio / Ollama) at **$0**. That is self-use — you are not renting from yourself.
+
+**Share your GPU** (you earn): if this host is powerful enough, list it at a real $/hr so other OpenDoor orgs can run jobs while you are away. Earnings accrue in cents on `gpu_host_shares` and the `premium_rentals` row.
 
 It does **not** send traffic to shared Vertex Imagen / Model Garden MaaS. Media playground (`/dashboard/playground/media`) is a different path.
 
@@ -13,23 +17,29 @@ It does **not** send traffic to shared Vertex Imagen / Model Garden MaaS. Media 
 
 Image gen uses Studio: `/api/studio/*` → gateway `POST /v1/images/generations`. Optional `PRIVATE_IMAGE_GEN_URL` is an OpenAI-compatible worker (`POST {base}/v1/images/generations`). If nothing is configured, generate returns **503** `{ "error": "Studio GPU offline" }`.
 
-**Dashboard → Studio** (`/dashboard/studio`) is the image UI. Premium is the rental / attach flow.
+**Dashboard → Studio** (`/dashboard/studio`) is the image UI. Premium is the rental / attach / host-share flow.
 
-Ollama on `:11434` is optional. It can warm a chat model on the same Mac; it does not serve Flux/SD images.
+Ollama on `:11434` (`OLLAMA_HOST`) is optional for chat on this Mac and is part of share eligibility when Studio is down.
 
-## Rent from the UI
+## Use from the UI
 
-1. Open **Dashboard → Premium** (not Playground).
-2. Pick **This Mac** or **Attach existing dedicated GPU**.
-3. Choose a catalog model (`FLUX.1 Schnell` is live on the private image process; **MiniMax H3** is `available_on_request` — omni video weights, not a chat LLM).
-4. Optional hours, or leave blank to run until you stop.
-5. **Rent private GPU**, then type a prompt and **Generate image**.
+1. Open **Dashboard → Premium**.
+2. Under **Use a GPU**, pick **Use this Mac** or a GCP SKU — or attach an existing dedicated GPU.
+3. Choose a catalog model (`FLUX.1 Schnell` is live on the private image process; **MiniMax H3** is `available_on_request`).
+4. Optional hours, or leave running until you stop.
+5. Start. Local self-use says **Use this Mac**, not “Rent This Mac”.
 
-Stop the rental from the table. Owned local deployments are paused; attached `custom:` boxes are left in place.
+## Share / earn demo
+
+1. Under **Share your GPU**, list this Mac if it is eligible (Apple Silicon or a discrete GPU, enough memory, Studio or Ollama up). Site admins can create a **demo listing** when the machine does not qualify.
+2. **Available hosts** shows real `gpu_host_shares` rows. Select one and **Rent listed host**, or **Preview as renter** on your own listing.
+3. The host row shows **in use** and earnings. Unlist only when idle. The renter (or host) can **Stop**.
+
+Remote dispatch to another person’s machine is not a live marketplace yet. The listing, rental, and earnings ledger are real.
 
 ## Billing
 
-GPU-seconds come from `gpu_skus` on the attached dedicated deployment (same compute-billing job). This Mac / Metal is **$0** (your hardware). There is no US-region multiplier on this lane (`region_locked` stays false for new local rentals).
+GCP GPU-seconds come from `gpu_skus` (same compute-billing job). **Use this Mac** is **$0**. Shared Metal uses the host’s listed hourly rate. Site-admin unlimited applies to **paying renters**, not to wiping host earnings.
 
 ## Models
 

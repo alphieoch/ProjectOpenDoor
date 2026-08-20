@@ -1,11 +1,8 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
-import DashboardSidebar from "@/components/ui/dashboard-sidebar";
 import ImpersonationBanner from "@/components/ImpersonationBanner";
 import { PostHogIdentify } from "@/components/PostHogIdentify";
-import DashboardTools from "@/components/DashboardTopBar";
-import { PageTransition } from "@/components/PageTransition";
-import { MobileBottomNav } from "@/components/dashboard/MobileBottomNav";
+import { DashboardFrame } from "@/components/dashboard/dashboard-frame";
 import { getDb } from "@/lib/db";
 import { organizations, users } from "@opendoor/database";
 import { eq } from "drizzle-orm";
@@ -94,7 +91,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   });
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background">
+    <>
       <PostHogIdentify
         userId={session.userId}
         email={session.email}
@@ -104,27 +101,19 @@ export default async function DashboardLayout({ children }: { children: React.Re
         impersonatingOrgId={session.impersonatingOrgId as string | undefined}
         onboardingSegment={onboardingSegment}
       />
-      <DashboardSidebar
-        email={email}
-        displayName={displayName}
-        workspaceName={workspaceName}
-        planLabel={planLabel}
-        enterpriseLocked={enterpriseLocked}
-        protectedChild={protectedChild}
-      />
-      <div className="flex min-w-0 flex-1 flex-col overflow-hidden md:ml-[260px]">
-        {session.impersonatingOrgId && <ImpersonationBanner />}
-        <DashboardTools />
-        <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-background max-md:pb-[calc(6.5rem+env(safe-area-inset-bottom))]">
-          <PageTransition>{children}</PageTransition>
-        </main>
-      </div>
-      <MobileBottomNav
-        email={email}
-        displayName={displayName}
-        enterpriseLocked={enterpriseLocked}
-        protectedChild={protectedChild}
-      />
-    </div>
+      <DashboardFrame
+        profile={{
+          email,
+          displayName,
+          workspaceName,
+          planLabel,
+          enterpriseLocked,
+          protectedChild,
+        }}
+        impersonation={session.impersonatingOrgId ? <ImpersonationBanner /> : null}
+      >
+        {children}
+      </DashboardFrame>
+    </>
   );
 }

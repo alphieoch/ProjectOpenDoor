@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { workspaceAgents } from "@opendoor/database";
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { requireAuth } from "@/lib/auth";
 import { inferModelModality } from "@/lib/models/modality";
 import { ensureAgentSchema } from "@/lib/agents/ensure-schema";
@@ -17,7 +17,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const [agent] = await db
     .select()
     .from(workspaceAgents)
-    .where(and(eq(workspaceAgents.id, id), eq(workspaceAgents.organizationId, session.orgId)))
+    .where(and(eq(workspaceAgents.id, id), eq(workspaceAgents.organizationId, session.orgId), isNull(workspaceAgents.deletedAt)))
     .limit(1);
 
   if (!agent) return NextResponse.json({ error: "Agent not found" }, { status: 404 });

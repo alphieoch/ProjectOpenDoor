@@ -121,6 +121,9 @@ describe("OpenBot computer policy", () => {
     ).toBe("invalid_path");
     expect(decideOpenBotAction({ computer, tool: "computer_list_files" }).allowed).toBe(true);
     expect(decideOpenBotAction({ computer, tool: "computer_read_page" }).allowed).toBe(true);
+    expect(decideOpenBotAction({ computer, tool: "computer_click" }).allowed).toBe(true);
+    expect(decideOpenBotAction({ computer, tool: "computer_move" }).allowed).toBe(true);
+    expect(decideOpenBotAction({ computer, tool: "computer_wait" }).allowed).toBe(true);
     expect(decideOpenBotAction({ computer, tool: "request_help", intent: "2FA" }).allowed).toBe(true);
     expect(decideOpenBotAction({ computer, tool: "render_component" }).allowed).toBe(true);
   });

@@ -1176,6 +1176,7 @@ export const workspaceAgents = pgTable(
     lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
     startedAt: timestamp("started_at", { withTimezone: true }),
     stoppedAt: timestamp("stopped_at", { withTimezone: true }),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -1186,6 +1187,7 @@ export const workspaceAgents = pgTable(
       table.slug
     ),
     statusIdx: index("workspace_agents_status_idx").on(table.status),
+    deletedAtIdx: index("workspace_agents_deleted_at_idx").on(table.deletedAt),
   })
 );
 
@@ -1807,12 +1809,20 @@ export const workflows = pgTable("workflows", {
   status:         varchar("status", { length: 50 }).notNull().default("draft"),
   graph:          jsonb("graph").default({ nodes: [], edges: [] }),
   tags:           jsonb("tags").$type<string[]>().default([]),
+  trigger:        jsonb("trigger").$type<Record<string, unknown>>().notNull().default({ type: "manual" }),
+  variables:      jsonb("variables").$type<Record<string, string>>().notNull().default({}),
+  publishedGraph: jsonb("published_graph"),
+  publishedVersion: integer("published_version").notNull().default(0),
+  publishedAt:    timestamp("published_at", { withTimezone: true }),
+  webhookSecret:  varchar("webhook_secret", { length: 64 }),
+  nextRunAt:      timestamp("next_run_at", { withTimezone: true }),
   createdBy:      uuid("created_by").references(() => users.id),
   createdAt:      timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt:      timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => ({
   orgIdx:    index("workflows_org_idx").on(t.organizationId),
   statusIdx: index("workflows_status_idx").on(t.status),
+  nextRunIdx: index("workflows_next_run_idx").on(t.nextRunAt),
 }));
 
 export const workflowRuns = pgTable("workflow_runs", {
@@ -1823,22 +1833,53 @@ export const workflowRuns = pgTable("workflow_runs", {
   input:          jsonb("input").$type<Record<string, unknown>>().notNull().default({}),
   stepOutputs:    jsonb("step_outputs").$type<unknown[]>().notNull().default([]),
   error:          text("error"),
+  triggerType:    varchar("trigger_type", { length: 50 }).notNull().default("manual"),
+  version:        integer("version"),
+  assignedTo:     varchar("assigned_to", { length: 255 }),
+  dueAt:          timestamp("due_at", { withTimezone: true }),
+  resumeAt:       timestamp("resume_at", { withTimezone: true }),
+  attempt:        integer("attempt").notNull().default(1),
   createdAt:      timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   completedAt:    timestamp("completed_at", { withTimezone: true }),
 }, (t) => ({
   workflowIdx: index("workflow_runs_workflow_idx").on(t.workflowId, t.createdAt),
   orgIdx:      index("workflow_runs_org_idx").on(t.organizationId),
+  statusIdx:   index("workflow_runs_status_idx").on(t.status, t.resumeAt),
+}));
+
+export const workflowVersions = pgTable("workflow_versions", {
+  id:             uuid("id").primaryKey().defaultRandom(),
+  workflowId:     uuid("workflow_id").notNull().references(() => workflows.id, { onDelete: "cascade" }),
+  organizationId: uuid("organization_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+  version:        integer("version").notNull(),
+  graph:          jsonb("graph").notNull(),
+  trigger:        jsonb("trigger").$type<Record<string, unknown>>().notNull().default({ type: "manual" }),
+  variables:      jsonb("variables").$type<Record<string, string>>().notNull().default({}),
+  note:           text("note"),
+  publishedBy:    uuid("published_by").references(() => users.id),
+  publishedAt:    timestamp("published_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => ({
+  workflowIdx: index("workflow_versions_workflow_idx").on(t.workflowId, t.version),
+  orgIdx:      index("workflow_versions_org_idx").on(t.organizationId),
+  uniqueVersion: uniqueIndex("workflow_versions_unique").on(t.workflowId, t.version),
 }));
 
 export const workflowsRelations = relations(workflows, ({ one, many }) => ({
   organization: one(organizations, { fields: [workflows.organizationId], references: [organizations.id] }),
   createdByUser: one(users, { fields: [workflows.createdBy], references: [users.id] }),
   runs: many(workflowRuns),
+  versions: many(workflowVersions),
 }));
 
 export const workflowRunsRelations = relations(workflowRuns, ({ one }) => ({
   workflow: one(workflows, { fields: [workflowRuns.workflowId], references: [workflows.id] }),
   organization: one(organizations, { fields: [workflowRuns.organizationId], references: [organizations.id] }),
+}));
+
+export const workflowVersionsRelations = relations(workflowVersions, ({ one }) => ({
+  workflow: one(workflows, { fields: [workflowVersions.workflowId], references: [workflows.id] }),
+  organization: one(organizations, { fields: [workflowVersions.organizationId], references: [organizations.id] }),
+  publishedByUser: one(users, { fields: [workflowVersions.publishedBy], references: [users.id] }),
 }));
 
 export const batchJobs = pgTable(
@@ -1938,7 +1979,39 @@ export const organizationProviderKeysRelations = relations(
   })
 );
 
-/** Private GPU rentals — this Mac or an existing dedicated deployment. Not Vertex MaaS. */
+/** Org-owned GPU listed so other orgs can rent it while the host is away. */
+export const gpuHostShares = pgTable(
+  "gpu_host_shares",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: uuid("organization_id")
+      .references(() => organizations.id, { onDelete: "cascade" })
+      .notNull(),
+    hostKey: varchar("host_key", { length: 80 }).notNull().default("this-host"),
+    status: varchar("status", { length: 20 }).notNull().default("unlisted"),
+    sku: varchar("sku", { length: 50 }).notNull().default("metal"),
+    hourlyUsd: numeric("hourly_usd", { precision: 10, scale: 4 }).notNull(),
+    displayName: varchar("display_name", { length: 120 }).notNull(),
+    chip: varchar("chip", { length: 160 }),
+    gpuName: varchar("gpu_name", { length: 160 }),
+    memoryGb: integer("memory_gb"),
+    workerKind: varchar("worker_kind", { length: 40 }),
+    isDemo: boolean("is_demo").notNull().default(false),
+    earningsCents: integer("earnings_cents").notNull().default(0),
+    listedBy: uuid("listed_by").references(() => users.id),
+    listedAt: timestamp("listed_at", { withTimezone: true }),
+    unlistedAt: timestamp("unlisted_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    uniqueHost: unique("gpu_host_shares_org_host").on(table.organizationId, table.hostKey),
+    orgIdx: index("gpu_host_shares_org_idx").on(table.organizationId),
+    listedIdx: index("gpu_host_shares_listed_idx").on(table.status, table.listedAt),
+  })
+);
+
+/** Private GPU rentals — this Mac, a listed host, or an existing dedicated deployment. */
 export const premiumRentals = pgTable(
   "premium_rentals",
   {
@@ -1949,6 +2022,9 @@ export const premiumRentals = pgTable(
     deploymentId: uuid("deployment_id").references(() => deployments.id, {
       onDelete: "set null",
     }),
+    hostShareId: uuid("host_share_id").references(() => gpuHostShares.id, {
+      onDelete: "set null",
+    }),
     sku: varchar("sku", { length: 50 }).notNull().default("metal"),
     status: varchar("status", { length: 30 }).notNull().default("pending"),
     hourlyRate: numeric("hourly_rate", { precision: 10, scale: 4 }).notNull().default("0"),
@@ -1956,6 +2032,7 @@ export const premiumRentals = pgTable(
     modelId: varchar("model_id", { length: 255 }),
     weightsUri: text("weights_uri"),
     ownsDeployment: boolean("owns_deployment").notNull().default(false),
+    earningsCents: integer("earnings_cents").notNull().default(0),
     startedAt: timestamp("started_at", { withTimezone: true }),
     endedAt: timestamp("ended_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -1965,8 +2042,46 @@ export const premiumRentals = pgTable(
     orgIdx: index("premium_rentals_org_idx").on(table.organizationId, table.createdAt),
     statusIdx: index("premium_rentals_status_idx").on(table.status),
     deploymentIdx: index("premium_rentals_deployment_idx").on(table.deploymentId),
+    hostShareIdx: index("premium_rentals_host_share_idx").on(table.hostShareId),
   })
 );
+
+/** Org entitlements for first-party Tools (workflow / gateway catalog). */
+export const organizationTools = pgTable(
+  "organization_tools",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: uuid("organization_id")
+      .references(() => organizations.id, { onDelete: "cascade" })
+      .notNull(),
+    toolId: varchar("tool_id", { length: 80 }).notNull(),
+    status: varchar("status", { length: 20 }).notNull().default("enabled"),
+    enabledBy: uuid("enabled_by").references(() => users.id),
+    enabledAt: timestamp("enabled_at", { withTimezone: true }).notNull().defaultNow(),
+    disabledAt: timestamp("disabled_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    uniqueTool: unique("organization_tools_org_tool").on(table.organizationId, table.toolId),
+    orgIdx: index("organization_tools_org_idx").on(table.organizationId),
+  })
+);
+
+export const organizationToolsRelations = relations(organizationTools, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [organizationTools.organizationId],
+    references: [organizations.id],
+  }),
+}));
+
+export const gpuHostSharesRelations = relations(gpuHostShares, ({ one, many }) => ({
+  organization: one(organizations, {
+    fields: [gpuHostShares.organizationId],
+    references: [organizations.id],
+  }),
+  rentals: many(premiumRentals),
+}));
 
 export const premiumRentalsRelations = relations(premiumRentals, ({ one }) => ({
   organization: one(organizations, {
@@ -1976,6 +2091,10 @@ export const premiumRentalsRelations = relations(premiumRentals, ({ one }) => ({
   deployment: one(deployments, {
     fields: [premiumRentals.deploymentId],
     references: [deployments.id],
+  }),
+  hostShare: one(gpuHostShares, {
+    fields: [premiumRentals.hostShareId],
+    references: [gpuHostShares.id],
   }),
 }));
 

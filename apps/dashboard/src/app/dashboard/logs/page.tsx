@@ -28,6 +28,7 @@ export default function LogsPage() {
   const [rows, setRows] = useState<LogRow[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState("all");
   const [q, setQ] = useState("");
 
@@ -37,11 +38,23 @@ export default function LogsPage() {
       if (status !== "all") params.set("status", status);
       if (q.trim()) params.set("q", q.trim());
       setLoading(true);
+      setError(null);
       fetch(`/api/requests?${params}`, { credentials: "include" })
-        .then((r) => (r.ok ? r.json() : { requests: [], total: 0 }))
-        .then((data) => {
+        .then(async (r) => {
+          const data = await r.json().catch(() => ({}));
+          if (!r.ok) {
+            setError(data.error || "Failed to load request logs.");
+            setRows([]);
+            setTotal(0);
+            return;
+          }
           setRows(data.requests || []);
           setTotal(Number(data.total || 0));
+        })
+        .catch(() => {
+          setError("Failed to load request logs.");
+          setRows([]);
+          setTotal(0);
         })
         .finally(() => setLoading(false));
     }, 200);
@@ -84,6 +97,12 @@ export default function LogsPage() {
         </span>
       </div>
 
+      {error && (
+        <div className="mb-4 alert-error">
+          <p className="font-medium">{error}</p>
+        </div>
+      )}
+
       <div className="card overflow-hidden">
         <table className="min-w-full">
           <thead>
@@ -109,9 +128,13 @@ export default function LogsPage() {
               <tr>
                 <td colSpan={8} className="px-4 py-12 text-center">
                   <ScrollText className="mx-auto mb-3 h-8 w-8" style={{ color: "hsl(var(--muted-foreground))" }} />
-                  <p className="text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
-                    No requests yet. Make a playground or API call and it will show up here.
+                  <p className="text-sm font-medium text-foreground">No requests this filter</p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Gateway calls for this workspace appear here. Try the playground or an API key.
                   </p>
+                  <Link href="/dashboard/playground" className="btn-secondary mt-4 inline-flex">
+                    Open playground
+                  </Link>
                 </td>
               </tr>
             ) : (

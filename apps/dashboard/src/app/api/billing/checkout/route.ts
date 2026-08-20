@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
     const orgId = session.orgId as string;
     const body = await req.json();
 
-    const requestedPlan = asCheckoutPlan(body.planId);
+    const requestedPlan = asCheckoutPlan(body.planId ?? body.plan);
     const requestedPriceId =
       typeof body.priceId === "string" && body.priceId.startsWith("price_")
         ? body.priceId
@@ -121,11 +121,9 @@ export async function POST(req: NextRequest) {
     });
 
     return NextResponse.json({ url: checkoutSession.url });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Failed to create checkout session";
     console.error("Checkout error:", error);
-    return NextResponse.json(
-      { error: error.message || "Failed to create checkout session" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

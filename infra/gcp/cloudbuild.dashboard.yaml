@@ -55,6 +55,7 @@ steps:
         if gcloud secrets describe opendoor-code-sandbox-token --project=${_DEPLOY_PROJECT} >/dev/null 2>&1; then
           SECRETS="$${SECRETS},CODE_SANDBOX_TOKEN=opendoor-code-sandbox-token:latest"
         fi
+        SECRETS="$${SECRETS},OPENBOT_COMPUTER_TOKEN=opendoor-openbot-computer-token:latest"
         gcloud run deploy opendoor-dashboard \
           --project=${_DEPLOY_PROJECT} \
           --image=$$IMAGE \

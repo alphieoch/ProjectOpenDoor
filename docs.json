@@ -86,6 +86,7 @@
         { "title": "Platform API", "href": "/api-reference/platform" },
         { "title": "Usage", "href": "/api-reference/usage" },
         { "title": "Assistants", "href": "/api-reference/assistants" },
+        { "title": "Agents", "href": "/api-reference/agents" },
         { "title": "Workflows", "href": "/api-reference/workflows" },
         { "title": "Chat completions", "href": "/api-reference/chat-completions" },
         { "title": "Structured outputs", "href": "/api-reference/structured-outputs" },

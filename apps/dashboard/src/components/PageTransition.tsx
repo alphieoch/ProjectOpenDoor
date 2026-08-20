@@ -9,8 +9,12 @@ export function PageTransition({ children }: { children: React.ReactNode }) {
   const isHouseChat = pathname === "/dashboard/chat" || pathname?.startsWith("/dashboard/chat/");
   const isStudio = pathname === "/dashboard/studio" || pathname.startsWith("/dashboard/studio/");
   const isGovernance = pathname === "/dashboard/governance" || pathname.startsWith("/dashboard/governance/");
-  const fillHeight = isChatPlayground || isHouseChat || isStudio || isGovernance || pathname === "/dashboard/pricing";
-  const bleed = isChatPlayground || isHouseChat || isStudio;
+  const isAgentDesk = Boolean(pathname?.startsWith("/dashboard/agents/") && pathname !== "/dashboard/agents");
+  const isOpenBot = Boolean(pathname?.startsWith("/dashboard/openbot"));
+  const isTraining = pathname === "/dashboard/training";
+  const isPremium = pathname === "/dashboard/premium" || Boolean(pathname?.startsWith("/dashboard/premium/"));
+  const fillHeight = isChatPlayground || isHouseChat || isStudio || isGovernance || isAgentDesk || isOpenBot || isTraining || isPremium || pathname === "/dashboard/pricing";
+  const bleed = isChatPlayground || isHouseChat || isStudio || isAgentDesk || isOpenBot;
 
   return (
     <div
