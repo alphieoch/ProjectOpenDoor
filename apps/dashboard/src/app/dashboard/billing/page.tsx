@@ -1,13 +1,24 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import {
+  ENTERPRISE_SALES_HREF,
+  isWorkspaceUnpaid,
+  resolveCheckoutRequest,
+} from "@/lib/signup-plan";
 import { CreditCard, ExternalLink, Loader2, Receipt } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { MetricCard } from "@/components/ui/metric-card";
 import { formatUsdCents, formatBalanceLabel, unlimitedReasonLabel } from "@/lib/usage-format";
-import { formatPlanPriceUsd, getPlan } from "@opendoor/shared";
+import {
+  SEARCH_QUERY_LIST_CENTS,
+  WEB_SEARCH_ADDON,
+  formatPlanPriceUsd,
+  formatUsdCents as formatCatalogUsd,
+  getPlan,
+} from "@opendoor/shared";
 
 const TOPUPS = [2000, 5000, 10000, 20000] as const;
 const CHECKOUT_PLANS = ["student", "pro", "ultra", "family", "family_max", "team"] as const;
@@ -44,6 +55,14 @@ type BillingInfo = {
   unlimitedReason: "site_admin" | "plan" | null;
   seatCount: number;
   checkout: Record<string, boolean>;
+  webSearchAddon?: {
+    active: boolean;
+    includedInPlan?: boolean;
+    amountUsd: number;
+    configured: boolean;
+    name: string;
+    status?: string;
+  };
 };
 
 function kindLabel(kind: string) {
@@ -61,8 +80,11 @@ function BillingPageInner() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
+  const [searchAddonLoading, setSearchAddonLoading] = useState(false);
   const [topupLoading, setTopupLoading] = useState<number | null>(null);
   const [portalLoading, setPortalLoading] = useState(false);
+  const [teamSeats, setTeamSeats] = useState(1);
+  const autoCheckoutRef = useRef<string | null>(null);
 
   const notice = useMemo(() => {
     if (searchParams?.get("success") === "true") return "Checkout complete. Stripe will update this plan shortly.";
@@ -105,6 +127,28 @@ function BillingPageInner() {
     void load();
   }, []);
 
+  useEffect(() => {
+    const requested = searchParams?.get("checkout");
+    if (!requested || loading || !info) return;
+    if (autoCheckoutRef.current === requested) return;
+    const decision = resolveCheckoutRequest({ planId: requested });
+    if (!decision.ok) {
+      autoCheckoutRef.current = requested;
+      setError(
+        decision.sales
+          ? `${decision.error}. Talk to sales instead of Stripe checkout.`
+          : decision.error
+      );
+      return;
+    }
+    if (!isWorkspaceUnpaid(info.org)) {
+      autoCheckoutRef.current = requested;
+      return;
+    }
+    autoCheckoutRef.current = requested;
+    void checkoutPlan(decision.plan);
+  }, [info, loading, searchParams]);
+
   async function checkoutPlan(planId: string) {
     setCheckoutLoading(planId);
     setError(null);
@@ -113,7 +157,10 @@ function BillingPageInner() {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ planId }),
+        body: JSON.stringify({
+          planId,
+          seats: getPlan(planId).perSeat ? teamSeats : undefined,
+        }),
       });
       const data = await res.json().catch(() => ({}));
       if (data.url) {
@@ -152,6 +199,31 @@ function BillingPageInner() {
       setError("Failed to start top-up.");
     } finally {
       setTopupLoading(null);
+    }
+  }
+
+  async function subscribeSearchAddon() {
+    setSearchAddonLoading(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/billing/addons/web-search", {
+        method: "POST",
+        credentials: "include",
+      });
+      const data = await res.json().catch(() => ({}));
+      if (data.url) {
+        window.location.href = data.url;
+        return;
+      }
+      if (data.alreadyActive) {
+        await load();
+        return;
+      }
+      setError(data.error || "Web Search add-on checkout is not configured.");
+    } catch {
+      setError("Failed to start Web Search checkout.");
+    } finally {
+      setSearchAddonLoading(false);
     }
   }
 
@@ -200,6 +272,11 @@ function BillingPageInner() {
       {error && (
         <div className="mb-6 alert-error">
           <p className="font-medium">{error}</p>
+          {error.toLowerCase().includes("sales") ? (
+            <a href={ENTERPRISE_SALES_HREF} className="mt-2 inline-block text-sm underline">
+              Email sales@opendoor.ai
+            </a>
+          ) : null}
         </div>
       )}
 
@@ -292,8 +369,57 @@ function BillingPageInner() {
             </div>
           </div>
 
+          <div className="mb-8 card p-6">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <h2 className="section-title">OpenDoor Search</h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Metered at {formatCatalogUsd(SEARCH_QUERY_LIST_CENTS)} / query on plan credits.
+                  The {WEB_SEARCH_ADDON.name} add-on (${WEB_SEARCH_ADDON.amountUsd}/month) covers
+                  Search for the month. Visible on Tools — enable to use. Site admins are unlimited.
+                </p>
+                <p className="mt-2 text-sm text-foreground">
+                  {info?.webSearchAddon?.includedInPlan
+                    ? "Included on Enterprise."
+                    : info?.webSearchAddon?.active
+                      ? "Add-on is active — queries are covered this month."
+                      : `Usage-based · ${formatCatalogUsd(SEARCH_QUERY_LIST_CENTS)} / query, or subscribe.`}
+                </p>
+              </div>
+              {!info?.webSearchAddon?.active && !unlimited ? (
+                <button
+                  type="button"
+                  className="btn-primary shrink-0"
+                  disabled={searchAddonLoading || info?.checkout.webSearch === false}
+                  onClick={() => void subscribeSearchAddon()}
+                >
+                  {searchAddonLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : info?.checkout.webSearch === false ? (
+                    "Checkout not configured"
+                  ) : (
+                    `Subscribe · $${WEB_SEARCH_ADDON.amountUsd}/mo`
+                  )}
+                </button>
+              ) : null}
+            </div>
+          </div>
+
           <div className="mb-8">
-            <h2 className="section-title mb-4">Change plan</h2>
+            <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+              <h2 className="section-title">Change plan</h2>
+              <label className="text-xs text-muted-foreground">
+                Team seats
+                <input
+                  type="number"
+                  min={1}
+                  max={500}
+                  value={teamSeats}
+                  onChange={(e) => setTeamSeats(Math.max(1, Math.min(500, Number(e.target.value) || 1)))}
+                  className="input ml-2 w-20"
+                />
+              </label>
+            </div>
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
               {CHECKOUT_PLANS.map((id) => {
                 const plan = getPlan(id);

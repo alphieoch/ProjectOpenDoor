@@ -6,6 +6,7 @@ import {
   houseToolLabel,
   houseToolThreadContent,
 } from "./openbot-tool-display";
+import { WEB_SEARCH_TOOL_NAME } from "@opendoor/shared";
 
 const LIVE = "OpenBot is live on deepseek-v3 · gateway 139ms · 187 models · isolated Chromium";
 const TEST_ID = "67f9caa8-1111-2222-3333-444455556666";
@@ -142,5 +143,25 @@ describe("house tool display", () => {
         `Deleted test (${TEST_ID}). Recoverable for 7 days in OpenBot settings.\nDeleted General Assistant (${GENERAL_ID}). Recoverable for 7 days in OpenBot settings.`,
       ),
     ).toBe("Removed test and General Assistant. Recoverable for 7 days in OpenBot settings.");
+  });
+
+  test("web_search chip shows a short answer and citation links — not skip-links", () => {
+    expect(houseToolLabel(WEB_SEARCH_TOOL_NAME)).toBe("Search");
+    const skip = "All Points East | Home Skip to content Skip to footer Tickets 2026 LINEUP";
+    const content = JSON.stringify({
+      query: "how old is Lil Baby",
+      answer: "Lil Baby is 31 years old (born December 3, 1994).",
+      provider: "vertex_google_search",
+      citations: [
+        { title: skip, url: "https://en.wikipedia.org/wiki/Lil_Baby", snippet: skip },
+        { title: "Lil Baby Biography", url: "https://www.biography.com/musicians/lil-baby", snippet: "born 1994" },
+      ],
+    });
+    const display = houseToolThreadContent(WEB_SEARCH_TOOL_NAME, content);
+    expect(display).toContain("Lil Baby is 31 years old");
+    expect(display).toContain("https://en.wikipedia.org/wiki/Lil_Baby");
+    expect(display).toContain("https://www.biography.com/musicians/lil-baby");
+    expect(display).not.toMatch(/Skip to content/i);
+    expect(display).not.toMatch(/Skip to footer/i);
   });
 });

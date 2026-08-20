@@ -21,8 +21,8 @@ import {
   inferAssistantFamily,
 } from "@/lib/assistant-gateway";
 import { assertOrgCanSpend, debitOrgUsage } from "@/lib/credits";
-import { loadWebSearchEntitlement } from "@/lib/web-search/entitlement";
-import { runWebSearch, type WebSearchResult } from "@/lib/web-search";
+import { authorizeOpenDoorSearch, settleOpenDoorSearch } from "@/lib/tools/search-spend";
+import { formatRagSearchForModel, ragSearch, type RagSearchResult } from "@/lib/tools/rag-search";
 
 interface LimitStatus {
   allowed: boolean;
@@ -304,11 +304,8 @@ function resolveDirectModel(modelId: string) {
   return createOpenAI()(modelId);
 }
 
-function formatSearchContext(result: WebSearchResult): string {
-  const lines = result.results
-    .map((hit, i) => `${i + 1}. ${hit.title}\n   ${hit.url}\n   ${hit.snippet}`)
-    .join("\n");
-  return `Live web search (${result.provider}) for "${result.query}":\n${lines}`;
+function formatSearchContext(result: RagSearchResult): string {
+  return formatRagSearchForModel(result);
 }
 
 function billedGatewayModel(modelId: string, orgId: string) {
@@ -352,7 +349,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
   }
 
   const family = inferAssistantFamily(assistant.modelId);
-  const afford = await assertOrgCanSpend(assistant.organizationId, family);
+  const session = await getSession();
+  const afford = await assertOrgCanSpend(assistant.organizationId, family, {
+    userId: session?.orgId === assistant.organizationId ? session.userId : null,
+  });
   if (!afford.ok) {
     return insufficientBalanceResponse(afford.detail, {
       includedQuotaCents: afford.waterfall.quotaCents,
@@ -361,7 +361,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
     });
   }
 
-  const session = await getSession();
   const isOwner = session?.orgId === assistant.organizationId;
   let purchaseRecord: typeof assistantPurchases.$inferSelect | null = null;
 
@@ -434,14 +433,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
 
   let webSearchAllowed = false;
   if (assistant.webSearchEnabled) {
-    const searchAddon = await loadWebSearchEntitlement(assistant.organizationId);
-    webSearchAllowed = searchAddon.active;
-    if (webSearchAllowed) {
+    const searchGate = await authorizeOpenDoorSearch({ orgId: assistant.organizationId });
+    webSearchAllowed = searchGate.ok;
+    if (searchGate.ok && searchGate.coveredByAddon) {
       const lastUser = [...messages].reverse().find((m) => m.role === "user");
       const query = typeof lastUser?.content === "string" ? lastUser.content.trim() : "";
       if (query) {
         try {
-          const search = await runWebSearch(query);
+          const search = await ragSearch({ query });
           systemMessages.push({ role: "system", content: formatSearchContext(search) });
         } catch (err) {
           console.error("Assistant web search failed:", err);
@@ -530,15 +529,23 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
   if (webSearchAllowed) {
     allTools.web_search = (tool as any)({
       description:
-        "Search the live web via Vertex AI Grounding with Google Search. Returns titles, URLs, and snippets. Do not invent URLs.",
+        "OpenDoor Search: a short synthesized answer plus 2–5 citations from Vertex grounding on OpenDoor's GCP. Do not invent URLs.",
       parameters: zodSchema(
         z.object({
           query: z.string().describe("Search query"),
-          max_results: z.number().int().min(1).max(10).optional(),
+          max_results: z.number().int().min(2).max(5).optional(),
         }),
       ) as any,
       execute: async (args: { query: string; max_results?: number }) => {
-        return runWebSearch(args.query, args.max_results);
+        const gate = await authorizeOpenDoorSearch({ orgId: assistant.organizationId });
+        if (!gate.ok) throw new Error(gate.error);
+        const result = await ragSearch({ query: args.query, maxResults: args.max_results });
+        const charge = await settleOpenDoorSearch({
+          orgId: assistant.organizationId,
+          coveredByAddon: gate.coveredByAddon,
+        });
+        if ("error" in charge) throw new Error(charge.error);
+        return result;
       },
     });
   }
@@ -594,6 +601,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
             await debitOrgUsage(assistant.organizationId, estCents, undefined, {
               allowWelcome: welcomeAllowedForFamily(family),
               source: "ai_assistant_tools",
+              userId: session?.userId || null,
             }).catch((err) => console.error("Assistant debit failed:", err));
           }
         }).catch(() => {
@@ -618,7 +626,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
 
   if (!assistantGatewaySecret()) {
     return NextResponse.json(
-      { error: "Gateway billing is not configured. Set INTERNAL_API_KEY or GATEWAY_INTERNAL_KEY." },
+      { error: "Gateway billing is not configured." },
       { status: 503 }
     );
   }

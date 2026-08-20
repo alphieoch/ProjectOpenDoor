@@ -7,6 +7,7 @@ const buckets = new Map<string, Bucket>();
 const LIMITS = {
   login: { ip: 20, email: 8, windowMs: 60_000 },
   signup: { ip: 8, email: 3, windowMs: 60 * 60_000 },
+  search: { ip: 30, email: 20, windowMs: 60_000 },
 } as const;
 
 function prune(now: number) {
@@ -37,7 +38,7 @@ export function clientIp(req: Request): string {
 }
 
 export function enforceAuthRateLimit(
-  kind: "login" | "signup",
+  kind: "login" | "signup" | "search",
   req: Request,
   email?: string
 ): NextResponse | null {

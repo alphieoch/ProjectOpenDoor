@@ -183,13 +183,13 @@ export function auditActivityHref(
   opts?: { entityId?: string | null; metadata?: unknown }
 ): string {
   if (action.startsWith("api_key.")) return "/dashboard/api-keys";
+  if (action.startsWith("byok.")) return "/dashboard/settings/byok";
   if (action.startsWith("billing.")) return "/dashboard/billing";
   if (action.startsWith("user.invit")) return "/dashboard/team";
   if (
     action.startsWith("sso.") ||
     action.startsWith("settings.") ||
     action.startsWith("organization.") ||
-    action.startsWith("byok.") ||
     action.startsWith("device_inventory.")
   ) {
     return "/dashboard/settings";

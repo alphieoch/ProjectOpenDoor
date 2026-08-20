@@ -4,6 +4,7 @@ initTracing();
 import { Hono } from "hono";
 import { serve } from "@hono/node-server";
 import { cors } from "hono/cors";
+import { resolveGatewayCorsOrigin } from "./lib/cors-origin.js";
 import { logger } from "hono/logger";
 import { authMiddleware } from "./middleware/auth.js";
 import { rateLimitMiddleware } from "./middleware/rate-limit.js";
@@ -42,7 +43,20 @@ import { startBatchWorker } from "./lib/batch-worker.js";
 
 const app = new Hono();
 
-app.use(cors());
+app.use(
+  cors({
+    origin: (origin) => resolveGatewayCorsOrigin(origin),
+    credentials: false,
+    allowMethods: ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowHeaders: [
+      "Authorization",
+      "Content-Type",
+      "X-OpenDoor-Organization-Id",
+      "X-OpenDoor-Assistant-Id",
+      "X-Data-Class",
+    ],
+  })
+);
 app.use(logger());
 
 app.get("/health", (c) => {
@@ -103,8 +117,14 @@ app.onError((err, c) => {
       captureGatewayException(orgId, err, { path: c.req.path });
     })
     .catch(() => undefined);
+  const expose = process.env.NODE_ENV !== "production";
   return c.json(
-    { error: { message: err.message || "Internal error", type: "internal_error" } },
+    {
+      error: {
+        message: expose ? err.message || "Internal error" : "Internal error",
+        type: "internal_error",
+      },
+    },
     500
   );
 });

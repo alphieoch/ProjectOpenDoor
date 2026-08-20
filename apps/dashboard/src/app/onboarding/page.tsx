@@ -16,25 +16,47 @@ import { getDb } from "@/lib/db";
 import { apiKeys, organizations } from "@opendoor/database";
 import { eq, sql } from "drizzle-orm";
 import { OnboardingSidebar } from "@/components/ui/onboarding-sidebar";
+import { RegionalOnboarding } from "@/components/i18n/regional-onboarding";
+import { ENTERPRISE_SALES_HREF, parseSignupPlan } from "@/lib/signup-plan";
 
 export const dynamic = "force-dynamic";
 
-export default async function OnboardingPage() {
+export default async function OnboardingPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ plan?: string }>;
+}) {
   const session = await getSession();
   if (!session) redirect("/login?signup=1");
+  const params = await searchParams;
+  const selectedPlan = parseSignupPlan(params.plan);
+  const enterpriseSales = selectedPlan === "enterprise";
+  const billingHref = enterpriseSales
+    ? ENTERPRISE_SALES_HREF
+    : selectedPlan && selectedPlan !== "enterprise"
+      ? `/dashboard/billing?checkout=${selectedPlan}`
+      : "/dashboard/billing";
+  const billingCta = enterpriseSales ? "Talk to sales" : "View billing";
 
-  const db = getDb();
-  const [org, keyCountResult] = await Promise.all([
-    db.query.organizations.findFirst({
-      where: eq(organizations.id, session.orgId),
-    }),
-    db
-      .select({ count: sql<number>`COUNT(*)` })
-      .from(apiKeys)
-      .where(eq(apiKeys.organizationId, session.orgId)),
-  ]);
+  let org: { name?: string | null; plan?: string | null; creditsUsdCents?: number | null } | undefined;
+  let keyCount = 0;
+  try {
+    const db = getDb();
+    const [foundOrg, keyCountResult] = await Promise.all([
+      db.query.organizations.findFirst({
+        where: eq(organizations.id, session.orgId),
+      }),
+      db
+        .select({ count: sql<number>`COUNT(*)` })
+        .from(apiKeys)
+        .where(eq(apiKeys.organizationId, session.orgId)),
+    ]);
+    org = foundOrg;
+    keyCount = Number(keyCountResult[0]?.count || 0);
+  } catch (err) {
+    console.error("[onboarding] database unavailable", err);
+  }
 
-  const keyCount = Number(keyCountResult[0]?.count || 0);
   const credits = Number(org?.creditsUsdCents || 0) / 100;
   const completedSteps = [
     true,
@@ -43,13 +65,15 @@ export default async function OnboardingPage() {
   ].filter(Boolean).length;
 
   return (
-    <div className="flex h-screen overflow-hidden">
-      <OnboardingSidebar
-        orgName={org?.name ?? "Your workspace"}
-        userEmail={session.email}
-        completedSteps={completedSteps}
-      />
-    <main className="ml-[3.05rem] flex-1 overflow-auto relative bg-[#06111f] text-white">
+    <div className="flex min-h-screen overflow-x-hidden md:h-screen md:overflow-hidden">
+      <div className="hidden md:block">
+        <OnboardingSidebar
+          orgName={org?.name ?? "Your workspace"}
+          userEmail={session.email}
+          completedSteps={completedSteps}
+        />
+      </div>
+    <main className="relative flex-1 overflow-auto bg-[#06111f] text-white md:ml-[3.05rem]">
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute left-[-12rem] top-[-10rem] h-[32rem] w-[32rem] rounded-full bg-blue-500/25 blur-3xl" />
         <div className="absolute right-[-10rem] top-24 h-[30rem] w-[30rem] rounded-full bg-cyan-400/15 blur-3xl" />
@@ -70,6 +94,14 @@ export default async function OnboardingPage() {
           Skip to dashboard
         </Link>
       </header>
+
+      <div className="mx-auto w-full max-w-7xl px-6 pt-8 lg:px-8">
+        <RegionalOnboarding
+          segment={org?.onboardingSegment}
+          plan={selectedPlan || org?.plan}
+          className="border-white/10 bg-white/[0.07] text-white"
+        />
+      </div>
 
       <section className="mx-auto grid w-full max-w-7xl gap-10 px-6 pb-16 pt-8 lg:grid-cols-[0.95fr_1.05fr] lg:px-8 lg:pb-24 lg:pt-16">
         <div className="flex flex-col justify-center">
@@ -143,10 +175,14 @@ export default async function OnboardingPage() {
               <OnboardingStep
                 done={(org?.plan || "free") !== "free"}
                 icon={CreditCard}
-                title="Add billing when you scale"
-                description="Upgrade for larger budgets, top-ups, and team-ready spend controls."
-                href="/dashboard/billing"
-                cta="View billing"
+                title={enterpriseSales ? "Talk to sales for Enterprise" : "Add billing when you scale"}
+                description={
+                  enterpriseSales
+                    ? "Enterprise is billed through sales — not Stripe checkout. We’ll set residency, SCIM, and a dedicated path."
+                    : "Upgrade for larger budgets, top-ups, and team-ready spend controls."
+                }
+                href={billingHref}
+                cta={billingCta}
               />
             </div>
           </div>
@@ -177,7 +213,7 @@ export default async function OnboardingPage() {
           <Link
             key={card.title}
             href={card.href}
-            className="group rounded-3xl border border-white/10 bg-white/[0.06] p-6 text-white no-underline transition hover:-translate-y-1 hover:bg-white/[0.1]"
+            className="group rounded-3xl border border-white/10 bg-white/[0.06] p-6 text-white no-underline transition hover:-translate-y-1 hover:bg-white/[0.1] motion-reduce:transition-none motion-reduce:hover:translate-y-0"
           >
             <card.icon className="h-6 w-6 text-cyan-200" />
             <h3 className="mt-5 text-lg font-semibold">{card.title}</h3>

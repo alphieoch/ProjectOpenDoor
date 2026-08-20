@@ -37,6 +37,9 @@
   "engines": {
     "bun": ">=1.0.0"
   },
+  "overrides": {
+    "server-only": "file:./scripts/server-only-stub"
+  },
   "workspaces": [
     "apps/*",
     "packages/*"

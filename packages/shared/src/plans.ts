@@ -366,12 +366,29 @@ export function agentsAddonActive(status: string | null | undefined) {
   return status === "active" || status === "trialing";
 }
 
+export function isEnterprisePlan(plan?: string | null): boolean {
+  return (plan || "").toLowerCase() === "enterprise";
+}
+
+/**
+ * Governance / tools pack on the customer’s site: Search, Agents, SSO/SCIM,
+ * audit logs, and Trust Center. Enterprise seats and site admins.
+ */
+export function workspaceHasEnterpriseTools(org: {
+  plan?: string | null;
+  isSiteAdmin?: boolean | null;
+}): boolean {
+  if (org.isSiteAdmin) return true;
+  return isEnterprisePlan(org.plan);
+}
+
 export function workspaceHasAgentsAddon(org: {
   plan?: string | null;
   agentsAddonStatus?: string | null;
+  isSiteAdmin?: boolean | null;
 }) {
-  const plan = (org.plan || "").toLowerCase();
-  if (plan === "enterprise" || plan === "family_max") return true;
+  if (workspaceHasEnterpriseTools(org)) return true;
+  if ((org.plan || "").toLowerCase() === "family_max") return true;
   return agentsAddonActive(org.agentsAddonStatus);
 }
 
@@ -381,7 +398,8 @@ export const WEB_SEARCH_ADDON = {
   name: "Web Search",
   amountUsd: 20,
   amountCents: 2000,
-  description: "Live Google results via Vertex AI Grounding.",
+  description:
+    "Covers OpenDoor Search and live Google results via Vertex AI Grounding for the month. Otherwise Search is list price per query.",
 };
 
 export function webSearchAddonActive(status: string | null | undefined) {
@@ -391,12 +409,9 @@ export function webSearchAddonActive(status: string | null | undefined) {
 export function workspaceHasWebSearchAddon(org: {
   plan?: string | null;
   webSearchAddonStatus?: string | null;
+  isSiteAdmin?: boolean | null;
 }) {
-  if (org.plan === "enterprise") return true;
+  if (workspaceHasEnterpriseTools(org)) return true;
   return webSearchAddonActive(org.webSearchAddonStatus);
-}
-
-export function isEnterprisePlan(plan?: string | null): boolean {
-  return (plan || "").toLowerCase() === "enterprise";
 }
 

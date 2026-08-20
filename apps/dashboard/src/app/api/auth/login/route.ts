@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
-import { users } from "@opendoor/database";
+import { organizations, users } from "@opendoor/database";
 import { eq } from "drizzle-orm";
 import { verifyPassword, createToken } from "@/lib/auth";
 import { posthogServerCapture } from "@/lib/posthog-server";
@@ -9,11 +9,57 @@ import {
   jsonAuthSuccess,
   workosErrorMessage,
 } from "@/lib/workos-password-auth";
-import { applySessionCookies } from "@/lib/session-cookie";
+import { applySessionCookies, cookieSecureFromRequest } from "@/lib/session-cookie";
 import { enforceAuthRateLimit } from "@/lib/auth-rate-limit";
+import {
+  applySignupIntentCookies,
+  clearSignupIntentCookies,
+  postAuthPathForWorkspace,
+  resolveSignupIntentFromRequest,
+  type SignupIntent,
+} from "@/lib/signup-plan";
+import { applyWorldCookies } from "@/lib/i18n/cookies";
+import { persistWorldToWorkspace, worldPreferenceFromRequest } from "@/lib/i18n/persist";
+
+async function loginRedirect(orgId: string, intent: SignupIntent, isNew: boolean) {
+  try {
+    const org = await getDb().query.organizations.findFirst({
+      where: eq(organizations.id, orgId),
+      columns: {
+        plan: true,
+        stripeSubscriptionId: true,
+        subscriptionStatus: true,
+      },
+    });
+    return postAuthPathForWorkspace({ plan: intent.plan, isNew, org });
+  } catch {
+    return postAuthPathForWorkspace({
+      plan: intent.plan,
+      isNew,
+      orgLookupFailed: true,
+    });
+  }
+}
+
+function withSignupCookies(
+  response: NextResponse,
+  intent: SignupIntent,
+  redirectTo: string,
+  world?: ReturnType<typeof worldPreferenceFromRequest>
+) {
+  if (intent.plan && redirectTo.includes("checkout=")) {
+    applySignupIntentCookies(response, intent);
+  } else {
+    clearSignupIntentCookies(response);
+  }
+  if (world) applyWorldCookies(response, world);
+  return response;
+}
 
 export async function POST(req: NextRequest) {
-  const { email, password } = await req.json();
+  const { email, password, plan, segment, locale, region, country } = await req.json();
+  const intent = resolveSignupIntentFromRequest(req, { plan, segment });
+  const world = worldPreferenceFromRequest(req, { locale, region, country });
 
   if (!email || !password) {
     return NextResponse.json(
@@ -38,13 +84,29 @@ export async function POST(req: NextRequest) {
         email: session.email,
         organization_id: session.orgId,
         auth_method: "workos_password",
+        signup_plan: intent.plan,
       });
-      return jsonAuthSuccess(
-        {
-          success: true,
-          user: { id: session.userId, email: user.email, orgId: session.orgId },
-        },
-        token
+      const redirectTo = await loginRedirect(session.orgId, intent, false);
+      if (world.locale !== "en" || world.region) {
+        await persistWorldToWorkspace({
+          userId: session.userId,
+          orgId: session.orgId,
+          preference: world,
+        });
+      }
+      return withSignupCookies(
+        jsonAuthSuccess(
+          {
+            success: true,
+            user: { id: session.userId, email: user.email, orgId: session.orgId },
+          },
+          token,
+          redirectTo,
+          req
+        ),
+        intent,
+        redirectTo,
+        world
       );
     } catch (error) {
       // Fall through to local password hash for legacy accounts.
@@ -88,12 +150,22 @@ export async function POST(req: NextRequest) {
     email: user.email,
     organization_id: user.organizationId,
     auth_method: "password",
+    signup_plan: intent.plan,
   });
 
+  const redirectTo = await loginRedirect(user.organizationId, intent, false);
   const response = NextResponse.json({
     success: true,
     user: { id: user.id, email: user.email, orgId: user.organizationId },
+    redirectTo,
   });
-  applySessionCookies(response, token);
-  return response;
+  applySessionCookies(response, token, 60 * 60 * 24 * 7, cookieSecureFromRequest(req));
+  if (world.locale !== "en" || world.region) {
+    await persistWorldToWorkspace({
+      userId: user.id,
+      orgId: user.organizationId,
+      preference: world,
+    });
+  }
+  return withSignupCookies(response, intent, redirectTo, world);
 }

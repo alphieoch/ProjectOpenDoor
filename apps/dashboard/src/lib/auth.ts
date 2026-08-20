@@ -8,9 +8,19 @@ import { users } from "@opendoor/database";
 import { getDb } from "@/lib/db";
 import { readSessionToken } from "@/lib/session-cookie";
 
-const secret = new TextEncoder().encode(
-  process.env.AUTH_SECRET || "opendoor-default-secret-change-me"
-);
+function authSecretBytes() {
+  const secret = process.env.AUTH_SECRET;
+  const fallback = "opendoor-default-secret-change-me";
+  const building = process.env.NEXT_PHASE === "phase-production-build";
+  if (
+    process.env.NODE_ENV === "production" &&
+    !building &&
+    (!secret || secret === fallback || secret.length < 16)
+  ) {
+    throw new Error("AUTH_SECRET must be set to a unique value in production");
+  }
+  return new TextEncoder().encode(secret || fallback);
+}
 
 export interface SessionPayload {
   userId: string;
@@ -38,12 +48,12 @@ export async function createToken(payload: Record<string, unknown>): Promise<str
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime("7d")
-    .sign(secret);
+    .sign(authSecretBytes());
 }
 
 export async function verifyToken(token: string) {
   try {
-    const { payload } = await jwtVerify(token, secret, {
+    const { payload } = await jwtVerify(token, authSecretBytes(), {
       clockTolerance: 60,
     });
     return payload;

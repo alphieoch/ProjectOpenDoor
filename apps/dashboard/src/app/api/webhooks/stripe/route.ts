@@ -25,6 +25,7 @@ import {
 import { ensureWebSearchAddonColumns } from "@/lib/web-search/entitlement";
 import { posthogServerCapture } from "@/lib/posthog-server";
 import { applyLedgerGrant } from "@/lib/credit-ledger";
+import { ensurePaidSeatQuantityColumn, persistPaidSeatQuantity } from "@/lib/seat-allocation";
 
 function parseAmountCents(value: unknown): number {
   const parsed = Number.parseInt(String(value ?? "0"), 10);
@@ -249,6 +250,7 @@ export async function POST(req: NextRequest) {
   }
 
   const db = getDb();
+  await ensurePaidSeatQuantityColumn();
 
   switch (event.type) {
     case "checkout.session.completed": {
@@ -310,6 +312,7 @@ export async function POST(req: NextRequest) {
         await setWebSearchAddon(orgId, "active", session.subscription as string);
       } else if (session.mode === "subscription" && orgId && session.subscription && !assistantId) {
         const plan = getPlanForSession(session);
+        const seats = Math.max(1, Number(session.metadata?.seats || 1));
         await db
           .update(organizations)
           .set({
@@ -317,8 +320,10 @@ export async function POST(req: NextRequest) {
             stripePriceId: (session.metadata?.priceId as string | undefined) || null,
             subscriptionStatus: "active",
             plan,
+            paidSeatQuantity: seats,
           })
           .where(eq(organizations.id, orgId));
+        await persistPaidSeatQuantity(orgId, seats);
         posthogServerCapture(null, orgId, "billing_subscribe", {
           organization_id: orgId,
           plan,
@@ -389,8 +394,10 @@ export async function POST(req: NextRequest) {
               plan,
               stripeSubscriptionId: subscription.id,
               stripePriceId: item?.price.id || null,
+              paidSeatQuantity: seats,
             })
             .where(eq(organizations.id, org.id));
+          await persistPaidSeatQuantity(org.id, seats);
           await applyPlanStipend(org.id, plan, seats, invoice.id);
         }
       }
@@ -496,16 +503,29 @@ export async function POST(req: NextRequest) {
       // Update org plan
       if (subscription.customer) {
         const status = subscription.status;
-        const updates: Record<string, unknown> = { subscriptionStatus: status };
+        const item = subscription.items.data[0];
+        const seats = Math.max(1, item?.quantity || Number(subscription.metadata?.seats || 1));
+        const updates: Record<string, unknown> = { subscriptionStatus: status, paidSeatQuantity: seats };
         if (status === "canceled" || status === "unpaid" || status === "incomplete_expired") {
           updates.plan = "free";
+          updates.paidSeatQuantity = 1;
         }
+        const org = await db.query.organizations.findFirst({
+          where: eq(organizations.stripeCustomerId, subscription.customer as string),
+          columns: { id: true },
+        });
         await db
           .update(organizations)
           .set(updates)
           .where(
             eq(organizations.stripeCustomerId, subscription.customer as string)
           );
+        if (org) {
+          await persistPaidSeatQuantity(
+            org.id,
+            status === "canceled" || status === "unpaid" || status === "incomplete_expired" ? 1 : seats,
+          );
+        }
       }
       break;
     }

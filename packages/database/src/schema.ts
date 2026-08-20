@@ -128,6 +128,7 @@ export const organizations = pgTable("organizations", {
   stripeCustomerId: varchar("stripe_customer_id", { length: 255 }),
   stripeSubscriptionId: varchar("stripe_subscription_id", { length: 255 }),
   stripePriceId: varchar("stripe_price_id", { length: 255 }),
+  paidSeatQuantity: integer("paid_seat_quantity").notNull().default(1),
   subscriptionStatus: varchar("subscription_status", { length: 50 }).default("inactive"),
   agentsAddonStatus: varchar("agents_addon_status", { length: 50 }).notNull().default("inactive"),
   stripeAgentsSubscriptionId: varchar("stripe_agents_subscription_id", { length: 255 }),
@@ -146,6 +147,8 @@ export const organizations = pgTable("organizations", {
   sector: sectorEnum("sector").notNull().default("general"),
   dataResidency: varchar("data_residency", { length: 50 }).default("uk"),
   currency: varchar("currency", { length: 8 }).notNull().default("USD"),
+  region: varchar("region", { length: 32 }),
+  country: varchar("country", { length: 8 }),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -168,6 +171,7 @@ export const users = pgTable("users", {
     .array()
     .notNull()
     .default(sql`ARRAY['flash','auto','thinking','max','max_fast']::text[]`),
+  locale: varchar("locale", { length: 16 }).notNull().default("en"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

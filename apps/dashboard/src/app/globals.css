@@ -2,6 +2,26 @@
 @tailwind components;
 @tailwind utilities;
 
+[dir="rtl"] {
+  --od-locale-dir: rtl;
+}
+
+html[lang="ar"] body {
+  font-family: var(--font-arabic), var(--font-inter), sans-serif;
+}
+
+html[lang="am"] body {
+  font-family: var(--font-ethiopic), var(--font-inter), sans-serif;
+}
+
+html[lang="zh"] body {
+  font-family: var(--font-cjk), var(--font-inter), sans-serif;
+}
+
+html[lang="hi"] body {
+  font-family: var(--font-devanagari), var(--font-inter), sans-serif;
+}
+
 /* ── SokoHut design tokens (HSL components for Tailwind hsl(var(--*))) ─ */
 :root {
   --background: 0 0% 100%;
@@ -49,6 +69,7 @@
   --estate-900: 240 14% 10%;
   --estate-950: 240 25% 5%;
 
+  --od-locale-dir: ltr;
   --radius: 0.5rem;
   --radius-control: 8px;
   --animation-btn: 0.25s;

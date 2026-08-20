@@ -53,6 +53,11 @@ export type ComputerIsolation = {
   runtime?: string | null;
 };
 
+/** Browser-safe isolation. Never include supervisor / computer URLs. */
+export function publicComputerIsolation(isolation?: ComputerIsolation | null) {
+  return { mode: isolation?.mode || "in-process" as const };
+}
+
 export type AgentComputer = {
   operator: ComputerOperator;
   status: ComputerStatus;

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { LayoutGroup, motion, useReducedMotion } from "framer-motion";
 import { usePathname } from "next/navigation";
 import { ChevronDown, LogOut, Menu } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -16,6 +17,7 @@ import {
   navGroupsForViewer,
 } from "@/lib/dashboard-nav";
 import posthog from "posthog-js";
+import { MOTION_DURATION, MOTION_EASE } from "@/lib/page-motion";
 
 export function MobileBottomNav({
   email,
@@ -31,6 +33,7 @@ export function MobileBottomNav({
   isSiteAdmin?: boolean;
 }) {
   const pathname = usePathname();
+  const reduceMotion = useReducedMotion();
   const [sheetOpen, setSheetOpen] = useState(false);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({
     main: true,
@@ -45,8 +48,13 @@ export function MobileBottomNav({
   }, [pathname]);
 
   const groups = useMemo(
-    () => navGroupsForViewer({ isSiteAdmin, protectedChild }),
-    [isSiteAdmin, protectedChild],
+    () =>
+      navGroupsForViewer({
+        isSiteAdmin,
+        protectedChild,
+        hasEnterpriseTools: !enterpriseLocked,
+      }),
+    [isSiteAdmin, protectedChild, enterpriseLocked],
   );
 
   const slots = protectedChild
@@ -64,6 +72,7 @@ export function MobileBottomNav({
 
   return (
     <div className="pointer-events-none fixed inset-x-0 bottom-0 z-50 md:hidden">
+      <LayoutGroup id="mobile-dock">
       <nav
         className="pointer-events-auto mx-auto flex h-[72px] max-w-[520px] items-stretch justify-around rounded-[32px] border border-white/40 bg-white/80 shadow-lg backdrop-blur-xl dark:border-white/10 dark:bg-zinc-900/80"
         style={{
@@ -83,21 +92,26 @@ export function MobileBottomNav({
             <Link
               key={item.href}
               href={item.href}
+              aria-current={active ? "page" : undefined}
               onClick={() => setSheetOpen(false)}
               className={cn(
                 "flex min-w-0 flex-1 flex-col items-center justify-center gap-1 px-1 transition-transform active:scale-95 motion-reduce:transform-none",
                 active ? "text-blue-500" : "text-muted-foreground",
               )}
             >
-              <span
-                className={cn(
-                  "grid size-9 place-items-center rounded-2xl border",
-                  active
-                    ? "border-blue-500/20 bg-blue-500/10"
-                    : "border-transparent bg-transparent",
-                )}
-              >
-                <Icon className="h-5 w-5" />
+              <span className="relative grid size-9 place-items-center rounded-2xl">
+                {active ? (
+                  <motion.span
+                    layoutId="mobile-dock-active"
+                    className="absolute inset-0 rounded-2xl border border-blue-500/20 bg-blue-500/10"
+                    transition={
+                      reduceMotion
+                        ? { duration: 0 }
+                        : { duration: MOTION_DURATION.layout, ease: MOTION_EASE }
+                    }
+                  />
+                ) : null}
+                <Icon className="relative h-5 w-5" />
               </span>
               <span className="truncate text-[10px] font-medium leading-none">{item.label}</span>
             </Link>
@@ -223,6 +237,7 @@ export function MobileBottomNav({
           </SheetContent>
         </Sheet>
       </nav>
+      </LayoutGroup>
     </div>
   );
 }

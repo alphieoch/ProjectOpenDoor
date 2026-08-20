@@ -21,6 +21,7 @@ import type {
   WriteFileResult,
 } from "./openbot-schema.js";
 import { checkNavigationTarget } from "./openbot-target.js";
+import { privateImageAuthHeaders } from "./gcp-id-token.js";
 import {
   hasOpenBotSupervisor,
   locateOpenBotComputer,
@@ -73,9 +74,11 @@ export function createOpenBotComputerClient(config: OpenBotComputerConfig) {
     async function call(path: string, init?: RequestInit) {
       let response: Response;
       try {
+        const iam = await privateImageAuthHeaders(`${base}${path}`);
         response = await fetch(`${base}${path}`, {
           ...init,
           headers: {
+            ...iam,
             ...((init?.headers as Record<string, string> | undefined) || {}),
             "x-openbot-computer-token": config.token,
             ...(botId ? { "x-openbot-bot-id": botId } : {}),

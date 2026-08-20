@@ -12,6 +12,7 @@ import { executeTool, toolsForRuntime, type ToolEvent } from "@/lib/agents/tools
 import { isLeaderbotRecord, withLeaderbotTurnGuidance } from "@/lib/openbot-leader";
 import { loadHouseManagement } from "@/lib/openbot-settings";
 import { readWorkspace } from "@/lib/agents/state";
+import { openDoorSearchSpend } from "@/lib/tools/search-spend";
 
 function gatewayUrl() {
   return (process.env.GATEWAY_URL || gatewayBaseUrl()).replace(/\/$/, "");
@@ -219,6 +220,10 @@ export async function runAgentTurn(opts: {
             : await executeTool(runtime, call.function.name, call.function.arguments, workspace, {
                 botId: opts.agent.id,
                 embeddings,
+                searchSpend: openDoorSearchSpend({
+                  orgId: opts.agent.organizationId,
+                  userId: opts.agent.createdBy,
+                }),
               });
         workspace = executed.workspace;
         const display =

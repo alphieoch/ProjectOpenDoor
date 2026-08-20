@@ -9,6 +9,7 @@ import {
 import Link from "next/link";
 import { models as modelsTable, providers, requests } from "@opendoor/database";
 import { and, eq, gte, sql } from "drizzle-orm";
+import { MotionPress, Stagger, StaggerItem } from "@/components/motion";
 import { MetricCard } from "@/components/ui/metric-card";
 import { CopyButton } from "@/components/ui/copy-button";
 import { buttonVariants } from "@/components/ui/button";
@@ -109,7 +110,7 @@ r = client.chat.completions.create(
   messages=[{"role":"user","content":"Hello"}]
 )`;
 
-  const { progress, evidence, recentAgents } = onboarding;
+  const { progress, evidence, recentAgents, world } = onboarding;
   const showGettingStarted = shouldShowGettingStarted(progress, evidence);
   const nextStep = progress.nextStepId ? GETTING_STARTED_CATALOG[progress.nextStepId] : null;
   const emptyActivityAction = nextStep
@@ -125,9 +126,14 @@ r = client.chat.completions.create(
       };
 
   return (
-    <div className="space-y-6">
+    <Stagger className="space-y-6" appear="settle">
+      <StaggerItem appear="settle">
       {showGettingStarted ? (
-        <GettingStartedCard progress={progress} evidence={evidence} />
+        <GettingStartedCard
+          progress={progress}
+          evidence={evidence}
+          needsRegion={!world.region}
+        />
       ) : (
         <section className="rounded-2xl border border-border bg-card p-4 text-card-foreground sm:p-6">
           <p className="text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground">
@@ -136,25 +142,33 @@ r = client.chat.completions.create(
           <h1 className="mt-2 text-xl font-semibold tracking-tight sm:text-2xl">Welcome back.</h1>
           <p className="mt-1 text-sm text-muted-foreground">How can I help you today?</p>
           <div className="mt-4 flex flex-wrap gap-2">
-            <Link href="/dashboard/chat" className={buttonVariants({ size: "sm" })}>
-              Open Chat
-            </Link>
-            <Link
-              href="/dashboard/openbot"
-              className={buttonVariants({ size: "sm", variant: "outline" })}
-            >
-              OpenBot
-            </Link>
-            <Link
-              href="/dashboard/usage"
-              className={buttonVariants({ size: "sm", variant: "outline" })}
-            >
-              Usage
-            </Link>
+            <MotionPress>
+              <Link href="/dashboard/chat" className={buttonVariants({ size: "sm" })}>
+                Open Chat
+              </Link>
+            </MotionPress>
+            <MotionPress>
+              <Link
+                href="/dashboard/openbot"
+                className={buttonVariants({ size: "sm", variant: "outline" })}
+              >
+                OpenBot
+              </Link>
+            </MotionPress>
+            <MotionPress>
+              <Link
+                href="/dashboard/usage"
+                className={buttonVariants({ size: "sm", variant: "outline" })}
+              >
+                Usage
+              </Link>
+            </MotionPress>
           </div>
         </section>
       )}
+      </StaggerItem>
 
+      <StaggerItem appear="settle">
       <SnapCarousel
         ariaLabel="Usage overview"
         prevLabel="Previous usage metrics"
@@ -206,7 +220,9 @@ r = client.chat.completions.create(
           />
         </div>
       </SnapCarousel>
+      </StaggerItem>
 
+      <StaggerItem appear="settle">
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <CardHeader className="pb-3">
@@ -235,9 +251,13 @@ r = client.chat.completions.create(
 
         <NextActionCard progress={progress} evidence={evidence} />
       </div>
+      </StaggerItem>
 
+      <StaggerItem appear="settle">
       <RecentActivityCard items={recentActivity} emptyAction={emptyActivityAction} />
+      </StaggerItem>
 
+      <StaggerItem appear="settle">
       <Card>
         <CardHeader>
           <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
@@ -257,7 +277,8 @@ r = client.chat.completions.create(
           </div>
         </CardContent>
       </Card>
-    </div>
+      </StaggerItem>
+    </Stagger>
   );
 }
 

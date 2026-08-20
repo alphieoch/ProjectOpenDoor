@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import { Button, buttonVariants } from './button';
 import {
 	AtSignIcon,
@@ -20,6 +20,16 @@ import { useTheme } from 'next-themes';
 import Link from 'next/link';
 import posthog from 'posthog-js';
 import { authErrorMessage } from '@/lib/workos-auth-errors';
+import {
+	ENTERPRISE_SALES_HREF,
+	SIGNUP_PLAN_CHIPS,
+	persistSignupIntentClient,
+	readSignupIntentClient,
+	resolveSignupIntent,
+	type SignupPlanId,
+} from '@/lib/signup-plan';
+import { LocalePicker } from '@/components/i18n/locale-picker';
+import { useI18n } from '@/components/i18n/i18n-provider';
 
 const QUOTES = [
 	"Every model. Every provider. One key to rule them all.",
@@ -57,13 +67,18 @@ export function AuthPage() {
 	const ssoErrorDetail = searchParams.get('error_detail');
 	const ssoSlug = searchParams.get('sso');
 	const segmentParam = searchParams.get('segment');
+	const planParam = searchParams.get('plan');
 	const modeParam = searchParams.get('mode');
 	const { theme, setTheme } = useTheme();
-	const quote = React.useMemo(() => QUOTES[Math.floor(Math.random() * QUOTES.length)], []);
-	const segment =
-		segmentParam === 'education' || segmentParam === 'enterprise_intent'
-			? segmentParam
-			: 'standard';
+	const { t, preference } = useI18n();
+	const reduceMotion = useReducedMotion();
+	const quote = QUOTES[0];
+	const intent = resolveSignupIntent({
+		plan: planParam,
+		segment: segmentParam,
+	});
+	const segment = intent.segment;
+	const selectedPlan = intent.plan;
 
 	function posthogRequestHeaders(): Record<string, string> {
 		const h: Record<string, string> = {};
@@ -92,71 +107,127 @@ export function AuthPage() {
 		}
 	}, [modeParam, signupParam, ssoSlug]);
 
+	React.useEffect(() => {
+		if (intent.plan) {
+			persistSignupIntentClient(intent);
+			if (signupParam && !planParam) {
+				const next = new URLSearchParams(searchParams.toString());
+				next.set('plan', intent.plan);
+				next.set('segment', intent.segment);
+				router.replace(`/login?${next.toString()}`);
+			}
+			return;
+		}
+		if (!signupParam || planParam) return;
+		const stored = readSignupIntentClient();
+		if (!stored.plan) return;
+		const next = new URLSearchParams(searchParams.toString());
+		next.set('plan', stored.plan);
+		next.set('segment', stored.segment);
+		router.replace(`/login?${next.toString()}`);
+	}, [intent.plan, intent.segment, planParam, router, searchParams, signupParam]);
+
+	const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+	const loginReady = emailOk && password.length > 0;
+	const signupReady = name.trim().length > 0 && emailOk && password.length >= 10;
+	const ssoReady = orgSlug.trim().length > 0;
+
 	async function handleLogin(e: React.FormEvent) {
 		e.preventDefault();
+		if (!loginReady) return;
 		setLoading(true);
 		setError('');
-		const res = await fetch('/api/auth/login', {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json', ...posthogRequestHeaders() },
-			body: JSON.stringify({ email, password }),
-		});
-		if (res.ok) {
+		if (intent.plan) persistSignupIntentClient(intent);
+		try {
+			const res = await fetch('/api/auth/login', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json', ...posthogRequestHeaders() },
+				body: JSON.stringify({
+					email,
+					password,
+					plan: selectedPlan,
+					segment,
+					locale: preference.locale,
+					region: preference.region,
+					country: preference.country,
+				}),
+			});
 			const data = await res.json().catch(() => ({}));
-			try {
-				if (data.user?.id) {
-					posthog.identify(data.user.id, {
-						email: data.user.email,
-						...(data.user.orgId ? { org_id: data.user.orgId } : {}),
-					});
+			if (res.ok) {
+				try {
+					if (data.user?.id) {
+						posthog.identify(data.user.id, {
+							email: data.user.email,
+							...(data.user.orgId ? { org_id: data.user.orgId } : {}),
+						});
+					}
+					posthog.capture('user_logged_in_client', { auth_method: 'password' });
+				} catch {
+					// Analytics is optional.
 				}
-				posthog.capture('user_logged_in_client', { auth_method: 'password' });
-			} catch {
-				// Analytics is optional.
+				router.push(data.redirectTo || '/dashboard');
+				router.refresh();
+			} else {
+				setError(data.error || t('auth.loginFailed'));
 			}
-			router.push('/dashboard');
-			router.refresh();
-		} else {
-			const data = await res.json();
-			setError(data.error || 'Login failed');
+		} catch {
+			setError('Could not reach OpenDoor. Check your connection and try again.');
+		} finally {
+			setLoading(false);
 		}
-		setLoading(false);
 	}
 
 	async function handleSignup(e: React.FormEvent) {
 		e.preventDefault();
+		if (!signupReady) return;
 		setLoading(true);
 		setError('');
-		const res = await fetch('/api/auth/signup', {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json', ...posthogRequestHeaders() },
-			body: JSON.stringify({ email, password, name, orgName, segment }),
-		});
-		if (res.ok) {
+		if (intent.plan) persistSignupIntentClient(intent);
+		try {
+			const res = await fetch('/api/auth/signup', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json', ...posthogRequestHeaders() },
+				body: JSON.stringify({
+					email,
+					password,
+					name,
+					orgName,
+					segment,
+					plan: selectedPlan,
+					locale: preference.locale,
+					region: preference.region,
+					country: preference.country,
+				}),
+			});
 			const data = await res.json().catch(() => ({}));
-			try {
-				if (data.user?.id) {
-					posthog.identify(data.user.id, {
-						email: data.user.email,
-						name: data.user.name,
+			if (res.ok) {
+				try {
+					if (data.user?.id) {
+						posthog.identify(data.user.id, {
+							email: data.user.email,
+							name: data.user.name,
+							onboarding_segment: segment,
+							...(data.user.orgId ? { org_id: data.user.orgId } : {}),
+						});
+					}
+					posthog.capture('user_signed_up_client', {
+						auth_method: 'password',
 						onboarding_segment: segment,
-						...(data.user.orgId ? { org_id: data.user.orgId } : {}),
+						signup_plan: selectedPlan,
 					});
+				} catch {
+					// Analytics is optional.
 				}
-				posthog.capture('user_signed_up_client', {
-					auth_method: 'password',
-					onboarding_segment: segment,
-				});
-			} catch {
-				// Analytics is optional.
+				router.push(data.redirectTo || '/dashboard/onboarding');
+				router.refresh();
+			} else {
+				setError(data.error || t('auth.signupFailed'));
 			}
-			router.push(data.redirectTo || '/dashboard/onboarding');
-			router.refresh();
-		} else {
-			const data = await res.json();
-			setError(data.error || 'Sign up failed');
+		} catch {
+			setError('Could not reach OpenDoor. Check your connection and try again.');
+		} finally {
+			setLoading(false);
 		}
-		setLoading(false);
 	}
 
 	function handleSSO(e: React.FormEvent) {
@@ -169,8 +240,26 @@ export function AuthPage() {
 	const ssoErrorMessage = authErrorMessage(ssoError);
 	const showAuthDebug = process.env.NODE_ENV !== 'production';
 
+	function selectPlan(plan: SignupPlanId) {
+		const nextIntent = resolveSignupIntent({ plan, segment: plan === 'student' ? 'education' : segment });
+		persistSignupIntentClient(nextIntent);
+		const next = new URLSearchParams(searchParams.toString());
+		next.set('signup', '1');
+		next.set('plan', plan);
+		next.set('segment', nextIntent.segment);
+		router.replace(`/login?${next.toString()}`);
+		setMode('signup');
+	}
+
 	function continueWithOAuth(provider: 'google' | 'github') {
-		window.location.href = `/api/auth/oauth/${provider}`;
+		const stored = readSignupIntentClient();
+		const nextIntent = intent.plan ? intent : stored;
+		if (nextIntent.plan) persistSignupIntentClient(nextIntent);
+		const next = new URLSearchParams();
+		if (nextIntent.plan) next.set('plan', nextIntent.plan);
+		if (nextIntent.segment) next.set('segment', nextIntent.segment);
+		const qs = next.toString();
+		window.location.href = `/api/auth/oauth/${provider}${qs ? `?${qs}` : ''}`;
 	}
 
 	return (
@@ -178,17 +267,23 @@ export function AuthPage() {
 			{/* Left Panel */}
 			<div className="relative hidden h-full flex-col border-r border-zinc-200 bg-zinc-50 p-10 dark:border-zinc-800 dark:bg-zinc-950 lg:flex">
 				<div className="absolute inset-0 z-10 bg-gradient-to-t from-white to-transparent dark:from-black" />
-				<div className="z-10 flex items-center justify-between">
+				<div className="z-10 flex items-center justify-between gap-3">
 					<Link href="/" className="flex items-center gap-2 transition-opacity hover:opacity-80">
 						<DoorOpen className="size-6 text-zinc-900 dark:text-white" />
 						<p className="text-xl font-semibold text-zinc-900 dark:text-white">OpenDoor</p>
 					</Link>
+					<div className="flex items-center gap-2">
+						<LocalePicker compact />
 					<button
+						type="button"
 						onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
 						className="rounded-lg p-2 text-zinc-500 hover:bg-zinc-200 dark:text-zinc-400 dark:hover:bg-zinc-800"
+						aria-label="Toggle theme"
 					>
-						{theme === 'dark' ? <Sun className="size-4" /> : <Moon className="size-4" />}
+						<Sun className="size-4 dark:hidden" />
+						<Moon className="hidden size-4 dark:block" />
 					</button>
+					</div>
 				</div>
 				<div className="z-10 mt-auto">
 					<blockquote className="space-y-2">
@@ -217,14 +312,18 @@ export function AuthPage() {
 					<div className="absolute top-0 right-0 h-[320px] w-[60px] -translate-y-[87.5%] rounded-full bg-[radial-gradient(50%_50%_at_50%_50%,rgba(0,0,0,0.04)_0,rgba(0,0,0,0.01)_80%,transparent_100%)] dark:bg-[radial-gradient(50%_50%_at_50%_50%,rgba(255,255,255,0.04)_0,rgba(255,255,255,0.01)_80%,transparent_100%)]" />
 				</div>
 
-				{/* Mobile theme toggle */}
-				<button
-					onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-					className="absolute top-4 right-4 rounded-lg p-2 min-h-[44px] min-w-[44px] text-muted-foreground hover:bg-accent lg:hidden"
-					aria-label="Toggle theme"
-				>
-					{theme === 'dark' ? <Sun className="size-4" /> : <Moon className="size-4" />}
-				</button>
+				<div className="absolute top-4 end-4 z-20 flex items-center gap-2 lg:hidden">
+					<LocalePicker compact />
+					<button
+						type="button"
+						onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+						className="rounded-lg p-2 min-h-[44px] min-w-[44px] text-muted-foreground hover:bg-accent"
+						aria-label="Toggle theme"
+					>
+						<Sun className="size-4 dark:hidden" />
+						<Moon className="hidden size-4 dark:block" />
+					</button>
+				</div>
 
 				<Link
 					href="/"
@@ -234,7 +333,7 @@ export function AuthPage() {
 					)}
 				>
 					<ChevronLeftIcon className="size-4 me-2" />
-					Home
+					{t('common.home')}
 				</Link>
 
 				<div className="mx-auto w-full max-w-sm space-y-4">
@@ -250,19 +349,60 @@ export function AuthPage() {
 							</span>
 						)}
 						<h1 className="font-garamond text-2xl font-semibold tracking-[-0.03em] text-[#181818] dark:text-[#f2f2f2]">
-							{mode === 'signup' ? 'Create your account' : 'Welcome back'}
+							{mode === 'signup' ? t('auth.createAccount') : t('auth.welcomeBack')}
 						</h1>
 						<p className="text-base text-zinc-500 dark:text-zinc-400">
 							{mode === 'signup'
 								? segment === 'education'
-									? 'Get started with an education-focused setup'
-									: 'Get started with the LLM gateway'
-								: 'Sign in to your LLM Gateway'}
+									? t('auth.educationSubtitle')
+									: t('auth.signupSubtitle')
+								: t('auth.signInSubtitle')}
 						</p>
 					</div>
 
-					{mode === 'signup' && segment === 'enterprise_intent' && (
-						<div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-300">
+					{mode === 'signup' && (
+						<div className="space-y-2">
+							<p className="text-sm font-medium text-foreground">{t('auth.choosePlan')}</p>
+							<div className="flex flex-wrap gap-2">
+								{SIGNUP_PLAN_CHIPS.map((chip) => {
+									const active = selectedPlan === chip.id;
+									return (
+										<button
+											key={chip.id}
+											type="button"
+											onClick={() => selectPlan(chip.id as SignupPlanId)}
+											className={cn(
+												'rounded-full border px-3 py-1.5 text-xs font-medium transition-colors',
+												active
+													? 'border-primary bg-primary text-primary-foreground'
+													: 'border-border bg-card text-foreground hover:bg-accent hover:text-accent-foreground'
+											)}
+										>
+											{chip.sales ? t('auth.enterpriseSales') : chip.label}
+										</button>
+									);
+								})}
+							</div>
+							{selectedPlan === 'enterprise' && (
+								<p className="text-xs text-muted-foreground">
+									Enterprise is billed through sales.{' '}
+									<a
+										href={ENTERPRISE_SALES_HREF}
+										className="font-medium text-foreground underline underline-offset-2"
+									>
+										Talk to sales
+									</a>
+									{' '}or create an account first — we will not send you to Stripe.
+								</p>
+							)}
+							{selectedPlan === 'ultra' && (
+								<p className="text-xs text-muted-foreground">Ultra is selected from your signup link.</p>
+							)}
+						</div>
+					)}
+
+					{mode === 'signup' && segment === 'enterprise_intent' && selectedPlan !== 'enterprise' && (
+						<div className="rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground">
 							Enterprise SSO is provisioned by your admin team. If you are joining an existing enterprise org, use the Enterprise SSO tab.
 						</div>
 					)}
@@ -314,6 +454,7 @@ export function AuthPage() {
 					{/* Mode tabs */}
 					<div className="flex rounded-lg border border-zinc-200 bg-zinc-50 p-1 dark:border-zinc-700 dark:bg-zinc-900">
 						<button
+							type="button"
 							onClick={() => setMode('password')}
 							className={cn(
 								'flex-1 rounded-md py-1.5 text-sm font-medium transition-colors',
@@ -322,9 +463,10 @@ export function AuthPage() {
 									: 'text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200'
 							)}
 						>
-							{mode === 'signup' ? 'Sign up' : 'Email'}
+							{mode === 'signup' ? t('auth.signUpFree') : t('auth.email')}
 						</button>
 						<button
+							type="button"
 							onClick={() => setMode('sso')}
 							className={cn(
 								'flex-1 rounded-md py-1.5 text-sm font-medium transition-colors',
@@ -333,7 +475,7 @@ export function AuthPage() {
 									: 'text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200'
 							)}
 						>
-							Enterprise SSO
+							{t('auth.enterpriseSso')}
 						</button>
 					</div>
 
@@ -341,12 +483,14 @@ export function AuthPage() {
 						<form onSubmit={handleLogin} className="space-y-2">
 							<motion.div
 								className="relative"
-								initial={{ y: 20, opacity: 0 }}
+								initial={reduceMotion ? false : { y: 20, opacity: 0 }}
 								animate={{ y: 0, opacity: 1 }}
-								transition={{ type: "spring", damping: 25, stiffness: 300, delay: 0 }}
+								transition={reduceMotion ? { duration: 0 } : { type: "spring", damping: 25, stiffness: 300, delay: 0 }}
 							>
 								<Input
 									placeholder="you@company.com"
+									aria-label={t('auth.email')}
+									autoComplete="email"
 									className="peer h-12 rounded-full border-0 bg-[#181818]/10 ps-12 text-[#181818] placeholder:text-[#181818]/50 auth-focus dark:bg-white/10 dark:text-[#f2f2f2] dark:placeholder:text-[#f2f2f2]/50"
 									type="email"
 									value={email}
@@ -359,12 +503,14 @@ export function AuthPage() {
 							</motion.div>
 							<motion.div
 								className="relative"
-								initial={{ y: 20, opacity: 0 }}
+								initial={reduceMotion ? false : { y: 20, opacity: 0 }}
 								animate={{ y: 0, opacity: 1 }}
-								transition={{ type: "spring", damping: 25, stiffness: 300, delay: 0.1 }}
+								transition={reduceMotion ? { duration: 0 } : { type: "spring", damping: 25, stiffness: 300, delay: 0.1 }}
 							>
 								<Input
-									placeholder="Password"
+									placeholder={t('auth.password')}
+									aria-label={t('auth.password')}
+									autoComplete="current-password"
 									className="peer h-12 rounded-full border-0 bg-[#181818]/10 ps-12 text-[#181818] placeholder:text-[#181818]/50 auth-focus dark:bg-white/10 dark:text-[#f2f2f2] dark:placeholder:text-[#f2f2f2]/50"
 									type="password"
 									value={password}
@@ -377,29 +523,29 @@ export function AuthPage() {
 							</motion.div>
 
 							<motion.div
-								initial={{ y: 20, opacity: 0 }}
+								initial={reduceMotion ? false : { y: 20, opacity: 0 }}
 								animate={{ y: 0, opacity: 1 }}
-								transition={{ type: "spring", damping: 25, stiffness: 300, delay: 0.2 }}
+								transition={reduceMotion ? { duration: 0 } : { type: "spring", damping: 25, stiffness: 300, delay: 0.2 }}
 							>
 							<Button
 								type="submit"
-								className="w-full h-12 rounded-full !bg-[#181818] !text-white hover:!bg-[#181818]/90 dark:!bg-[#f2f2f2] dark:!text-[#181818] active:scale-[0.98]"
+								className="w-full h-12 rounded-full !bg-[#181818] !text-white hover:!bg-[#181818]/90 dark:!bg-[#f2f2f2] dark:!text-[#181818] active:scale-[0.98] motion-reduce:active:scale-100"
 								size="mobile"
 								isLoading={loading}
-								disabled={loading}
+								disabled={loading || !loginReady}
 							>
 								<LogIn className="me-2 size-4" />
-								{loading ? 'Signing in…' : 'Continue With Email'}
+								{loading ? t('auth.signingIn') : t('auth.signIn')}
 							</Button>
 							</motion.div>
 							<p className="text-center text-sm text-zinc-500 dark:text-zinc-400">
-								No account?{' '}
+								{t('auth.noAccount')}{' '}
 								<button
 									type="button"
 									onClick={() => setMode('signup')}
 									className="font-medium text-zinc-900 hover:text-zinc-700 dark:text-white dark:hover:text-zinc-200"
 								>
-									Sign up free
+									{t('auth.signUpFree')}
 								</button>
 							</p>
 						</form>
@@ -409,7 +555,9 @@ export function AuthPage() {
 						<form onSubmit={handleSignup} className="space-y-2">
 							<div className="relative">
 								<Input
-									placeholder="Full Name"
+									placeholder={t('auth.fullName')}
+									aria-label={t('auth.fullName')}
+									autoComplete="name"
 									className="peer h-12 rounded-full border-0 bg-[#181818]/10 ps-12 text-[#181818] placeholder:text-[#181818]/50 auth-focus dark:bg-white/10 dark:text-[#f2f2f2] dark:placeholder:text-[#f2f2f2]/50"
 									type="text"
 									value={name}
@@ -422,7 +570,9 @@ export function AuthPage() {
 							</div>
 							<div className="relative">
 								<Input
-									placeholder="Organization (optional)"
+									placeholder={`${t('auth.organization')} (${t('auth.organizationOptional')})`}
+									aria-label={t('auth.organization')}
+									autoComplete="organization"
 									className="peer h-12 rounded-full border-0 bg-[#181818]/10 ps-12 text-[#181818] placeholder:text-[#181818]/50 auth-focus dark:bg-white/10 dark:text-[#f2f2f2] dark:placeholder:text-[#f2f2f2]/50"
 									type="text"
 									value={orgName}
@@ -435,6 +585,8 @@ export function AuthPage() {
 							<div className="relative">
 								<Input
 									placeholder="you@company.com"
+									aria-label={t('auth.email')}
+									autoComplete="email"
 									className="peer h-12 rounded-full border-0 bg-[#181818]/10 ps-12 text-[#181818] placeholder:text-[#181818]/50 auth-focus dark:bg-white/10 dark:text-[#f2f2f2] dark:placeholder:text-[#f2f2f2]/50"
 									type="email"
 									value={email}
@@ -447,7 +599,9 @@ export function AuthPage() {
 							</div>
 							<div className="relative">
 								<Input
-									placeholder="Password (min 10 chars)"
+									placeholder={`${t('auth.password')} (${t('auth.passwordHint')})`}
+									aria-label={t('auth.password')}
+									autoComplete="new-password"
 									className="peer h-12 rounded-full border-0 bg-[#181818]/10 ps-12 text-[#181818] placeholder:text-[#181818]/50 auth-focus dark:bg-white/10 dark:text-[#f2f2f2] dark:placeholder:text-[#f2f2f2]/50"
 									type="password"
 									value={password}
@@ -464,19 +618,19 @@ export function AuthPage() {
 								type="submit"
 								className="w-full h-12 rounded-full !bg-[#181818] !text-white hover:!bg-[#181818]/90 dark:!bg-[#f2f2f2] dark:!text-[#181818]"
 								size="mobile"
-								disabled={loading}
+								disabled={loading || !signupReady}
 							>
 								<UserPlus className="me-2 size-4" />
-								{loading ? 'Creating account…' : 'Create Account'}
+								{loading ? t('auth.creatingAccount') : t('auth.createAccountCta')}
 							</Button>
 							<p className="text-center text-sm text-zinc-500 dark:text-zinc-400">
-								Already have an account?{' '}
+								{t('auth.haveAccount')}{' '}
 								<button
 									type="button"
 									onClick={() => setMode('password')}
 									className="font-medium text-zinc-900 hover:text-zinc-700 dark:text-white dark:hover:text-zinc-200"
 								>
-									Sign in
+									{t('auth.signIn')}
 								</button>
 							</p>
 						</form>
@@ -486,7 +640,9 @@ export function AuthPage() {
 						<form onSubmit={handleSSO} className="space-y-2">
 							<div className="relative">
 								<Input
-									placeholder="Organization Slug"
+									placeholder={t('auth.orgSlug')}
+									aria-label={t('auth.orgSlug')}
+									autoComplete="organization"
 									className="peer h-12 rounded-full border-0 bg-[#181818]/10 ps-12 text-[#181818] placeholder:text-[#181818]/50 auth-focus dark:bg-white/10 dark:text-[#f2f2f2] dark:placeholder:text-[#f2f2f2]/50"
 									type="text"
 									value={orgSlug}
@@ -504,10 +660,10 @@ export function AuthPage() {
 								type="submit"
 								className="w-full h-12 rounded-full !bg-[#181818] !text-white hover:!bg-[#181818]/90 dark:!bg-[#f2f2f2] dark:!text-[#181818]"
 								size="mobile"
-								disabled={ssoLoading}
+								disabled={ssoLoading || !ssoReady}
 							>
 								<Shield className="me-2 size-4" />
-								{ssoLoading ? 'Redirecting…' : 'Continue with SSO'}
+								{ssoLoading ? t('auth.continueSso') : t('auth.continueSso')}
 							</Button>
 						</form>
 					)}
@@ -536,6 +692,7 @@ export function AuthPage() {
 }
 
 function FloatingPaths({ position }: { position: number }) {
+	const reduceMotion = useReducedMotion();
 	const paths = Array.from({ length: 36 }, (_, i) => ({
 		id: i,
 		d: `M-${380 - i * 5 * position} -${189 + i * 6}C-${
@@ -564,17 +721,25 @@ function FloatingPaths({ position }: { position: number }) {
 						stroke="currentColor"
 						strokeWidth={path.width}
 						strokeOpacity={0.1 + path.id * 0.03}
-						initial={{ pathLength: 0.3, opacity: 0.6 }}
-						animate={{
-							pathLength: 1,
-							opacity: [0.3, 0.6, 0.3],
-							pathOffset: [0, 1, 0],
-						}}
-						transition={{
-							duration: 20 + Math.random() * 10,
-							repeat: Number.POSITIVE_INFINITY,
-							ease: 'linear',
-						}}
+						initial={reduceMotion ? false : { pathLength: 0.3, opacity: 0.6 }}
+						animate={
+							reduceMotion
+								? { pathLength: 1, opacity: 0.35, pathOffset: 0 }
+								: {
+										pathLength: 1,
+										opacity: [0.3, 0.6, 0.3],
+										pathOffset: [0, 1, 0],
+									}
+						}
+						transition={
+							reduceMotion
+								? { duration: 0 }
+								: {
+										duration: 20 + (path.id % 10),
+										repeat: Number.POSITIVE_INFINITY,
+										ease: 'linear',
+									}
+						}
 					/>
 				))}
 			</svg>
@@ -586,7 +751,10 @@ const GoogleIcon = (props: React.ComponentProps<'svg'>) => (
 	<svg
 		xmlns="http://www.w3.org/2000/svg"
 		viewBox="0 0 24 24"
+		width={24}
+		height={24}
 		fill="currentColor"
+		aria-hidden="true"
 		{...props}
 	>
 		<g>
@@ -599,7 +767,10 @@ const GithubIcon = (props: React.ComponentProps<'svg'>) => (
 	<svg
 		xmlns="http://www.w3.org/2000/svg"
 		viewBox="0 0 24 24"
+		width={24}
+		height={24}
 		fill="currentColor"
+		aria-hidden="true"
 		{...props}
 	>
 		<path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12" />

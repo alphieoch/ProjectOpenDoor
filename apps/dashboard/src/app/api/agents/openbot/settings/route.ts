@@ -8,7 +8,7 @@ import { loadAgentsEntitlement } from "@/lib/agents/entitlement";
 import { loadEnterpriseAccess } from "@/lib/enterprise";
 import { publicAgent } from "@/lib/agents/provision";
 import { getDb } from "@/lib/db";
-import { agentPurgeAt, daysLeftToRecover, getPlan, hasOpenBotSupervisor } from "@opendoor/shared";
+import { agentPurgeAt, daysLeftToRecover, getPlan, hasOpenBotSupervisor, workspaceHasEnterpriseTools } from "@opendoor/shared";
 import { summarizeOpenBotCapacity } from "@/lib/openbot-leader";
 import { readHouseManagement, withHouseManagement } from "@/lib/openbot-settings";
 
@@ -150,7 +150,10 @@ export async function GET() {
     })),
     plugins,
     sso: {
-      enterprise: enterprise.active,
+      enterprise: workspaceHasEnterpriseTools({
+        plan: org?.plan || enterprise.plan,
+        isSiteAdmin: session.isSiteAdmin,
+      }),
       plan: enterprise.plan,
       enabled: Boolean(org?.ssoEnabled),
       defaultRole: org?.ssoDefaultRole || "member",

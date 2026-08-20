@@ -8,6 +8,7 @@ import { loadAgentsEntitlement } from "@/lib/agents/entitlement";
 import { loadWebSearchEntitlement } from "@/lib/web-search/entitlement";
 import { billingIsUnlimited, getPlan } from "@opendoor/shared";
 import { orgHasUnlimitedSpend } from "@/lib/credits";
+import { loadOrgSeatState } from "@/lib/seat-allocation";
 
 export async function GET() {
   try {
@@ -33,10 +34,13 @@ export async function GET() {
       return NextResponse.json({ error: "Organization not found" }, { status: 404 });
     }
 
-    const [seatRow] = await db
-      .select({ n: sql<number>`count(*)` })
-      .from(users)
-      .where(eq(users.organizationId, orgId));
+    const [seatRow, seatState] = await Promise.all([
+      db
+        .select({ n: sql<number>`count(*)` })
+        .from(users)
+        .where(eq(users.organizationId, orgId)),
+      loadOrgSeatState(orgId),
+    ]);
 
     const [addon, webSearchAddon] = await Promise.all([
       loadAgentsEntitlement(orgId, session),
@@ -56,7 +60,10 @@ export async function GET() {
           ? "plan"
           : null,
       isSiteAdmin: Boolean(session.isSiteAdmin),
-      seatCount: Math.max(1, Number(seatRow?.n || 1)),
+      seatCount: Math.max(1, Number(seatRow[0]?.n || 1)),
+      seatsPaid: seatState?.paidSeatQuantity ?? 1,
+      maxSeats: seatState?.maxSeats ?? 1,
+      seatsUsed: seatState?.seatsUsed ?? Number(seatRow[0]?.n || 1),
       checkout: {
         student: checkoutPlanConfigured("student"),
         pro: checkoutPlanConfigured("pro"),

@@ -87,9 +87,9 @@ async function firstModelId() {
       .from(models)
       .where(eq(models.enabled, true))
       .limit(1);
-    return row[0]?.modelId || "llama-3.1-8b-instruct";
+    return row[0]?.modelId || "gemma-4-26b-a4b-it";
   } catch {
-    return "llama-3.1-8b-instruct";
+    return "gemma-4-26b-a4b-it";
   }
 }
 

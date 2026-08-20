@@ -2,7 +2,7 @@ import { createHash, randomBytes } from "crypto";
 import { Hono } from "hono";
 import { and, eq, isNull, ne } from "drizzle-orm";
 import { db, apiKeys } from "@opendoor/database";
-import { getPlan, SYSTEM_ASSISTANT_KEY_NAME } from "@opendoor/shared";
+import { SYSTEM_ASSISTANT_KEY_NAME, apiKeyLimitMessage, apiKeyQuota } from "@opendoor/shared";
 import { asString, requireTenant, writeAudit } from "../lib/platform.js";
 
 const keysRouter = new Hono();
@@ -42,7 +42,6 @@ keysRouter.post("/", async (c) => {
   const tenant = requireTenant(c);
   if (!tenant) return c.json({ error: "Unauthorized" }, 401);
   const body = await c.req.json().catch(() => ({}));
-  const limits = getPlan(tenant.organization.plan);
   const existing = await db
     .select({ id: apiKeys.id })
     .from(apiKeys)
@@ -53,11 +52,13 @@ keysRouter.post("/", async (c) => {
         ne(apiKeys.name, SYSTEM_ASSISTANT_KEY_NAME)
       )
     );
-  if (existing.length >= limits.maxApiKeys) {
+  const quota = apiKeyQuota(existing.length, tenant.organization.plan);
+  if (quota.atLimit) {
     return c.json(
       {
-        error: `${limits.name} includes ${limits.maxApiKeys} API keys. Upgrade to add more.`,
-        limit: limits.maxApiKeys,
+        error: apiKeyLimitMessage(quota.planName, quota.max),
+        limit: quota.max,
+        quota,
       },
       402
     );

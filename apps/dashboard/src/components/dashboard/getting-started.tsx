@@ -11,6 +11,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { SnapCarousel, snapCarouselItemClassName } from "@/components/dashboard/snap-carousel";
 import { PageHeader } from "@/components/ui/page-header";
 import { cn } from "@/lib/utils";
+import { RegionalOnboarding } from "@/components/i18n/regional-onboarding";
+import { useI18n } from "@/components/i18n/i18n-provider";
 import {
   GETTING_STARTED_CATALOG,
   GETTING_STARTED_STEPS,
@@ -23,10 +25,13 @@ import {
 export function GettingStartedCard({
   progress,
   evidence,
+  needsRegion = false,
 }: {
   progress: GettingStartedProgress;
   evidence: OnboardingEvidence;
+  needsRegion?: boolean;
 }) {
+  const { t } = useI18n();
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [dismissed, setDismissed] = useState(false);
@@ -54,15 +59,25 @@ export function GettingStartedCard({
 
   return (
     <section className="rounded-2xl border border-border bg-card p-4 text-card-foreground sm:p-6">
+      {needsRegion ? (
+        <div className="mb-6">
+          <RegionalOnboarding
+            compact
+            segment={evidence.onboardingSegment}
+            plan={evidence.plan}
+            className="border-0 bg-transparent p-0 sm:p-0"
+          />
+        </div>
+      ) : null}
       <PageHeader
         compact
         className="mb-4"
-        eyebrow="Getting started"
-        title="Welcome to OpenDoor"
+        eyebrow={t("gettingStarted.eyebrow")}
+        title={t("gettingStarted.title")}
         description={
           progress.requiredDone
-            ? "Core setup is done. Optional steps below are there when you need them."
-            : "Chat and a coworker get you into the product. Everything else is optional."
+            ? t("gettingStarted.coreDone")
+            : t("gettingStarted.coreTodo")
         }
         actions={
           <div className="flex flex-wrap items-center gap-2">
@@ -90,7 +105,7 @@ export function GettingStartedCard({
           disabled={pending}
           onClick={() => void dismiss()}
         >
-          Hide setup
+          {t("gettingStarted.hide")}
         </button>
         <p className="text-xs text-muted-foreground">
           Overview below stays live either way.

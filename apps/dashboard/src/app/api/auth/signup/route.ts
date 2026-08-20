@@ -11,12 +11,39 @@ import {
   jsonAuthSuccess,
   workosErrorMessage,
 } from "@/lib/workos-password-auth";
-import { applySessionCookies } from "@/lib/session-cookie";
+import { applySessionCookies, cookieSecureFromRequest } from "@/lib/session-cookie";
 import { syncWorkOSUserToSession } from "@/lib/workos-sync";
 import { enforceAuthRateLimit } from "@/lib/auth-rate-limit";
 
+import {
+  applySignupIntentCookies,
+  clearSignupIntentCookies,
+  postAuthPath,
+  resolveSignupIntentFromRequest,
+  type SignupIntent,
+} from "@/lib/signup-plan";
+import { applyWorldCookies } from "@/lib/i18n/cookies";
+import { persistWorldToWorkspace, worldPreferenceFromRequest } from "@/lib/i18n/persist";
+
+function withSignupCookies(
+  response: NextResponse,
+  intent: SignupIntent,
+  redirectTo: string,
+  world?: ReturnType<typeof worldPreferenceFromRequest>
+) {
+  if (intent.plan && (redirectTo.includes("checkout=") || intent.plan === "enterprise")) {
+    applySignupIntentCookies(response, intent);
+  } else {
+    clearSignupIntentCookies(response);
+  }
+  if (world) applyWorldCookies(response, world);
+  return response;
+}
+
 export async function POST(req: NextRequest) {
-  const { email, password, name, orgName, segment } = await req.json();
+  const { email, password, name, orgName, segment, plan, locale, region, country } = await req.json();
+  const intent = resolveSignupIntentFromRequest(req, { plan, segment });
+  const world = worldPreferenceFromRequest(req, { locale, region, country });
 
   if (!email || !password || !name) {
     return NextResponse.json(
@@ -32,9 +59,14 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const onboardingSegment: OnboardingSegment = isOnboardingSegment(segment)
-    ? segment
-    : "standard";
+  const onboardingSegment: OnboardingSegment =
+    intent.segment ||
+    (isOnboardingSegment(segment) ? segment : "standard");
+  const signupRedirect = postAuthPath({
+    plan: intent.plan,
+    isNew: true,
+    unpaid: true,
+  });
   const normalized = String(email).toLowerCase().trim();
   const limited = enforceAuthRateLimit("signup", req, normalized);
   if (limited) return limited;
@@ -64,19 +96,38 @@ export async function POST(req: NextRequest) {
             .set({ name: orgName, updatedAt: new Date() })
             .where(eq(organizations.id, session.orgId));
         }
+        if (onboardingSegment !== "standard") {
+          const db = getDb();
+          await db
+            .update(organizations)
+            .set({ onboardingSegment, updatedAt: new Date() })
+            .where(eq(organizations.id, session.orgId));
+        }
+        await persistWorldToWorkspace({
+          userId: session.userId,
+          orgId: session.orgId,
+          preference: world,
+        });
         posthogServerCapture(req, session.userId, "user_signed_up", {
           email: user.email,
           organization_id: session.orgId,
           onboarding_segment: onboardingSegment,
+          signup_plan: intent.plan,
           auth_method: "workos_password",
         });
-        return jsonAuthSuccess(
-          {
-            success: true,
-            user: { id: session.userId, email: user.email, name, orgId: session.orgId },
-          },
-          token,
-          "/dashboard/onboarding"
+        return withSignupCookies(
+          jsonAuthSuccess(
+            {
+              success: true,
+              user: { id: session.userId, email: user.email, name, orgId: session.orgId },
+            },
+            token,
+            signupRedirect,
+            req
+          ),
+          intent,
+          signupRedirect,
+          world
         );
       } catch (authErr) {
         const msg = workosErrorMessage(authErr, "Account created");
@@ -150,7 +201,7 @@ export async function POST(req: NextRequest) {
       creditsUsdCents: 0,
       welcomeCreditsUsdCents: 0,
       signupCreditGranted: false,
-      metadata: { onboarding_checklist: {} },
+      metadata: { onboarding_checklist: {}, world },
     })
     .returning();
 
@@ -179,12 +230,19 @@ export async function POST(req: NextRequest) {
     email: user.email,
     organization_id: org.id,
     onboarding_segment: onboardingSegment,
+    signup_plan: intent.plan,
   });
 
   const response = NextResponse.json({
     success: true,
     user: { id: user.id, email: user.email, name: user.name, orgId: org.id },
+    redirectTo: signupRedirect,
   });
-  applySessionCookies(response, token);
-  return response;
+  applySessionCookies(response, token, 60 * 60 * 24 * 7, cookieSecureFromRequest(req));
+  await persistWorldToWorkspace({
+    userId: user.id,
+    orgId: org.id,
+    preference: world,
+  });
+  return withSignupCookies(response, intent, signupRedirect, world);
 }

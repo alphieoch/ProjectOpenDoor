@@ -5,6 +5,7 @@ import { eq } from "drizzle-orm";
 import { requireAuth } from "@/lib/auth";
 import { logAuditEvent } from "@/lib/audit";
 import { loadEnterpriseAccess } from "@/lib/enterprise";
+import { workspaceHasEnterpriseTools } from "@opendoor/shared";
 
 export async function GET() {
   try {
@@ -18,6 +19,7 @@ export async function GET() {
         id: true,
         name: true,
         slug: true,
+        plan: true,
         ssoEnabled: true,
         ssoDefaultRole: true,
         workosOrganizationId: true,
@@ -34,7 +36,27 @@ export async function GET() {
       return NextResponse.json({ error: "Organization not found" }, { status: 404 });
     }
 
-    return NextResponse.json({ org });
+    const enterpriseTools = workspaceHasEnterpriseTools({
+      plan: org.plan,
+      isSiteAdmin: session.isSiteAdmin,
+    });
+
+    return NextResponse.json({
+      org,
+      enterpriseTools,
+      sso: {
+        included: enterpriseTools,
+        enabled: Boolean(org.ssoEnabled),
+        defaultRole: org.ssoDefaultRole || "member",
+        workosOrganizationId: org.workosOrganizationId,
+        workosConnectionId: org.workosConnectionId,
+      },
+      scim: {
+        included: enterpriseTools,
+        available: enterpriseTools,
+        configured: Boolean(org.workosOrganizationId),
+      },
+    });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Failed to load SSO settings";
     if (message === "Unauthorized") {

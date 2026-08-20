@@ -1,3 +1,4 @@
+import { isSearchToolName } from "@opendoor/shared";
 import { houseToolLabel, houseToolThreadContent, isHouseToolName } from "@/lib/openbot-tool-display";
 
 export function HouseToolChip({
@@ -8,7 +9,8 @@ export function HouseToolChip({
   content: string;
 }) {
   const title = houseToolLabel(name);
-  const body = isHouseToolName(name) ? houseToolThreadContent(name, content) : content;
+  const body =
+    isHouseToolName(name) || isSearchToolName(name) ? houseToolThreadContent(name, content) : content;
 
   return (
     <div

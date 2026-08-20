@@ -64,6 +64,7 @@ export default async function DocsPage({
         <DocsNav
           tabs={config.tabs}
           groups={groupsForTab(activeTab)}
+          pinned={config.pinned}
           currentHref={page.href}
           activeTab={activeTab}
         />
@@ -85,9 +86,9 @@ export default async function DocsPage({
           {prev ? (
             <Link
               href={docsHref(prev.href)}
-              className="rounded-2xl border border-border bg-white px-5 py-4 transition hover:border-slate-300"
+              className="rounded-2xl border border-border bg-card px-5 py-4 transition hover:border-foreground/20"
             >
-              <span className="inline-flex items-center gap-1 text-xs font-medium uppercase tracking-wide text-slate-400">
+              <span className="inline-flex items-center gap-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 <ArrowLeft className="h-3.5 w-3.5" /> Previous
               </span>
               <p className="mt-1 font-medium text-foreground">{prev.title}</p>
@@ -98,9 +99,9 @@ export default async function DocsPage({
           {next ? (
             <Link
               href={docsHref(next.href)}
-              className="rounded-2xl border border-border bg-white px-5 py-4 text-right transition hover:border-slate-300"
+              className="rounded-2xl border border-border bg-card px-5 py-4 text-right transition hover:border-foreground/20"
             >
-              <span className="inline-flex items-center justify-end gap-1 text-xs font-medium uppercase tracking-wide text-slate-400">
+              <span className="inline-flex items-center justify-end gap-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 Next <ArrowRight className="h-3.5 w-3.5" />
               </span>
               <p className="mt-1 font-medium text-foreground">{next.title}</p>

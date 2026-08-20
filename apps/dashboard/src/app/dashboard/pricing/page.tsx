@@ -7,6 +7,7 @@ import {
   PricingAvailableModels,
   type PricingAvailableModel,
 } from "@/components/pricing-available-models";
+import { Stagger, StaggerItem } from "@/components/motion";
 import { PageHeader } from "@/components/ui/page-header";
 import type { EffortLevel, SpeedTier } from "@/lib/pricing-markup";
 
@@ -89,11 +90,11 @@ export default function PricingPage() {
           <p className="font-medium">{error}</p>
         </div>
       )}
-      <div
-        className="grid w-full min-h-0 flex-1 gap-5 lg:grid-cols-2"
-        style={{ overflow: "hidden" }}
+      <Stagger
+        className="grid w-full min-h-0 flex-1 gap-5 overflow-hidden lg:grid-cols-2"
+        appear="fade"
       >
-        <div className="min-h-0 overflow-hidden">
+        <StaggerItem className="min-h-0 overflow-hidden">
           <PricingCalculator
             rules={rules}
             loading={loading}
@@ -104,8 +105,8 @@ export default function PricingPage() {
             effortLevel={effortLevel}
             onEffortLevelChange={setEffortLevel}
           />
-        </div>
-        <div className="min-h-0 overflow-hidden">
+        </StaggerItem>
+        <StaggerItem className="min-h-0 overflow-hidden">
           <PricingAvailableModels
             models={models}
             rules={rules}
@@ -115,8 +116,8 @@ export default function PricingPage() {
             onSelect={setSelectedModel}
             loading={loading}
           />
-        </div>
-      </div>
+        </StaggerItem>
+      </Stagger>
     </div>
   );
 }

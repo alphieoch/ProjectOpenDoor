@@ -6,6 +6,7 @@ import { DashboardFrame } from "@/components/dashboard/dashboard-frame";
 import { getDb } from "@/lib/db";
 import { organizations, users } from "@opendoor/database";
 import { eq } from "drizzle-orm";
+import { workspaceHasEnterpriseTools } from "@opendoor/shared";
 
 interface LayoutProfileCache {
   onboardingSegment?: string;
@@ -59,7 +60,10 @@ async function getCachedProfile(session: {
     workspaceName = org?.name || displayName;
     const plan = (org?.plan || "free").trim();
     planLabel = `${plan.charAt(0).toUpperCase()}${plan.slice(1)} plan`;
-    enterpriseLocked = !session.isSiteAdmin && plan.toLowerCase() !== "enterprise";
+    enterpriseLocked = !workspaceHasEnterpriseTools({
+      plan,
+      isSiteAdmin: session.isSiteAdmin,
+    });
     protectedChild = Boolean(user?.protectedChild);
   } catch (err) {
     console.error("[dashboard layout] database unavailable", err);

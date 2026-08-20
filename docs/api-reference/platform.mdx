@@ -30,7 +30,10 @@ A 402 means the key or org cannot cover the estimated cost. Top up on Billing, o
 ```ts
 import { OpenDoor } from "@opendoor/sdk";
 
-const client = new OpenDoor(); // OPENDOOR_API_KEY + OPENDOOR_BASE_URL
+const client = new OpenDoor({
+  apiKey: process.env.OPENDOOR_API_KEY,
+  baseURL: "{{GATEWAY_URL}}",
+});
 
 const catalog = await client.catalog.list();
 const account = await client.account.get();
@@ -51,7 +54,7 @@ Python:
 ```python
 from opendoor import OpenDoor
 
-client = OpenDoor()  # OPENDOOR_API_KEY
+client = OpenDoor(base_url="{{GATEWAY_URL}}")  # OPENDOOR_API_KEY
 print(client.account.balance())
 print(client.assistants.chat(assistant_id, messages=[{"role": "user", "content": "Hello"}]))
 ```

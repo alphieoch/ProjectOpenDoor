@@ -13,9 +13,37 @@ export type DocsConfig = {
   name: string;
   description?: string;
   tabs: DocsTab[];
+  pinned?: DocsPageLink[];
   sidebar: DocsSidebarGroup[];
   redirects?: Record<string, string>;
 };
+
+/** Hosted Cloud Run gateway — used when `NEXT_PUBLIC_GATEWAY_URL` is unset. */
+export const PRODUCTION_GATEWAY_URL = "https://opendoor-gateway-u5ojp4qjiq-uc.a.run.app";
+export const PRODUCTION_APP_URL = "https://opendoor-gcp.web.app";
+/** Vertex MaaS id from `VERTEX_SERVERLESS_MODEL_IDS` — callable on the hosted gateway. */
+export const DOCS_EXAMPLE_MODEL = "gemma-4-26b-a4b-it";
+
+export function docsGatewayUrl() {
+  return (process.env.NEXT_PUBLIC_GATEWAY_URL || PRODUCTION_GATEWAY_URL).replace(/\/$/, "");
+}
+
+export function docsAppUrl() {
+  return (process.env.NEXT_PUBLIC_APP_URL || PRODUCTION_APP_URL).replace(/\/$/, "");
+}
+
+export function interpolateDocsBody(
+  body: string,
+  vars?: { gatewayUrl?: string; appUrl?: string; exampleModel?: string },
+) {
+  const gateway = (vars?.gatewayUrl || docsGatewayUrl()).replace(/\/$/, "");
+  const app = (vars?.appUrl || docsAppUrl()).replace(/\/$/, "");
+  const model = vars?.exampleModel || DOCS_EXAMPLE_MODEL;
+  return body
+    .replaceAll("{{GATEWAY_URL}}", gateway)
+    .replaceAll("{{APP_URL}}", app)
+    .replaceAll("{{EXAMPLE_MODEL}}", model);
+}
 
 export type DocsArticle = {
   slug: string[];
@@ -131,6 +159,7 @@ export function knownDocHrefs() {
   const hrefs = new Set<string>(["/"]);
   for (const slug of listDocSlugs()) hrefs.add(slugToHref(slug));
   const config = loadDocsConfig();
+  for (const page of config.pinned ?? []) hrefs.add(page.href);
   for (const group of config.sidebar) {
     for (const page of group.pages) hrefs.add(page.href);
   }
@@ -147,7 +176,7 @@ export function loadDocPage(slug: string[]): DocsArticle | null {
     href,
     title: data.title || headingFromBody(body) || href,
     description: data.description || "",
-    body: expandDocsComponents(body).trim(),
+    body: interpolateDocsBody(expandDocsComponents(body)).trim(),
   };
 }
 
@@ -169,7 +198,15 @@ export function resolveDocSlug(slug: string[]): string[] | null {
 }
 
 export function flattenSidebarPages() {
-  return loadDocsConfig().sidebar.flatMap((group) => group.pages);
+  const config = loadDocsConfig();
+  const pages: DocsPageLink[] = [];
+  const seen = new Set<string>();
+  for (const page of [...(config.pinned ?? []), ...config.sidebar.flatMap((group) => group.pages)]) {
+    if (seen.has(page.href)) continue;
+    seen.add(page.href);
+    pages.push(page);
+  }
+  return pages;
 }
 
 export function adjacentPages(href: string) {

@@ -1,0 +1,98 @@
+# Cloud Armor backend policy for OpenDoor (attach to GCLB serverless NEG backends).
+# Allow the world — no geo-block, including no African country deny list.
+# Rate limits only. OWASP-ish ModSecurity CRS at sensitivity 1.
+#
+# Apply: ./scripts/setup-gcp-security.sh
+# Or: gcloud compute security-policies create opendoor-armor --file-name=infra/gcp/armor-policy.yaml --global
+name: opendoor-armor
+description: >-
+  OpenDoor WAF. OWASP preconfigured rules (sensitivity 1) + per-IP rate limit.
+  Default allow the world. Do not add destCountry/origin.region_code deny lists
+  (Africa must stay reachable).
+type: CLOUD_ARMOR
+advancedOptionsConfig:
+  jsonParsing: STANDARD
+  logLevel: NORMAL
+adaptiveProtectionConfig:
+  layer7DdosDefenseConfig:
+    enable: true
+rules:
+  - action: deny(403)
+    description: OWASP SQLi (sensitivity 1)
+    preview: false
+    priority: 1000
+    match:
+      expr:
+        expression: "evaluatePreconfiguredWaf('sqli-v33-stable', {'sensitivity': 1})"
+  - action: deny(403)
+    description: OWASP XSS (sensitivity 1)
+    preview: false
+    priority: 1010
+    match:
+      expr:
+        expression: "evaluatePreconfiguredWaf('xss-v33-stable', {'sensitivity': 1})"
+  - action: deny(403)
+    description: OWASP LFI (sensitivity 1)
+    preview: false
+    priority: 1020
+    match:
+      expr:
+        expression: "evaluatePreconfiguredWaf('lfi-v33-stable', {'sensitivity': 1})"
+  - action: deny(403)
+    description: OWASP RCE (sensitivity 1)
+    preview: false
+    priority: 1030
+    match:
+      expr:
+        expression: "evaluatePreconfiguredWaf('rce-v33-stable', {'sensitivity': 1})"
+  - action: deny(403)
+    description: OWASP method enforcement (sensitivity 1)
+    preview: false
+    priority: 1040
+    match:
+      expr:
+        expression: "evaluatePreconfiguredWaf('methodenforcement-v33-stable', {'sensitivity': 1})"
+  - action: deny(403)
+    description: OWASP scanner detection (sensitivity 1)
+    preview: false
+    priority: 1050
+    match:
+      expr:
+        expression: "evaluatePreconfiguredWaf('scannerdetection-v33-stable', {'sensitivity': 1})"
+  - action: deny(403)
+    description: OWASP protocol attack (sensitivity 1)
+    preview: false
+    priority: 1060
+    match:
+      expr:
+        expression: "evaluatePreconfiguredWaf('protocolattack-v33-stable', {'sensitivity': 1})"
+  - action: deny(403)
+    description: OWASP session fixation (sensitivity 1)
+    preview: false
+    priority: 1070
+    match:
+      expr:
+        expression: "evaluatePreconfiguredWaf('sessionfixation-v33-stable', {'sensitivity': 1})"
+  - action: throttle
+    description: Per-IP rate limit (500/min). Not a geo rule.
+    preview: false
+    priority: 2000
+    match:
+      expr:
+        expression: "true"
+    rateLimitOptions:
+      conformAction: allow
+      exceedAction: deny(429)
+      enforceOnKey: IP
+      rateLimitThreshold:
+        count: 500
+        intervalSec: 60
+  - action: allow
+    description: Default allow the world (includes Africa). No country deny list.
+    preview: false
+    priority: 2147483647
+    match:
+      versionedExpr: SRC_IPS_V1
+      config:
+        srcIpRanges:
+          - "*"

@@ -40,7 +40,16 @@ import { Avatar, Badge } from "@heroui/react";
 import { cn } from "@/lib/utils";
 import { PageHeader } from "@/components/ui/page-header";
 import { EnterpriseGate } from "@/components/enterprise-gate";
-import { formatPlanPriceUsd, formatUsd, getPlan, isEnterprisePlan } from "@opendoor/shared";
+import {
+  formatPlanPriceUsd,
+  formatUsd,
+  getPlan,
+  SEAT_CAP_UPGRADE_COPY,
+  workspaceHasEnterpriseTools,
+} from "@opendoor/shared";
+import { LocalePicker } from "@/components/i18n/locale-picker";
+import { RegionalOnboarding } from "@/components/i18n/regional-onboarding";
+import { useI18n } from "@/components/i18n/i18n-provider";
 
 /* ── Compute Execution Modes ── */
 export type ExecutionMode = "on-demand" | "off-peak" | "batch";
@@ -232,6 +241,7 @@ interface UserProfile {
   role: string;
   isSiteAdmin: boolean;
   avatarUrl?: string | null;
+  locale?: string;
 }
 
 interface OrgSettings {
@@ -249,6 +259,8 @@ interface OrgSettings {
   emailNotificationsEnabled: boolean | null;
   notifyOnInvites: boolean | null;
   notifyOnBillingAlerts: boolean | null;
+  region?: string | null;
+  country?: string | null;
 }
 
 interface FamilyMember {
@@ -269,6 +281,7 @@ interface FamilyPoolData {
   planName: string;
   maxSeats: number;
   seatsUsed: number;
+  isOrganizer?: boolean;
   totalPoolCreditsCents: number;
   rolledOverCreditsCents: number;
   rolloverMonthsActive: number;
@@ -423,6 +436,7 @@ const ALL_PLAN_TIERS = [
 
 /* ── Page ── */
 export default function SettingsPage() {
+  const { t } = useI18n();
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialTab = (searchParams?.get("tab") as Tab) || "profile";
@@ -499,6 +513,8 @@ export default function SettingsPage() {
   const [inviteName, setInviteName] = useState("");
   const [inviteQuotaUsd, setInviteQuotaUsd] = useState("50");
   const [inviteLoading, setInviteLoading] = useState(false);
+  const [quotaDrafts, setQuotaDrafts] = useState<Record<string, string>>({});
+  const [savingQuotaId, setSavingQuotaId] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -521,7 +537,15 @@ export default function SettingsPage() {
       const res = await fetch("/api/settings/family");
       if (res.ok) {
         const data = await res.json();
-        if (data.family) setFamilyData(data.family);
+        if (data.family) {
+          setFamilyData(data.family);
+          const drafts: Record<string, string> = {};
+          for (const member of data.family.members || []) {
+            drafts[member.id] =
+              typeof member.monthlyQuotaCents === "number" ? String(member.monthlyQuotaCents / 100) : "";
+          }
+          setQuotaDrafts(drafts);
+        }
       }
     } catch {
       // ignore
@@ -607,6 +631,9 @@ export default function SettingsPage() {
           body: JSON.stringify({
             name: userProfile.name,
             orgName: settings.name,
+            locale: userProfile.locale,
+            region: settings.region,
+            country: settings.country,
           }),
         });
         if (res.ok) {
@@ -660,7 +687,7 @@ export default function SettingsPage() {
       const res = await fetch("/api/billing/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ planId }),
+        body: JSON.stringify({ planId, seats: getPlan(planId).perSeat ? 1 : undefined }),
       });
       const data = await res.json().catch(() => ({}));
       if (data.url) {
@@ -778,6 +805,29 @@ export default function SettingsPage() {
     }
   };
 
+  const handleSaveQuota = async (memberId: string) => {
+    setSavingQuotaId(memberId);
+    try {
+      const raw = quotaDrafts[memberId];
+      const monthlyQuotaCents = raw === "" || raw == null ? null : Math.max(0, Math.round(Number(raw) * 100));
+      const res = await fetch("/api/settings/family", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ memberId, monthlyQuotaCents }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(data.error || "Could not update monthly cap.");
+        return;
+      }
+      await fetchFamily();
+    } catch {
+      setError("Could not update monthly cap.");
+    } finally {
+      setSavingQuotaId(null);
+    }
+  };
+
   const handleSetParentPin = () => {
     setPinDialog({ mode: "set" });
     setPinValue("");
@@ -822,8 +872,11 @@ export default function SettingsPage() {
   }
 
   const isCurrentFamily = settings.plan === "family" || settings.plan === "family_max";
-  const domainLocked =
-    !loading && !isEnterprisePlan(settings.plan) && !userProfile.isSiteAdmin;
+  const hasEnterpriseTools = workspaceHasEnterpriseTools({
+    plan: settings.plan,
+    isSiteAdmin: userProfile.isSiteAdmin,
+  });
+  const domainLocked = !loading && !hasEnterpriseTools;
 
   const userInitials = (userProfile.name || "User")
     .split(" ")
@@ -1034,6 +1087,16 @@ export default function SettingsPage() {
                           <Check className="h-3 w-3" />
                           <span>Verified</span>
                         </span>
+                      </div>
+                    </SettingRow>
+
+                    <SettingRow
+                      label={t("settings.languageRegion")}
+                      hint={t("settings.languageRegionHint")}
+                    >
+                      <div className="space-y-3 max-w-xl">
+                        <LocalePicker />
+                        <RegionalOnboarding compact className="border-0 bg-transparent p-0 sm:p-0" />
                       </div>
                     </SettingRow>
 
@@ -1499,32 +1562,58 @@ export default function SettingsPage() {
                               <h3 className="text-sm font-semibold text-foreground">Family Members & Seat Controls</h3>
                             </div>
                             <p className="text-xs text-muted-foreground mt-0.5">
-                              {familyData.members.length} of {settings.plan === "family_max" ? 5 : 4} seats filled. Manage per-seat monthly spending caps and child protection.
+                              {familyData.seatsUsed} of {familyData.maxSeats || (settings.plan === "family_max" ? 5 : 4)} seats filled.
+                              {familyData.seatsUsed >= (familyData.maxSeats || 1)
+                                ? ` ${SEAT_CAP_UPGRADE_COPY}`
+                                : " Manage per-seat monthly spending caps and child protection."}
                             </p>
                           </div>
 
                           <div className="flex items-center gap-2">
-                            <button
-                              type="button"
-                              onClick={() => void handleSetParentPin()}
-                              className="rounded-xl border border-border bg-muted px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-accent"
-                            >
-                              {familyData.hasParentPin ? "Change parent PIN" : "Set parent PIN"}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setShowInviteModal(true)}
-                              disabled={familyData.members.length >= (settings.plan === "family_max" ? 5 : 4)}
-                              className="flex items-center gap-1.5 rounded-xl bg-info px-3 py-1.5 text-xs font-semibold text-info-foreground hover:bg-info/90 transition-colors disabled:opacity-40"
-                            >
-                              <Plus className="h-3.5 w-3.5" />
-                              <span>Invite Family Member</span>
-                            </button>
+                            {familyData.isOrganizer ? (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => void handleSetParentPin()}
+                                  className="rounded-xl border border-border bg-muted px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-accent"
+                                >
+                                  {familyData.hasParentPin ? "Change parent PIN" : "Set parent PIN"}
+                                </button>
+                                {familyData.seatsUsed >= (familyData.maxSeats || 1) ? (
+                                  <Link
+                                    href="/dashboard/billing"
+                                    className="flex items-center gap-1.5 rounded-xl border border-border bg-muted px-3 py-1.5 text-xs font-semibold text-foreground"
+                                  >
+                                    Upgrade seats
+                                  </Link>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => setShowInviteModal(true)}
+                                    className="flex items-center gap-1.5 rounded-xl bg-info px-3 py-1.5 text-xs font-semibold text-info-foreground hover:bg-info/90 transition-colors"
+                                  >
+                                    <Plus className="h-3.5 w-3.5" />
+                                    <span>Invite Family Member</span>
+                                  </button>
+                                )}
+                              </>
+                            ) : (
+                              <p className="text-xs text-muted-foreground">Organizer-only seat controls.</p>
+                            )}
                           </div>
                         </div>
 
                         <div className="divide-y divide-border border-t border-b border-border">
-                          {familyData.members.map((member) => (
+                          {familyData.members.length === 0 ? (
+                            <div className="py-8 text-center">
+                              <p className="text-sm font-medium text-foreground">No household members yet</p>
+                              <p className="mt-1 text-sm text-muted-foreground">
+                                {familyData.seatsUsed >= (familyData.maxSeats || 1)
+                                  ? SEAT_CAP_UPGRADE_COPY
+                                  : "Invite a family member to share this credit pool."}
+                              </p>
+                            </div>
+                          ) : familyData.members.map((member) => (
                             <div key={member.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 py-3">
                               <div className="flex items-center gap-3">
                                 <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-info text-info-foreground font-mono font-bold text-xs">
@@ -1544,33 +1633,55 @@ export default function SettingsPage() {
                               </div>
 
                               <div className="flex items-center gap-4">
-                                <div className="text-right">
-                                  <span className="text-[10px] text-muted-foreground block font-mono">Monthly Fair-Use Cap</span>
-                                  <span className="text-xs font-mono font-medium text-success">
-                                    {member.monthlyQuotaCents ? `$${member.monthlyQuotaCents / 100} / mo limit` : "Uncapped (Full Pool)"}
-                                  </span>
-                                </div>
-
-                                {member.role !== "organizer" && (
-                                  <label className="flex items-center gap-1.5 text-[10px] font-mono text-muted-foreground">
-                                    <input
-                                      type="checkbox"
-                                      checked={Boolean(member.protectedChild)}
-                                      onChange={(e) => void handleSetChild(member.id, e.target.checked)}
-                                      className="rounded border-border"
-                                    />
-                                    Child / Protected
-                                  </label>
-                                )}
-
-                                {member.role !== "organizer" && (
-                                  <button
-                                    type="button"
-                                    onClick={() => handleRemoveMember(member.id)}
-                                    className="text-muted-foreground hover:text-destructive p-1.5 rounded-lg hover:bg-accent transition-colors"
-                                  >
-                                    <Trash2 className="h-3.5 w-3.5" />
-                                  </button>
+                                {familyData.isOrganizer ? (
+                                  <>
+                                    <label className="text-[10px] text-muted-foreground font-mono">
+                                      Monthly cap (USD)
+                                      <input
+                                        type="number"
+                                        min="0"
+                                        placeholder="None"
+                                        value={quotaDrafts[member.id] ?? ""}
+                                        onChange={(e) => setQuotaDrafts((prev) => ({ ...prev, [member.id]: e.target.value }))}
+                                        className="input mt-1 w-24 font-mono text-xs"
+                                      />
+                                    </label>
+                                    <button
+                                      type="button"
+                                      className="rounded-lg border border-border px-2 py-1 text-[10px] font-semibold"
+                                      disabled={savingQuotaId === member.id}
+                                      onClick={() => void handleSaveQuota(member.id)}
+                                    >
+                                      {savingQuotaId === member.id ? <Loader2 className="h-3 w-3 animate-spin" /> : "Save"}
+                                    </button>
+                                    {member.role !== "organizer" && (
+                                      <label className="flex items-center gap-1.5 text-[10px] font-mono text-muted-foreground">
+                                        <input
+                                          type="checkbox"
+                                          checked={Boolean(member.protectedChild)}
+                                          onChange={(e) => void handleSetChild(member.id, e.target.checked)}
+                                          className="rounded border-border"
+                                        />
+                                        Child / Protected
+                                      </label>
+                                    )}
+                                    {member.role !== "organizer" && (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleRemoveMember(member.id)}
+                                        className="text-muted-foreground hover:text-destructive p-1.5 rounded-lg hover:bg-accent transition-colors"
+                                      >
+                                        <Trash2 className="h-3.5 w-3.5" />
+                                      </button>
+                                    )}
+                                  </>
+                                ) : (
+                                  <div className="text-right">
+                                    <span className="text-[10px] text-muted-foreground block font-mono">Monthly Fair-Use Cap</span>
+                                    <span className="text-xs font-mono font-medium text-success">
+                                      {member.monthlyQuotaCents ? `$${member.monthlyQuotaCents / 100} / mo limit` : "Uncapped (Full Pool)"}
+                                    </span>
+                                  </div>
                                 )}
                               </div>
                             </div>
@@ -1649,14 +1760,22 @@ export default function SettingsPage() {
                     <div className="flex items-center gap-2.5">
                       <Shield className="h-4 w-4 text-primary" />
                       <h2 className="section-title">Single Sign-On & Authentication</h2>
+                      {hasEnterpriseTools ? (
+                        <span className="badge-success">Included with Enterprise</span>
+                      ) : null}
                     </div>
                     <p className="mt-1 text-sm text-muted-foreground">
-                      Allow your team to authenticate via Okta, Azure AD, Google Workspace, and SAML through WorkOS.
+                      {hasEnterpriseTools
+                        ? "SSO and SCIM are included with Enterprise. Connect Okta, Azure AD, Google Workspace, or SAML through WorkOS — this is live, not a tease."
+                        : "Allow your team to authenticate via Okta, Azure AD, Google Workspace, and SAML through WorkOS."}
                     </p>
                   </div>
 
                   <div className="divide-y divide-border px-6">
-                    <SettingRow label="Enable SSO" hint="Team members will be redirected to your identity provider.">
+                    <SettingRow
+                      label="SSO status"
+                      hint="Team members are redirected to your identity provider when SSO is on."
+                    >
                       <label className="flex cursor-pointer items-center gap-3">
                         <input
                           type="checkbox"
@@ -1670,12 +1789,45 @@ export default function SettingsPage() {
                       </label>
                     </SettingRow>
 
+                    <SettingRow
+                      label="SCIM provisioning"
+                      hint="WorkOS Directory Sync (SCIM) for joiner/mover/leaver updates."
+                    >
+                      {hasEnterpriseTools ? (
+                        <div className="space-y-1">
+                          <p className="text-sm text-foreground">Included with Enterprise</p>
+                          <p className="text-xs text-muted-foreground">
+                            {settings.workosOrganizationId
+                              ? `Directory Sync uses WorkOS org ${settings.workosOrganizationId}. Configure SCIM in the WorkOS dashboard.`
+                              : "Add your WorkOS organisation ID, then turn on Directory Sync in WorkOS."}
+                          </p>
+                        </div>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">
+                          SCIM ships with Enterprise.{" "}
+                          <a href="mailto:sales@opendoor.ai?subject=OpenDoor%20Enterprise" className="underline">
+                            Talk to sales
+                          </a>
+                        </p>
+                      )}
+                    </SettingRow>
+
                     <SettingRow label="WorkOS Organisation ID" hint="Found in your WorkOS Dashboard under Organisations.">
                       <input
                         type="text"
                         value={settings.workosOrganizationId || ""}
                         onChange={(e) => setSettings({ ...settings, workosOrganizationId: e.target.value })}
                         placeholder="org_xxxxxxxxxxxx"
+                        className="input w-full max-w-md font-mono text-xs"
+                      />
+                    </SettingRow>
+
+                    <SettingRow label="WorkOS Connection ID" hint="Optional. SSO connection id from WorkOS.">
+                      <input
+                        type="text"
+                        value={settings.workosConnectionId || ""}
+                        onChange={(e) => setSettings({ ...settings, workosConnectionId: e.target.value })}
+                        placeholder="conn_xxxxxxxxxxxx"
                         className="input w-full max-w-md font-mono text-xs"
                       />
                     </SettingRow>

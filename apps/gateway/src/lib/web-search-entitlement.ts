@@ -1,6 +1,6 @@
 import { db, organizations } from "@opendoor/database";
 import { eq, sql } from "drizzle-orm";
-import { WEB_SEARCH_ADDON, workspaceHasWebSearchAddon } from "@opendoor/shared";
+import { SEARCH_TOOL_ID, WEB_SEARCH_ADDON, workspaceHasWebSearchAddon } from "@opendoor/shared";
 import { orgHasToolEnabled } from "./tool-entitlement.js";
 
 const g = global as typeof global & { _webSearchAddonColsReady?: boolean };
@@ -29,7 +29,10 @@ export async function webSearchAccess(
   ) {
     return { ok: true, via: "addon" };
   }
-  if (await orgHasToolEnabled(orgId, "web_search")) {
+  if (
+    (await orgHasToolEnabled(orgId, "web_search")) ||
+    (await orgHasToolEnabled(orgId, SEARCH_TOOL_ID))
+  ) {
     return { ok: true, via: "usage" };
   }
   return { ok: false, via: null };
@@ -41,7 +44,7 @@ export async function orgHasWebSearchAddon(orgId: string, plan?: string | null) 
 
 export function webSearchAddonRequiredBody() {
   return {
-    error: `Web Search is a $${WEB_SEARCH_ADDON.amountUsd}/month add-on, or enable it on Tools for usage-based cost.`,
+    error: `OpenDoor Search is metered on credits, or a $${WEB_SEARCH_ADDON.amountUsd}/month add-on. Enable it on Tools or subscribe on Billing.`,
     code: "addon_required" as const,
     addon: "web_search" as const,
     amountUsd: WEB_SEARCH_ADDON.amountUsd,

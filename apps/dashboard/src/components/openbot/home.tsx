@@ -2,6 +2,8 @@
 
 import { Loader2, Sparkles } from "lucide-react";
 import { OPENBOT_ROSTER } from "@/lib/openbot-personas";
+import { useI18n } from "@/components/i18n/i18n-provider";
+import { HouseIntro } from "./house-intro";
 import { OpenBotAgentCard } from "./agent-card";
 import { AskComposer } from "./ask-composer";
 import type { useOpenBotWorkspace } from "./use-openbot-workspace";
@@ -9,18 +11,20 @@ import type { useOpenBotWorkspace } from "./use-openbot-workspace";
 type Workspace = ReturnType<typeof useOpenBotWorkspace>;
 
 export function OpenBotHome({ workspace }: { workspace: Workspace }) {
+  const { t } = useI18n();
   const locked = Boolean(workspace.addon && !workspace.addon.active);
   const price = workspace.addon?.amountUsd ?? 20;
   const fallbackName = workspace.fallback?.name || "General Assistant";
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col items-center justify-center overflow-y-auto px-4 py-10">
+      <HouseIntro />
       <div className="flex flex-col items-center">
         <h2 className="text-center text-sm font-medium uppercase tracking-tight text-muted-foreground">
           OPENBOT
         </h2>
         <h1 className="mt-1.5 text-center text-2xl font-bold tracking-tight text-foreground">
-          Start a new channel
+          {t("openbot.startChannel")}
         </h1>
       </div>
 

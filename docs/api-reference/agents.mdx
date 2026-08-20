@@ -17,32 +17,42 @@ GET    /v1/agents/:id
 PATCH  /v1/agents/:id
 POST   /v1/agents/:id/chat
 POST   /v1/agents/:id/ag-ui
+POST   /v1/agents/:id/restore
 DELETE /v1/agents/:id
 ```
+
+These are the same operations as the dashboard Agents / OpenBot desk: list, spawn a coworker or Leaderbot, start/stop, chat, and 7-day soft delete. Computer CDP (screenshot, click, secret field) stays on the dashboard cookie routes and the existing computer token — it is not exposed on `/v1/agents/:id/computer`.
 
 ## Create and boot
 
 ```bash
-curl $OPENDOOR_BASE_URL/v1/agents \
+export OPENDOOR_API_KEY=opd_…
+export OPENDOOR_BASE_URL={{GATEWAY_URL}}
+
+curl "$OPENDOOR_BASE_URL/v1/agents" \
   -H "Authorization: Bearer $OPENDOOR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "name": "Desk",
     "runtime": "openbot",
-    "modelId": "llama-3.1-8b-instruct"
+    "modelId": "{{EXAMPLE_MODEL}}"
   }'
 ```
 
-`runtime` must be `openclaw`, `hermes`, `nemoclaw`, or `openbot`. `modelId` is a live catalog id. Optional `systemPrompt` overrides the runtime default.
+`runtime` must be `openclaw`, `hermes`, `nemoclaw`, or `openbot`. `modelId` is a live catalog id. Optional `systemPrompt` overrides the runtime default. Optional `kind` is `leader` or `coworker`. `kind: "leader"` (or the name `Leaderbot`) is idempotent: if Leaderbot already exists the existing row is returned; if it is in the 7-day recovery window it is restored and booted.
 
 Create mints a scoped API key, probes `GET /v1/models`, seeds runtime skills, and marks the agent **running**. If the gateway is unreachable the row is still created with `status: "failed"` — call `PATCH` with `{ "status": "running" }` to retry.
 
-The response is a public agent object: id, runtime, model, status, and a `workspace` snapshot (memory, skills, outbox, computer). Secrets are never returned.
+Plan seat caps apply: `maxApiKeys` is the bot cap and `maxActiveDeployments` is the concurrent running cap. Hitting either returns `402` with `code: at_bot_cap` or `at_concurrent_cap`.
+
+`GET /v1/agents` also returns `deleted` (recoverable rows), `addon`, and `capacity`. `GET /v1/agents/:id` includes recent `messages`.
+
+The response is a public agent object: id, runtime, `kind`, model, status, and a `workspace` snapshot (memory, skills, outbox, computer). Secrets are never returned.
 
 ## Chat
 
 ```bash
-curl $OPENDOOR_BASE_URL/v1/agents/$AGENT_ID/chat \
+curl "$OPENDOOR_BASE_URL/v1/agents/$AGENT_ID/chat" \
   -H "Authorization: Bearer $OPENDOOR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{"message":"Open https://example.com and summarize the page."}'
@@ -73,37 +83,50 @@ The dashboard coworker desk at `/dashboard/agents/:id` is the OpenBot UI: live s
 ## Start, stop, take the wheel
 
 ```bash
-curl -X PATCH $OPENDOOR_BASE_URL/v1/agents/$AGENT_ID \
+curl -X PATCH "$OPENDOOR_BASE_URL/v1/agents/$AGENT_ID" \
   -H "Authorization: Bearer $OPENDOOR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{"status":"stopped"}'
 ```
 
 ```bash
-curl -X PATCH $OPENDOOR_BASE_URL/v1/agents/$AGENT_ID \
+curl -X PATCH "$OPENDOOR_BASE_URL/v1/agents/$AGENT_ID" \
   -H "Authorization: Bearer $OPENDOOR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{"computerControl":"take"}'
 ```
 
-`status` is `running` or `stopped`. `computerControl` is `take` or `release` (OpenBot). You can send both in one PATCH.
+`status` is `running` or `stopped`. `computerControl` is `take` or `release` (OpenBot). You can send both in one PATCH. Optional `name`, `systemPrompt`, and `modelId` update the row the same way as the dashboard.
+
+## Restore (7-day soft delete)
+
+```bash
+curl -X POST "$OPENDOOR_BASE_URL/v1/agents/$AGENT_ID/restore" \
+  -H "Authorization: Bearer $OPENDOOR_API_KEY"
+```
+
+`DELETE` stops the agent and keeps the row for 7 days (`recoverUntil` is in the response). Restore returns the agent as `stopped` — call `PATCH` with `{ "status": "running" }` to attach the computer again. After the window, purge is permanent.
 
 ## CLI and SDK
 
 ```bash
-bun run od -- agents create --name Desk --runtime openbot --model llama-3.1-8b-instruct
+export OPENDOOR_BASE_URL={{GATEWAY_URL}}
+bun run od -- agents create --name Desk --runtime openbot --model {{EXAMPLE_MODEL}} --kind coworker
 bun run od -- agents chat --id "$AGENT_ID" --message "Hello"
 bun run od -- agents computer --id "$AGENT_ID" --take
+bun run od -- agents restore --id "$AGENT_ID"
 ```
 
 ```ts
 const agent = await client.agents.create({
   name: "Desk",
   runtime: "openbot",
-  modelId: "llama-3.1-8b-instruct",
+  modelId: "{{EXAMPLE_MODEL}}",
+  kind: "coworker",
 });
 const turn = await client.agents.chat(agent.id, { message: "Hello" });
 await client.agents.computer(agent.id, "take");
+await client.agents.restore(agent.id);
 ```
 
 ## Related

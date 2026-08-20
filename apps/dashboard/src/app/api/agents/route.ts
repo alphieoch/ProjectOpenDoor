@@ -12,9 +12,10 @@ import { agentsAddonRequiredResponse, loadAgentsEntitlement } from "@/lib/agents
 import { getAgentRuntime, isAgentRuntime, toAgentSlug } from "@/lib/agents/runtimes";
 import { isLeaderbotName, isLeaderbotRecord, summarizeOpenBotCapacity } from "@/lib/openbot-leader";
 import { hasOpenBotSupervisor, readWorkspace } from "@opendoor/shared";
+import { publicErrorMessage } from "@/lib/client-error";
 
 function agentRouteError(err: unknown, fallback: string) {
-  const message = err instanceof Error ? err.message : fallback;
+  const message = publicErrorMessage(err, fallback);
   const status = message === "Unauthorized" ? 401 : 500;
   return NextResponse.json({ error: message }, { status });
 }

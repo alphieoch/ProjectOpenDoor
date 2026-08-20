@@ -33,6 +33,10 @@ const unlocks = [
     title: "Agents, including OpenBot",
     body: "Boot OpenClaw, Hermes, NemoClaw, or OpenBot. Computer tools, take-the-wheel, and memory run on the gateway.",
   },
+  {
+    title: "Search",
+    body: "POST /v1/plugins/web-search — Vertex grounding with citations. $0.10 / query, included on Enterprise.",
+  },
 ];
 
 const steps = [
@@ -73,9 +77,9 @@ const next = [
     icon: Terminal,
   },
   {
-    title: "Agents API",
-    body: "REST for boot, chat, take the wheel, and delete.",
-    href: docsHref("/api-reference/agents"),
+    title: "API reference",
+    body: "Chat, models, Search, errors, and the live /v1 catalog.",
+    href: docsHref("/api"),
     icon: Bot,
   },
 ];
@@ -88,9 +92,9 @@ async function firstModelId() {
       .from(models)
       .where(eq(models.enabled, true))
       .limit(1);
-    return row[0]?.modelId || "llama-3.1-8b-instruct";
+    return row[0]?.modelId || "gemma-4-26b-a4b-it";
   } catch {
-    return "llama-3.1-8b-instruct";
+    return "gemma-4-26b-a4b-it";
   }
 }
 
@@ -162,10 +166,10 @@ curl ${base}/v1/agents/$AGENT_ID/chat \\
               Mint an API key <ArrowRight className="h-4 w-4" />
             </Link>
             <Link
-              href={docsHref("/getting-started/sdk")}
+              href={docsHref("/")}
               className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-6 py-3 text-sm font-semibold text-foreground transition hover:bg-slate-50"
             >
-              TypeScript SDK docs
+              Call the API docs
             </Link>
           </>
         }

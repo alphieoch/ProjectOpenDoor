@@ -4,7 +4,7 @@ import { getDb } from "@/lib/db";
 import { users, organizations } from "@opendoor/database";
 import { eq } from "drizzle-orm";
 import { createToken } from "@/lib/auth";
-import { applySessionCookies } from "@/lib/session-cookie";
+import { applySessionCookies, cookieSecureFromRequest } from "@/lib/session-cookie";
 import { logAuditEvent } from "@/lib/audit";
 
 export async function GET(req: NextRequest) {
@@ -84,7 +84,7 @@ export async function GET(req: NextRequest) {
     });
 
     const response = NextResponse.redirect("/dashboard");
-    applySessionCookies(response, token);
+    applySessionCookies(response, token, 60 * 60 * 24 * 7, cookieSecureFromRequest(req));
 
     return response;
   } catch (error: any) {

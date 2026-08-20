@@ -512,6 +512,7 @@ export class OpenDoor {
       computer: (id, control) =>
         this.request("PATCH", `/v1/agents/${encodeURIComponent(id)}`, { computerControl: control }),
       delete: (id) => this.request("DELETE", `/v1/agents/${encodeURIComponent(id)}`),
+      restore: (id) => this.request("POST", `/v1/agents/${encodeURIComponent(id)}/restore`),
     };
     this.byok = {
       list: () => this.request("GET", "/v1/byok"),

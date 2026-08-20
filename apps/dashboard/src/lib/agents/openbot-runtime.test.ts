@@ -17,6 +17,7 @@ const OPENBOT_TOOLS = [
   "recall",
   "list_skills",
   "use_skill",
+  "web_search",
   "author_skill",
   "computer_navigate",
   "computer_read",

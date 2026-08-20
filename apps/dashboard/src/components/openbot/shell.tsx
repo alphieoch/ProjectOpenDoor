@@ -1,7 +1,8 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { FadeIn } from "@/components/motion";
 import { PanelLeft } from "lucide-react";
 import { useDashboardProfile } from "@/components/dashboard/dashboard-frame";
 import { OpenBotAgentsDialog } from "./agents-dialog";
@@ -26,6 +27,7 @@ export function useOpenBotShell() {
 export function OpenBotShell({ children }: { children: React.ReactNode }) {
   const workspace = useOpenBotWorkspace();
   const { displayName } = useDashboardProfile();
+  const pathname = usePathname();
   const router = useRouter();
   const [pinned, setPinned] = useState(true);
   const [mobileRail, setMobileRail] = useState(false);
@@ -109,7 +111,13 @@ export function OpenBotShell({ children }: { children: React.ReactNode }) {
             </button>
             <span className="text-sm font-semibold tracking-tight">OpenBot</span>
           </div>
-          {children}
+          <FadeIn
+            key={pathname}
+            variant="inner"
+            className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
+          >
+            {children}
+          </FadeIn>
         </div>
       </div>
       <OpenBotSkillsDialog

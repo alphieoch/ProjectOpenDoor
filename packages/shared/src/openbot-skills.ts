@@ -21,7 +21,7 @@ export const OPENBOT_SKILL_CATALOG: OpenBotCatalogSkill[] = [
     title: "Browse and report",
     description: "Open public pages, read them, and bring back a short report.",
     helpsWith: "Web research without guessing what a site says",
-    body: "Open public https pages with computer_navigate, then computer_read. To act, computer_screenshot then computer_click with visible text (cookie consent) or a snapshot ref. x,y is the fallback in screenshot CSS pixels. computer_wait after each click.",
+    body: "For a factual question, call web_search first and cite those sources. Use computer_navigate only when they asked you to browse a specific page, then computer_read. To act, computer_screenshot then computer_click with visible text (cookie consent) or a snapshot ref. x,y is the fallback in screenshot CSS pixels. computer_wait after each click.",
     seed: true,
   },
   {
@@ -45,7 +45,7 @@ export const OPENBOT_SKILL_CATALOG: OpenBotCatalogSkill[] = [
     title: "Cite sources",
     description: "Name the pages a claim came from, with a short excerpt and URL.",
     helpsWith: "Answers the person can check",
-    body: "When you use computer_navigate or computer_read, keep the page URL and a short excerpt for every fact you will state. Answer with the claim, then the source URL. Prefer render_component kind=links titled “Sources”. Do not invent citations. If you could not open the page, say so and request_help only if a person must sign in.",
+    body: "When you use web_search, keep its citations (title + URL). When you use computer_navigate or computer_read, keep the page URL and a short excerpt for every fact you will state. Answer with the claim, then the source URL. Prefer render_component kind=links titled “Sources”. Do not invent citations. If you could not open the page, say so and request_help only if a person must sign in.",
   },
   {
     id: "extract-tables",

@@ -1,12 +1,12 @@
 import { Hono } from "hono";
+import type { Context } from "hono";
 import {
-  runWebSearch,
-  WebSearchNotConfiguredError,
-  WebSearchProviderError,
-} from "../lib/web-search.js";
-import { webSearchAccess, webSearchAddonRequiredBody } from "../lib/web-search-entitlement.js";
-import { getPlatformTool, usageCostCents } from "@opendoor/shared";
-import { centsToUsd, debitUsage, orgHasUnlimitedSpend } from "../utils/billing.js";
+  ragSearch,
+  RagSearchError,
+  RagSearchNotConfiguredError,
+} from "../lib/rag-search.js";
+import { authorizeGatewaySearch, settleGatewaySearch } from "../lib/search-spend.js";
+import { webSearchAddonRequiredBody } from "../lib/web-search-entitlement.js";
 
 const pluginsRouter = new Hono();
 
@@ -14,16 +14,13 @@ function requireApiKey(c: { get: (k: "apiKey") => unknown }) {
   return c.get("apiKey") ?? null;
 }
 
-pluginsRouter.post("/web-search", async (c) => {
+async function runOpenDoorSearch(c: Context) {
   if (!requireApiKey(c)) {
     return c.json({ error: "Unauthorized" }, 401);
   }
 
   const organization = c.get("organization");
-  const access = organization
-    ? await webSearchAccess(organization.id, organization.plan)
-    : { ok: false, via: null };
-  if (!organization || !access.ok) {
+  if (!organization) {
     return c.json(webSearchAddonRequiredBody(), 402);
   }
 
@@ -38,36 +35,38 @@ pluginsRouter.post("/web-search", async (c) => {
     return c.json({ error: "query is required" }, 400);
   }
 
+  const gate = await authorizeGatewaySearch(organization);
+  if (!gate.ok) {
+    return c.json(gate.body, gate.status);
+  }
+
   const maxResults =
     typeof body.max_results === "number" ? body.max_results : undefined;
 
   try {
-    const result = await runWebSearch(body.query, maxResults);
-    if (access.via === "usage" && !(await orgHasUnlimitedSpend(organization))) {
-      const tool = getPlatformTool("web_search");
-      const cents = tool ? usageCostCents(tool, 1) : 0;
-      if (cents > 0) {
-        await debitUsage(organization.id, centsToUsd(cents), undefined, {
-          plan: organization.plan,
-          family: "closed",
-          providerSlug: "vertex",
-          useFromPlan: false,
-          useFromCredits: true,
-        });
-      }
-    }
-    return c.json(result);
+    const result = await ragSearch({ query: body.query, orgId: organization.id, maxResults });
+    await settleGatewaySearch(organization, gate.chargeCents);
+    return c.json({
+      query: result.query,
+      provider: result.provider,
+      answer: result.answer,
+      results: result.citations,
+      citations: result.citations,
+    });
   } catch (err) {
-    if (err instanceof WebSearchNotConfiguredError) {
+    if (err instanceof RagSearchNotConfiguredError) {
       return c.json({ error: err.message }, 503);
     }
-    if (err instanceof WebSearchProviderError) {
-      return c.json({ error: err.message }, 502);
+    if (err instanceof RagSearchError) {
+      return c.json({ error: err.message }, err.status === 400 ? 400 : 502);
     }
     const message = err instanceof Error ? err.message : "Web search failed";
     return c.json({ error: message }, 400);
   }
-});
+}
 
-export { runWebSearch };
+pluginsRouter.post("/web-search", (c) => runOpenDoorSearch(c));
+pluginsRouter.post("/search", (c) => runOpenDoorSearch(c));
+
+export { ragSearch };
 export default pluginsRouter;

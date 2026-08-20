@@ -5,9 +5,11 @@ import {
   emptyComputer,
   isBlockedComputerHost,
   looksLikeLoginWall,
+  publicComputerIsolation,
   readComputer,
   sanitizeWorkspacePath,
 } from "./openbot";
+import { readWorkspace, workspacePublic } from "./agent-workspace";
 import { AGENTS_ADDON } from "./plans";
 
 describe("OpenBot computer policy", () => {
@@ -159,5 +161,22 @@ describe("Agents add-on copy", () => {
   test("lists OpenBot next to the other hosted runtimes", () => {
     expect(AGENTS_ADDON.description).toContain("OpenBot");
     expect(AGENTS_ADDON.id).toBe("agents");
+  });
+});
+
+describe("public computer isolation", () => {
+  test("strips supervisor and loopback URLs from client payloads", () => {
+    const ws = readWorkspace({
+      computer: {
+        isolation: {
+          mode: "container",
+          url: "http://127.0.0.1:49152",
+          container: "opendoor-computer-bot-1",
+        },
+      },
+    });
+    expect(ws.computer.isolation.url).toBe("http://127.0.0.1:49152");
+    expect(workspacePublic(ws).computer.isolation).toEqual({ mode: "container" });
+    expect(publicComputerIsolation(ws.computer.isolation)).toEqual({ mode: "container" });
   });
 });

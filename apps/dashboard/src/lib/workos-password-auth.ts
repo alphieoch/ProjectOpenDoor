@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getWorkOS, saveSession } from "@workos-inc/authkit-nextjs";
-import { applySessionCookies } from "@/lib/session-cookie";
+import { applySessionCookies, cookieSecureFromRequest } from "@/lib/session-cookie";
 import { syncWorkOSUserToSession } from "@/lib/workos-sync";
 import { getWorkOSClientId } from "@/lib/workos";
 
@@ -85,10 +85,11 @@ export async function createWorkOSUser(opts: {
 export function jsonAuthSuccess(
   body: Record<string, unknown>,
   token: string,
-  redirectTo?: string
+  redirectTo?: string,
+  req?: NextRequest
 ) {
   const response = NextResponse.json({ ...body, redirectTo });
-  applySessionCookies(response, token);
+  applySessionCookies(response, token, 60 * 60 * 24 * 7, cookieSecureFromRequest(req));
   return response;
 }
 

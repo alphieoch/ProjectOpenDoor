@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { AGENT_PUBLIC_ROUTES } from "../lib/agent-public.js";
 import { requireTenant } from "../lib/platform.js";
 
 const catalogRouter = new Hono();
@@ -35,7 +36,8 @@ export const PLATFORM_ENDPOINTS = [
   { method: "POST", path: "/v1/batches", group: "files", summary: "Create a batch" },
   { method: "GET", path: "/v1/batches", group: "files", summary: "List batches" },
   { method: "GET", path: "/v1/batches/:id", group: "files", summary: "Get a batch" },
-  { method: "POST", path: "/v1/plugins/web-search", group: "plugins", summary: "Live web search (add-on or Tools usage)" },
+  { method: "POST", path: "/v1/plugins/web-search", group: "plugins", summary: "OpenDoor Search (Vertex grounding + citations)" },
+  { method: "POST", path: "/v1/plugins/search", group: "plugins", summary: "OpenDoor Search alias (same Vertex RAG engine)" },
   { method: "GET", path: "/v1/tools", group: "plugins", summary: "First-party tools catalog and org enablement" },
   { method: "GET", path: "/v1/assistants", group: "assistants", summary: "List assistants" },
   { method: "POST", path: "/v1/assistants", group: "assistants", summary: "Create an assistant" },
@@ -64,13 +66,7 @@ export const PLATFORM_ENDPOINTS = [
   { method: "DELETE", path: "/v1/deployments/:id", group: "capacity", summary: "Stop a deployment" },
   { method: "GET", path: "/v1/premium/rentals", group: "capacity", summary: "List private GPU rentals" },
   { method: "POST", path: "/v1/premium/rentals", group: "capacity", summary: "Start a rental" },
-  { method: "GET", path: "/v1/agents", group: "agents", summary: "List workspace agents" },
-  { method: "POST", path: "/v1/agents", group: "agents", summary: "Create and boot a workspace agent" },
-  { method: "GET", path: "/v1/agents/:id", group: "agents", summary: "Get an agent" },
-  { method: "PATCH", path: "/v1/agents/:id", group: "agents", summary: "Start, stop, or take the wheel" },
-  { method: "POST", path: "/v1/agents/:id/chat", group: "agents", summary: "Run an agent turn, including OpenBot computer tools" },
-  { method: "POST", path: "/v1/agents/:id/ag-ui", group: "agents", summary: "AG-UI stream for an OpenBot / hosted agent turn" },
-  { method: "DELETE", path: "/v1/agents/:id", group: "agents", summary: "Delete an agent" },
+  ...AGENT_PUBLIC_ROUTES,
   { method: "GET", path: "/v1/byok", group: "byok", summary: "List org provider keys" },
   { method: "POST", path: "/v1/byok", group: "byok", summary: "Add a provider key" },
   { method: "DELETE", path: "/v1/byok/:id", group: "byok", summary: "Revoke a provider key" },

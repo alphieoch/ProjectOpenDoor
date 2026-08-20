@@ -97,6 +97,8 @@ describe("dashboard sidebar collapse", () => {
     expect(sidebar).toContain("collapsedRailItems");
     expect(sidebar).toContain('data-collapsed');
     expect(sidebar).toContain("title={collapsed");
+    expect(sidebar).toContain("aria-expanded={isOpen}");
+    expect(sidebar).toContain('aria-label="Ochieng & Co"');
     expect(frame).toContain("DASHBOARD_SIDEBAR_CONTENT_OFFSET_CLASS");
     expect(frame).toContain("md:ml-12");
     expect(frame).not.toContain("md:ml-[260px]");
@@ -116,7 +118,8 @@ describe("dashboard sidebar collapse", () => {
       join(import.meta.dir, "../components/ui/dashboard-sidebar.tsx"),
       "utf8",
     );
-    expect(sidebar).toContain("after:h-0.5 after:bg-foreground");
+    expect(sidebar).toContain("h-0.5 bg-foreground");
+    expect(sidebar).toContain('layoutId="dashboard-nav-active"');
     expect(sidebar).not.toContain("ring-2 ring-ring/50");
     expect(sidebar).not.toContain("bg-black/5 font-medium text-foreground dark:bg-white/10");
   });

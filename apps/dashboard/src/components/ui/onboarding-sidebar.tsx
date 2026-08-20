@@ -2,7 +2,7 @@
 
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
 import {
   Activity,
@@ -54,7 +54,14 @@ const variants = {
   },
 };
 
-const transitionProps = { type: "tween", ease: "easeOut", duration: 0.2, staggerChildren: 0.1 } as const;
+function sidebarTransition(reduceMotion: boolean | null) {
+  return {
+    type: "tween" as const,
+    ease: "easeOut" as const,
+    duration: reduceMotion ? 0 : 0.2,
+    staggerChildren: reduceMotion ? 0 : 0.1,
+  };
+}
 
 const staggerVariants = {
   open: { transition: { staggerChildren: 0.03, delayChildren: 0.02 } },
@@ -70,6 +77,12 @@ interface OnboardingSidebarProps {
 export function OnboardingSidebar({ orgName, userEmail, completedSteps }: OnboardingSidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(true);
   const pathname = usePathname();
+  const reduceMotion = useReducedMotion();
+
+  async function logout() {
+    await fetch("/api/auth/logout", { method: "POST" });
+    window.location.href = "/login";
+  }
 
   const orgInitial = orgName.charAt(0).toUpperCase();
   const userInitial = userEmail.split("@")[0].charAt(0).toUpperCase();
@@ -80,7 +93,7 @@ export function OnboardingSidebar({ orgName, userEmail, completedSteps }: Onboar
       initial={isCollapsed ? "closed" : "open"}
       animate={isCollapsed ? "closed" : "open"}
       variants={sidebarVariants}
-      transition={transitionProps}
+      transition={sidebarTransition(reduceMotion)}
       onMouseEnter={() => setIsCollapsed(false)}
       onMouseLeave={() => setIsCollapsed(true)}
     >
@@ -99,6 +112,7 @@ export function OnboardingSidebar({ orgName, userEmail, completedSteps }: Onboar
                     <Button
                       variant="ghost"
                       size="sm"
+                      aria-label={`${orgName} workspace menu`}
                       className="flex w-fit items-center gap-2 px-2 hover:bg-accent hover:text-foreground"
                     >
                       <Avatar className="size-4 rounded">
@@ -140,6 +154,8 @@ export function OnboardingSidebar({ orgName, userEmail, completedSteps }: Onboar
 
                     <Link
                       href="/dashboard"
+                      title="Dashboard"
+                      aria-label="Dashboard"
                       className={cn(
                         "flex h-8 w-full flex-row items-center rounded-md px-2 py-1.5 transition hover:bg-accent hover:text-foreground",
                         pathname?.includes("/dashboard") && !pathname?.includes("/dashboard/") && "bg-muted text-foreground",
@@ -153,6 +169,8 @@ export function OnboardingSidebar({ orgName, userEmail, completedSteps }: Onboar
 
                     <Link
                       href="/dashboard/api-keys"
+                      title="API Keys"
+                      aria-label="API Keys"
                       className={cn(
                         "flex h-8 w-full flex-row items-center rounded-md px-2 py-1.5 transition hover:bg-accent hover:text-foreground",
                         pathname?.includes("api-keys") && "bg-muted text-foreground",
@@ -166,6 +184,8 @@ export function OnboardingSidebar({ orgName, userEmail, completedSteps }: Onboar
 
                     <Link
                       href="/dashboard/usage"
+                      title="Usage"
+                      aria-label="Usage"
                       className={cn(
                         "flex h-8 w-full flex-row items-center rounded-md px-2 py-1.5 transition hover:bg-accent hover:text-foreground",
                         pathname?.includes("usage") && "bg-muted text-foreground",
@@ -179,6 +199,8 @@ export function OnboardingSidebar({ orgName, userEmail, completedSteps }: Onboar
 
                     <Link
                       href="/dashboard/playground"
+                      title="Playground"
+                      aria-label="Playground"
                       className={cn(
                         "flex h-8 w-full flex-row items-center rounded-md px-2 py-1.5 transition hover:bg-accent hover:text-foreground",
                         pathname?.includes("playground") && "bg-muted text-foreground",
@@ -194,6 +216,8 @@ export function OnboardingSidebar({ orgName, userEmail, completedSteps }: Onboar
 
                     <Link
                       href="/dashboard/governance"
+                      title="Governance"
+                      aria-label="Governance"
                       className={cn(
                         "flex h-8 w-full flex-row items-center rounded-md px-2 py-1.5 transition hover:bg-accent hover:text-foreground",
                         pathname?.includes("governance") && "bg-muted text-foreground",
@@ -214,6 +238,8 @@ export function OnboardingSidebar({ orgName, userEmail, completedSteps }: Onboar
 
                     <Link
                       href="/dashboard/billing"
+                      title="Billing"
+                      aria-label="Billing"
                       className={cn(
                         "flex h-8 w-full flex-row items-center rounded-md px-2 py-1.5 transition hover:bg-accent hover:text-foreground",
                         pathname?.includes("billing") && "bg-muted text-foreground",
@@ -229,6 +255,8 @@ export function OnboardingSidebar({ orgName, userEmail, completedSteps }: Onboar
 
                     <Link
                       href="/status"
+                      title="Status"
+                      aria-label="Status"
                       className="flex h-8 w-full flex-row items-center rounded-md px-2 py-1.5 transition hover:bg-accent hover:text-foreground"
                     >
                       <Activity className="h-4 w-4 shrink-0" />
@@ -245,6 +273,8 @@ export function OnboardingSidebar({ orgName, userEmail, completedSteps }: Onboar
               <div className="flex flex-col p-2">
                 <Link
                   href="/dashboard/settings"
+                  title="Settings"
+                  aria-label="Settings"
                   className="flex h-8 w-full flex-row items-center rounded-md px-2 py-1.5 transition hover:bg-accent hover:text-foreground"
                 >
                   <Settings className="h-4 w-4 shrink-0" />
@@ -288,10 +318,14 @@ export function OnboardingSidebar({ orgName, userEmail, completedSteps }: Onboar
                         <UserCircle className="h-4 w-4" /> Profile
                       </Link>
                     </DropdownMenuItem>
-                    <DropdownMenuItem asChild className="flex items-center gap-2">
-                      <Link href="/api/auth/signout">
-                        <LogOut className="h-4 w-4" /> Sign out
-                      </Link>
+                    <DropdownMenuItem
+                      className="flex items-center gap-2"
+                      onSelect={(event) => {
+                        event.preventDefault();
+                        void logout();
+                      }}
+                    >
+                      <LogOut className="h-4 w-4" /> Sign out
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>

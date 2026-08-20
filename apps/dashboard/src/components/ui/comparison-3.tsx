@@ -19,14 +19,18 @@ import {
   type PricingAudienceId,
 } from "@/lib/account-plans";
 import {
+  SEARCH_QUERY_LIST_CENTS,
+  WEB_SEARCH_ADDON,
   familyClubValue,
   formatPeriodWindow,
   formatPlanPriceUsd,
   formatUsd,
+  formatUsdCents,
   getPlan,
   houseChatAllowanceForPlan,
 } from "@opendoor/shared";
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/components/i18n/i18n-provider";
 
 type CellValue = boolean | string;
 
@@ -64,6 +68,7 @@ const familyClub = familyClubValue("family");
 const familyMaxClub = familyClubValue("family_max");
 const planTeam = getPlan("team");
 const planEnterprise = getPlan("enterprise");
+const searchMetered = `${formatUsdCents(SEARCH_QUERY_LIST_CENTS)} / query or $${WEB_SEARCH_ADDON.amountUsd}/mo`;
 
 const VIEW: Record<
   PricingAudienceId,
@@ -158,7 +163,7 @@ const VIEW: Record<
         features: [
           { label: "Request logs & playground", values: [true, true, true] },
           { label: "Agents add-on", values: ["$20 / month", "$20 / month", "$20 / month"] },
-          { label: "Web Search add-on", values: ["$20 / month", "$20 / month", "$20 / month"] },
+          { label: "OpenDoor Search", values: [searchMetered, searchMetered, searchMetered] },
         ],
       },
     ],
@@ -275,7 +280,7 @@ const VIEW: Record<
         features: [
           { label: "Request logs & playground", values: [true, true] },
           { label: "Agents add-on", values: ["$20 / month", "Included"] },
-          { label: "Web Search add-on", values: ["$20 / month", "$20 / month"] },
+          { label: "OpenDoor Search", values: [searchMetered, searchMetered] },
         ],
       },
     ],
@@ -356,7 +361,7 @@ const VIEW: Record<
           { label: "SCIM provisioning", values: [false, true] },
           { label: "Trust Center & sector packs", values: [false, true] },
           { label: "Agents add-on", values: ["$20 / month", "Included"] },
-          { label: "Web Search add-on", values: ["$20 / month", "Included"] },
+          { label: "OpenDoor Search", values: [searchMetered, "Included"] },
         ],
       },
       {
@@ -424,19 +429,27 @@ function Cell({
 }
 
 export default function ComparisonBlock() {
+  const { t } = useI18n();
   const [audience, setAudience] = React.useState<PricingAudienceId>("single");
   const meta = PRICING_AUDIENCES.find((a) => a.id === audience)!;
   const { plans, groups } = VIEW[audience];
   const colSpan = plans.length + 1;
+  const audienceCopy: Record<PricingAudienceId, { label: string; headline: string }> = {
+    single: { label: t("pricing.singleLabel"), headline: t("pricing.singleHeadline") },
+    family: { label: t("pricing.familyLabel"), headline: t("pricing.familyHeadline") },
+    enterprise: { label: t("pricing.enterpriseLabel"), headline: t("pricing.enterpriseHeadline") },
+  };
 
   return (
     <section className="mt-12 w-full text-foreground">
       <div className="mb-6 max-w-2xl">
         <Badge variant="outline" className="mb-4 gap-1.5">
           <Sparkles className="h-3.5 w-3.5" />
-          Compare plans
+          {t("pricing.compare")}
         </Badge>
-        <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">{meta.headline}</h2>
+        <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+          {audienceCopy[audience].headline}
+        </h2>
         <p className="mt-3 text-sm text-muted-foreground">{meta.blurb}</p>
       </div>
 
@@ -461,7 +474,7 @@ export default function ComparisonBlock() {
                   : "text-muted-foreground hover:text-foreground",
               )}
             >
-              {item.label}
+              {audienceCopy[item.id].label}
             </button>
           );
         })}

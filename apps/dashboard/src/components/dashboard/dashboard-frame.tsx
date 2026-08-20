@@ -3,6 +3,8 @@
 import { createContext, useContext } from "react";
 import DashboardSidebar from "@/components/ui/dashboard-sidebar";
 import DashboardTools from "@/components/DashboardTopBar";
+import { DashboardErrorBoundary } from "@/components/dashboard/dashboard-error-boundary";
+import { DashboardMotionConfig } from "@/components/motion";
 import { PageTransition } from "@/components/PageTransition";
 import { MobileBottomNav } from "@/components/dashboard/MobileBottomNav";
 import { DASHBOARD_SIDEBAR_CONTENT_OFFSET_CLASS } from "@/lib/dashboard-sidebar";
@@ -43,6 +45,7 @@ export function DashboardFrame({
 }) {
   return (
     <DashboardProfileContext.Provider value={profile}>
+      <DashboardMotionConfig>
       <div className="flex h-screen overflow-hidden bg-background">
         <DashboardSidebar
           email={profile.email}
@@ -62,7 +65,9 @@ export function DashboardFrame({
           {impersonation}
           <DashboardTools />
           <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-background max-md:pb-[calc(6.5rem+env(safe-area-inset-bottom))]">
-            <PageTransition>{children}</PageTransition>
+            <PageTransition>
+              <DashboardErrorBoundary>{children}</DashboardErrorBoundary>
+            </PageTransition>
           </main>
         </div>
         <MobileBottomNav
@@ -73,6 +78,7 @@ export function DashboardFrame({
           isSiteAdmin={profile.isSiteAdmin}
         />
       </div>
+      </DashboardMotionConfig>
     </DashboardProfileContext.Provider>
   );
 }

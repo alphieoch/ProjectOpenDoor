@@ -1,4 +1,6 @@
 import { describe, expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import {
   DEFAULT_OPENBOT_PERSONA,
   formatChannelTime,
@@ -23,6 +25,17 @@ describe("OpenBot home copy", () => {
     ];
     expect(matchingChannels(channels, "drive").map((c) => c.name)).toEqual(["Knowledge"]);
     expect(matchingChannels(channels, "  ")).toEqual(channels);
+  });
+
+  test("personas and sidebar do not import Vertex rag-search", () => {
+    const personas = readFileSync(join(import.meta.dir, "openbot-personas.ts"), "utf8");
+    const sidebar = readFileSync(
+      join(import.meta.dir, "../components/ui/dashboard-sidebar.tsx"),
+      "utf8",
+    );
+    expect(personas).not.toMatch(/rag-search/);
+    expect(personas).toContain("OPENBOT_SYSTEM_PROMPT");
+    expect(sidebar).not.toMatch(/rag-search/);
   });
 
   test("shows today's clock time the way the official home does", () => {

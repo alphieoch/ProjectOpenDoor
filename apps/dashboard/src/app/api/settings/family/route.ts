@@ -3,9 +3,10 @@ import { requireAuth } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import { users, organizations, invitations, creditTransactions } from "@opendoor/database";
 import { and, eq, gte, sql } from "drizzle-orm";
-import { DEFAULT_ALLOWED_CHAT_MODES, getPlan } from "@opendoor/shared";
+import { DEFAULT_ALLOWED_CHAT_MODES, getPlan, resolveMaxSeats, extraSeatsFromMetadata } from "@opendoor/shared";
 import { hashParentPin, isOrgOrganizer, verifyParentPin } from "@/lib/house-chat";
 import { listCreditBuckets } from "@/lib/credit-ledger";
+import { assertOrgCanInvite, countPendingInvitesNotInOrg } from "@/lib/seat-allocation";
 
 export interface FamilyMember {
   id: string;
@@ -63,10 +64,22 @@ export async function GET() {
 
     const plan = getPlan(orgRecord.plan);
     const meta = (orgRecord.metadata as Record<string, unknown>) || {};
-    const extraSeatsCount = typeof meta.extraSeatsCount === "number" ? meta.extraSeatsCount : 0;
+    const extraSeatsCount = extraSeatsFromMetadata(meta);
     const isFamilyPlan = Boolean(plan.isPool);
     const baseSeats = plan.maxSeats ?? 1;
-    const totalAllowedSeats = baseSeats + extraSeatsCount;
+    const pendingInviteCount = await countPendingInvitesNotInOrg(
+      orgId,
+      new Set(realUsers.map((u) => u.email.toLowerCase())),
+    );
+    const totalAllowedSeats = resolveMaxSeats({
+      plan: orgRecord.plan,
+      extraSeatsCount,
+    });
+    const organizer = await isOrgOrganizer({
+      userId: session.userId,
+      orgId,
+      role: session.role,
+    });
 
     const spendRows = await db
       .select({
@@ -147,7 +160,9 @@ export async function GET() {
         extraSeatPriceGbp: null,
         extraSeatPriceUsd: null,
         totalAllowedSeats,
-        seatsUsed: members.length,
+        seatsUsed: members.length + pendingInviteCount,
+        pendingInviteCount,
+        isOrganizer: organizer,
         totalPoolCreditsCents: Number(orgRecord.creditsUsdCents || 0),
         rolledOverCreditsCents,
         rolloverMonthsActive: plan.rolloverMonths ?? 0,
@@ -183,8 +198,6 @@ export async function POST(req: NextRequest) {
     }
 
     const meta = (orgRecord.metadata as Record<string, unknown>) || {};
-    const extraSeatsCount = typeof meta.extraSeatsCount === "number" ? meta.extraSeatsCount : 0;
-    const baseSeats = getPlan(orgRecord.plan).maxSeats ?? 1;
 
     const organizer = await isOrgOrganizer({
       userId: session.userId,
@@ -238,20 +251,25 @@ export async function POST(req: NextRequest) {
     }
 
     if (action === "invite") {
+      if (!organizer) {
+        return NextResponse.json({ error: "Only the organizer can invite household members" }, { status: 403 });
+      }
       if (!email) {
         return NextResponse.json({ error: "Email is required" }, { status: 400 });
       }
 
-      const currentUsers = await db.query.users.findMany({ where: eq(users.organizationId, orgId) });
-      const totalAllowed = baseSeats + extraSeatsCount;
-      if (currentUsers.length >= totalAllowed) {
+      const cap = await assertOrgCanInvite(orgId);
+      if (!cap.ok) {
         return NextResponse.json(
-          {
-            error: `All ${totalAllowed} seats are occupied. Upgrade the plan on Billing to invite more members.`,
-          },
+          { error: cap.decision.error, code: cap.decision.code, useBilling: true },
           { status: 400 },
         );
       }
+
+      const quotaCents =
+        typeof monthlyQuotaCents === "number" && Number.isFinite(monthlyQuotaCents)
+          ? Math.max(0, Math.round(monthlyQuotaCents))
+          : null;
 
       const token = crypto.randomUUID();
       const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
@@ -265,27 +283,50 @@ export async function POST(req: NextRequest) {
       });
 
       const existingUser = await db.query.users.findFirst({ where: eq(users.email, email) });
+      let memberId = existingUser?.id;
       if (existingUser) {
-        await db.update(users).set({ organizationId: orgId }).where(eq(users.id, existingUser.id));
+        await db
+          .update(users)
+          .set({
+            organizationId: orgId,
+            monthlyCreditSubCapCents: quotaCents,
+            updatedAt: new Date(),
+          })
+          .where(eq(users.id, existingUser.id));
       } else {
-        await db.insert(users).values({
-          email,
-          name: name || email.split("@")[0],
-          role: "member",
-          organizationId: orgId,
-        });
+        const [created] = await db
+          .insert(users)
+          .values({
+            email,
+            name: name || email.split("@")[0],
+            role: "member",
+            organizationId: orgId,
+            monthlyCreditSubCapCents: quotaCents,
+          })
+          .returning({ id: users.id });
+        memberId = created?.id;
       }
 
-      if (typeof monthlyQuotaCents === "number") {
+      if (quotaCents != null) {
         const memberQuotas = (meta.memberQuotas as Record<string, number> | undefined) || {};
-        const updatedMeta = { ...meta, memberQuotas: { ...memberQuotas, [email]: monthlyQuotaCents } };
+        const updatedMeta = {
+          ...meta,
+          memberQuotas: {
+            ...memberQuotas,
+            [email]: quotaCents,
+            ...(memberId ? { [memberId]: quotaCents } : {}),
+          },
+        };
         await db.update(organizations).set({ metadata: updatedMeta }).where(eq(organizations.id, orgId));
       }
 
-      return NextResponse.json({ success: true, email });
+      return NextResponse.json({ success: true, email, monthlyQuotaCents: quotaCents });
     }
 
     if (action === "update_quota") {
+      if (!organizer) {
+        return NextResponse.json({ error: "Only the organizer can update seat caps" }, { status: 403 });
+      }
       if (memberId) {
         const memberQuotas = (meta.memberQuotas as Record<string, number> | undefined) || {};
         const updatedMeta = { ...meta, memberQuotas: { ...memberQuotas, [memberId]: monthlyQuotaCents } };
@@ -302,6 +343,9 @@ export async function POST(req: NextRequest) {
     }
 
     if (action === "remove") {
+      if (!organizer) {
+        return NextResponse.json({ error: "Only the organizer can remove household members" }, { status: 403 });
+      }
       if (memberId) {
         await db
           .update(users)

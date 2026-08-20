@@ -2,9 +2,9 @@
 
 Open-weight LLM API gateway for Africa and the Global South: one OpenAI-compatible `/v1` endpoint, a live model catalog, and a dashboard that reads real keys, usage, and billing.
 
-OpenDoor sits between your app and the models you run — local Ollama, vendor APIs (DeepSeek, Qwen, Mistral, optional GPT/Claude/Gemini), or a GPU on this machine or GCP. **OpenBot** is the hosted coworker runtime (browser, `/workspace`, take-the-wheel).
+OpenDoor sits between your app and the models you run — local Ollama, vendor APIs (DeepSeek, Qwen, Mistral, optional GPT/Claude/Gemini), or a GPU on this machine or GCP. **OpenBot** is the hosted coworker runtime (browser, `/workspace`, take-the-wheel). **OpenDoor Search** is visible on Tools and Pricing; queries are metered on org credits (or the Web Search add-on). No third-party search keys.
 
-Docs while the dashboard is running: [http://localhost:3010/docs](http://localhost:3010/docs). Published site: [https://opendoor-gcp.web.app/docs](https://opendoor-gcp.web.app/docs).
+Docs while the dashboard is running: [http://localhost:3010/docs](http://localhost:3010/docs) · API: [http://localhost:3010/docs/api](http://localhost:3010/docs/api). Published: [https://opendoor-gcp.web.app/docs](https://opendoor-gcp.web.app/docs) · [https://opendoor-gcp.web.app/docs/api](https://opendoor-gcp.web.app/docs/api).
 
 ## Environments
 
@@ -21,7 +21,19 @@ Docs while the dashboard is running: [http://localhost:3010/docs](http://localho
 | GitHub | https://github.com/alphieoch/ProjectOpenDoor |
 | This branch PR | https://github.com/alphieoch/ProjectOpenDoor/pull/2 |
 
-Firebase Hosting (`opendoor-gcp`) rewrites `/v1/**` and `/health` to the gateway; everything else goes to the dashboard.
+Firebase Hosting (`opendoor-gcp`) is the public **HTTPS edge** (Google CDN-like). It rewrites `/v1/**` and `/health` to the gateway; everything else goes to the dashboard. WorkOS callbacks stay on `https://opendoor-gcp.web.app`.
+
+A second Google HTTPS load balancer (`opendoor-edge`, IP `34.149.240.132`) sits beside Hosting — not in front of it — so custom-domain / OAuth redirects are not broken:
+
+| Piece | Name |
+|---|---|
+| Cloud Armor (WAF + rate limit, allow the world) | `opendoor-armor` |
+| Cloud CDN (static/app) | `opendoor-edge-dash-bs` |
+| Armor-only API backend (no CDN) | `opendoor-edge-gw-bs` |
+| HTTP → HTTPS | `http://34.149.240.132` → `https://opendoor-gcp.web.app` |
+| Cloud DNS | **no zone** in this project (Firebase owns `*.web.app`) |
+
+No Cloudflare. No geo-block (Africa included). Apply: `./scripts/setup-gcp-security.sh`. Zone-to-zone failover (Cloud SQL REGIONAL HA, Cloud Run min instances): `./scripts/setup-gcp-ha.sh`. Details: [infra/gcp/README.md](infra/gcp/README.md).
 
 ### Development (local)
 
@@ -67,6 +79,30 @@ curl http://localhost:3001/v1/chat/completions \
 ```
 
 More detail: [Run locally](docs/getting-started/local-development.mdx), [Install](docs/getting-started/installation.mdx). GCP deploy: [infra/gcp/README.md](infra/gcp/README.md).
+
+## Language and region
+
+No URL prefix (paths stay Cloud Run / Firebase friendly). Locale is a cookie (`od_locale`) plus `users.locale` / `organizations.region` + `organizations.country` (also mirrored in org `metadata.world`).
+
+**Switch language**
+
+- Locale picker on login/signup, Get started, Pricing (header), onboarding, and the dashboard sidebar
+- `?lang=sw` (or `?lang=ar`) on any page — Arabic is RTL
+- Browser `Accept-Language` on first visit
+- Settings → Profile → Language & region
+
+First-class African locales: `en`, `fr`, `ar`, `pt`, `sw`, `ha`, `yo`, `am`, `zu`, plus `es`, `zh`, `hi`. Unknown tags fall back to English. Region (Africa / Europe / Americas / Asia-Pacific / Middle East) is never a geo-block.
+
+**Translated screens (must-have copy only — not the whole dashboard)**
+
+- Login / signup
+- Regional onboarding + how the product works (Chat, house, shared pool)
+- Get started
+- Pricing audiences (Student / Family / Team / Enterprise)
+- Tools Search one-liner
+- OpenBot “What is this house?”
+
+Catalogs: `apps/dashboard/messages/{locale}.json`. Resolve/RTL/Africa persist tests: `packages/shared/src/i18n.test.ts`. Apply `packages/database/migrations/0050_locale_region.sql` when you migrate.
 
 ## OpenBot computer URLs
 

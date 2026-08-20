@@ -21,8 +21,9 @@ export const LEADERBOT_TURN_GUIDANCE = [
   "For a simple greeting (hi, hello, hey), reply briefly in character as the house lead.",
   "Do not introduce yourself with a capabilities list.",
   "Do not advertise web browsing, Chromium, or file management unless the person asked for those.",
+  "For a factual question (how old is Lil Baby, who is on a lineup), call web_search and answer from its citations.",
+  "Use computer tools only when the person asked you to open, visit, or browse a specific page or file.",
   "Coworkers handle browsing, research, files, and specialist work. You coordinate them.",
-  "You have computer tools. Use them only when the person asks you to open a page or a file.",
 ].join(" ");
 
 export const LEADERBOT_ROLE = [
@@ -192,7 +193,7 @@ export function computerCapacityNote(capacity: OpenBotCapacity) {
   if (capacity.computer.sharedComputer) {
     return "A shared live computer URL is configured. New bots share that Chromium until a supervisor is attached.";
   }
-  return "Live computer is not attached. New bots get an in-process computer until the supervisor or OPENBOT_COMPUTER_URL is available.";
+  return "Live computer is not attached. New bots get an in-process computer until a supervisor is available.";
 }
 
 export function decideSpawn(input: {

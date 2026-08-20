@@ -1,0 +1,138 @@
+{
+  "common": {
+    "language": "ቋንቋ",
+    "region": "ክልል",
+    "country": "አገር",
+    "countryOptional": "አገር (አማራጭ)",
+    "countryNone": "አሑን ዝለል",
+    "save": "አስቀምጥ",
+    "continue": "ቀጥል",
+    "skip": "ዝለል",
+    "home": "መነሻ",
+    "signIn": "ግባ",
+    "getStarted": "ጀምር",
+    "openDashboard": "ዳሽቦርድ ክፈት"
+  },
+  "auth": {
+    "welcomeBack": "እንዋን ደሕና መጡ",
+    "createAccount": "መለያዎን ይፍጠሩ",
+    "signInSubtitle": "ወደ LLM መግቢያዎ ይግቡ",
+    "signupSubtitle": "በLLM መግቢያ ይጀምሩ",
+    "educationSubtitle": "በትምህርት ቤት አቀራረብ ይጀምሩ",
+    "email": "ኢሜይል",
+    "password": "የይለፍ ቃል",
+    "fullName": "ሙሉ ስም",
+    "organization": "ድርጅት",
+    "organizationOptional": "አማራጭ",
+    "signIn": "ግባ",
+    "signingIn": "እየገባ ነው…",
+    "createAccountCta": "መለያ ፍጠር",
+    "creatingAccount": "መለያ እየተፈጠረ ነው…",
+    "noAccount": "መለያ የለዎትም?",
+    "signUpFree": "በነጻ ይመዝገቡ",
+    "haveAccount": "መለያ አለዎት?",
+    "enterpriseSso": "የድርጅት SSO",
+    "orgSlug": "የድርጅት መለያ",
+    "continueSso": "በSSO ቀጥል",
+    "choosePlan": "እቅድ ምረጥ",
+    "enterpriseSales": "የEnterprise ሽያጭ",
+    "loginFailed": "መግባት አልተሳካም",
+    "signupFailed": "ምዝገባ አልተሳካም",
+    "passwordHint": "ቢያንስ 10 ፊደላት"
+  },
+  "onboarding": {
+    "eyebrow": "የስራ ቦታዎ",
+    "title": "OpenDoor እንዴት ይሰራል",
+    "body": "አንድ መግቢያ። በአሳሽ ውስጥ ውይይት፣ የOpenBot ባልደረቦች ቤት፣ እና የጋራ ክሬዲት ገንዳ። ክልል ይምረጡ — ምንም አገር አንዘጋም።",
+    "pickRegion": "የት ነዎት?",
+    "pickRegionHint": "ይህ ጽሑፍንና ነባሪዎችን ብቻ ይቀይራል። ሁሉም ክልሎች መመዝገብ ይችላሉ።",
+    "productChatTitle": "ውይይት",
+    "productChatBody": "ውይይትን ከፍተው በስልክ ወይም ኮምፒውተር ከሞዴሎች ይነጋገሩ። ለመጀመር የAPI ቡልፍ አያስፈልግም።",
+    "productHouseTitle": "ቤቱ",
+    "productHouseBody": "OpenBot የባልደረቦች ቤት ነው — መሪ እና የሚጨምሩአቸው ስፔሻሊስቶች። አንድ ቦታ ይጋራሉ።",
+    "productPoolTitle": "የጋራ ገንዳ",
+    "productPoolBody": "ቤተሰብና ቡድን አንድ የክሬዲት ገንዳ ይጋራሉ። አንድ ሂሳብ፣ ለእያንዳንዱ ሰው ቡልፍ አይደለም።",
+    "saveWorld": "ቋንቋና ክልል አስቀምጥ",
+    "saved": "ተቀምጧል",
+    "africa": {
+      "school": "ትምህርት ቤት፦ ቀላል ገጾች በስልክ፣ ለክፍል ወይም የቤት ስራ የተማሪ መቀመጫ፣ ሞዴል ለመድረስ ተጨማሪ ዳታ ሳይፈለግ።",
+      "family": "ቤተሰብ፦ አንድ የቤት ገንዳ። ወላጆችና ልጆች አንድ ክሬዲት ይጠቀማሉ — ከአራት ሂሳቦች ርካሽ፣ ለዳታ ወጢ የተሰራ።",
+      "team": "ቡድን፦ ለላብራቶሪ፣ NGO ወይም ሱቅ አንድ ቦታ። በኢሜይል ጋብዙ። ሁሉም ገንዳውን ይጋራሉ።"
+    },
+    "europe": {
+      "school": "ትምህርት ቤት፦ ለክፍል ወይም ላብ የተማሪ ጅምር፣ እንደ Pro ያለው መንገድ።",
+      "family": "ቤተሰብ፦ የቤት ገንዳ ከማሸጋገር ጋር — ለቤቱ አንድ አባልነት።",
+      "team": "ቡድን፦ SSO እና የጋራ መቆጣጠሪያ። Enterprise ከሽያጭ ጋር ይነጋገራል።"
+    },
+    "americas": {
+      "school": "ትምህርት ቤት፦ ተማሪ ለቤት ስራና ላብ አባልነት ነው። የPro ሞዴሎች።",
+      "family": "ቤተሰብ፦ የቤት ገንዳ፣ ከአራት የPro መቀመጫዎች ርካሽ።",
+      "team": "ቡድን፦ በራስ የሚገዙ መቀመጫዎች። Enterprise፦ መኖሪያ፣ SCIM እና ሽያጭ።"
+    },
+    "asia_pacific": {
+      "school": "ትምህርት ቤት፦ በስልክ ይጀምሩ። ተማሪ መቀመጫውን ይሸፍናል፤ ቶከኖች በመጋዘን ዋጋ ይቆያሉ።",
+      "family": "ቤተሰብ፦ አንድ የቤት ገንዳ ዳታና መቀመጫ አራት ጊዜ እንዳይገዙ።",
+      "team": "ቡድን፦ አንድ ቦታ፣ ባልደረቦችን ጋብዙ፣ ክሬዲት ያካፍሉ።"
+    },
+    "middle_east": {
+      "school": "ትምህርት ቤት፦ ለክፍልና ምርምር የተማሪ መንገድ። ዓረብኛ ዋና ቋንቋ ነው።",
+      "family": "ቤተሰብ፦ የቤት ገንዳ — ለቤቱ አንድ ሂሳብ።",
+      "team": "ቡድን፦ የጋራ ቦታ እና አስፈላጊ ሲሆን SSO። Enterprise በሽያጭ።"
+    }
+  },
+  "getStarted": {
+    "eyebrow": "ጀምር",
+    "title": "መንገዶን ይምረጡ።",
+    "body": "OpenDoor ከትምህርት ቤት፣ ቤተሰብ እና ቡድን ጋር ይስማማል። ክልል ይምረጡ — ማንም በጂዎ አይታገድም።",
+    "startFree": "በነጻ ጀምር",
+    "startFreeBody": "ለአንድ ሰው ወይም ትንሽ ቡድን በራስ ያገልግሉ። በኢሜይል ይቀጥሉ።",
+    "education": "ትምህርት",
+    "educationBody": "ለትምህርት ቤቶች፣ ላቦች እና ተማሪዎች። ጅምሩ የትምህርት ቤት ቅርጽ ይይዛል።",
+    "enterprise": "ድርጅት",
+    "enterpriseBody": "ያሉ ድርጅቶች በSSO ይገባሉ። አዲስ ማሰማራት ከሽያጭ ጋር ይጀምራል።",
+    "continueEmail": "በኢሜይል ቀጥል",
+    "continueEducation": "በትምህርት ምዝገባ ቀጥል",
+    "joinSso": "በSSO ተቀላቀል",
+    "talkSales": "ከሽያጭ ጋር ተነጋገር"
+  },
+  "gettingStarted": {
+    "eyebrow": "መጀመር",
+    "title": "ወደ OpenDoor እንዋን ደሕና መጡ",
+    "coreDone": "ዋናው ማዋቀር ተጠናቋል። አማራጭ ደረጃዎች ሲያስፈልጉ እዚህ አሉ።",
+    "coreTodo": "ውይይትና አንድ ባልደረባ ወደ ምርቱ ያስገቡዎታል። የቀረው አማራጭ ነው።",
+    "hide": "ማዋቀሩን ደብቅ"
+  },
+  "pricing": {
+    "audienceStudent": "ተማሪ",
+    "audienceFamily": "ቤተሰብ",
+    "audienceTeam": "ቡድን",
+    "audienceEnterprise": "ድርጅት",
+    "singleLabel": "ተማሪ",
+    "familyLabel": "ቤተሰብ",
+    "enterpriseLabel": "ቡድን / ድርጅት",
+    "singleHeadline": "ለአንድ ሰው እቅዶች",
+    "familyHeadline": "ለቤቶ የጋራ ገንዳ",
+    "enterpriseHeadline": "ለቡድኖችና ድርጅቶች እቅዶች",
+    "compare": "እቅዶችን አወዳድር"
+  },
+  "tools": {
+    "searchOneLiner": "ጥያቄ ይጠይቁ። OpenDoor Search በእኛ ስታክ ምንጎችን ይሰጣል — ከክሬዲቶ ይቀነሳል፣ የውጭ የፍለጋ ቡልፎች የሉም።"
+  },
+  "openbot": {
+    "houseTitle": "ይህ ቤት ምንድን ነው?",
+    "houseBody": "ቤት የOpenBot ቦታዎ ነው፦ መሪ ባልደረባ እና የሚጨምሩአቸው ስፔሻሊስቶች። ቻናሎችን፣ ክህሎቶችን እና የድርጅቱን ክሬዲት ገንዳ ይጋራሉ። ለመነጋገር ቻናል ይጀምሩ፤ ስም ያለው ሚና ሲፈልጉ ባልደረባ ይጨምሩ።",
+    "houseGotIt": "ገባኝ",
+    "startChannel": "አዲስ ቻናል ጀምር"
+  },
+  "settings": {
+    "languageRegion": "ቋንቋና ክልል",
+    "languageRegionHint": "በመግቢያ፣ በጅምር እና በመጀመሪያ ማያ ገጽ ይጠቀማል። የቀረው ዳሽቦርድ ለአሑን በእንግሊዝኛ ይቀራል።"
+  },
+  "regions": {
+    "africa": "አፍሪካ",
+    "europe": "አውሮፓ",
+    "americas": "አሜሪካዎች",
+    "asia_pacific": "እስያ-ፓሲፊክ",
+    "middle_east": "መካከለኛው ምስራቅ"
+  }
+}

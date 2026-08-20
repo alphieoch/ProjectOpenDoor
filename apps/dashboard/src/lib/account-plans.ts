@@ -107,7 +107,7 @@ export const ACCOUNT_PLANS: AccountPlan[] = [
       "Custom dashboard and API domain",
       "Governance: Trust Center, policies, violations, approvals, compliance, and sector packs",
       "Agents add-on included (OpenClaw, Hermes, NemoClaw, OpenBot)",
-      "Web Search add-on included (Vertex AI Grounding)",
+      "OpenDoor Search included (Vertex AI Grounding; otherwise list price per query)",
     ],
   },
 ];
@@ -141,6 +141,7 @@ export const PRICING_AUDIENCES: {
 ];
 
 export function planSignupHref(id: AccountPlanId) {
+  if (id === "student") return "/login?signup=1&plan=student&segment=education";
   if (id === "enterprise") {
     return "mailto:sales@opendoor.ai?subject=OpenDoor%20Enterprise";
   }

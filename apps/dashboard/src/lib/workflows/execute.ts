@@ -23,6 +23,7 @@ import {
   type WorkflowGatewayContext,
 } from "@/lib/workflows/gateway";
 import { runWorkflowHttp } from "@/lib/workflows/http";
+import { ragSearch, RagSearchNotConfiguredError } from "@/lib/tools/rag-search";
 
 export type WorkflowGraphNode = {
   id: string;
@@ -142,7 +143,7 @@ export function graphHasWebSearch(graph: WorkflowGraph): boolean {
   return (graph.nodes || []).some((node) => {
     if (node.type !== "tool" && node.type !== "web_search") return false;
     const tool = toolTypeOf(node);
-    return tool === "web_search" || node.type === "web_search";
+    return tool === "web_search" || tool === "search" || node.type === "web_search";
   });
 }
 
@@ -583,6 +584,46 @@ async function runTool(
         status: "error",
         query,
         error: message,
+      };
+    }
+  }
+
+  if (toolType === "search") {
+    const query = nodeQuery(node, fallback) || str(node.data?.description);
+    const limit = typeof node.data?.maxResults === "number" ? node.data.maxResults : maxResults;
+    if (!query) {
+      return {
+        nodeId: node.id,
+        type: "tool",
+        toolType,
+        status: "error",
+        error: "No search query. Set Query on the Search node, or pass { query } when running.",
+      };
+    }
+    try {
+      const result = await ragSearch({
+        query,
+        maxResults: limit,
+      });
+      return {
+        nodeId: node.id,
+        type: "tool",
+        toolType,
+        status: "ok",
+        query,
+        provider: result.provider,
+        results: result.citations,
+        text: result.answer,
+      };
+    } catch (err) {
+      return {
+        nodeId: node.id,
+        type: "tool",
+        toolType,
+        status: "error",
+        code: err instanceof RagSearchNotConfiguredError ? "not_configured" : undefined,
+        query,
+        error: err instanceof Error ? err.message : "Search failed",
       };
     }
   }

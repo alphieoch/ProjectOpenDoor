@@ -43,6 +43,7 @@ describe("activity mapping", () => {
       metadata: { runtime: "openbot" },
     })).toBe("/dashboard/openbot/agt-1");
     expect(auditActivityHref("billing.checkout_started")).toBe("/dashboard/billing");
+    expect(auditActivityHref("byok.created")).toBe("/dashboard/settings/byok");
     expect(auditActivityHref("governance.approval.requested")).toBe(
       "/dashboard/governance/approvals"
     );

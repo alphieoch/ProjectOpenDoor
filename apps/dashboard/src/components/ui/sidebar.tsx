@@ -159,8 +159,13 @@ export function SessionNavBar({
   const pathname = usePathname();
 
   const groups = useMemo(
-    () => navGroupsForViewer({ isSiteAdmin, protectedChild }),
-    [isSiteAdmin, protectedChild],
+    () =>
+      navGroupsForViewer({
+        isSiteAdmin,
+        protectedChild,
+        hasEnterpriseTools: !enterpriseLocked,
+      }),
+    [isSiteAdmin, protectedChild, enterpriseLocked],
   );
 
   useEffect(() => {

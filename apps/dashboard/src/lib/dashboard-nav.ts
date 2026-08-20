@@ -6,6 +6,7 @@ import {
   GitBranch, List, FlaskConical, ScrollText, MessageSquare, Image as ImageIcon, Wrench,
   ShieldAlert,
 } from "lucide-react";
+import { workspaceHasEnterpriseTools } from "@opendoor/shared";
 import { AgentsNavIcon } from "@/components/ui/agents-nav-icon";
 
 export type SidebarIcon = ComponentType<{ className?: string; style?: CSSProperties }>;
@@ -23,6 +24,8 @@ export type DashboardNavGroup = {
   id: "main" | "build" | "account" | "governance" | "admin";
   label: string;
   siteAdminOnly?: boolean;
+  /** Trust Center pack — unlocked when the workspace has Enterprise tools. */
+  locked?: boolean;
   items: DashboardNavItem[];
 };
 
@@ -104,14 +107,30 @@ export const CHILD_HIDDEN_HREFS = new Set([
   "/dashboard/premium",
 ]);
 
+export function viewerHasEnterpriseTools(opts: {
+  plan?: string | null;
+  isSiteAdmin?: boolean | null;
+}) {
+  return workspaceHasEnterpriseTools(opts);
+}
+
 export function navGroupsForViewer(opts: {
   isSiteAdmin?: boolean;
   protectedChild?: boolean;
+  hasEnterpriseTools?: boolean;
+  plan?: string | null;
 }): DashboardNavGroup[] {
+  const hasEnterpriseTools =
+    opts.hasEnterpriseTools ??
+    workspaceHasEnterpriseTools({
+      plan: opts.plan,
+      isSiteAdmin: opts.isSiteAdmin,
+    });
   return dashboardNavGroups
     .filter((group) => !group.siteAdminOnly || Boolean(opts.isSiteAdmin))
     .map((group) => ({
       ...group,
+      locked: group.id === "governance" ? !hasEnterpriseTools : undefined,
       items: (opts.protectedChild
         ? group.items.filter((item) => !CHILD_HIDDEN_HREFS.has(item.href))
         : group.items

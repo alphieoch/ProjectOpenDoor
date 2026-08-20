@@ -59,7 +59,7 @@ export function DocsMarkdown({
       components={{
         h1({ children }) {
           return (
-            <h1 className="mt-2 text-4xl font-semibold tracking-tight text-slate-950 first:mt-0">
+            <h1 className="mt-2 text-4xl font-semibold tracking-tight text-foreground first:mt-0">
               {children}
             </h1>
           );
@@ -67,7 +67,7 @@ export function DocsMarkdown({
         h2({ children }) {
           const id = slugify(textFrom(children));
           return (
-            <h2 id={id} className="mt-12 scroll-mt-28 text-2xl font-semibold tracking-tight text-slate-950">
+            <h2 id={id} className="mt-12 scroll-mt-28 text-2xl font-semibold tracking-tight text-foreground">
               {children}
             </h2>
           );
@@ -75,26 +75,26 @@ export function DocsMarkdown({
         h3({ children }) {
           const id = slugify(textFrom(children));
           return (
-            <h3 id={id} className="mt-8 scroll-mt-28 text-lg font-semibold text-slate-900">
+            <h3 id={id} className="mt-8 scroll-mt-28 text-lg font-semibold text-foreground">
               {children}
             </h3>
           );
         },
         p({ children }) {
-          return <p className="mt-4 text-[15px] leading-7 text-slate-700 first:mt-0">{children}</p>;
+          return <p className="mt-4 text-[15px] leading-7 text-muted-foreground first:mt-0">{children}</p>;
         },
         ul({ children }) {
-          return <ul className="mt-4 list-disc space-y-2 pl-5 text-[15px] leading-7 text-slate-700">{children}</ul>;
+          return <ul className="mt-4 list-disc space-y-2 pl-5 text-[15px] leading-7 text-muted-foreground">{children}</ul>;
         },
         ol({ children }) {
-          return <ol className="mt-4 list-decimal space-y-2 pl-5 text-[15px] leading-7 text-slate-700">{children}</ol>;
+          return <ol className="mt-4 list-decimal space-y-2 pl-5 text-[15px] leading-7 text-muted-foreground">{children}</ol>;
         },
         li({ children }) {
           return <li className="leading-7">{children}</li>;
         },
         a({ href, children }) {
           const next = rewriteHref(href, known) || href || "#";
-          const className = "font-medium text-blue-700 underline-offset-2 hover:underline";
+          const className = "font-medium text-primary underline-offset-2 hover:underline";
           if (next.startsWith("/")) {
             return (
               <Link href={next} className={className}>
@@ -110,29 +110,29 @@ export function DocsMarkdown({
         },
         blockquote({ children }) {
           return (
-            <blockquote className="mt-6 border-l-2 border-blue-600 pl-4 text-[15px] leading-7 text-slate-600">
+            <blockquote className="mt-6 border-l-2 border-primary pl-4 text-[15px] leading-7 text-muted-foreground">
               {children}
             </blockquote>
           );
         },
         hr() {
-          return <hr className="my-10 border-slate-200" />;
+          return <hr className="my-10 border-border" />;
         },
         table({ children }) {
           return (
-            <div className="mt-6 overflow-x-auto rounded-2xl border border-slate-200 bg-white">
+            <div className="mt-6 overflow-x-auto rounded-2xl border border-border bg-card">
               <table className="w-full min-w-[36rem] border-collapse text-left text-sm">{children}</table>
             </div>
           );
         },
         thead({ children }) {
-          return <thead className="bg-slate-50 text-slate-600">{children}</thead>;
+          return <thead className="bg-muted text-muted-foreground">{children}</thead>;
         },
         th({ children }) {
           return <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide">{children}</th>;
         },
         td({ children }) {
-          return <td className="border-t border-slate-100 px-4 py-3 align-top text-slate-700">{children}</td>;
+          return <td className="border-t border-border px-4 py-3 align-top text-foreground">{children}</td>;
         },
         code({ className, children, ...props }) {
           const text = String(children).replace(/\n$/, "");
@@ -140,7 +140,7 @@ export function DocsMarkdown({
           if (!language) {
             return (
               <code
-                className="rounded-md bg-slate-100 px-1.5 py-0.5 font-mono text-[13px] text-slate-800"
+                className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-[13px] text-foreground"
                 {...props}
               >
                 {children}
@@ -148,8 +148,8 @@ export function DocsMarkdown({
             );
           }
           return (
-            <div className="mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-[#F7F6F2]">
-              <div className="flex items-center justify-between border-b border-slate-200 px-4 py-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+            <div className="mt-6 overflow-hidden rounded-2xl border border-border bg-card">
+              <div className="flex items-center justify-between border-b border-border px-4 py-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                 <span>{language}</span>
                 <button
                   type="button"
@@ -158,7 +158,7 @@ export function DocsMarkdown({
                     setCopied(text);
                     window.setTimeout(() => setCopied(null), 1600);
                   }}
-                  className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-medium normal-case tracking-normal text-slate-600 hover:bg-white"
+                  className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-medium normal-case tracking-normal text-muted-foreground hover:bg-background"
                 >
                   {copied === text ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
                   {copied === text ? "Copied" : "Copy"}

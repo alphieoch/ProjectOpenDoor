@@ -15,8 +15,8 @@
     "showThemeToggle": true,
     "showGitHubCard": false,
     "links": [
-      { "title": "Get started", "href": "/getting-started/installation" },
-      { "title": "API", "href": "/api-reference/chat-completions" },
+      { "title": "Get started", "href": "/" },
+      { "title": "API", "href": "/api" },
       { "title": "Status", "href": "https://opendoor-gcp.web.app/status" },
       { "title": "Dashboard", "href": "https://opendoor-gcp.web.app/get-started", "cta": true }
     ]
@@ -39,11 +39,26 @@
     "/docs/getting-started/configuration": "/getting-started/configuration",
     "/docs/getting-started/local-development": "/getting-started/local-development",
     "/docs/api-reference/chat-completions": "/api-reference/chat-completions",
-    "/docs/model-catalog/overview": "/model-catalog/overview"
+    "/docs/model-catalog/overview": "/model-catalog/overview",
+    "/docs/api": "/api",
+    "/api-reference": "/api",
+    "/getting-started": "/",
+    "/getting-started/javascript": "/getting-started/sdk"
   },
+  "pinned": [
+    { "title": "Get started", "href": "/" },
+    { "title": "API keys", "href": "/how-it-works/api-keys" },
+    { "title": "Chat", "href": "/api-reference/chat-completions" },
+    { "title": "Models", "href": "/api-reference/models" },
+    { "title": "Errors", "href": "/api-reference/errors" },
+    { "title": "JavaScript SDK", "href": "/getting-started/sdk" },
+    { "title": "Python SDK", "href": "/getting-started/python" },
+    { "title": "Search", "href": "/api-reference/web-search" },
+    { "title": "OpenBot / Agents", "href": "/api-reference/agents" }
+  ],
   "tabs": [
     { "id": "guides", "title": "Guides", "href": "/" },
-    { "id": "api", "title": "API", "href": "/api-reference/chat-completions" },
+    { "id": "api", "title": "API", "href": "/api" },
     { "id": "catalog", "title": "Catalog", "href": "/model-catalog/overview" },
     { "id": "ops", "title": "Ops", "href": "/billing/spend-caps" }
   ],
@@ -53,12 +68,14 @@
       "icon": "rocket",
       "tab": "guides",
       "pages": [
-        { "title": "What OpenDoor is", "href": "/" },
-        { "title": "Install", "href": "/getting-started/installation" },
+        { "title": "Get started", "href": "/" },
+        { "title": "API keys", "href": "/how-it-works/api-keys" },
+        { "title": "JavaScript SDK", "href": "/getting-started/sdk" },
+        { "title": "Python SDK", "href": "/getting-started/python" },
+        { "title": "CLI", "href": "/getting-started/cli" },
+        { "title": "Install (self-host)", "href": "/getting-started/installation" },
         { "title": "Configure", "href": "/getting-started/configuration" },
-        { "title": "Run locally", "href": "/getting-started/local-development" },
-        { "title": "TypeScript SDK", "href": "/getting-started/sdk" },
-        { "title": "CLI", "href": "/getting-started/cli" }
+        { "title": "Run locally", "href": "/getting-started/local-development" }
       ]
     },
     {
@@ -83,12 +100,15 @@
       "icon": "code",
       "tab": "api",
       "pages": [
-        { "title": "Platform API", "href": "/api-reference/platform" },
+        { "title": "API overview", "href": "/api" },
+        { "title": "Chat completions", "href": "/api-reference/chat-completions" },
+        { "title": "Models", "href": "/api-reference/models" },
+        { "title": "Errors", "href": "/api-reference/errors" },
+        { "title": "Platform catalog", "href": "/api-reference/platform" },
         { "title": "Usage", "href": "/api-reference/usage" },
         { "title": "Assistants", "href": "/api-reference/assistants" },
         { "title": "Agents", "href": "/api-reference/agents" },
         { "title": "Workflows", "href": "/api-reference/workflows" },
-        { "title": "Chat completions", "href": "/api-reference/chat-completions" },
         { "title": "Structured outputs", "href": "/api-reference/structured-outputs" },
         { "title": "Vision", "href": "/api-reference/vision" },
         { "title": "Streaming", "href": "/api-reference/streaming" },

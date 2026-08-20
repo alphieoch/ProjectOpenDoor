@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { db, organizations, creditTransactions, users } from "@opendoor/database";
-import { and, eq } from "drizzle-orm";
-import { billingIsUnlimited, splitCreditBuckets, welcomeAllowedForFamily } from "@opendoor/shared";
+import { and, eq, gte, sql } from "drizzle-orm";
+import { billingIsUnlimited, evaluateMonthlySeatCap, splitCreditBuckets, welcomeAllowedForFamily } from "@opendoor/shared";
 import type { BillingPlan, ModelFamily } from "./pricing.js";
 import { spendFifoCredits } from "./credit-ledger.js";
 import { createRedis } from "../lib/redis.js";
@@ -29,6 +29,57 @@ export function getPlanBudgetLimitCents(_plan: BillingPlan): number {
 
 export function usdToCents(usd: number): number {
   return Math.max(0, Math.ceil(usd * 100));
+}
+
+export async function monthUserSpendCents(orgId: string, userId: string) {
+  const monthStart = new Date();
+  monthStart.setUTCDate(1);
+  monthStart.setUTCHours(0, 0, 0, 0);
+  const spent = await db
+    .select({
+      total: sql<number>`COALESCE(SUM(CASE WHEN ${creditTransactions.amountCents} < 0 THEN -${creditTransactions.amountCents} ELSE 0 END), 0)`,
+    })
+    .from(creditTransactions)
+    .where(
+      and(
+        eq(creditTransactions.organizationId, orgId),
+        gte(creditTransactions.createdAt, monthStart),
+        sql`${creditTransactions.metadata}->>'userId' = ${userId}`,
+      ),
+    );
+  return Number(spent[0]?.total || 0);
+}
+
+export async function assertMonthlySeatCap(
+  orgId: string,
+  userId: string | null | undefined,
+  estimatedCostCents = 0,
+): Promise<
+  | { ok: true }
+  | { ok: false; status: 402; body: Record<string, unknown> }
+> {
+  if (!userId || !asUuid(userId)) return { ok: true };
+  const member = await db.query.users.findFirst({
+    where: and(eq(users.id, userId), eq(users.organizationId, orgId)),
+    columns: { monthlyCreditSubCapCents: true, isSiteAdmin: true },
+  });
+  if (!member || member.isSiteAdmin) return { ok: true };
+  const usedCents = await monthUserSpendCents(orgId, userId);
+  const decision = evaluateMonthlySeatCap({
+    monthlyCreditSubCapCents: member.monthlyCreditSubCapCents,
+    usedCents,
+    estimatedCostCents,
+  });
+  if (decision.ok) return { ok: true };
+  return {
+    ok: false,
+    status: 402,
+    body: {
+      error: decision.error,
+      monthlyCreditSubCapCents: decision.monthlyCreditSubCapCents,
+      usedCents: decision.usedCents,
+    },
+  };
 }
 
 export async function orgHasUnlimitedSpend(

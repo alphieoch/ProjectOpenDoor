@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getPlatformTool } from "@opendoor/shared";
+import { getPlatformTool, isRagSearchToolId, usesWebSearchAddon } from "@opendoor/shared";
 import { requireAuth, sessionActorId } from "@/lib/auth";
 import { chargeToolUsage, orgHasToolEnabled } from "@/lib/tools/entitlements";
+import { invokeOpenDoorSearch } from "@/lib/tools/search-invoke";
 import { loadWebSearchEntitlement } from "@/lib/web-search/entitlement";
 import { executeWorkflowGraph, type WorkflowGraph } from "@/lib/workflows/execute";
 import { workflowGatewayContext } from "@/lib/workflows/gateway";
@@ -32,15 +33,6 @@ export async function POST(
   const tool = getPlatformTool(id);
   if (!tool) return NextResponse.json({ error: "Tool not found" }, { status: 404 });
 
-  const enabled = await orgHasToolEnabled(orgId, id);
-  const addon = id === "web_search" ? await loadWebSearchEntitlement(orgId, session) : null;
-  if (!enabled && !addon?.active) {
-    return NextResponse.json(
-      { error: `Enable ${tool.name} on Tools first, or subscribe to the monthly add-on.` },
-      { status: 402 }
-    );
-  }
-
   const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
   const query =
     typeof body.query === "string"
@@ -48,6 +40,33 @@ export async function POST(
       : typeof body.prompt === "string"
         ? body.prompt
         : undefined;
+
+  if (isRagSearchToolId(id)) {
+    const maxResults =
+      typeof body.maxResults === "number"
+        ? body.maxResults
+        : typeof body.max_results === "number"
+          ? body.max_results
+          : undefined;
+    const result = await invokeOpenDoorSearch({
+      orgId,
+      query: query ?? "",
+      userId: sessionActorId(session),
+      isSiteAdmin: session.isSiteAdmin,
+      session,
+      maxResults,
+    });
+    return NextResponse.json(result.body, { status: result.status });
+  }
+
+  const enabled = await orgHasToolEnabled(orgId, id);
+  const addon = usesWebSearchAddon(tool) ? await loadWebSearchEntitlement(orgId, session) : null;
+  if (!enabled && !addon?.active) {
+    return NextResponse.json(
+      { error: `Enable ${tool.name} on Tools first, or subscribe to the monthly add-on.` },
+      { status: 402 }
+    );
+  }
 
   const afford = await chargeToolUsage({
     orgId,

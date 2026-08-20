@@ -1,0 +1,138 @@
+{
+  "common": {
+    "language": "Langue",
+    "region": "Région",
+    "country": "Pays",
+    "countryOptional": "Pays (facultatif)",
+    "countryNone": "Passer pour l’instant",
+    "save": "Enregistrer",
+    "continue": "Continuer",
+    "skip": "Passer",
+    "home": "Accueil",
+    "signIn": "Connexion",
+    "getStarted": "Commencer",
+    "openDashboard": "Ouvrir le tableau de bord"
+  },
+  "auth": {
+    "welcomeBack": "Bon retour",
+    "createAccount": "Créer votre compte",
+    "signInSubtitle": "Connectez-vous à votre passerelle LLM",
+    "signupSubtitle": "Démarrez avec la passerelle LLM",
+    "educationSubtitle": "Démarrez avec un parcours école",
+    "email": "E-mail",
+    "password": "Mot de passe",
+    "fullName": "Nom complet",
+    "organization": "Organisation",
+    "organizationOptional": "facultatif",
+    "signIn": "Se connecter",
+    "signingIn": "Connexion…",
+    "createAccountCta": "Créer un compte",
+    "creatingAccount": "Création du compte…",
+    "noAccount": "Pas de compte ?",
+    "signUpFree": "Inscription gratuite",
+    "haveAccount": "Déjà un compte ?",
+    "enterpriseSso": "SSO Entreprise",
+    "orgSlug": "Identifiant d’organisation",
+    "continueSso": "Continuer avec le SSO",
+    "choosePlan": "Choisir une offre",
+    "enterpriseSales": "Ventes Enterprise",
+    "loginFailed": "Échec de la connexion",
+    "signupFailed": "Échec de l’inscription",
+    "passwordHint": "Au moins 10 caractères"
+  },
+  "onboarding": {
+    "eyebrow": "Votre espace",
+    "title": "Comment OpenDoor fonctionne",
+    "body": "Une connexion. Le chat dans le navigateur, une maison de collègues OpenBot, et un pool de crédits partagé. Choisissez votre région — aucun pays n’est bloqué.",
+    "pickRegion": "Où êtes-vous ?",
+    "pickRegionHint": "Cela change le texte et les défauts. Toutes les régions peuvent s’inscrire.",
+    "productChatTitle": "Chat",
+    "productChatBody": "Ouvrez Chat et parlez aux modèles sur téléphone ou ordinateur. Pas besoin de clé API pour commencer.",
+    "productHouseTitle": "La maison",
+    "productHouseBody": "OpenBot est une maison de collègues — un leader plus les spécialistes que vous ajoutez. Ils partagent le même espace.",
+    "productPoolTitle": "Pool partagé",
+    "productPoolBody": "Famille et Équipe partagent un seul pool de crédits. Une facture, pas une clé par personne.",
+    "saveWorld": "Enregistrer la langue et la région",
+    "saved": "Enregistré",
+    "africa": {
+      "school": "École : pages légères sur téléphone, un siège Student pour la classe, sans données en trop juste pour joindre un modèle.",
+      "family": "Famille : un pool pour le foyer. Parents et enfants partagent les crédits — moins cher que quatre factures, pensé pour le coût des données mobiles.",
+      "team": "Équipe : un espace pour le labo, l’ONG ou le commerce. Invitation par e-mail. Tout le monde partage le pool."
+    },
+    "europe": {
+      "school": "École : onboarding Student pour une classe ou un labo, même chemin que Pro.",
+      "family": "Famille : un pool foyer avec report — une adhésion pour la maison.",
+      "team": "Équipe : SSO et contrôles partagés. Enterprise passe par les ventes."
+    },
+    "americas": {
+      "school": "École : Student est l’adhésion pour les devoirs et les labos. Mêmes modèles que Pro.",
+      "family": "Famille : un pool maison, moins cher que quatre sièges Pro.",
+      "team": "Équipe : sièges en libre-service. Enterprise : résidence, SCIM, ventes."
+    },
+    "asia_pacific": {
+      "school": "École : commencez sur téléphone. Student couvre le siège ; les jetons restent au tarif entrepôt.",
+      "family": "Famille : un pool pour le foyer, pour ne pas racheter data et sièges quatre fois.",
+      "team": "Équipe : un espace, invitez des collègues, partagez les crédits."
+    },
+    "middle_east": {
+      "school": "École : parcours Student pour la classe et la recherche. L’arabe est une langue de premier plan.",
+      "family": "Famille : un pool foyer — une facture pour la maison.",
+      "team": "Équipe : espace partagé et SSO si besoin. Enterprise via les ventes."
+    }
+  },
+  "getStarted": {
+    "eyebrow": "Commencer",
+    "title": "Choisissez votre chemin.",
+    "body": "OpenDoor s’adapte à l’école, la famille et l’équipe. Choisissez une région — personne n’est bloqué.",
+    "startFree": "Commencer gratuitement",
+    "startFreeBody": "Libre-service pour une personne ou une petite équipe. Continuer par e-mail.",
+    "education": "Éducation",
+    "educationBody": "Pour les écoles, labos et étudiants. L’onboarding reste scolaire.",
+    "enterprise": "Enterprise",
+    "enterpriseBody": "Les orgs existantes se connectent en SSO. Les nouveaux déploiements passent par les ventes.",
+    "continueEmail": "Continuer avec l’e-mail",
+    "continueEducation": "Continuer en inscription éducation",
+    "joinSso": "Rejoindre via SSO",
+    "talkSales": "Parler aux ventes"
+  },
+  "gettingStarted": {
+    "eyebrow": "Premiers pas",
+    "title": "Bienvenue sur OpenDoor",
+    "coreDone": "L’essentiel est fait. Les étapes optionnelles restent là si besoin.",
+    "coreTodo": "Le chat et un collègue suffisent pour entrer. Le reste est optionnel.",
+    "hide": "Masquer le guidage"
+  },
+  "pricing": {
+    "audienceStudent": "Étudiant",
+    "audienceFamily": "Famille",
+    "audienceTeam": "Équipe",
+    "audienceEnterprise": "Enterprise",
+    "singleLabel": "Étudiant",
+    "familyLabel": "Famille",
+    "enterpriseLabel": "Équipe / Enterprise",
+    "singleHeadline": "Offres pour une personne",
+    "familyHeadline": "Un pool partagé pour le foyer",
+    "enterpriseHeadline": "Offres pour les équipes et orgs",
+    "compare": "Comparer les offres"
+  },
+  "tools": {
+    "searchOneLiner": "Posez une question. OpenDoor Search répond avec des sources sur notre stack — débité sur vos crédits, sans clés de recherche tierces."
+  },
+  "openbot": {
+    "houseTitle": "Qu’est-ce que cette maison ?",
+    "houseBody": "Une maison est votre espace OpenBot : un collègue leader plus les spécialistes que vous ajoutez. Ils partagent les salons, les compétences et le pool de crédits de l’org. Ouvrez un salon pour parler ; ajoutez un collègue pour un rôle nommé.",
+    "houseGotIt": "Compris",
+    "startChannel": "Ouvrir un nouveau salon"
+  },
+  "settings": {
+    "languageRegion": "Langue et région",
+    "languageRegionHint": "Utilisé à la connexion, à l’onboarding et au premier écran. Le reste du tableau de bord reste en anglais pour l’instant."
+  },
+  "regions": {
+    "africa": "Afrique",
+    "europe": "Europe",
+    "americas": "Amériques",
+    "asia_pacific": "Asie-Pacifique",
+    "middle_east": "Moyen-Orient"
+  }
+}

@@ -1,62 +1,63 @@
 ---
-title: "Web search"
-description: "Live web search with citations. Prefers Vertex AI Google Search grounding on GCP, then Gemini API, Gemini CLI, then Tavily / Brave / Serper."
+title: "Search"
+description: "OpenDoor Search — Vertex AI Grounding with Google Search, $0.10 per query, included on Enterprise."
+showPageTitle: true
 ---
 
-# Web search
-
-Plugin endpoint that runs a live web search and returns citations. **Requires the Web Search add-on** (`STRIPE_WEB_SEARCH_ADDON_PRICE_ID`, $20/month) or an Enterprise plan. Without it the gateway returns **402** `{ error, code: "addon_required", addon: "web_search" }` — it does not silently fall through to Tavily. Results are never invented — if the add-on is active but no provider is configured, the gateway returns 503.
-
-Subscribe from **Dashboard → Billing**. Vertex / GCP credentials stay on the OpenDoor server (`GOOGLE_CLOUD_PROJECT` + ADC). Customers do not paste GCP keys.
+# Search
 
 ```
 POST /v1/plugins/web-search
+POST /v1/plugins/search
 ```
 
-Provider order:
+Same engine. The gateway runs **Vertex AI Grounding with Google Search** on OpenDoor’s GCP project (`provider: "vertex_google_search"`). You do not paste GCP or third-party search keys. Citations come back with the synthesized answer.
 
-1. **`vertex_google_search`** — **Production path.** [Vertex AI Grounding with Google Search](https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/grounding/grounding-with-google-search) (`googleSearch` tool on Gemini `generateContent`). Uses your GCP project and Application Default Credentials (Cloud Run service account, `GOOGLE_APPLICATION_CREDENTIALS`, or `gcloud auth application-default login`).
-2. **`google`** — Gemini API Google Search grounding (`GOOGLE_API_KEY` or `GEMINI_API_KEY`). Optional `GOOGLE_SEARCH_MODEL` (default `gemini-2.0-flash`).
-3. **`google_cli`** — Local laptop fallback. Gemini CLI (`gemini` from `@google/gemini-cli`) using its built-in `google_web_search` tool. Set `GOOGLE_CLI` or `GEMINI_CLI`, or leave unset to use `gemini` on `PATH`.
-4. **`google_cse`** — Google Programmable Search JSON API (`GOOGLE_CSE_ID` + `GOOGLE_SEARCH_API_KEY` or `GOOGLE_API_KEY`).
-5. **Tavily** (`TAVILY_API_KEY`), then **Brave** (`BRAVE_SEARCH_API_KEY`), then **Serper** (`SERPER_API_KEY`).
+`GET /v1/tools` lists **OpenDoor Search** as `$0.10 / query` (and the Web Search plugin as `$0.10 / call`).
 
-The same helper runs workflow **Web Search** nodes from the dashboard (**Run** on `/dashboard/workflow/[id]`).
+## Price
 
-## Vertex / GCP env
+| Who | What you pay |
+|-----|----------------|
+| **Enterprise** | Included (no per-query debit for this tool) |
+| **$20/month Web Search add-on** | Included for the month — subscribe on [Billing]({{APP_URL}}/dashboard/billing) |
+| **Everyone else** | Enable the tool on [Dashboard → Tools]({{APP_URL}}/dashboard/tools), then **$0.10 per query** from prepaid credits |
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `GOOGLE_CLOUD_PROJECT` or `GCP_PROJECT` or `GCP_PROJECT_ID` | Yes (unless `VERTEX_API_KEY`) | GCP project that has Vertex AI enabled |
-| `VERTEX_LOCATION` | No | Defaults to `global` (required by current Google Search grounding docs). Also reads `GOOGLE_CLOUD_LOCATION`. |
-| `VERTEX_SEARCH_MODEL` | No | Defaults to `gemini-2.5-flash` (official Vertex Node sample). |
-| `GOOGLE_APPLICATION_CREDENTIALS` | No | Service-account JSON. On Cloud Run, the runtime service account is used via the metadata server. |
-| `VERTEX_API_KEY` | No | Alternate Vertex API key if you are not using ADC. |
-| `VERTEX_ACCESS_TOKEN` | No | Pre-minted OAuth token (skips ADC). |
+Without entitlement the gateway returns **402**:
 
-```bash
-gcloud auth application-default login
-gcloud auth application-default set-quota-project project-800192c2-3ecc-4889-8f7
-gcloud services enable aiplatform.googleapis.com --project project-800192c2-3ecc-4889-8f7
+```json
+{
+  "error": "OpenDoor Search is metered on credits, or a $20/month add-on. Enable it on Tools or subscribe on Billing.",
+  "code": "addon_required",
+  "addon": "web_search",
+  "amountUsd": 20
+}
 ```
 
-The caller needs `roles/aiplatform.user` (or equivalent) on that project.
+If the tool is enabled but the org cannot cover $0.10:
 
-## Request Body
+```json
+{ "error": "OpenDoor Search needs $0.10 spendable credit. Top up on Billing." }
+```
+
+If Vertex is not configured on the server: **503** (not a fake empty result).
+
+## Request
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `query` | string | Yes | Search query |
-| `max_results` | integer | No | 1–10, default 5 |
-
-## Example
+| `query` | string | Yes | Search question |
+| `max_results` | integer | No | Caps citations (server default 5, hard max 8) |
 
 ```bash
-curl http://localhost:3001/v1/plugins/web-search \
-  -H "Authorization: Bearer YOUR_API_KEY" \
+export OPENDOOR_API_KEY=opd_…
+export OPENDOOR_BASE_URL={{GATEWAY_URL}}
+
+curl "$OPENDOOR_BASE_URL/v1/plugins/web-search" \
+  -H "Authorization: Bearer $OPENDOOR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-    "query": "Stellar smart contracts",
+    "query": "OpenDoor LLM gateway",
     "max_results": 5
   }'
 ```
@@ -65,34 +66,43 @@ curl http://localhost:3001/v1/plugins/web-search \
 
 ```json
 {
-  "query": "Stellar smart contracts",
+  "query": "OpenDoor LLM gateway",
   "provider": "vertex_google_search",
+  "answer": "…",
   "results": [
-    {
-      "title": "Smart Contracts | Stellar Docs",
-      "url": "https://developers.stellar.org/docs/build/smart-contracts",
-      "snippet": "..."
-    }
+    { "title": "…", "url": "https://…", "snippet": "…" }
   ],
   "citations": [
-    {
-      "title": "Smart Contracts | Stellar Docs",
-      "url": "https://developers.stellar.org/docs/build/smart-contracts",
-      "snippet": "..."
-    }
+    { "title": "…", "url": "https://…", "snippet": "…" }
   ]
 }
 ```
 
-Without the add-on (and not Enterprise):
+`results` and `citations` are the same list.
 
-```json
-{
-  "error": "Web Search is a $20/month add-on. Subscribe on Billing to unlock live Google results via Vertex AI Grounding.",
-  "code": "addon_required",
-  "addon": "web_search",
-  "amountUsd": 20
-}
+## SDKs
+
+```ts
+await client.plugins.webSearch({
+  query: "OpenDoor LLM gateway",
+  max_results: 5,
+});
 ```
 
-`runWebSearch(query)` is exported from `apps/gateway/src/lib/web-search.ts` and used by the dashboard workflow runner after the same add-on check.
+```python
+client.plugins.web_search("OpenDoor LLM gateway", max_results=5)
+```
+
+There is no CLI `search` command. Use curl or an SDK.
+
+## Agents and workflows
+
+Hosted agents can call the `web_search` tool on a turn (same Vertex engine, same $0.10 / Enterprise rules). Workflow **Web Search** nodes use the same entitlement check.
+
+## BYOK and GCP
+
+Platform Search uses **OpenDoor’s** GCP credentials (`GOOGLE_CLOUD_PROJECT` + ADC on Cloud Run). Customers do not upload a service-account JSON for Search.
+
+If you want the gateway to prefer **your** Vertex key for *chat* routing, add a `vertex` provider key — see [BYOK](/how-it-works/byok). That is separate from Search billing.
+
+Team **Google / GCP** on [Dashboard → Team]({{APP_URL}}/dashboard/team) stores a project id and sync timestamp for your workspace. It does not expose secrets and it is not a Search API.

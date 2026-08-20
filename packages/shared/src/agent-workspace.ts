@@ -174,7 +174,7 @@ export function workspacePublic(ws: AgentWorkspace) {
       snapshotId: computer.snapshotId,
       elements: computer.elements.slice(0, 40),
       backend: computer.backend,
-      isolation: computer.isolation,
+      isolation: { mode: computer.isolation.mode },
     },
     probe: ws.probe || null,
     counts: {

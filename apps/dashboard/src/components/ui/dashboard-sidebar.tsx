@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, type FocusEvent, type MouseEvent } from "react";
 import Link from "next/link";
+import { LayoutGroup, motion, useReducedMotion } from "framer-motion";
 import { usePathname, useRouter } from "next/navigation";
 import {
   Search,
@@ -18,6 +19,7 @@ import posthog from "posthog-js";
 import { cn } from "@/lib/utils";
 import { OchiengLogoSimple } from "@/components/logos/OchiengLogoSimple";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { LocalePicker } from "@/components/i18n/locale-picker";
 import { InboxMenu } from "@/components/inbox-menu";
 import { OpenBotSettingsDialog } from "@/components/openbot/settings-dialog";
 import {
@@ -37,6 +39,7 @@ import {
   reduceDashboardSidebarExpand,
   type DashboardSidebarExpandEvent,
 } from "@/lib/dashboard-sidebar";
+import { MOTION_DURATION, MOTION_EASE } from "@/lib/page-motion";
 
 export function useDashboardSidebarHoverExpand() {
   const pathname = usePathname();
@@ -162,7 +165,9 @@ function WorkspaceSwitcher({
       <button
         type="button"
         title={collapsed ? `${workspace} · ${planLabel}` : undefined}
-        aria-label={collapsed ? `${workspace}, ${planLabel}` : undefined}
+        aria-label={`${workspace}, ${planLabel}`}
+        aria-expanded={isOpen}
+        aria-haspopup="menu"
         onClick={() => setIsOpen((v) => !v)}
         className={cn(
           "group flex w-full items-center rounded-lg transition-colors hover:bg-black/5 dark:hover:bg-white/5",
@@ -262,6 +267,7 @@ function NavItem({
   const isActive = item.href
     ? isNavActive(pathname, item.href, hasChildren ? childSiblings : siblings)
     : false;
+  const reduceMotion = useReducedMotion();
   const [isOpen, setIsOpen] = useState(isActive || childActive);
 
   useEffect(() => {
@@ -285,8 +291,6 @@ function NavItem({
     "h-4 w-4 shrink-0 transition-colors",
     isActive ? "text-foreground" : "text-muted-foreground/70 group-hover:text-foreground/70",
   );
-  const activeBar =
-    "after:pointer-events-none after:absolute after:bottom-0 after:h-0.5 after:bg-foreground after:content-['']";
   const badge =
     item.badge != null && item.badge !== "" ? (
       <span
@@ -301,18 +305,18 @@ function NavItem({
       </span>
     ) : null;
   const inner = collapsed ? (
-    <span
-      className={cn(
-        "relative grid size-8 place-items-center",
-        isActive && cn(activeBar, "after:left-1/2 after:w-4 after:-translate-x-1/2"),
-      )}
+    <motion.span
+      className="relative grid size-8 place-items-center"
+      whileHover={reduceMotion ? undefined : { scale: 1.06 }}
+      whileTap={reduceMotion ? undefined : { scale: 0.94 }}
+      transition={reduceMotion ? { duration: 0 } : { duration: MOTION_DURATION.hover, ease: MOTION_EASE }}
     >
       <Icon className={iconClass} />
       {badge}
       {item.locked && (
         <Lock className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 text-muted-foreground/70" />
       )}
-    </span>
+    </motion.span>
   ) : (
     <>
       <div className="flex min-w-0 items-center gap-2.5">
@@ -382,15 +386,24 @@ function NavItem({
   );
 
   const rowClass = cn(
-    "group flex cursor-pointer items-center rounded-[6px] transition-all duration-200 select-none motion-reduce:transition-none",
+    "group relative flex cursor-pointer items-center rounded-[6px] transition-all duration-200 select-none active:scale-[0.98] motion-reduce:transition-none motion-reduce:active:scale-100",
     collapsed
       ? "justify-center px-0 py-0.5"
-      : "relative justify-between px-2.5 py-[7px]",
+      : "justify-between px-2.5 py-[7px]",
     isActive
       ? "font-medium text-foreground"
       : "text-muted-foreground hover:bg-black/5 hover:text-foreground/90 dark:hover:bg-white/5",
-    !collapsed && isActive && cn(activeBar, "after:inset-x-2.5"),
   );
+  const activeBar = isActive ? (
+    <motion.span
+      layoutId="dashboard-nav-active"
+      className={cn(
+        "pointer-events-none absolute bottom-0 h-0.5 bg-foreground",
+        collapsed ? "left-1/2 w-4 -translate-x-1/2" : "inset-x-2.5",
+      )}
+      transition={reduceMotion ? { duration: 0 } : { duration: MOTION_DURATION.layout, ease: MOTION_EASE }}
+    />
+  ) : null;
   const rowStyle = collapsed ? undefined : { paddingLeft: `${level * 12 + 10}px` };
 
   return (
@@ -401,10 +414,12 @@ function NavItem({
           prefetch
           title={collapsed ? item.title : undefined}
           aria-label={collapsed ? item.title : undefined}
+          aria-current={isActive ? "page" : undefined}
           className={rowClass}
           style={rowStyle}
         >
           {inner}
+          {activeBar}
         </Link>
       ) : (
         <button
@@ -416,6 +431,7 @@ function NavItem({
           onClick={handleClick}
         >
           {inner}
+          {activeBar}
         </button>
       )}
 
@@ -513,7 +529,11 @@ export function SidebarNav({
       return n > 0 ? String(n) : undefined;
     };
 
-    return navGroupsForViewer({ isSiteAdmin, protectedChild })
+    return navGroupsForViewer({
+      isSiteAdmin,
+      protectedChild,
+      hasEnterpriseTools: !enterpriseLocked,
+    })
       .map((group) => ({
         heading: group.label,
         items: group.items
@@ -524,7 +544,7 @@ export function SidebarNav({
             icon: item.icon,
             href: item.href,
             badge: badgeFor(item),
-            locked: group.id === "governance" ? enterpriseLocked : undefined,
+            locked: group.locked ?? (group.id === "governance" ? enterpriseLocked : undefined),
             children: item.children?.map((child) => ({
               id: child.href,
               title: child.label,
@@ -557,6 +577,7 @@ export function SidebarNav({
   const collapsed = !expanded;
 
   return (
+    <LayoutGroup id="dashboard-sidebar">
     <div
       className={cn(
         "flex h-full flex-col overflow-hidden border-r border-border/50 bg-card font-sans",
@@ -651,7 +672,8 @@ export function SidebarNav({
             href="https://ochiengandco.com"
             target="_blank"
             rel="noreferrer"
-            title={collapsed ? "Ochieng & Co" : undefined}
+            title="Ochieng & Co"
+            aria-label="Ochieng & Co"
             className={cn(
               "flex items-center text-foreground",
               collapsed ? "justify-center px-0 py-1" : "min-w-0 flex-1 gap-2 px-1.5 py-2",
@@ -663,11 +685,13 @@ export function SidebarNav({
             )}
           </a>
           <InboxMenu placement="right-end" />
+          {!collapsed ? <LocalePicker compact /> : null}
           <ThemeToggle />
         </div>
       </div>
       <OpenBotSettingsDialog open={openBotSettingsOpen} onOpenChange={setOpenBotSettingsOpen} />
     </div>
+    </LayoutGroup>
   );
 }
 
@@ -696,6 +720,7 @@ export default function DashboardSidebar(props: {
       onClick={onClick}
       className={cn(
         "fixed left-0 top-0 z-40 hidden h-screen overflow-hidden md:block",
+        "motion-safe:transition-[width] motion-safe:duration-200 motion-safe:ease-out",
         expanded ? "w-[260px]" : "w-12",
       )}
     >

@@ -15,6 +15,11 @@ import {
 import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import { getDb } from "@/lib/db";
 import {
+  persistWorldPreference,
+  worldPreferenceFromMetadata,
+  type WorldPreference,
+} from "@opendoor/shared";
+import {
   isInternalApiKeyName,
   parseOnboardingChecklist,
   resolveGettingStarted,
@@ -36,6 +41,7 @@ export type OnboardingHomeData = {
   progress: GettingStartedProgress;
   checklist: OnboardingChecklist;
   recentAgents: RecentAgent[];
+  world: WorldPreference;
 };
 
 async function countOrZero(query: Promise<{ count: number }[]>): Promise<number> {
@@ -180,10 +186,14 @@ export async function loadOnboardingHome(
     onboardingSegment: org?.onboardingSegment || null,
   };
 
+  const fromMeta = worldPreferenceFromMetadata(metadata);
+  const world = persistWorldPreference(fromMeta);
+
   return {
     evidence,
     progress: resolveGettingStarted(evidence),
     checklist,
+    world,
     recentAgents: recentAgentRows.map((row) => ({
       id: row.id,
       name: row.name,

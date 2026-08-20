@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from "crypto";
-import { and, desc, eq, isNotNull, lte } from "drizzle-orm";
+import { and, desc, eq, isNotNull, isNull, lte } from "drizzle-orm";
 import { apiKeys, db, workspaceAgentMessages, workspaceAgents } from "@opendoor/database";
 import {
   agentPurgeCutoff,
@@ -7,7 +7,6 @@ import {
   attachOpenBotComputer,
   detachOpenBotIsolation,
   embeddingsClientFromEnv,
-  executeTool,
   formatRecallHits,
   getAgentRuntime,
   isolationStatusSuffix,
@@ -17,13 +16,16 @@ import {
   recordOpenBotAudit,
   seedSkills,
   syncLiveComputerControl,
-  toolsForRuntime,
   workspacePublic,
   type AgentRuntimeId,
   type AgentWorkspace,
   type ComputerControl,
 } from "@opendoor/shared";
+import { executeTool } from "@opendoor/shared/agent-execute";
+import { toolsForRuntime } from "@opendoor/shared/agent-tools";
 import { decryptAgentSecret, encryptAgentSecret } from "./agent-secret.js";
+import { agentKind, isLeaderbotRecord } from "./agent-public.js";
+import { gatewaySearchSpend } from "./search-spend.js";
 
 type AgentRow = typeof workspaceAgents.$inferSelect;
 
@@ -40,7 +42,7 @@ export function presentAgent(row: AgentRow) {
   const workspace = workspacePublic(readWorkspace(row.config));
   return {
     id: row.id,
-    object: "agent",
+    object: "agent" as const,
     name: row.name,
     slug: row.slug,
     runtime: row.runtime,
@@ -49,6 +51,7 @@ export function presentAgent(row: AgentRow) {
     systemPrompt: row.systemPrompt,
     status: row.status,
     statusMessage: row.statusMessage,
+    kind: agentKind(row),
     workspace,
     lastUsedAt: row.lastUsedAt,
     startedAt: row.startedAt,
@@ -57,6 +60,54 @@ export function presentAgent(row: AgentRow) {
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
+}
+
+export async function loadOwnedAgent(orgId: string, id: string, opts?: { includeDeleted?: boolean }) {
+  const filters = [eq(workspaceAgents.id, id), eq(workspaceAgents.organizationId, orgId)];
+  if (!opts?.includeDeleted) filters.push(isNull(workspaceAgents.deletedAt));
+  const [row] = await db.select().from(workspaceAgents).where(and(...filters)).limit(1);
+  return row ?? null;
+}
+
+export async function countOrgAgents(orgId: string) {
+  const rows = await db
+    .select({
+      id: workspaceAgents.id,
+      status: workspaceAgents.status,
+    })
+    .from(workspaceAgents)
+    .where(and(eq(workspaceAgents.organizationId, orgId), isNull(workspaceAgents.deletedAt)));
+  return {
+    bots: rows.length,
+    running: rows.filter((row) => row.status === "running" || row.status === "starting").length,
+  };
+}
+
+export async function findLeaderbot(orgId: string) {
+  const rows = await db
+    .select()
+    .from(workspaceAgents)
+    .where(eq(workspaceAgents.organizationId, orgId));
+  return rows.find((row) => row.runtime === "openbot" && isLeaderbotRecord(row)) ?? null;
+}
+
+export async function loadAgentMessages(agentId: string, orgId: string, limit = 80) {
+  const rows = await db
+    .select()
+    .from(workspaceAgentMessages)
+    .where(and(eq(workspaceAgentMessages.agentId, agentId), eq(workspaceAgentMessages.organizationId, orgId)))
+    .orderBy(desc(workspaceAgentMessages.createdAt))
+    .limit(limit);
+  rows.reverse();
+  return rows
+    .filter((m) => m.role === "user" || m.role === "assistant" || m.role === "tool")
+    .map((m) => ({
+      id: m.id,
+      role: m.role,
+      content: m.content,
+      toolName: m.toolName,
+      createdAt: m.createdAt,
+    }));
 }
 
 async function uniqueSlug(orgId: string, name: string) {
@@ -157,8 +208,11 @@ export async function createAndBootAgent(opts: {
   runtime: AgentRuntimeId;
   modelId: string;
   systemPrompt?: string;
+  kind?: "leader" | "coworker";
 }) {
   const profile = getAgentRuntime(opts.runtime)!;
+  const config =
+    opts.kind === "leader" ? { kind: "leader" as const } : opts.kind === "coworker" ? { kind: "coworker" as const } : {};
   const [created] = await db
     .insert(workspaceAgents)
     .values({
@@ -170,10 +224,25 @@ export async function createAndBootAgent(opts: {
       systemPrompt: opts.systemPrompt || profile.defaultPrompt,
       status: "starting",
       statusMessage: `Booting ${profile.name} on ${opts.modelId}…`,
-      config: {},
+      config,
     })
     .returning();
   return bootAgent(created);
+}
+
+export async function restoreAgent(row: AgentRow) {
+  if (!row.deletedAt) return row;
+  const [updated] = await db
+    .update(workspaceAgents)
+    .set({
+      deletedAt: null,
+      status: "stopped",
+      statusMessage: "Restored. Start it again to attach the computer.",
+      updatedAt: new Date(),
+    })
+    .where(eq(workspaceAgents.id, row.id))
+    .returning();
+  return updated || row;
 }
 
 export async function bootAgent(row: AgentRow) {
@@ -433,15 +502,20 @@ export async function runAgentChat(row: AgentRow, userText: string) {
         const executed = await executeTool(runtime, call.function.name, call.function.arguments, workspace, {
           botId: row.id,
           embeddings,
+          searchSpend: gatewaySearchSpend({ id: row.organizationId }),
         });
         workspace = executed.workspace;
+        const display =
+          "display" in executed && typeof executed.display === "string" && executed.display.trim()
+            ? executed.display
+            : executed.result;
         events.push(executed.event);
         messages.push({ role: "tool", tool_call_id: call.id, content: executed.result });
         await db.insert(workspaceAgentMessages).values({
           agentId: row.id,
           organizationId: row.organizationId,
           role: "tool",
-          content: executed.result,
+          content: display,
           toolName: call.function.name,
           metadata: { ok: executed.event.ok, detail: executed.event.detail },
         });

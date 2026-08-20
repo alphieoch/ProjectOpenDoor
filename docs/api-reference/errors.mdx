@@ -1,0 +1,163 @@
+---
+title: "Errors"
+description: "HTTP status codes and JSON bodies the OpenDoor gateway returns."
+showPageTitle: true
+---
+
+# Errors
+
+Failed calls return JSON. Most routes use `{ "error": "…" }`. Uncaught 500s use `{ "error": { "message": "…", "type": "internal_error" } }`.
+
+The TypeScript client throws `OpenDoorError` with `.status` and `.body`. The Python client throws `OpenDoorError` with `.status_code` and `.body`.
+
+## Status codes
+
+| Status | When |
+|--------|------|
+| **400** | Missing `model` / `messages`, invalid JSON, or a catalog status that is not callable (`coming_soon`, `dedicated`, closed `available_on_request`) |
+| **401** | Missing `Authorization: Bearer …`, short key, or unknown / revoked key |
+| **402** | Insufficient prepaid credit, key spend cap, or a paid add-on is required |
+| **403** | Model not on this key’s allowlist, data-residency mismatch, or priority queue on a plan that does not include it |
+| **404** | Model id is not routed, or the object (key, agent, …) is not in this org |
+| **409** | Agent is not `running` before chat; or a unique slug conflict |
+| **429** | Per-key RPM or TPM exceeded |
+| **502** | Every provider in the fallback chain failed; or an agent / search upstream error |
+| **503** | Model is `warming`; wholesale path not configured; Search not configured on the server; priority capacity exceeded |
+
+## Auth
+
+```json
+{ "error": "Missing or invalid Authorization header" }
+```
+
+```json
+{ "error": "Invalid API key format" }
+```
+
+```json
+{ "error": "Invalid API key" }
+```
+
+Keys must be at least 20 characters. Workspace keys look like `opd_` plus hex.
+
+## Billing
+
+```json
+{
+  "error": "Insufficient balance",
+  "detail": "Prepaid credits cannot cover this request estimate.",
+  "estimatedCostUsd": 0.01,
+  "creditsUsdCents": 0,
+  "paidCreditsUsdCents": 0,
+  "welcomeCreditsUsdCents": 0,
+  "topupUrl": "{{APP_URL}}/dashboard/billing"
+}
+```
+
+Welcome credit is for **open-weight** models only. Closed models need prepaid credit or a plan stipend.
+
+```json
+{
+  "error": "API key spend limit exceeded",
+  "detail": "This key has a spend cap of 5.00 USD. Used: 4.90 USD. Estimated request cost: 0.20 USD.",
+  "keySpendLimitUsdCents": 500,
+  "keySpendUsedUsdCents": 490,
+  "estimatedCostUsd": 0.2
+}
+```
+
+Search / agents without entitlement:
+
+```json
+{
+  "error": "OpenDoor Search is metered on credits, or a $20/month add-on. Enable it on Tools or subscribe on Billing.",
+  "code": "addon_required",
+  "addon": "web_search",
+  "amountUsd": 20
+}
+```
+
+```json
+{
+  "error": "Agents add-on required",
+  "code": "addon_required",
+  "addon": "agents"
+}
+```
+
+## Chat
+
+```json
+{ "error": "Model is required" }
+```
+
+```json
+{ "error": "Messages are required" }
+```
+
+```json
+{
+  "error": "Model '…' is not allowed for this API key. Allowed models: gemma-4-26b-a4b-it"
+}
+```
+
+```json
+{
+  "error": "Model not found: unknown-id. This model is not routed on the gateway. Pick a local model or configure the provider API key."
+}
+```
+
+```json
+{
+  "error": "Model '…' is warming",
+  "status": "warming"
+}
+```
+
+```json
+{
+  "error": "All providers failed",
+  "detail": "…",
+  "tried": ["vertex", "together"]
+}
+```
+
+A `coming_soon` or `dedicated` catalog row is a **400**, not the only way to chat. Live Vertex MaaS ids (for example `{{EXAMPLE_MODEL}}`) are callable now — list them with [Models](/api-reference/models).
+
+## Rate limits
+
+```json
+{
+  "error": "Rate limit exceeded: too many requests per minute",
+  "limit": 60,
+  "service_tier": "standard"
+}
+```
+
+```json
+{
+  "error": "Rate limit exceeded: token quota exceeded",
+  "limit": 40000,
+  "unlock_hint": "TPM unlocks automatically as lifetime spend on this key grows ($10 / $100 / $1k / $10k)."
+}
+```
+
+```json
+{
+  "error": "Priority queue requires Pro, Team, or Enterprise",
+  "service_tier": "standard",
+  "type": "plan_required"
+}
+```
+
+Check remaining quota with `GET /v1/usage/rate-limits`.
+
+## Search
+
+| Status | Body |
+|--------|------|
+| 400 | `{ "error": "query is required" }` or invalid JSON |
+| 402 | Add-on / tool / credit gate (see above) |
+| 503 | Vertex grounding is not configured on the server |
+
+Top up at [Dashboard → Billing]({{APP_URL}}/dashboard/billing).

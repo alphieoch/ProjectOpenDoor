@@ -175,10 +175,7 @@ function computerRuntime() {
 }
 
 export function liveComputerSetupHint() {
-  if (hasOpenBotSupervisor()) {
-    return "Start the isolated Chromium computer with docker compose up -d openbot-supervisor.";
-  }
-  return "Set OPENBOT_SUPERVISOR_URL and OPENBOT_SUPERVISOR_TOKEN, then run docker compose up -d openbot-supervisor.";
+  return "The live computer is not attached.";
 }
 
 export async function attachOpenBotIsolation(botId: string): Promise<ComputerIsolation> {

@@ -4,6 +4,7 @@ import {
   SESSION_COOKIE,
   applySessionCookies,
   clearSessionCookies,
+  cookieSecureFromRequest,
   readSessionToken,
   sessionCookieOptions,
 } from "./session-cookie";
@@ -63,5 +64,24 @@ describe("session cookies", () => {
   test("marks Secure only when asked (http localhost must stay non-secure)", () => {
     expect(sessionCookieOptions(1, false).secure).toBe(false);
     expect(sessionCookieOptions(1, true).secure).toBe(true);
+  });
+
+  test("cookieSecureFromRequest is true on HTTPS and false on localhost HTTP", () => {
+    expect(
+      cookieSecureFromRequest({
+        headers: { get: (name) => (name === "x-forwarded-proto" ? "https" : "opendoor-gcp.web.app") },
+      })
+    ).toBe(true);
+    expect(
+      cookieSecureFromRequest({
+        headers: {
+          get: (name) => {
+            if (name === "x-forwarded-proto") return "http";
+            if (name === "host") return "localhost:3010";
+            return null;
+          },
+        },
+      })
+    ).toBe(false);
   });
 });

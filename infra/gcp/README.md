@@ -4,9 +4,10 @@ All production traffic is Google-managed:
 
 | Piece | Resource |
 |-------|----------|
-| Edge | Firebase Hosting site `opendoor-gcp` (rewrites to Cloud Run) |
+| Edge | Firebase Hosting site `opendoor-gcp` (rewrites to Cloud Run). Google HTTPS, CDN-like. |
 | App | Cloud Run `opendoor-dashboard` |
 | API | Cloud Run `opendoor-gateway` |
+| Armor + CDN LB | External HTTPS LB `opendoor-edge` (serverless NEGs). **Not** in front of Hosting. |
 | Code jail | Cloud Run `opendoor-sandbox` (gVisor, no egress) |
 | OpenBot computer | Cloud Run `opendoor-openbot-computer` (shared Chromium). Per-Bot supervisor stays local (Docker socket). |
 | Private image GPU | Retired `opendoor-comfy` (do not wire apps to it). Studio uses the gateway image path. |
@@ -17,6 +18,58 @@ All production traffic is Google-managed:
 
 **Project:** `project-800192c2-3ecc-4889-8f7`  
 **Region:** `us-central1`
+
+## Edge: Firebase + Cloud Armor + Cloud CDN (no Cloudflare)
+
+Public app/API: **https://opendoor-gcp.web.app** (Firebase Hosting). Putting a Google HTTPS LB *in front of* Hosting would break WorkOS redirects (`/callback`), so Hosting stays the user-facing edge.
+
+Beside it, not in front:
+
+| Resource | Role |
+|----------|------|
+| `opendoor-armor` | Cloud Armor WAF (OWASP sensitivity 1) + 500 req/min/IP + L7 DDoS defense. Default **allow the world** — no country/Africa block. GFE volumetric DDoS on the external LB. |
+| `opendoor-edge` URL map | `/v1/*` `/health` `/status` → gateway NEG; else dashboard NEG |
+| `opendoor-edge-dash-bs` | Cloud **CDN** `CACHE_ALL_STATIC` + Armor |
+| `opendoor-edge-gw-bs` | Armor only (do not cache `/v1`) |
+| `opendoor-edge-ip` `34.149.240.132` | HTTPS `:443`; HTTP `:80` 301 → `https://opendoor-gcp.web.app` |
+| Cloud DNS | **No managed zone** in this project. Firebase owns `*.web.app`. Do not create a zone for a domain we do not own. |
+
+```bash
+./scripts/setup-edge-lb.sh      # serverless NEGs + URL map (once)
+./scripts/setup-gcp-security.sh # Armor, CDN, HTTPS, HTTP redirect, Cloud Run ingress
+./scripts/setup-gcp-ha.sh       # us-central1 zone-to-zone failover (SQL REGIONAL + Run min)
+```
+
+IaC: `infra/gcp/armor-policy.yaml`, `infra/gcp/edge-http-redirect.yaml`.
+
+## Availability-zone failover (us-central1 hop)
+
+Traffic stays in **us-central1**. A zone loss hops to another zone in the same region. This is not multi-region and not Cloudflare. Firebase Hosting remains the public edge; Armor `opendoor-armor` + CDN stay as applied. Armor default-allows the world — **do not geo-block Africa**.
+
+Apply (idempotent; does not rotate secrets):
+
+```bash
+./scripts/setup-gcp-ha.sh
+```
+
+Desired state: `infra/gcp/ha.yaml`.
+
+| Piece | Automatic on zone loss | Needs a click / operator |
+|-------|------------------------|--------------------------|
+| Cloud Run `opendoor-dashboard`, `opendoor-gateway` | Regional (not zonal/city). Min **2** instances so one zone dying does not go to zero. GFE / Hosting retry the healthy zone. | None. |
+| Cloud Run `opendoor-openbot-computer` | Regional. Min **1**, max **1** (shared Chromium + session affinity). Cloud Run starts a replacement in another zone. `--no-cpu-throttling` stays on here only. | Browser session is gone — user reloads. Do not raise max. |
+| Cloud SQL `opendoor-pg` | **REGIONAL** HA: standby in another us-central1 zone. Same connection name and IP. Automatic failover (typically ~1 minute of DB errors, then reconnect). | Enabling HA (this script) is an **immediate** restart — not the Sunday 07:00 UTC maintenance window. Expect **several minutes** of downtime **once**, while the standby is created. After that, planned SQL maintenance uses the window (Sun 07:00 UTC). Manual failover: Cloud SQL console → Failover (or `gcloud sql instances failover`). |
+| Memorystore `opendoor-redis-psa` | None. **BASIC** = one zone. | Do **not** recreate to get STANDARD_HA (new IP, cache wipe, `REDIS_URL` rewrite). Redis is cache-only (rate-limit / prompt-cache / usage). Apps fail open. Zonal Redis loss is OK. |
+| `opendoor-edge` | Global anycast frontend + **regional** serverless NEGs. No zonal endpoints to drain — Cloud Run already spans zones. | None. Keep Firebase Hosting as public HTTPS. |
+
+**How a zone outage behaves**
+
+1. **Apps:** Hosting + `opendoor-edge` keep sending to Cloud Run. Surviving min-instances in other zones serve immediately; replacements start in healthy zones.
+2. **Database:** Cloud SQL promotes the standby. Apps using the Cloud SQL Auth Unix socket (`/cloudsql/project-…:us-central1:opendoor-pg`) reconnect to the same path. Brief write errors during failover — retry.
+3. **Cache:** Redis in the failed zone is unreachable. Rate limits reset; prompt-cache misses. Chat continues.
+4. **Computer:** The singleton Chromium instance dies with its zone; Cloud Run places a new min=1 instance elsewhere. OpenBot computer needs a fresh session.
+
+Do not `gcloud sql instances delete` or recreate Redis/SQL to “turn on HA”.
 
 ## Live Cloud Run URLs (usable before Firebase Hosting)
 
@@ -136,6 +189,8 @@ bun run seed:serverless
 - Dashboard `/pricing` shows serverless `$ / 1M` rows
 - Gateway `/health` → `{"status":"ok"}`
 - After Firebase: `https://opendoor-gcp.web.app/pricing` and `/v1/...`
-- Edge LB (no Firebase): `./scripts/setup-edge-lb.sh` then `http://<EDGE_IP>/pricing`
+- Edge LB HTTP: `http://34.149.240.132` 301s to `https://opendoor-gcp.web.app`
+- Armor / CDN: `./scripts/setup-gcp-security.sh`
+- Zone failover: `./scripts/setup-gcp-ha.sh` (SQL `REGIONAL`, Cloud Run min instances)
 - Ops one-shot: `TOGETHER_API_KEY=... ./scripts/finish-ops.sh`
 - Training: `/dashboard/training` after migration `0028`

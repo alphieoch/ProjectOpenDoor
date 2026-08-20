@@ -74,7 +74,7 @@ deploy_run_services() {
     --port=3001 \
     --memory=1Gi \
     --cpu=1 \
-    --min-instances=1 \
+    --min-instances=2 \
     --max-instances=20 \
     --timeout=300 \
     --add-cloudsql-instances="$connection_name" \
@@ -95,7 +95,7 @@ deploy_run_services() {
     --port=3000 \
     --memory=1Gi \
     --cpu=1 \
-    --min-instances=0 \
+    --min-instances=2 \
     --max-instances=20 \
     --timeout=300 \
     --add-cloudsql-instances="$connection_name" \

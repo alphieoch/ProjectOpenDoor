@@ -1,0 +1,138 @@
+{
+  "common": {
+    "language": "Ulimi",
+    "region": "Isifunda",
+    "country": "Izwe",
+    "countryOptional": "Izwe (akunaphoqedwa)",
+    "countryNone": "Yeqa okwamanje",
+    "save": "Londoloza",
+    "continue": "Qhubeka",
+    "skip": "Yeqa",
+    "home": "Ikhaya",
+    "signIn": "Ngena",
+    "getStarted": "Qala",
+    "openDashboard": "Vula ideshibhodi"
+  },
+  "auth": {
+    "welcomeBack": "Siyakwamukela futhi",
+    "createAccount": "Dala i-akhawunti yakho",
+    "signInSubtitle": "Ngena esangweni lakho le-LLM",
+    "signupSubtitle": "Qala ngesango le-LLM",
+    "educationSubtitle": "Qala ngohlelo lwesikole",
+    "email": "I-imeyili",
+    "password": "Iphasiwedi",
+    "fullName": "Igama eligcwele",
+    "organization": "Inhlangano",
+    "organizationOptional": "akunaphoqedwa",
+    "signIn": "Ngena",
+    "signingIn": "Iyangena…",
+    "createAccountCta": "Dala i-akhawunti",
+    "creatingAccount": "Idala i-akhawunti…",
+    "noAccount": "Awunayo i-akhawunti?",
+    "signUpFree": "Bhalisa mahhala",
+    "haveAccount": "Usuvele unayo i-akhawunti?",
+    "enterpriseSso": "I-SSO yebhizinisi",
+    "orgSlug": "Isibonakaliso senhlangano",
+    "continueSso": "Qhubeka nge-SSO",
+    "choosePlan": "Khetha uhlelo",
+    "enterpriseSales": "Ukuthengisa kwe-Enterprise",
+    "loginFailed": "Ukungena kuhlulekile",
+    "signupFailed": "Ukubhalisa kuhlulekile",
+    "passwordHint": "Okungenani izinhlamvu eziyi-10"
+  },
+  "onboarding": {
+    "eyebrow": "Indawo yakho yokusebenza",
+    "title": "Indlela i-OpenDoor esebenza ngayo",
+    "body": "Ukungena okukodwa. Ingxoxo kusiphequluli, indlu yozakwethu be-OpenBot, nechibi lemali elihlanganyelwe. Khetha isifunda — asivimbi izwe.",
+    "pickRegion": "Uphi?",
+    "pickRegionHint": "Lokhu kushintsha umbhalo nezilungiselelo kuphela. Zonke izifunda zingabhalisa.",
+    "productChatTitle": "Ingxoxo",
+    "productChatBody": "Vula Ingxoxo ukhulume namamodeli kufoni noma ikhompyutha. Awudingi ukhiye we-API ukuze uqale.",
+    "productHouseTitle": "Indlu",
+    "productHouseBody": "I-OpenBot iyindlu yozakwethu — umholi kanye nochwepheshe obangezayo. Babelana ngendawo eyodwa.",
+    "productPoolTitle": "Ichibi elihlanganyelwe",
+    "productPoolBody": "Umndeni nethimba babelana ngechibi elilodwa. I-akhawunti eyodwa, hhayi ukhiye ngomuntu ngamunye.",
+    "saveWorld": "Londoloza ulimi nesifunda",
+    "saved": "Kulondoloziwe",
+    "africa": {
+      "school": "Isikole: amakhasi alula kufoni, isihlalo soMfundi seklasi noma umsebenzi wasekhaya, ngaphandle kwedatha eyengeziwe ukufinyelela imodeli.",
+      "family": "Umndeni: ichibi elilodwa lendlu. Abazali nezingane basebenzisa imali efanayo — kushibhe kunezikweletu ezine, kwakhelwe izindleko zedatha.",
+      "team": "Ithimba: indawo eyodwa yelebhu, i-NGO, noma isitolo. Mema nge-imeyili. Bonke babelana ngechibi."
+    },
+    "europe": {
+      "school": "Isikole: ukuqala koMfundi kweklasi noma ilebhu, umgwaqo ofanayo no-Pro.",
+      "family": "Umndeni: ichibi lendlu elinokudlulisela — ubulungu obubodwa kwendlu.",
+      "team": "Ithimba: i-SSO nezilawuli ezihlanganyelwe. I-Enterprise ikhuluma nokuthengisa."
+    },
+    "americas": {
+      "school": "Isikole: uMfundi ubulungu bomsebenzi wasekhaya namalebhu. Amamodeli afanayo no-Pro.",
+      "family": "Umndeni: ichibi lendlu, kushibhe kunezihlalo ezine ze-Pro.",
+      "team": "Ithimba: izihlalo ozizenzela. I-Enterprise: ukuhlala kwedatha, i-SCIM, nokuthengisa."
+    },
+    "asia_pacific": {
+      "school": "Isikole: qala kufoni. uMfundi uhlanganisa isihlalo; amathokheni ahlala entengo yenkundla.",
+      "family": "Umndeni: ichibi elilodwa lendlu ukuze ungathengi idatha nezihlalo kane.",
+      "team": "Ithimba: indawo eyodwa, mema ozakwenu, yabelana ngemali."
+    },
+    "middle_east": {
+      "school": "Isikole: uhlelo loMfundi lweklasi nocwaningo. Isi-Arabhu ulimi oluqala.",
+      "family": "Umndeni: ichibi lendlu — i-akhawunti eyodwa kwendlu.",
+      "team": "Ithimba: indawo ehlanganyelwe ne-SSO uma udinga. I-Enterprise ngokuthengisa."
+    }
+  },
+  "getStarted": {
+    "eyebrow": "Qala",
+    "title": "Khetha indlela yakho.",
+    "body": "I-OpenDoor ilungela isikole, umndeni, nethimba. Khetha isifunda — akekho ovinjwa nge-geo.",
+    "startFree": "Qala mahhala",
+    "startFreeBody": "Zenzele umuntu oyedwa noma ithimba elincane. Qhubeka nge-imeyili.",
+    "education": "Imfundo",
+    "educationBody": "Ezikoleni, emalebhu, nakubafundi. Ukuqala kuhlala kufana nesikole.",
+    "enterprise": "Ibhizinisi elikhulu",
+    "enterpriseBody": "Izinhlangano ezikhona zingena nge-SSO. Ukusetshenziswa okusha kuqala ngokuthengisa.",
+    "continueEmail": "Qhubeka nge-imeyili",
+    "continueEducation": "Qhubeka ngokubhalisa kwemfundo",
+    "joinSso": "Joyina nge-SSO",
+    "talkSales": "Khuluma nokuthengisa"
+  },
+  "gettingStarted": {
+    "eyebrow": "Ukuqala",
+    "title": "Siyakwamukela ku-OpenDoor",
+    "coreDone": "Ukusetha okuyinhloko kuphelile. Izinyathelo ezikhethwa zikhona uma uzidinga.",
+    "coreTodo": "Ingxoxo nozakwethu oyedwa kukufaka emkhiqizweni. Okunye akuphoqelekile.",
+    "hide": "Fihla ukusetha"
+  },
+  "pricing": {
+    "audienceStudent": "Umfundi",
+    "audienceFamily": "Umndeni",
+    "audienceTeam": "Ithimba",
+    "audienceEnterprise": "Ibhizinisi elikhulu",
+    "singleLabel": "Umfundi",
+    "familyLabel": "Umndeni",
+    "enterpriseLabel": "Ithimba / Ibhizinisi",
+    "singleHeadline": "Izinhlelo zomuntu oyedwa",
+    "familyHeadline": "Ichibi elihlanganyelwe lendlu yakho",
+    "enterpriseHeadline": "Izinhlelo zamathimba nezinhlangano",
+    "compare": "Qhathanisa izinhlelo"
+  },
+  "tools": {
+    "searchOneLiner": "Buza umbuzo. I-OpenDoor Search iphendula ngemithombo ku-stack yethu — ikhokhwa emalini yakho, ayikho izinkinobho zokusesha zangaphandle."
+  },
+  "openbot": {
+    "houseTitle": "Iyini le ndlu?",
+    "houseBody": "Indlu yindawo yakho ye-OpenBot: uzakwethu omholi kanye nochwepheshe obangezayo. Babelana ngeziteshi, amakhono, nechibi lemali lenhlangano. Qala isiteshi ukuze ukhulume; engeza uzakwethu uma ufuna indima enegama.",
+    "houseGotIt": "Ngiyezwa",
+    "startChannel": "Qala isiteshi esisha"
+  },
+  "settings": {
+    "languageRegion": "Ulimi nesifunda",
+    "languageRegionHint": "Isetshenziswa ekungeneni, ekuqaleni, nasesikrinini sokuqala. Enye ideshibhodi ihlala ngesiNgisi okwamanje."
+  },
+  "regions": {
+    "africa": "i-Afrika",
+    "europe": "iYurophu",
+    "americas": "iMelika",
+    "asia_pacific": "i-Asia-Pacific",
+    "middle_east": "iMpumalanga Ephakathi"
+  }
+}

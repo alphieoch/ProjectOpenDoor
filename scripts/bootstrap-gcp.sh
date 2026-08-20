@@ -52,7 +52,11 @@ if ! gcloud sql instances describe "$SQL_INSTANCE" --project="$PROJECT" >/dev/nu
     --region="$REGION" \
     --storage-size=20 \
     --storage-auto-increase \
-    --availability-type=ZONAL \
+    --availability-type=REGIONAL \
+    --backup-start-time=10:00 \
+    --enable-point-in-time-recovery \
+    --maintenance-window-day=SUN \
+    --maintenance-window-hour=7 \
     --root-password="$DB_PASS" \
     --project="$PROJECT" \
     --assign-ip
@@ -108,12 +112,16 @@ gcloud services vpc-peerings connect \
 
 echo "==> Memorystore Redis"
 # DIRECT_PEERING is unreachable from Cloud Run (connector + Direct VPC). PSA is required.
+# BASIC is zonal. Memorystore cannot in-place upgrade BASIC → STANDARD_HA (new
+# instance + new IP). Redis is cache-only; zonal loss is OK. Prod uses
+# opendoor-redis-psa (BASIC). Pass REDIS_TIER=standard only on a fresh create.
+REDIS_TIER="${REDIS_TIER:-basic}"
 if ! gcloud redis instances describe "$REDIS_INSTANCE" --region="$REGION" --project="$PROJECT" >/dev/null 2>&1; then
   gcloud redis instances create "$REDIS_INSTANCE" \
     --size=1 \
     --region="$REGION" \
     --redis-version=redis_7_0 \
-    --tier=basic \
+    --tier="$REDIS_TIER" \
     --network=default \
     --connect-mode=PRIVATE_SERVICE_ACCESS \
     --project="$PROJECT"

@@ -3,7 +3,9 @@ import { getDb } from "@/lib/db";
 import { users, organizations } from "@opendoor/database";
 import { eq } from "drizzle-orm";
 import { requireAuth } from "@/lib/auth";
-import { getPlan } from "@opendoor/shared";
+import { getPlan, persistWorldPreference } from "@opendoor/shared";
+import { applyWorldCookies } from "@/lib/i18n/cookies";
+import { persistWorldToWorkspace, worldFromOrg } from "@/lib/i18n/persist";
 
 export async function GET() {
   try {
@@ -41,10 +43,12 @@ export async function GET() {
             emailNotificationsEnabled: true,
             notifyOnInvites: true,
             notifyOnBillingAlerts: true,
+            metadata: true,
           },
         })
       : null;
 
+    const world = worldFromOrg(orgRecord);
     return NextResponse.json({
       user: {
         id: userRecord?.id || session.userId,
@@ -52,11 +56,14 @@ export async function GET() {
         email: userRecord?.email || session.email,
         role: userRecord?.role || session.role,
         isSiteAdmin: Boolean(session.isSiteAdmin || userRecord?.isSiteAdmin),
+        locale: world.locale,
       },
       org: orgRecord
         ? {
             ...orgRecord,
             planName: getPlan(orgRecord.plan).name,
+            region: world.region,
+            country: world.country,
           }
         : null,
     });
@@ -72,7 +79,7 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {
     const session = await requireAuth();
-    const { name, orgName } = await req.json().catch(() => ({}));
+    const { name, orgName, locale, region, country } = await req.json().catch(() => ({}));
     const db = getDb();
 
     if (session.userId && name) {
@@ -86,6 +93,17 @@ export async function POST(req: NextRequest) {
         .update(organizations)
         .set({ name: String(orgName), updatedAt: new Date() })
         .where(eq(organizations.id, session.orgId));
+    }
+    if (locale !== undefined || region !== undefined || country !== undefined) {
+      const preference = persistWorldPreference({ locale, region, country });
+      await persistWorldToWorkspace({
+        userId: session.userId,
+        orgId: session.orgId,
+        preference,
+      });
+      const response = NextResponse.json({ success: true, ...preference });
+      applyWorldCookies(response, preference, req.nextUrl.protocol === "https:");
+      return response;
     }
 
     return NextResponse.json({ success: true });

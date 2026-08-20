@@ -7,6 +7,8 @@ import { cn } from '@/lib/utils';
 import { MenuToggleIcon } from '@/components/ui/menu-toggle-icon';
 import { useScroll } from '@/components/ui/use-scroll';
 import { docsHref } from '@/lib/public-urls';
+import { LocalePicker } from '@/components/i18n/locale-picker';
+import { useI18n } from '@/components/i18n/i18n-provider';
 
 const NAV_LINKS = [
   { label: 'Platform', href: '/platform' },
@@ -34,6 +36,7 @@ export function Header({ signedIn = false }: HeaderProps) {
   const [open, setOpen] = React.useState(false);
   const scrolled = useScroll(10);
   const pathname = usePathname();
+  const { t } = useI18n();
 
   React.useEffect(() => {
     document.body.style.overflow = open ? 'hidden' : '';
@@ -90,12 +93,13 @@ export function Header({ signedIn = false }: HeaderProps) {
 
         {/* Desktop CTAs */}
         <div className="hidden items-center gap-3 md:flex">
+          <LocalePicker compact />
           {signedIn ? (
             <Link
               href="/dashboard"
               className="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90"
             >
-              Open dashboard <ArrowRight className="h-4 w-4" />
+              {t('common.openDashboard')} <ArrowRight className="h-4 w-4" />
             </Link>
           ) : (
             <>
@@ -103,13 +107,13 @@ export function Header({ signedIn = false }: HeaderProps) {
                 href="/login"
                 className="rounded-lg px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-accent"
               >
-                Sign in
+                {t('common.signIn')}
               </Link>
               <Link
                 href="/get-started"
                 className="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90"
               >
-                Get started <ArrowRight className="h-4 w-4" />
+                {t('common.getStarted')} <ArrowRight className="h-4 w-4" />
               </Link>
             </>
           )}
@@ -163,13 +167,14 @@ export function Header({ signedIn = false }: HeaderProps) {
           </div>
 
           <div className="flex flex-col gap-3 pb-4">
+            <LocalePicker />
             {signedIn ? (
               <Link
                 href="/dashboard"
                 onClick={() => setOpen(false)}
                 className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-6 py-3.5 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 min-h-[44px]"
               >
-                Open dashboard <ArrowRight className="h-4 w-4" />
+                {t('common.openDashboard')} <ArrowRight className="h-4 w-4" />
               </Link>
             ) : (
               <>
@@ -178,14 +183,14 @@ export function Header({ signedIn = false }: HeaderProps) {
                   onClick={() => setOpen(false)}
                   className="inline-flex w-full items-center justify-center rounded-lg border border-input bg-background px-6 py-3.5 text-sm font-semibold text-foreground transition hover:bg-accent min-h-[44px]"
                 >
-                  Sign in
+                  {t('common.signIn')}
                 </Link>
                 <Link
                   href="/get-started"
                   onClick={() => setOpen(false)}
                   className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-6 py-3.5 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 min-h-[44px]"
                 >
-                  Get started <ArrowRight className="h-4 w-4" />
+                  {t('common.getStarted')} <ArrowRight className="h-4 w-4" />
                 </Link>
               </>
             )}

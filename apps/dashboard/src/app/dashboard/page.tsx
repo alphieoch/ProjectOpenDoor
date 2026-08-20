@@ -2,6 +2,7 @@ export const dynamic = "force-dynamic";
 
 import { unstable_rethrow } from "next/navigation";
 import { DashboardHome } from "@/components/dashboard/dashboard-home";
+import { DashboardUnavailable } from "@/components/dashboard/dashboard-unavailable";
 
 export default async function DashboardPage() {
   try {
@@ -10,14 +11,10 @@ export default async function DashboardPage() {
     unstable_rethrow(err);
     console.error("[dashboard] overview unavailable", err);
     return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Welcome back.</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Workspace stats could not be loaded. Open Chat or OpenBot to keep working.
-          </p>
-        </div>
-      </div>
+      <DashboardUnavailable
+        title="Welcome back."
+        body="Workspace stats could not be loaded. Nothing on this page is invented — open Chat or OpenBot, or refresh Overview."
+      />
     );
   }
 }

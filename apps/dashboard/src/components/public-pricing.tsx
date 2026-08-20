@@ -4,6 +4,11 @@ import { useState } from "react";
 import Link from "next/link";
 import { Flag, BarChart3, Check } from "lucide-react";
 import ComparisonBlock from "@/components/ui/comparison-3";
+import {
+  SEARCH_QUERY_LIST_CENTS,
+  WEB_SEARCH_ADDON,
+  formatUsdCents,
+} from "@opendoor/shared";
 
 export type ChatRate = {
   modelId: string;
@@ -101,6 +106,24 @@ export function PublicPricing({
           <p className="text-4xl font-semibold tracking-tight">
             $20
             <span className="ml-1 text-sm font-normal text-muted-foreground">/month</span>
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-8 rounded-[1.75rem] border border-border bg-white p-6 sm:p-7">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">Metered</p>
+        <div className="mt-2 flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <h2 className="text-2xl font-semibold tracking-tight">OpenDoor Search</h2>
+            <p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">
+              Visible on Tools and this page. Queries debit credits at list price — enable to use.
+              The ${WEB_SEARCH_ADDON.amountUsd}/month Web Search add-on covers Search for the month.
+              Included on Enterprise. Site admins are unlimited. No third-party search keys.
+            </p>
+          </div>
+          <p className="text-4xl font-semibold tracking-tight">
+            {formatUsdCents(SEARCH_QUERY_LIST_CENTS)}
+            <span className="ml-1 text-sm font-normal text-muted-foreground">/ query</span>
           </p>
         </div>
       </div>

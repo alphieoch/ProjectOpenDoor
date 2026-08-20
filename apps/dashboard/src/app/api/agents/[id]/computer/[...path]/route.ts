@@ -7,7 +7,8 @@ import {
   persistComputerHandover,
   workspaceControl,
 } from "@/lib/agents/computer-proxy";
-import { hasLiveOpenBotComputer, liveComputerSetupHint, readWorkspace, syncLiveComputerControl } from "@opendoor/shared";
+import { hasLiveOpenBotComputer, liveComputerSetupHint, publicComputerIsolation, readWorkspace, syncLiveComputerControl } from "@opendoor/shared";
+import { publicErrorMessage } from "@/lib/client-error";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -39,7 +40,7 @@ export async function GET(req: NextRequest, ctx: Ctx) {
     const isolation = readWorkspace(loaded.row.config).computer.isolation;
     return NextResponse.json({
       attached: loaded.computer != null,
-      isolation,
+      isolation: publicComputerIsolation(isolation),
       canAttach: hasLiveOpenBotComputer(),
       hint: loaded.computer ? null : liveComputerSetupHint(),
     });
@@ -56,7 +57,7 @@ export async function GET(req: NextRequest, ctx: Ctx) {
       return NextResponse.json(await loaded.computer.screenshot());
     } catch (error) {
       return NextResponse.json(
-        { error: error instanceof Error ? error.message : "The screen is not available right now." },
+        { error: publicErrorMessage(error, "The screen is not available right now.") },
         { status: 502 },
       );
     }
@@ -90,13 +91,13 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       }
       return NextResponse.json({
         attached: true,
-        isolation: ensured.isolation,
+        isolation: publicComputerIsolation(ensured.isolation),
         statusMessage: ensured.row?.statusMessage ?? null,
       });
     } catch (error) {
       return NextResponse.json(
         {
-          error: error instanceof Error ? error.message : liveComputerSetupHint(),
+          error: publicErrorMessage(error, liveComputerSetupHint()),
           hint: liveComputerSetupHint(),
         },
         { status: 503 },
@@ -119,7 +120,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       } catch (error) {
         await persistComputerHandover(loaded.row, control);
         return NextResponse.json(
-          { error: error instanceof Error ? error.message : "Could not change control." },
+          { error: publicErrorMessage(error, "Could not change control.") },
           { status: 502 },
         );
       }
@@ -159,7 +160,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
   } catch (error) {
     const status = error && typeof error === "object" && "status" in error ? Number(error.status) : 502;
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "That did not work." },
+      { error: publicErrorMessage(error, "That did not work.") },
       { status: Number.isFinite(status) && status >= 400 ? status : 502 },
     );
   }

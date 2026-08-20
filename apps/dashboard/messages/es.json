@@ -1,0 +1,138 @@
+{
+  "common": {
+    "language": "Idioma",
+    "region": "Región",
+    "country": "País",
+    "countryOptional": "País (opcional)",
+    "countryNone": "Omitir por ahora",
+    "save": "Guardar",
+    "continue": "Continuar",
+    "skip": "Omitir",
+    "home": "Inicio",
+    "signIn": "Iniciar sesión",
+    "getStarted": "Empezar",
+    "openDashboard": "Abrir el panel"
+  },
+  "auth": {
+    "welcomeBack": "Bienvenido de nuevo",
+    "createAccount": "Crea tu cuenta",
+    "signInSubtitle": "Entra en tu pasarela LLM",
+    "signupSubtitle": "Empieza con la pasarela LLM",
+    "educationSubtitle": "Empieza con un recorrido escolar",
+    "email": "Correo",
+    "password": "Contraseña",
+    "fullName": "Nombre completo",
+    "organization": "Organización",
+    "organizationOptional": "opcional",
+    "signIn": "Iniciar sesión",
+    "signingIn": "Entrando…",
+    "createAccountCta": "Crear cuenta",
+    "creatingAccount": "Creando cuenta…",
+    "noAccount": "¿Sin cuenta?",
+    "signUpFree": "Regístrate gratis",
+    "haveAccount": "¿Ya tienes cuenta?",
+    "enterpriseSso": "SSO empresarial",
+    "orgSlug": "Identificador de la organización",
+    "continueSso": "Continuar con SSO",
+    "choosePlan": "Elige un plan",
+    "enterpriseSales": "Ventas Enterprise",
+    "loginFailed": "Error al iniciar sesión",
+    "signupFailed": "Error al registrarse",
+    "passwordHint": "Al menos 10 caracteres"
+  },
+  "onboarding": {
+    "eyebrow": "Tu espacio",
+    "title": "Cómo funciona OpenDoor",
+    "body": "Un solo acceso. Chat en el navegador, una casa de compañeros OpenBot y un fondo compartido. Elige tu región: no bloqueamos ningún país.",
+    "pickRegion": "¿Dónde estás?",
+    "pickRegionHint": "Esto solo cambia el texto y los valores. Todas las regiones pueden registrarse.",
+    "productChatTitle": "Chat",
+    "productChatBody": "Abre Chat y habla con modelos en el móvil o el portátil. No necesitas una clave API para empezar.",
+    "productHouseTitle": "La casa",
+    "productHouseBody": "OpenBot es una casa de compañeros: un líder más los especialistas que añades. Comparten el mismo espacio.",
+    "productPoolTitle": "Fondo compartido",
+    "productPoolBody": "Familia y Equipo comparten un fondo de créditos. Una factura, no una clave por persona.",
+    "saveWorld": "Guardar idioma y región",
+    "saved": "Guardado",
+    "africa": {
+      "school": "Escuela: páginas ligeras en el móvil, un asiento Student para clase o deberes, sin datos extra solo para llegar a un modelo.",
+      "family": "Familia: un fondo para el hogar. Padres e hijos usan los mismos créditos: más barato que cuatro facturas, pensado para el coste de datos.",
+      "team": "Equipo: un espacio para el laboratorio, la ONG o la tienda. Invita por correo. Todos comparten el fondo."
+    },
+    "europe": {
+      "school": "Escuela: onboarding Student para una clase o laboratorio, el mismo camino que Pro.",
+      "family": "Familia: un fondo del hogar con prórroga: una membresía para la casa.",
+      "team": "Equipo: SSO y controles compartidos. Enterprise habla con ventas."
+    },
+    "americas": {
+      "school": "Escuela: Student es la membresía para deberes y laboratorios. Los mismos modelos que Pro.",
+      "family": "Familia: un fondo de la casa, más barato que cuatro asientos Pro.",
+      "team": "Equipo: asientos de autoservicio. Enterprise: residencia, SCIM y ventas."
+    },
+    "asia_pacific": {
+      "school": "Escuela: empieza en el móvil. Student cubre el asiento; los tokens siguen a precio de almacén.",
+      "family": "Familia: un fondo para el hogar, para no comprar datos y asientos cuatro veces.",
+      "team": "Equipo: un espacio, invita compañeros, comparte créditos."
+    },
+    "middle_east": {
+      "school": "Escuela: recorrido Student para clase e investigación. El árabe es un idioma de primera.",
+      "family": "Familia: un fondo del hogar: una factura para la casa.",
+      "team": "Equipo: espacio compartido y SSO cuando lo necesites. Enterprise por ventas."
+    }
+  },
+  "getStarted": {
+    "eyebrow": "Empezar",
+    "title": "Elige tu camino.",
+    "body": "OpenDoor se adapta a escuela, familia y equipo. Elige una región: nadie queda bloqueado.",
+    "startFree": "Empezar gratis",
+    "startFreeBody": "Autoservicio para una persona o un equipo pequeño. Continúa con el correo.",
+    "education": "Educación",
+    "educationBody": "Para escuelas, laboratorios y estudiantes. El onboarding sigue siendo escolar.",
+    "enterprise": "Enterprise",
+    "enterpriseBody": "Las orgs existentes entran con SSO. Los despliegues nuevos empiezan con ventas.",
+    "continueEmail": "Continuar con el correo",
+    "continueEducation": "Continuar con registro educativo",
+    "joinSso": "Unirse por SSO",
+    "talkSales": "Hablar con ventas"
+  },
+  "gettingStarted": {
+    "eyebrow": "Primeros pasos",
+    "title": "Bienvenido a OpenDoor",
+    "coreDone": "Lo esencial está hecho. Los pasos opcionales están cuando los necesites.",
+    "coreTodo": "El chat y un compañero te meten en el producto. El resto es opcional.",
+    "hide": "Ocultar configuración"
+  },
+  "pricing": {
+    "audienceStudent": "Estudiante",
+    "audienceFamily": "Familia",
+    "audienceTeam": "Equipo",
+    "audienceEnterprise": "Enterprise",
+    "singleLabel": "Estudiante",
+    "familyLabel": "Familia",
+    "enterpriseLabel": "Equipo / Enterprise",
+    "singleHeadline": "Planes para una persona",
+    "familyHeadline": "Un fondo compartido para tu hogar",
+    "enterpriseHeadline": "Planes para equipos y orgs",
+    "compare": "Comparar planes"
+  },
+  "tools": {
+    "searchOneLiner": "Haz una pregunta. OpenDoor Search responde con fuentes en nuestro stack: se cobra de tus créditos, sin claves de búsqueda de terceros."
+  },
+  "openbot": {
+    "houseTitle": "¿Qué es esta casa?",
+    "houseBody": "Una casa es tu espacio OpenBot: un compañero líder más los especialistas que añades. Comparten canales, habilidades y el fondo de créditos de la org. Abre un canal para hablar; añade un compañero cuando quieras un rol con nombre.",
+    "houseGotIt": "Entendido",
+    "startChannel": "Abrir un canal nuevo"
+  },
+  "settings": {
+    "languageRegion": "Idioma y región",
+    "languageRegionHint": "Se usa en el acceso, el onboarding y la primera pantalla. El resto del panel sigue en inglés por ahora."
+  },
+  "regions": {
+    "africa": "África",
+    "europe": "Europa",
+    "americas": "Américas",
+    "asia_pacific": "Asia-Pacífico",
+    "middle_east": "Oriente Medio"
+  }
+}

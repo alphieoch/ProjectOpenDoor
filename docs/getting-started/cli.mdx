@@ -8,8 +8,8 @@ The CLI is a thin client over the gateway. It does not implement routing or bill
 
 ```bash
 export OPENDOOR_API_KEY=opd_…
-# optional; also accepts OPENDOOR_API_URL
-export OPENDOOR_BASE_URL=http://localhost:3001
+# also accepts OPENDOOR_API_URL
+export OPENDOOR_BASE_URL={{GATEWAY_URL}}
 
 bun run od -- help
 ```
@@ -53,7 +53,7 @@ audio transcribe --file <path> --model <id>
 
 ```bash
 bun run od -- chat \
-  --model llama-3.1-8b-instruct \
+  --model {{EXAMPLE_MODEL}} \
   --message "Hello" \
   --provider-sort price \
   --no-fallbacks \
@@ -79,13 +79,14 @@ These hit `/v1/images/generations`, `/v1/videos/generations`, `/v1/audio/transcr
 Needs the Agents add-on. Create boots the runtime (OpenBot by default). Chat runs the MIT OpenBot tool loop. With `OPENBOT_SUPERVISOR_URL` each OpenBot gets its own Chromium container. A shared `OPENBOT_COMPUTER_URL` is the fallback; without either, navigate/read/files still run. `--take` / `--release` hand the computer to a person and back.
 
 ```bash
-bun run od -- agents create --name Desk --runtime openbot --model llama-3.1-8b-instruct
+bun run od -- agents create --name Desk --runtime openbot --model {{EXAMPLE_MODEL}}
 bun run od -- agents chat --id "$AGENT_ID" --message "Open https://example.com and summarize the page."
 bun run od -- agents computer --id "$AGENT_ID" --take
 ```
 
 ## Related
 
-- [TypeScript SDK](/getting-started/sdk)
+- [JavaScript SDK](/getting-started/sdk)
+- [Python SDK](/getting-started/python)
 - [Agents API](/api-reference/agents)
 - [Batches](/api-reference/batches)

@@ -268,21 +268,22 @@ export function OpenBotSettingsDialog({
                 {data.sso.enterprise ? (
                   <div className="mt-2 space-y-1 text-sm">
                     <p className="text-foreground">
-                      {data.sso.enabled ? "SSO is on for this workspace." : "SSO is off."}
+                      {data.sso.enabled ? "SSO is on for this workspace." : "SSO is off."}{" "}
+                      <span className="text-xs text-muted-foreground">Included with Enterprise.</span>
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      Default role {data.sso.defaultRole}
+                      SCIM / Directory Sync is available in Settings. Default role {data.sso.defaultRole}
                       {data.sso.connectionId ? ` · connection ${data.sso.connectionId}` : ""}
                     </p>
-                    <Link href="/dashboard/settings" className="text-xs underline">
+                    <Link href="/dashboard/settings?tab=sso" className="text-xs underline">
                       Manage SSO in Settings
                     </Link>
                   </div>
                 ) : (
                   <p className="mt-2 text-sm text-muted-foreground">
-                    SSO for OpenBot is on Enterprise. This workspace is on {data.sso.plan}.{" "}
+                    SSO for OpenBot is included with Enterprise. This workspace is on {data.sso.plan}.{" "}
                     <Link href="/dashboard/settings?tab=billing" className="underline">
-                      Upgrade
+                      Talk to sales
                     </Link>
                   </p>
                 )}

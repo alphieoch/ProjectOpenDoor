@@ -81,13 +81,14 @@ if (cmd === "help" || cmd === "--help") {
   training jobs
   deployments list
   agents list
-  agents create --name <name> --runtime openbot|openclaw|hermes|nemoclaw --model <id>
+  agents create --name <name> --runtime openbot|openclaw|hermes|nemoclaw --model <id> [--kind leader|coworker]
   agents get --id <id>
   agents start --id <id>
   agents stop --id <id>
   agents chat --id <id> --message <text>
   agents computer --id <id> --take|--release
   agents delete --id <id>
+  agents restore --id <id>
   byok list
   keys list
   requests [--limit 20]
@@ -163,6 +164,7 @@ if (cmd === "catalog") {
       runtime: arg("--runtime", "openbot"),
       modelId: arg("--model"),
       systemPrompt: arg("--system") || undefined,
+      kind: arg("--kind") || undefined,
     }),
   });
   console.log(JSON.stringify(body, null, 2));
@@ -200,6 +202,9 @@ if (cmd === "catalog") {
   console.log(JSON.stringify(body, null, 2));
 } else if (cmd === "agents" && process.argv[3] === "delete") {
   const { body } = await api(`/v1/agents/${arg("--id")}`, { method: "DELETE" });
+  console.log(JSON.stringify(body, null, 2));
+} else if (cmd === "agents" && process.argv[3] === "restore") {
+  const { body } = await api(`/v1/agents/${arg("--id")}/restore`, { method: "POST" });
   console.log(JSON.stringify(body, null, 2));
 } else if (cmd === "byok" && process.argv[3] === "list") {
   const { body } = await api("/v1/byok");

@@ -1,3 +1,4 @@
+import { formatRagSearchDisplay, isSearchToolName } from "@opendoor/shared";
 import { isOpenBotStatusBanner } from "./openbot-house";
 import { LEADERBOT_TOOL_NAMES, isLeaderbotName } from "./openbot-leader";
 
@@ -51,6 +52,7 @@ const HOUSE_TOOL_LABELS: Record<string, string> = {
   stop_coworker: "Pause coworker",
   delete_coworker: "Remove coworker",
   restore_coworker: "Restore coworker",
+  web_search: "Search",
 };
 
 export function isHouseToolName(name: string | null | undefined) {
@@ -216,6 +218,9 @@ function hideLiveNoise(text: string) {
 }
 
 export function houseToolThreadContent(name: string | null | undefined, content: string) {
+  if (isSearchToolName(name)) {
+    return formatRagSearchDisplay(content);
+  }
   const parsed = parseToolPayload(content);
   if (parsed?.display) return stripToolIds(parsed.display);
 

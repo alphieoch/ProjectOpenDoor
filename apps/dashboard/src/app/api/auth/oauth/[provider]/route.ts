@@ -9,6 +9,12 @@ import {
   workosRedirectUri,
 } from "@/lib/public-urls";
 import { loginErrorLocation } from "@/lib/workos-auth-errors";
+import {
+  applySignupIntentCookies,
+  attachSignupIntentToOAuthState,
+  readSignupIntentFromCookies,
+  resolveSignupIntent,
+} from "@/lib/signup-plan";
 
 const PROVIDERS = {
   google: "GoogleOAuth",
@@ -52,12 +58,20 @@ export async function GET(
   const clientId = getWorkOSClientId();
   const pkce = await workos.pkce.generate();
   const callback = workosRedirectUri(req);
+  const cookieIntent = readSignupIntentFromCookies(req.cookies);
+  const intent = resolveSignupIntent({
+    plan: req.nextUrl.searchParams.get("plan") ?? cookieIntent.plan,
+    segment: req.nextUrl.searchParams.get("segment") ?? cookieIntent.segment,
+  });
 
-  const statePayload = {
-    nonce: crypto.randomUUID(),
-    codeVerifier: pkce.codeVerifier,
-    returnPathname: "/dashboard",
-  };
+  const statePayload = attachSignupIntentToOAuthState(
+    {
+      nonce: crypto.randomUUID(),
+      codeVerifier: pkce.codeVerifier,
+      returnPathname: "/dashboard",
+    },
+    intent
+  );
   const sealedState = await sealData(statePayload, {
     password: cookiePassword,
     ttl: 600,
@@ -86,5 +100,6 @@ export async function GET(
     path: "/",
     maxAge: 600,
   });
+  applySignupIntentCookies(response, intent, callback.startsWith("https:"));
   return response;
 }

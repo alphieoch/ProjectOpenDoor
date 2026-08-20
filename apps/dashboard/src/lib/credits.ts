@@ -3,6 +3,7 @@ import { spendFifoCredits } from "@/lib/credit-ledger";
 import {
   billingIsUnlimited,
   creditWaterfall,
+  evaluateMonthlySeatCap,
   splitCreditBuckets,
   spendableCents,
   welcomeAllowedForFamily,
@@ -111,6 +112,51 @@ export function spendableFromWaterfall(
     : waterfall.spendableClosedCents;
 }
 
+export async function getMonthUserSpendCents(orgId: string, userId: string, now = new Date()) {
+  const db = getDb();
+  const [row] = await db
+    .select({
+      total: sql<number>`COALESCE(SUM(CASE WHEN ${creditTransactions.amountCents} < 0 THEN -${creditTransactions.amountCents} ELSE 0 END), 0)`,
+    })
+    .from(creditTransactions)
+    .where(
+      and(
+        eq(creditTransactions.organizationId, orgId),
+        gte(creditTransactions.createdAt, monthStartUtc(now)),
+        sql`${creditTransactions.metadata}->>'userId' = ${userId}`,
+      ),
+    );
+  return Number(row?.total || 0);
+}
+
+export async function assertUserMonthlySeatCap(
+  orgId: string,
+  userId: string | null | undefined,
+  estimatedCostCents = 0,
+): Promise<{ ok: true } | { ok: false; status: 402; detail: string; usedCents: number; capCents: number }> {
+  if (!userId) return { ok: true };
+  const db = getDb();
+  const member = await db.query.users.findFirst({
+    where: and(eq(users.id, userId), eq(users.organizationId, orgId)),
+    columns: { monthlyCreditSubCapCents: true, isSiteAdmin: true },
+  });
+  if (!member || member.isSiteAdmin) return { ok: true };
+  const usedCents = await getMonthUserSpendCents(orgId, userId);
+  const decision = evaluateMonthlySeatCap({
+    monthlyCreditSubCapCents: member.monthlyCreditSubCapCents,
+    usedCents,
+    estimatedCostCents,
+  });
+  if (decision.ok) return { ok: true };
+  return {
+    ok: false,
+    status: 402,
+    detail: decision.error,
+    usedCents: decision.usedCents,
+    capCents: decision.capCents,
+  };
+}
+
 export async function orgHasUnlimitedSpend(
   orgId: string,
   opts?: { isSiteAdmin?: boolean | null }
@@ -133,7 +179,7 @@ export async function orgHasUnlimitedSpend(
 export async function assertOrgCanSpend(
   orgId: string,
   family: "closed" | "open_weight",
-  opts?: { isSiteAdmin?: boolean | null }
+  opts?: { isSiteAdmin?: boolean | null; userId?: string | null; estimatedCostCents?: number }
 ): Promise<
   | { ok: true; waterfall: CreditWaterfall; buckets: CreditBuckets; unlimited?: boolean }
   | { ok: false; status: 402; waterfall: CreditWaterfall; buckets: CreditBuckets; detail: string }
@@ -162,6 +208,17 @@ export async function assertOrgCanSpend(
       waterfall: empty,
       buckets: splitCreditBuckets({}),
       detail: "Organization not found.",
+    };
+  }
+
+  const seatCap = await assertUserMonthlySeatCap(orgId, opts?.userId, opts?.estimatedCostCents);
+  if (!seatCap.ok) {
+    return {
+      ok: false,
+      status: 402,
+      waterfall: state.waterfall,
+      buckets: state.buckets,
+      detail: seatCap.detail,
     };
   }
 

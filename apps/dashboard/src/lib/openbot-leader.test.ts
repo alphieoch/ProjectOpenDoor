@@ -7,6 +7,8 @@ import {
   LEADERBOT_NAME,
   LEADERBOT_READ_TOOL_NAMES,
   LEADERBOT_TOOL_NAMES,
+  LEADERBOT_TURN_GUIDANCE,
+  leaderbotSystemPrompt,
   decideHouseAction,
   decideSpawn,
   findExistingLeaderbot,
@@ -44,6 +46,10 @@ describe("Leaderbot identity", () => {
   test("is a first-class persona with a leader kind", () => {
     expect(LEADERBOT_PERSONA.id).toBe("leader");
     expect(LEADERBOT_PERSONA.name).toBe(LEADERBOT_NAME);
+    expect(LEADERBOT_TURN_GUIDANCE).toMatch(/web_search/);
+    expect(LEADERBOT_TURN_GUIDANCE).toMatch(/factual question/);
+    expect(leaderbotSystemPrompt()).toMatch(/browse a specific page/);
+    expect(LEADERBOT_PERSONA.systemPrompt).toContain("web_search");
     expect(LEADERBOT_KIND).toBe("leader");
     expect(getOpenBotPersona("leader").name).toBe("Leaderbot");
     expect(LEADERBOT_TOOL_NAMES).toEqual([

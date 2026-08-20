@@ -1,94 +1,105 @@
 ---
 title: "Models"
-description: "OpenDoor documentation."
+description: "GET /v1/models — live catalog with deployment status, pricing, and architecture."
+showPageTitle: true
 ---
 
 # Models
 
-## List Models
-
 ```
 GET /v1/models
+GET /v1/models/:model
 ```
 
-Returns all available models with their deployment status.
-
-## Headers
-
-| Header | Required | Description |
-|--------|----------|-------------|
-| `Authorization` | Yes | `Bearer YOUR_API_KEY` |
-
-## Example Request
+`GET /v1/models` lists every model the gateway will advertise for this key: platform providers, org-scoped custom deployments, and BYOK adapters. Rows are enriched with catalog status and list prices when those exist in Postgres.
 
 ```bash
-curl http://localhost:3001/v1/models \
-  -H "Authorization: Bearer YOUR_API_KEY"
-```
+export OPENDOOR_API_KEY=opd_…
+export OPENDOOR_BASE_URL={{GATEWAY_URL}}
 
-## Example Response
+curl "$OPENDOOR_BASE_URL/v1/models" \
+  -H "Authorization: Bearer $OPENDOOR_API_KEY"
+```
 
 ```json
 {
   "object": "list",
   "data": [
     {
-      "id": "gpt-4o",
+      "id": "{{EXAMPLE_MODEL}}",
       "object": "model",
-      "created": 0,
-      "owned_by": "openai",
-      "provider": "azure-foundry",
+      "owned_by": "google",
+      "provider": "vertex",
       "deployment_status": "live",
-      "display_name": "GPT-4o",
-      "supports_vision": true,
+      "display_name": "Gemma 4 26B",
+      "context_window": 128000,
+      "supports_vision": false,
       "supports_tools": true,
       "supports_json_mode": true,
-      "context_window": 128000,
       "pricing": {
-        "prompt": 2.5,
-        "completion": 10,
-        "prompt_per_token": "0.0000025",
-        "completion_per_token": "0.00001"
+        "prompt": 0.15,
+        "completion": 0.6
       },
       "architecture": {
         "modality": "text",
-        "input_modalities": ["text", "image"],
+        "input_modalities": ["text"],
         "output_modalities": ["text"]
       },
-      "supported_parameters": ["temperature", "max_tokens", "top_p", "stream", "tools", "tool_choice", "response_format", "image_url"],
-      "top_provider": { "slug": "azure-foundry" }
-    },
-    {
-      "id": "DeepSeek-V4-Pro",
-      "object": "model",
-      "created": 0,
-      "owned_by": "deepseek",
-      "provider": "azure-foundry",
-      "deployment_status": "coming_soon",
-      "display_name": "DeepSeek V4 Pro",
-      "supports_vision": false,
-      "supports_tools": true,
-      "supports_json_mode": true
+      "supported_parameters": ["temperature", "max_tokens", "top_p", "stream", "tools", "tool_choice"],
+      "top_provider": { "slug": "vertex" },
+      "serverless": true
     }
   ]
 }
 ```
 
-## Deployment Statuses
+Pricing numbers are catalog list rates (per 1M tokens in `prompt` / `completion` when present). Always treat `GET /v1/models` as source of truth for your workspace.
 
-| Status | Meaning | HTTP Code |
-|--------|---------|-----------|
-| `live` | Model is deployed and ready | 200 |
-| `available_on_request` | Can be deployed on demand | 400 |
-| `coming_soon` | Will be available shortly | 400 |
+## Hosted Vertex MaaS ids
 
-## Filter by Status
+These catalog ids are the serverless wholesale set the gateway advertises when Vertex (or Together overflow) is configured:
 
-Client-side filtering example:
+`gemma-4-26b-a4b-it`, `qwen3-next-80b-instruct`, `qwen3-next-80b-thinking`, `qwen3-coder-480b-a35b-instruct`, `deepseek-v3.2`, `deepseek-r1`, `kimi-k2-thinking`, `minimax-m2`, `glm-4.7`, `glm-5`, `gpt-oss-120b`, `gpt-oss-20b`.
+
+Image / video ids (when Vertex media is configured): `gemini-2.5-flash-image`, `gemini-3.1-flash-image`, `gemini-3-pro-image`, `veo-3.1-fast-generate-001`, `veo-3.1-generate-001`.
+
+## Deployment status
+
+| Status | Meaning | Chat |
+|--------|---------|------|
+| `live` | Callable now | **200** |
+| `warming` | Listed; not serving yet | **503** |
+| `dedicated` | Needs a GPU from Dashboard → Deployments | **400** |
+| `available_on_request` | Closed / marketplace only (open-weight is not blocked on this flag) | **400** for closed |
+| `coming_soon` | Not callable yet | **400** |
+
+Filter to live models:
 
 ```bash
-# Get only live models
-curl http://localhost:3001/v1/models \
-  -H "Authorization: Bearer YOUR_API_KEY" | \
-  jq '.data | map(select(.deployment_status == "live"))'
+curl "$OPENDOOR_BASE_URL/v1/models" \
+  -H "Authorization: Bearer $OPENDOOR_API_KEY" \
+  | jq '.data | map(select(.deployment_status == "live"))'
+```
+
+## One model
+
+```bash
+curl "$OPENDOOR_BASE_URL/v1/models/{{EXAMPLE_MODEL}}" \
+  -H "Authorization: Bearer $OPENDOOR_API_KEY"
+```
+
+Returns `{ id, object, created, owned_by }` for a routed id, or **404** `{ "error": "Model not found" }`.
+
+## SDKs
+
+```ts
+const models = await client.models.list();
+```
+
+```python
+print(client.models.list())
+```
+
+```bash
+bun run od -- models
 ```

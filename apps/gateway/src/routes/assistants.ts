@@ -14,8 +14,9 @@ import {
   writeAudit,
 } from "../lib/platform.js";
 import { runBilledChat } from "../lib/run-completion.js";
+import { formatRagSearchForModel, ragSearch } from "../lib/rag-search.js";
+import { authorizeGatewaySearch } from "../lib/search-spend.js";
 import { orgHasWebSearchAddon, webSearchAddonRequiredBody } from "../lib/web-search-entitlement.js";
-import { runWebSearch } from "../lib/web-search.js";
 
 const assistantsRouter = new Hono();
 const ROLES = new Set<ChatMessage["role"]>(["system", "user", "assistant", "tool"]);
@@ -186,20 +187,21 @@ assistantsRouter.post("/:id/chat", async (c) => {
   if (assistant.webSearchEnabled) {
     const lastUser = [...incoming].reverse().find((m) => m.role === "user");
     const query = typeof lastUser?.content === "string" ? lastUser.content : "";
-    if (query && (await orgHasWebSearchAddon(tenant.organization.id, tenant.organization.plan))) {
-      try {
-        const search = await runWebSearch(query, 5);
-        const digest = (search.results || [])
-          .map((r) => `- ${r.title}: ${r.url}\n  ${r.snippet || ""}`)
-          .join("\n");
-        if (digest) {
-          messages.push({
-            role: "system",
-            content: `Live web search results for the latest user message:\n${digest}`,
-          });
+    if (query) {
+      const gate = await authorizeGatewaySearch(tenant.organization);
+      if (gate.ok && gate.coveredByAddon) {
+        try {
+          const search = await ragSearch({ query, maxResults: 5 });
+          const digest = formatRagSearchForModel(search);
+          if (digest) {
+            messages.push({
+              role: "system",
+              content: digest,
+            });
+          }
+        } catch {
+          /* search is optional; chat still runs */
         }
-      } catch {
-        /* search is optional; chat still runs */
       }
     }
   }

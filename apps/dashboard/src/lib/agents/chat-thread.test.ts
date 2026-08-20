@@ -46,6 +46,7 @@ describe("computer working flag", () => {
     expect(isComputerToolName("spawn_coworker")).toBe(false);
     expect(isComputerToolName("stop_coworker")).toBe(false);
     expect(isComputerToolName("delete_coworker")).toBe(false);
+    expect(isComputerToolName("web_search")).toBe(false);
     expect(isComputerToolName("computer_navigate")).toBe(true);
     expect(turnUsedComputer([{ name: "list_coworkers" }])).toBe(false);
     expect(turnUsedComputer([{ name: "computer_read" }])).toBe(true);

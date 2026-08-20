@@ -1,8 +1,8 @@
 // @ts-nocheck
 import type { Context, Next } from "hono";
 import { db } from "@opendoor/database";
-import { apiKeys, organizations, models, providers, users, creditTransactions } from "@opendoor/database";
-import { eq, and, isNull, gte, sql } from "drizzle-orm";
+import { apiKeys, organizations, models, providers, users } from "@opendoor/database";
+import { eq, and, isNull } from "drizzle-orm";
 import { createHash, randomBytes } from "crypto";
 import {
   flattenMessageText,
@@ -17,7 +17,7 @@ import {
 } from "@opendoor/shared";
 import { estimateTokens } from "../utils/streaming.js";
 import { calculateCost } from "../utils/pricing.js";
-import { expireWelcomeCredits, orgHasUnlimitedSpend, shouldUsePlanBudget, usdToCents } from "../utils/billing.js";
+import { assertMonthlySeatCap, expireWelcomeCredits, orgHasUnlimitedSpend, shouldUsePlanBudget, usdToCents } from "../utils/billing.js";
 import { applyModelRouting, normalizeAllowlist } from "../lib/model-aliases.js";
 
 function internalGatewaySecret() {
@@ -195,39 +195,12 @@ export async function authMiddleware(c: Context, next: Next) {
     if (member && !chatModeAllowed(member.allowedChatModes, houseChatMode)) {
       return c.json({ error: "This chat mode is disabled for your seat.", mode: houseChatMode }, 403);
     }
-    const cap = member?.monthlyCreditSubCapCents;
-    if (!c.get("skipBilling") && cap != null && cap >= 0) {
-      const monthStart = new Date();
-      monthStart.setUTCDate(1);
-      monthStart.setUTCHours(0, 0, 0, 0);
-      try {
-        const spent = await db
-          .select({
-            total: sql<number>`COALESCE(SUM(ABS(${creditTransactions.amountCents})), 0)`,
-          })
-          .from(creditTransactions)
-          .where(
-            and(
-              eq(creditTransactions.organizationId, org.id),
-              eq(creditTransactions.kind, "usage"),
-              gte(creditTransactions.createdAt, monthStart),
-              sql`${creditTransactions.metadata}->>'userId' = ${houseChatUserId}`
-            )
-          );
-        const used = Number(spent[0]?.total || 0);
-        if (used >= cap) {
-          return c.json(
-            {
-              error: "Monthly seat credit cap reached",
-              monthlyCreditSubCapCents: cap,
-              usedCents: used,
-            },
-            402
-          );
-        }
-      } catch {
-        /* metadata filter may fail on older rows */
-      }
+  }
+
+  if (!c.get("skipBilling") && houseChatUserId) {
+    const seatCap = await assertMonthlySeatCap(org.id, houseChatUserId);
+    if (!seatCap.ok) {
+      return c.json(seatCap.body, seatCap.status);
     }
   }
 

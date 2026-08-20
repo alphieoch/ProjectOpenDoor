@@ -29,6 +29,7 @@ import { ConfirmDialog } from "@/components/workflow/confirm-dialog";
 import { NODE_META, TRIGGER_LABELS } from "@/components/workflow/node-meta";
 
 const TOOLS = [
+  { value: "search",            label: "OpenDoor Search" },
   { value: "web_search",        label: "Web Search" },
   { value: "code_execution",    label: "Code Execution" },
   { value: "document_analysis", label: "Document Analysis" },
@@ -73,7 +74,7 @@ function WorkflowNodeComponent({ data, selected }: { id: string; data: any; sele
         {data.toolType && (
           <div style={{ fontSize: 11, color: "hsl(var(--muted-foreground))" }}>
             {TOOLS.find((t) => t.value === data.toolType)?.label ?? data.toolType}
-            {data.toolType === "web_search" && data.query ? ` · ${data.query}` : ""}
+            {(data.toolType === "web_search" || data.toolType === "search") && data.query ? ` · ${data.query}` : ""}
             {data.toolType === "image_generation" && data.prompt ? ` · ${data.prompt}` : ""}
             {data.toolType === "document_analysis" && data.fileId ? ` · ${data.fileId}` : ""}
             {data.toolType === "code_execution" ? ` · ${data.language === "python" ? "python" : "js"}` : ""}
@@ -213,7 +214,7 @@ function ConfigPanel({
                 ))}
               </select>
             </div>
-            {data.toolType === "web_search" && (
+            {(data.toolType === "web_search" || data.toolType === "search") && (
               <>
                 <div>
                   <label className="mb-1 block text-xs font-medium" style={{ color: "hsl(var(--muted-foreground))" }}>Query</label>
@@ -237,8 +238,9 @@ function ConfigPanel({
                   />
                 </div>
                 <p className="text-[11px] leading-relaxed" style={{ color: "hsl(var(--muted-foreground))" }}>
-                  Requires the Web Search add-on (or Enterprise). Production uses Vertex AI
-                  Google Search grounding on OpenDoor’s GCP project.{" "}
+                  {data.toolType === "search"
+                    ? "OpenDoor Search synthesizes an answer with citations on our GCP Vertex stack. Enable it on Tools or cover it with the existing search add-on. Billed on org credits."
+                    : "Requires the Web Search add-on (or Enterprise). Production uses Vertex AI Google Search grounding on OpenDoor’s GCP project."}{" "}
                   <Link href="/dashboard/billing" className="underline" style={{ color: "hsl(var(--foreground))" }}>
                     Billing
                   </Link>

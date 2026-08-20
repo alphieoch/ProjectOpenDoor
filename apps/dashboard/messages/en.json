@@ -1,0 +1,138 @@
+{
+  "common": {
+    "language": "Language",
+    "region": "Region",
+    "country": "Country",
+    "countryOptional": "Country (optional)",
+    "countryNone": "Skip for now",
+    "save": "Save",
+    "continue": "Continue",
+    "skip": "Skip",
+    "home": "Home",
+    "signIn": "Sign in",
+    "getStarted": "Get started",
+    "openDashboard": "Open dashboard"
+  },
+  "auth": {
+    "welcomeBack": "Welcome back",
+    "createAccount": "Create your account",
+    "signInSubtitle": "Sign in to your LLM gateway",
+    "signupSubtitle": "Get started with the LLM gateway",
+    "educationSubtitle": "Get started with a school-focused setup",
+    "email": "Email",
+    "password": "Password",
+    "fullName": "Full name",
+    "organization": "Organization",
+    "organizationOptional": "optional",
+    "signIn": "Sign in",
+    "signingIn": "Signing in…",
+    "createAccountCta": "Create account",
+    "creatingAccount": "Creating account…",
+    "noAccount": "No account?",
+    "signUpFree": "Sign up free",
+    "haveAccount": "Already have an account?",
+    "enterpriseSso": "Enterprise SSO",
+    "orgSlug": "Organization slug",
+    "continueSso": "Continue with SSO",
+    "choosePlan": "Choose a plan",
+    "enterpriseSales": "Enterprise sales",
+    "loginFailed": "Login failed",
+    "signupFailed": "Sign up failed",
+    "passwordHint": "At least 10 characters"
+  },
+  "onboarding": {
+    "eyebrow": "Your workspace",
+    "title": "How OpenDoor works",
+    "body": "One login. Chat in the browser, a house of OpenBot coworkers, and a shared credit pool. Pick your region so we speak your context — we never block a country.",
+    "pickRegion": "Where are you?",
+    "pickRegionHint": "This only changes copy and defaults. Every region can sign up.",
+    "productChatTitle": "Chat",
+    "productChatBody": "Open Chat and talk to models on your phone or laptop. You do not need an API key to start.",
+    "productHouseTitle": "The house",
+    "productHouseBody": "OpenBot is a house of coworkers — one leader plus specialists you add. They share the same workspace.",
+    "productPoolTitle": "Shared pool",
+    "productPoolBody": "Family and Team share one credit pool. One bill, not a closed-API key per person.",
+    "saveWorld": "Save language and region",
+    "saved": "Saved",
+    "africa": {
+      "school": "School: light pages on a phone, a Student seat for class or homework, and no extra data just to reach a model.",
+      "family": "Family: one shared pool for the household. Parents and kids use the same credits — cheaper than four separate bills, and built for mobile data costs.",
+      "team": "Team: one workspace for the lab, NGO, or shop. Invite by email. Everyone shares the org pool."
+    },
+    "europe": {
+      "school": "School: Student onboarding for a class or lab, with the same gateway path as Pro.",
+      "family": "Family: a household pool with rollover — one membership for the home.",
+      "team": "Team: SSO and shared controls when you are ready. Enterprise is talk to sales."
+    },
+    "americas": {
+      "school": "School: Student is the membership for homework and labs. Same models as Pro.",
+      "family": "Family: a shared house pool for the household, cheaper than four Pro seats.",
+      "team": "Team: self-serve seats. Enterprise is residency, SCIM, and sales."
+    },
+    "asia_pacific": {
+      "school": "School: start on a phone. Student covers the seat; tokens stay warehouse-priced.",
+      "family": "Family: one pool for the household so data and seats are not bought four times.",
+      "team": "Team: one workspace, invite coworkers, share credits."
+    },
+    "middle_east": {
+      "school": "School: Student setup for class and research. Arabic is a first-class language.",
+      "family": "Family: a shared household pool — one bill for the house.",
+      "team": "Team: shared workspace and SSO when you need it. Enterprise via sales."
+    }
+  },
+  "getStarted": {
+    "eyebrow": "Get started",
+    "title": "Choose your path.",
+    "body": "OpenDoor adapts to school, family, and team. Pick a region first if you like — nobody is geo-blocked.",
+    "startFree": "Start free",
+    "startFreeBody": "Self-serve for a person or small team. Continue with email.",
+    "education": "Education",
+    "educationBody": "For schools, labs, and students. Onboarding stays school-shaped.",
+    "enterprise": "Enterprise",
+    "enterpriseBody": "Existing orgs sign in with SSO. New deployments start with sales.",
+    "continueEmail": "Continue with email",
+    "continueEducation": "Continue with education signup",
+    "joinSso": "Join via SSO",
+    "talkSales": "Talk to sales"
+  },
+  "gettingStarted": {
+    "eyebrow": "Getting started",
+    "title": "Welcome to OpenDoor",
+    "coreDone": "Core setup is done. Optional steps below are there when you need them.",
+    "coreTodo": "Chat and a coworker get you into the product. Everything else is optional.",
+    "hide": "Hide setup"
+  },
+  "pricing": {
+    "audienceStudent": "Student",
+    "audienceFamily": "Family",
+    "audienceTeam": "Team",
+    "audienceEnterprise": "Enterprise",
+    "singleLabel": "Student",
+    "familyLabel": "Family",
+    "enterpriseLabel": "Team / Enterprise",
+    "singleHeadline": "Plans for one person",
+    "familyHeadline": "A shared pool for your household",
+    "enterpriseHeadline": "Plans for teams and orgs",
+    "compare": "Compare plans"
+  },
+  "tools": {
+    "searchOneLiner": "Ask a question. OpenDoor Search answers with citations on our stack — billed on your credits, no third-party search keys."
+  },
+  "openbot": {
+    "houseTitle": "What is this house?",
+    "houseBody": "A house is your OpenBot workspace: a leader coworker plus specialists you add. They share channels, skills, and this org’s credit pool. Start a channel to talk; add a coworker when you want a named role.",
+    "houseGotIt": "Got it",
+    "startChannel": "Start a new channel"
+  },
+  "settings": {
+    "languageRegion": "Language & region",
+    "languageRegionHint": "Used on login, onboarding, and first-run copy. The rest of the dashboard stays in English for now."
+  },
+  "regions": {
+    "africa": "Africa",
+    "europe": "Europe",
+    "americas": "Americas",
+    "asia_pacific": "Asia-Pacific",
+    "middle_east": "Middle East"
+  }
+}

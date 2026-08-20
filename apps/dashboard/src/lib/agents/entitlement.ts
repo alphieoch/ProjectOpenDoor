@@ -1,7 +1,7 @@
 import { getDb } from "@/lib/db";
 import { organizations } from "@opendoor/database";
 import { eq, sql } from "drizzle-orm";
-import { AGENTS_ADDON, workspaceHasAgentsAddon } from "@opendoor/shared";
+import { AGENTS_ADDON, workspaceHasAgentsAddon, workspaceHasEnterpriseTools } from "@opendoor/shared";
 import type { SessionPayload } from "@/lib/auth";
 import { agentsAddonPriceId } from "@/lib/stripe";
 
@@ -26,17 +26,21 @@ export async function loadAgentsEntitlement(orgId: string, session?: SessionPayl
       stripeAgentsSubscriptionId: true,
     },
   });
+  const enterpriseTools = workspaceHasEnterpriseTools({
+    plan: org?.plan,
+    isSiteAdmin: session?.isSiteAdmin,
+  });
   const active = Boolean(
-    session?.isSiteAdmin ||
     workspaceHasAgentsAddon({
       plan: org?.plan,
       agentsAddonStatus: org?.agentsAddonStatus,
+      isSiteAdmin: session?.isSiteAdmin,
     }),
   );
   return {
     active,
     status: org?.agentsAddonStatus || "inactive",
-    includedInPlan: org?.plan === "enterprise",
+    includedInPlan: enterpriseTools,
     amountUsd: AGENTS_ADDON.amountUsd,
     amountCents: AGENTS_ADDON.amountCents,
     configured: Boolean(agentsAddonPriceId()),

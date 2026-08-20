@@ -9,6 +9,7 @@ import {
 } from "@opendoor/shared";
 import { getDb } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
+import { assertUserMonthlySeatCap } from "@/lib/credits";
 import { houseChatMessages, houseChats, users } from "@opendoor/database";
 import {
   assistantGatewayHeaders,
@@ -106,6 +107,17 @@ export async function POST(
     return NextResponse.json(
       { error: "This chat mode is disabled for your seat.", mode },
       { status: 403 }
+    );
+  }
+  const seatCap = await assertUserMonthlySeatCap(orgId, session.userId);
+  if (!seatCap.ok) {
+    return NextResponse.json(
+      {
+        error: seatCap.detail,
+        monthlyCreditSubCapCents: seatCap.capCents,
+        usedCents: seatCap.usedCents,
+      },
+      { status: 402 },
     );
   }
 
@@ -237,9 +249,8 @@ export async function POST(
       }),
       signal: AbortSignal.timeout(180_000),
     });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Gateway unreachable";
-    return NextResponse.json({ error: `Cannot reach gateway: ${message}` }, { status: 502 });
+  } catch {
+    return NextResponse.json({ error: "Cannot reach the gateway." }, { status: 502 });
   }
 
   if (!upstream.ok || !upstream.body) {

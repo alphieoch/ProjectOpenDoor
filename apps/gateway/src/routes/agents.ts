@@ -1,19 +1,34 @@
 import { Hono } from "hono";
-import { and, desc, eq, isNull } from "drizzle-orm";
+import { and, desc, eq, isNotNull, isNull } from "drizzle-orm";
 import { db, workspaceAgents } from "@opendoor/database";
 import { AGENT_SOFT_DELETE_RETENTION_MS, isAgentRuntime, workspaceHasAgentsAddon } from "@opendoor/shared";
 import { asString, requireTenant, uniqueConflict, writeAudit } from "../lib/platform.js";
 import { runAgentAgui } from "../lib/ag-ui.js";
 import {
+  AGENT_PUBLIC_ROUTES,
+  isAgentId,
+  planAgentCaps,
+  presentDeletedAgent,
+  resolveCreateKind,
+  spawnCapError,
+} from "../lib/agent-public.js";
+import {
   bootAgent,
+  countOrgAgents,
   createAndBootAgent,
+  findLeaderbot,
+  loadAgentMessages,
+  loadOwnedAgent,
   presentAgent,
   purgeExpiredAgents,
+  restoreAgent,
   runAgentChat,
   setComputerControl,
   softDeleteAgent,
   stopAgent,
 } from "../lib/workspace-agent.js";
+
+export { AGENT_PUBLIC_ROUTES };
 
 const agentsRouter = new Hono();
 
@@ -24,28 +39,45 @@ function addonActive(org: { plan?: string | null; agentsAddonStatus?: string | n
   });
 }
 
-async function loadOwned(orgId: string, id: string) {
-  const [row] = await db
-    .select()
-    .from(workspaceAgents)
-    .where(and(eq(workspaceAgents.id, id), eq(workspaceAgents.organizationId, orgId), isNull(workspaceAgents.deletedAt)))
-    .limit(1);
-  return row;
+function addonRequired() {
+  return { error: "Agents add-on required", code: "addon_required" as const, addon: "agents" };
+}
+
+async function owned(orgId: string, id: string, opts?: { includeDeleted?: boolean }) {
+  if (!isAgentId(id)) return null;
+  return loadOwnedAgent(orgId, id, opts);
 }
 
 agentsRouter.get("/", async (c) => {
   const tenant = requireTenant(c);
   if (!tenant) return c.json({ error: "Unauthorized" }, 401);
   await purgeExpiredAgents();
-  const rows = await db
-    .select()
-    .from(workspaceAgents)
-    .where(and(eq(workspaceAgents.organizationId, tenant.organization.id), isNull(workspaceAgents.deletedAt)))
-    .orderBy(desc(workspaceAgents.createdAt));
+  const [rows, deletedRows] = await Promise.all([
+    db
+      .select()
+      .from(workspaceAgents)
+      .where(and(eq(workspaceAgents.organizationId, tenant.organization.id), isNull(workspaceAgents.deletedAt)))
+      .orderBy(desc(workspaceAgents.createdAt)),
+    db
+      .select()
+      .from(workspaceAgents)
+      .where(and(eq(workspaceAgents.organizationId, tenant.organization.id), isNotNull(workspaceAgents.deletedAt)))
+      .orderBy(desc(workspaceAgents.deletedAt)),
+  ]);
+  const running = rows.filter((row) => row.status === "running" || row.status === "starting").length;
   return c.json({
     object: "list",
     data: rows.map(presentAgent),
+    deleted: deletedRows.flatMap((row) => {
+      const presented = presentDeletedAgent(row);
+      return presented ? [presented] : [];
+    }),
     addon: { active: addonActive(tenant.organization) },
+    capacity: {
+      ...planAgentCaps(tenant.organization.plan),
+      bots: rows.length,
+      running,
+    },
   });
 });
 
@@ -53,17 +85,47 @@ agentsRouter.post("/", async (c) => {
   const tenant = requireTenant(c);
   if (!tenant) return c.json({ error: "Unauthorized" }, 401);
   if (!addonActive(tenant.organization)) {
-    return c.json({ error: "Agents add-on required", code: "addon_required", addon: "agents" }, 402);
+    return c.json(addonRequired(), 402);
   }
   const body = await c.req.json().catch(() => ({}));
   const name = asString(body.name);
   const runtime = asString(body.runtime);
   const modelId = asString(body.modelId || body.model);
+  const kind = resolveCreateKind(name, body.kind);
   if (!name) return c.json({ error: "name is required" }, 400);
   if (!isAgentRuntime(runtime)) {
     return c.json({ error: "runtime must be openclaw, hermes, nemoclaw, or openbot" }, 400);
   }
   if (!modelId) return c.json({ error: "modelId is required" }, 400);
+
+  if (kind === "leader") {
+    const found = await findLeaderbot(tenant.organization.id);
+    if (found && !found.deletedAt) {
+      return c.json({ ...presentAgent(found), existed: true });
+    }
+    if (found?.deletedAt) {
+      const restored = await restoreAgent(found);
+      const ready = await bootAgent(restored);
+      await writeAudit({
+        organizationId: tenant.organization.id,
+        action: "agent.restored",
+        entityType: "workspace_agent",
+        entityId: ready.id,
+        metadata: { name: ready.name, runtime: ready.runtime, status: ready.status, kind: "leader" },
+      });
+      return c.json({ ...presentAgent(ready), restored: true });
+    }
+  }
+
+  const counts = await countOrgAgents(tenant.organization.id);
+  const capped = spawnCapError({
+    action: "create",
+    bots: counts.bots,
+    running: counts.running,
+    plan: tenant.organization.plan,
+  });
+  if (capped) return c.json(capped, 402);
+
   try {
     const ready = await createAndBootAgent({
       orgId: tenant.organization.id,
@@ -71,13 +133,14 @@ agentsRouter.post("/", async (c) => {
       runtime,
       modelId,
       systemPrompt: asString(body.systemPrompt) || undefined,
+      kind,
     });
     await writeAudit({
       organizationId: tenant.organization.id,
       action: "agent.created",
       entityType: "workspace_agent",
       entityId: ready.id,
-      metadata: { name, runtime, modelId, status: ready.status },
+      metadata: { name, runtime, modelId, status: ready.status, kind: kind || null },
     });
     return c.json(presentAgent(ready), 201);
   } catch (err) {
@@ -89,29 +152,63 @@ agentsRouter.post("/", async (c) => {
 agentsRouter.get("/:id", async (c) => {
   const tenant = requireTenant(c);
   if (!tenant) return c.json({ error: "Unauthorized" }, 401);
-  const row = await loadOwned(tenant.organization.id, c.req.param("id"));
+  const row = await owned(tenant.organization.id, c.req.param("id"));
   if (!row) return c.json({ error: "Agent not found" }, 404);
-  return c.json(presentAgent(row));
+  const messages = await loadAgentMessages(row.id, tenant.organization.id);
+  return c.json({
+    ...presentAgent(row),
+    messages,
+  });
 });
 
 agentsRouter.patch("/:id", async (c) => {
   const tenant = requireTenant(c);
   if (!tenant) return c.json({ error: "Unauthorized" }, 401);
-  const row = await loadOwned(tenant.organization.id, c.req.param("id"));
+  const row = await owned(tenant.organization.id, c.req.param("id"));
   if (!row) return c.json({ error: "Agent not found" }, 404);
   const body = await c.req.json().catch(() => ({}));
   const status = asString(body.status);
+  const name = asString(body.name);
+  const systemPrompt = typeof body.systemPrompt === "string" ? body.systemPrompt.trim() : undefined;
+  const modelId = asString(body.modelId || body.model);
   const computerControl = body.computerControl === "take" || body.computerControl === "release"
     ? body.computerControl
     : null;
 
-  let updated = row;
+  if (status && status !== "stopped" && status !== "running") {
+    return c.json({ error: "status must be running or stopped" }, 400);
+  }
+
+  const patch: Partial<typeof workspaceAgents.$inferInsert> = { updatedAt: new Date() };
+  if (name) patch.name = name;
+  if (systemPrompt !== undefined) patch.systemPrompt = systemPrompt || null;
+  if (modelId) patch.modelId = modelId;
+  if (Object.keys(patch).length > 1) {
+    await db.update(workspaceAgents).set(patch).where(eq(workspaceAgents.id, row.id));
+  }
+
+  let updated = (await loadOwnedAgent(tenant.organization.id, row.id)) || row;
   if (status === "stopped") updated = await stopAgent(updated);
   if (status === "running") {
     if (!addonActive(tenant.organization)) {
-      return c.json({ error: "Agents add-on required", code: "addon_required", addon: "agents" }, 402);
+      return c.json(addonRequired(), 402);
     }
-    updated = await bootAgent(updated);
+    const alreadyHot = updated.status === "running" || updated.status === "starting";
+    if (!alreadyHot) {
+      const counts = await countOrgAgents(tenant.organization.id);
+      const capped = spawnCapError({
+        action: "start",
+        bots: counts.bots,
+        running: counts.running,
+        plan: tenant.organization.plan,
+      });
+      if (capped) return c.json(capped, 402);
+    }
+    updated = await bootAgent({
+      ...updated,
+      name: name || updated.name,
+      modelId: modelId || updated.modelId,
+    });
   }
   if (computerControl) updated = await setComputerControl(updated, computerControl);
 
@@ -126,7 +223,7 @@ agentsRouter.patch("/:id", async (c) => {
           : "agent.updated",
     entityType: "workspace_agent",
     entityId: row.id,
-    metadata: { status: updated.status, computerControl },
+    metadata: { status: updated.status, computerControl, kind: presentAgent(updated).kind },
   });
   return c.json(presentAgent(updated));
 });
@@ -135,9 +232,9 @@ agentsRouter.post("/:id/chat", async (c) => {
   const tenant = requireTenant(c);
   if (!tenant) return c.json({ error: "Unauthorized" }, 401);
   if (!addonActive(tenant.organization)) {
-    return c.json({ error: "Agents add-on required", code: "addon_required", addon: "agents" }, 402);
+    return c.json(addonRequired(), 402);
   }
-  const row = await loadOwned(tenant.organization.id, c.req.param("id"));
+  const row = await owned(tenant.organization.id, c.req.param("id"));
   if (!row) return c.json({ error: "Agent not found" }, 404);
   if (row.status !== "running") {
     return c.json({ error: "Start the agent before chatting." }, 409);
@@ -164,9 +261,9 @@ agentsRouter.post("/:id/ag-ui", async (c) => {
   const tenant = requireTenant(c);
   if (!tenant) return c.json({ error: "Unauthorized" }, 401);
   if (!addonActive(tenant.organization)) {
-    return c.json({ error: "Agents add-on required", code: "addon_required", addon: "agents" }, 402);
+    return c.json(addonRequired(), 402);
   }
-  const row = await loadOwned(tenant.organization.id, c.req.param("id"));
+  const row = await owned(tenant.organization.id, c.req.param("id"));
   if (!row) return c.json({ error: "Agent not found" }, 404);
   if (row.status !== "running") {
     return c.json({ error: "Start the agent before chatting." }, 409);
@@ -175,10 +272,30 @@ agentsRouter.post("/:id/ag-ui", async (c) => {
   return runAgentAgui(row, body);
 });
 
+agentsRouter.post("/:id/restore", async (c) => {
+  const tenant = requireTenant(c);
+  if (!tenant) return c.json({ error: "Unauthorized" }, 401);
+  await purgeExpiredAgents();
+  const row = await owned(tenant.organization.id, c.req.param("id"), { includeDeleted: true });
+  if (!row) return c.json({ error: "Agent not found" }, 404);
+  if (!row.deletedAt) {
+    return c.json({ error: "This agent is not in the recovery window." }, 409);
+  }
+  const restored = await restoreAgent(row);
+  await writeAudit({
+    organizationId: tenant.organization.id,
+    action: "agent.restored",
+    entityType: "workspace_agent",
+    entityId: row.id,
+    metadata: { name: row.name, runtime: row.runtime, softDelete: true },
+  });
+  return c.json(presentAgent(restored));
+});
+
 agentsRouter.delete("/:id", async (c) => {
   const tenant = requireTenant(c);
   if (!tenant) return c.json({ error: "Unauthorized" }, 401);
-  const existing = await loadOwned(tenant.organization.id, c.req.param("id"));
+  const existing = await owned(tenant.organization.id, c.req.param("id"));
   if (!existing) return c.json({ error: "Agent not found" }, 404);
   await softDeleteAgent(existing);
   await writeAudit({
