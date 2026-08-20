@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type FocusEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FocusEvent, type MouseEvent } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -21,51 +21,103 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { InboxMenu } from "@/components/inbox-menu";
 import { OpenBotSettingsDialog } from "@/components/openbot/settings-dialog";
 import {
-  CHILD_HIDDEN_HREFS,
-  dashboardNavGroups,
   isNavActive,
+  navGroupsForViewer,
   type DashboardNavItem,
   type SidebarIcon,
 } from "@/lib/dashboard-nav";
 import {
   collapsedRailItems,
   DASHBOARD_SIDEBAR_COLLAPSED_CLASS,
+  DASHBOARD_SIDEBAR_COLLAPSED_STATE,
   DASHBOARD_SIDEBAR_EXPANDED_CLASS,
   dashboardSidebarLeaveDelay,
   isDashboardSidebarExpanded,
+  reduceDashboardSidebarExpand,
+  type DashboardSidebarExpandEvent,
 } from "@/lib/dashboard-sidebar";
 
-function useDashboardSidebarHoverExpand() {
-  const [hovered, setHovered] = useState(false);
-  const [focused, setFocused] = useState(false);
+export function useDashboardSidebarHoverExpand() {
+  const pathname = usePathname();
+  const [state, setState] = useState(DASHBOARD_SIDEBAR_COLLAPSED_STATE);
   const leaveTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-
-  useEffect(() => () => window.clearTimeout(leaveTimer.current), []);
+  const rootRef = useRef<HTMLElement | null>(null);
+  const skipPathname = useRef(true);
 
   function clearLeaveTimer() {
     window.clearTimeout(leaveTimer.current);
   }
 
+  function dispatch(event: DashboardSidebarExpandEvent) {
+    setState((current) => reduceDashboardSidebarExpand(current, event));
+  }
+
+  function blurSidebarFocus() {
+    const root = rootRef.current;
+    const active = document.activeElement;
+    if (root && active instanceof HTMLElement && root.contains(active)) {
+      active.blur();
+    }
+  }
+
+  function collapseAfterNavigate() {
+    clearLeaveTimer();
+    dispatch("navigate");
+    blurSidebarFocus();
+    requestAnimationFrame(blurSidebarFocus);
+  }
+
+  useEffect(() => () => window.clearTimeout(leaveTimer.current), []);
+
+  useEffect(() => {
+    if (skipPathname.current) {
+      skipPathname.current = false;
+      return;
+    }
+    collapseAfterNavigate();
+  }, [pathname]);
+
+  useEffect(() => {
+    function onPointerDown(event: PointerEvent) {
+      const root = rootRef.current;
+      if (!root || root.contains(event.target as Node)) return;
+      clearLeaveTimer();
+      dispatch("click-outside");
+      blurSidebarFocus();
+    }
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
+  }, []);
+
   return {
-    expanded: isDashboardSidebarExpanded({ hovered, focused }),
+    expanded: isDashboardSidebarExpanded(state),
+    rootRef,
     onMouseEnter() {
       clearLeaveTimer();
-      setHovered(true);
+      dispatch("pointer-enter");
     },
     onMouseLeave() {
       clearLeaveTimer();
       leaveTimer.current = setTimeout(
-        () => setHovered(false),
+        () => dispatch("pointer-leave"),
         dashboardSidebarLeaveDelay(window.matchMedia("(prefers-reduced-motion: reduce)").matches),
       );
     },
     onFocus() {
       clearLeaveTimer();
-      setFocused(true);
+      dispatch("focus");
     },
     onBlur(event: FocusEvent<HTMLElement>) {
       if (event.currentTarget.contains(event.relatedTarget as Node | null)) return;
-      setFocused(false);
+      dispatch("blur");
+    },
+    onClick(event: MouseEvent<HTMLElement>) {
+      const link = (event.target as HTMLElement | null)?.closest?.("a[href]");
+      if (!link || !event.currentTarget.contains(link)) return;
+      clearLeaveTimer();
+      dispatch("click-nav");
+      blurSidebarFocus();
+      requestAnimationFrame(blurSidebarFocus);
     },
   };
 }
@@ -232,6 +284,8 @@ function NavItem({
     "h-4 w-4 shrink-0 transition-colors",
     isActive ? "text-foreground" : "text-muted-foreground/70 group-hover:text-foreground/70",
   );
+  const activeBar =
+    "after:pointer-events-none after:absolute after:bottom-0 after:h-0.5 after:bg-foreground after:content-['']";
   const badge =
     item.badge != null && item.badge !== "" ? (
       <span
@@ -246,7 +300,12 @@ function NavItem({
       </span>
     ) : null;
   const inner = collapsed ? (
-    <span className="relative grid size-8 place-items-center">
+    <span
+      className={cn(
+        "relative grid size-8 place-items-center",
+        isActive && cn(activeBar, "after:left-1/2 after:w-4 after:-translate-x-1/2"),
+      )}
+    >
       <Icon className={iconClass} />
       {badge}
       {item.locked && (
@@ -325,11 +384,11 @@ function NavItem({
     "group flex cursor-pointer items-center rounded-[6px] transition-all duration-200 select-none motion-reduce:transition-none",
     collapsed
       ? "justify-center px-0 py-0.5"
-      : "justify-between px-2.5 py-[7px]",
+      : "relative justify-between px-2.5 py-[7px]",
     isActive
-      ? "bg-black/5 font-medium text-foreground dark:bg-white/10"
+      ? "font-medium text-foreground"
       : "text-muted-foreground hover:bg-black/5 hover:text-foreground/90 dark:hover:bg-white/5",
-    collapsed && isActive && "ring-2 ring-ring/50",
+    !collapsed && isActive && cn(activeBar, "after:inset-x-2.5"),
   );
   const rowStyle = collapsed ? undefined : { paddingLeft: `${level * 12 + 10}px` };
 
@@ -398,6 +457,7 @@ export function SidebarNav({
   planLabel,
   enterpriseLocked = false,
   protectedChild = false,
+  isSiteAdmin = false,
   expanded = false,
 }: {
   className?: string;
@@ -407,6 +467,7 @@ export function SidebarNav({
   planLabel: string;
   enterpriseLocked?: boolean;
   protectedChild?: boolean;
+  isSiteAdmin?: boolean;
   expanded?: boolean;
 }) {
   const pathname = usePathname();
@@ -451,10 +512,10 @@ export function SidebarNav({
       return n > 0 ? String(n) : undefined;
     };
 
-    return dashboardNavGroups
+    return navGroupsForViewer({ isSiteAdmin, protectedChild })
       .map((group) => ({
         heading: group.label,
-        items: (protectedChild ? group.items.filter((i) => !CHILD_HIDDEN_HREFS.has(i.href)) : group.items)
+        items: group.items
           .filter((i) => i.href !== "/dashboard/settings")
           .map((item) => ({
             id: item.href,
@@ -463,20 +524,18 @@ export function SidebarNav({
             href: item.href,
             badge: badgeFor(item),
             locked: group.id === "governance" ? enterpriseLocked : undefined,
-            children: item.children
-              ?.filter((child) => !protectedChild || !CHILD_HIDDEN_HREFS.has(child.href))
-              .map((child) => ({
-                id: child.href,
-                title: child.label,
-                icon: child.icon,
-                href: child.href,
-                badge: badgeFor(child),
-                opensSettings: child.opensSettings,
-              })),
+            children: item.children?.map((child) => ({
+              id: child.href,
+              title: child.label,
+              icon: child.icon,
+              href: child.href,
+              badge: badgeFor(child),
+              opensSettings: child.opensSettings,
+            })),
           })),
       }))
       .filter((g) => g.items.length > 0);
-  }, [counts, protectedChild, enterpriseLocked]);
+  }, [counts, protectedChild, enterpriseLocked, isSiteAdmin]);
 
   async function logout() {
     try {
@@ -621,11 +680,14 @@ export default function DashboardSidebar(props: {
   planLabel: string;
   enterpriseLocked?: boolean;
   protectedChild?: boolean;
+  isSiteAdmin?: boolean;
 }) {
-  const { expanded, onMouseEnter, onMouseLeave, onFocus, onBlur } = useDashboardSidebarHoverExpand();
+  const { expanded, rootRef, onMouseEnter, onMouseLeave, onFocus, onBlur, onClick } =
+    useDashboardSidebarHoverExpand();
 
   return (
     <aside
+      ref={rootRef}
       aria-label="Dashboard"
       aria-expanded={expanded}
       data-collapsed={expanded ? "false" : "true"}
@@ -633,6 +695,7 @@ export default function DashboardSidebar(props: {
       onMouseLeave={onMouseLeave}
       onFocus={onFocus}
       onBlur={onBlur}
+      onClick={onClick}
       className={cn(
         "fixed left-0 top-0 z-40 hidden h-screen overflow-hidden md:block",
         expanded ? "w-[260px]" : "w-12",

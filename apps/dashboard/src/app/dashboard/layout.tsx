@@ -109,6 +109,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
           planLabel,
           enterpriseLocked,
           protectedChild,
+          isSiteAdmin: Boolean(session.isSiteAdmin),
         }}
         impersonation={session.impersonatingOrgId ? <ImpersonationBanner /> : null}
       >

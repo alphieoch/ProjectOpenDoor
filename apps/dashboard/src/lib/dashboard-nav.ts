@@ -4,8 +4,9 @@ import {
   Play, Users, Settings, ClipboardList, ShieldCheck, Gavel, LifeBuoy, Monitor,
   Gem, Aperture, AlertTriangle, FileCheck, BookOpen, Building2, Bot,
   GitBranch, List, FlaskConical, ScrollText, MessageSquare, Image as ImageIcon, Wrench,
+  ShieldAlert,
 } from "lucide-react";
-import { AgentsNavIcon } from "@/components/ui/ai-crest";
+import { AgentsNavIcon } from "@/components/ui/agents-nav-icon";
 
 export type SidebarIcon = ComponentType<{ className?: string; style?: CSSProperties }>;
 
@@ -19,8 +20,9 @@ export type DashboardNavItem = {
 };
 
 export type DashboardNavGroup = {
-  id: "main" | "build" | "account" | "governance";
+  id: "main" | "build" | "account" | "governance" | "admin";
   label: string;
+  siteAdminOnly?: boolean;
   items: DashboardNavItem[];
 };
 
@@ -85,6 +87,14 @@ export const dashboardNavGroups: DashboardNavGroup[] = [
       { href: "/dashboard/governance/sector-templates", label: "Sector Packs", icon: Building2 },
     ],
   },
+  {
+    id: "admin",
+    label: "Admin",
+    siteAdminOnly: true,
+    items: [
+      { href: "/dashboard/admin", label: "Platform", icon: ShieldAlert },
+    ],
+  },
 ];
 
 export const CHILD_HIDDEN_HREFS = new Set([
@@ -93,6 +103,27 @@ export const CHILD_HIDDEN_HREFS = new Set([
   "/dashboard/studio",
   "/dashboard/premium",
 ]);
+
+export function navGroupsForViewer(opts: {
+  isSiteAdmin?: boolean;
+  protectedChild?: boolean;
+}): DashboardNavGroup[] {
+  return dashboardNavGroups
+    .filter((group) => !group.siteAdminOnly || Boolean(opts.isSiteAdmin))
+    .map((group) => ({
+      ...group,
+      items: (opts.protectedChild
+        ? group.items.filter((item) => !CHILD_HIDDEN_HREFS.has(item.href))
+        : group.items
+      ).map((item) => ({
+        ...item,
+        children: item.children?.filter(
+          (child) => !opts.protectedChild || !CHILD_HIDDEN_HREFS.has(child.href),
+        ),
+      })),
+    }))
+    .filter((group) => group.items.length > 0);
+}
 
 export const dockItems: DashboardNavItem[] = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard },

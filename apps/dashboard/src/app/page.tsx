@@ -1,4 +1,5 @@
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import {
   Activity,
   ArrowRight,
@@ -8,7 +9,10 @@ import {
   ShieldCheck,
   Terminal,
 } from "lucide-react";
-import { StickyFooter } from "@/components/ui/sticky-footer";
+
+const StickyFooter = dynamic(
+  () => import("@/components/ui/sticky-footer").then((m) => m.StickyFooter),
+);
 import { getSession } from "@/lib/auth";
 import MarketingHeader from "@/components/MarketingHeader";
 import { HeroSection } from "@/components/ui/hero-3";

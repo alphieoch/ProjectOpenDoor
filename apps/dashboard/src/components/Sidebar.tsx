@@ -46,7 +46,7 @@ const governanceItems = [
 ];
 
 const adminNavItems = [
-  { href: "/admin", label: "Platform", icon: Building2 },
+  { href: "/dashboard/admin", label: "Platform", icon: Building2 },
   { href: "/admin/orgs", label: "Organizations", icon: Building2 },
   { href: "/admin/users", label: "All Users", icon: UserCog },
   { href: "/admin/credits", label: "Credits", icon: Coins },

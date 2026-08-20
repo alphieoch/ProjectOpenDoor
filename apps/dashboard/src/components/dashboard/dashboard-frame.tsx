@@ -15,6 +15,7 @@ type Profile = {
   planLabel: string;
   enterpriseLocked: boolean;
   protectedChild: boolean;
+  isSiteAdmin: boolean;
 };
 
 const DashboardProfileContext = createContext<Profile>({
@@ -24,6 +25,7 @@ const DashboardProfileContext = createContext<Profile>({
   planLabel: "",
   enterpriseLocked: false,
   protectedChild: false,
+  isSiteAdmin: false,
 });
 
 export function useDashboardProfile() {
@@ -49,6 +51,7 @@ export function DashboardFrame({
           planLabel={profile.planLabel}
           enterpriseLocked={profile.enterpriseLocked}
           protectedChild={profile.protectedChild}
+          isSiteAdmin={profile.isSiteAdmin}
         />
         <div
           className={cn(
@@ -67,6 +70,7 @@ export function DashboardFrame({
           displayName={profile.displayName}
           enterpriseLocked={profile.enterpriseLocked}
           protectedChild={profile.protectedChild}
+          isSiteAdmin={profile.isSiteAdmin}
         />
       </div>
     </DashboardProfileContext.Provider>

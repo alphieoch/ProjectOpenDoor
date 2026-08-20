@@ -19,9 +19,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import posthog from "posthog-js";
 import {
-  CHILD_HIDDEN_HREFS,
-  dashboardNavGroups,
   isNavActive,
+  navGroupsForViewer,
   type DashboardNavItem,
 } from "@/lib/dashboard-nav";
 import { OchiengLogoSimple } from "@/components/logos/OchiengLogoSimple";
@@ -148,6 +147,7 @@ export function SessionNavBar({
     build: true,
     account: true,
     governance: true,
+    admin: true,
   });
   const [counts, setCounts] = useState({
     deployments: 0,
@@ -159,14 +159,8 @@ export function SessionNavBar({
   const pathname = usePathname();
 
   const groups = useMemo(
-    () =>
-      dashboardNavGroups.map((group) => ({
-        ...group,
-        items: protectedChild
-          ? group.items.filter((item) => !CHILD_HIDDEN_HREFS.has(item.href))
-          : group.items,
-      })),
-    [protectedChild],
+    () => navGroupsForViewer({ isSiteAdmin, protectedChild }),
+    [isSiteAdmin, protectedChild],
   );
 
   useEffect(() => {

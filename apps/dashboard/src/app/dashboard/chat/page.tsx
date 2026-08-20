@@ -1,9 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import {
-  Check,
   ChevronDown,
   Lock,
   MessageSquare,
@@ -21,14 +21,27 @@ import {
   looksLikeCapabilityGuide,
 } from "@/components/house-chat-guides";
 import StreamingText from "@/components/ui/streaming-text";
-import LoadingState from "@/components/ui/loading-state";
-import ThinkingState from "@/components/ui/thinking-state";
-import GradientChatInput, {
-  SpectrumGlow,
-} from "@/components/ruixen/gradient-chat-input";
-import { Liquid } from "@/components/ui/liquid-gooey";
 import { AiCrest } from "@/components/ui/ai-crest";
 import type { OrbState } from "thinking-orbs";
+
+const LoadingState = dynamic(() => import("@/components/ui/loading-state"), {
+  ssr: false,
+});
+const ThinkingState = dynamic(() => import("@/components/ui/thinking-state"), {
+  ssr: false,
+});
+const GradientChatInput = dynamic(
+  () => import("@/components/ruixen/gradient-chat-input"),
+  { ssr: false },
+);
+const SpectrumGlow = dynamic(
+  () => import("@/components/ruixen/gradient-chat-input").then((m) => m.SpectrumGlow),
+  { ssr: false },
+);
+const ChatModeMenu = dynamic(
+  () => import("./chat-mode-menu").then((m) => m.ChatModeMenu),
+  { ssr: false },
+);
 
 type Allowance = {
   periodUsed: number;
@@ -657,33 +670,14 @@ export default function HouseChatPage() {
                         <ChevronDown className="h-3 w-3 opacity-60" />
                       </button>
                       {modeOpen && (
-                        <Liquid
-                          blur={8}
-                          contrast={18}
-                          fill="hsl(var(--background))"
-                          shadow="0 10px 28px rgba(0,0,0,0.18)"
-                          className="absolute bottom-full right-0 z-20 mb-2 flex w-48 flex-col p-1"
-                        >
-                          {MODES.map((m, i) => (
-                            <Liquid.Item key={m.id} delay={i * 28} transition="snappy">
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setMode(m.id);
-                                  setModeOpen(false);
-                                }}
-                                className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-xs"
-                                style={{ background: "transparent", color: "hsl(var(--foreground))" }}
-                              >
-                                <span>
-                                  <span className="font-semibold">{m.label}</span>
-                                  <span className="ml-1.5 opacity-50">{m.hint}</span>
-                                </span>
-                                {mode === m.id && <Check className="h-3.5 w-3.5" style={{ color: "hsl(var(--primary))" }} />}
-                              </button>
-                            </Liquid.Item>
-                          ))}
-                        </Liquid>
+                        <ChatModeMenu
+                          modes={MODES}
+                          mode={mode}
+                          onSelect={(id) => {
+                            setMode(id);
+                            setModeOpen(false);
+                          }}
+                        />
                       )}
                     </div>
                   }

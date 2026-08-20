@@ -1,20 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import {
-  BarChart,
-  Bar,
-  AreaChart,
-  Area,
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Legend,
-} from "recharts";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { formatCurrency, formatNumber } from "@/lib/utils";
 import { PageHeader } from "@/components/ui/page-header";
@@ -28,6 +15,19 @@ import {
   tokenSplit,
   unlimitedReasonLabel,
 } from "@/lib/usage-format";
+
+const DailyRequestChart = dynamic(
+  () => import("./usage-charts").then((m) => m.DailyRequestChart),
+  { ssr: false, loading: () => <LoadingChart /> },
+);
+const DailyCostChart = dynamic(
+  () => import("./usage-charts").then((m) => m.DailyCostChart),
+  { ssr: false, loading: () => <LoadingChart /> },
+);
+const DailyTokenChart = dynamic(
+  () => import("./usage-charts").then((m) => m.DailyTokenChart),
+  { ssr: false, loading: () => <LoadingChart /> },
+);
 
 interface DailyUsage {
   date: string;
@@ -59,15 +59,6 @@ interface OverviewData {
 }
 
 type Tab = "overview" | "tokens" | "models" | "latency";
-
-const axisTick = { fontSize: 11, fill: "hsl(var(--muted-foreground))" } as const;
-const tooltipStyle = {
-  borderRadius: "8px",
-  border: "1px solid hsl(var(--border))",
-  fontSize: "12px",
-  background: "hsl(var(--card))",
-  color: "hsl(var(--foreground))",
-} as const;
 
 function StatCard({
   label,
@@ -304,24 +295,7 @@ export default function UsagePage() {
               ) : daily.length === 0 ? (
                 <EmptyChart days={days} />
               ) : (
-                <ResponsiveContainer width="100%" height={280}>
-                  <BarChart data={daily} barSize={16}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-                    <XAxis dataKey="date" tick={axisTick} axisLine={false} tickLine={false} />
-                    <YAxis tick={axisTick} axisLine={false} tickLine={false} width={40} />
-                    <Tooltip contentStyle={tooltipStyle} cursor={{ fill: "hsl(var(--accent))" }} />
-                    <Legend wrapperStyle={{ fontSize: 12 }} />
-                    {daily[0]?.successCount != null ? (
-                      <>
-                        <Bar dataKey="successCount" name="Success" stackId="a" fill="var(--green)" radius={[0, 0, 0, 0]} />
-                        <Bar dataKey="cachedCount" name="Cached" stackId="a" fill="var(--blue)" radius={[0, 0, 0, 0]} />
-                        <Bar dataKey="errorCount" name="Error" stackId="a" fill="var(--red)" radius={[4, 4, 0, 0]} />
-                      </>
-                    ) : (
-                      <Bar dataKey="requests" name="Requests" fill="hsl(var(--foreground))" radius={[4, 4, 0, 0]} />
-                    )}
-                  </BarChart>
-                </ResponsiveContainer>
+                <DailyRequestChart daily={daily} />
               )}
             </div>
 
@@ -332,33 +306,7 @@ export default function UsagePage() {
               ) : daily.length === 0 ? (
                 <EmptyChart days={days} />
               ) : (
-                <ResponsiveContainer width="100%" height={240}>
-                  <LineChart data={daily}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-                    <XAxis dataKey="date" tick={axisTick} axisLine={false} tickLine={false} />
-                    <YAxis
-                      tick={axisTick}
-                      axisLine={false}
-                      tickLine={false}
-                      width={60}
-                      tickFormatter={(v) => formatCurrency(v)}
-                    />
-                    <Tooltip
-                      contentStyle={tooltipStyle}
-                      formatter={(v: number) => [formatCurrency(v), "Cost"]}
-                      cursor={{ stroke: "hsl(var(--border))" }}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="costUsd"
-                      name="Cost"
-                      stroke="var(--green)"
-                      strokeWidth={2}
-                      dot={false}
-                      activeDot={{ r: 4 }}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
+                <DailyCostChart daily={daily} />
               )}
             </div>
           </div>
@@ -401,52 +349,7 @@ export default function UsagePage() {
               ) : daily.length === 0 ? (
                 <EmptyChart days={days} />
               ) : (
-                <ResponsiveContainer width="100%" height={300}>
-                  <AreaChart data={daily}>
-                    <defs>
-                      <linearGradient id="gradPrompt" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="var(--blue)" stopOpacity={0.25} />
-                        <stop offset="95%" stopColor="var(--blue)" stopOpacity={0.02} />
-                      </linearGradient>
-                      <linearGradient id="gradCompletion" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="var(--green)" stopOpacity={0.25} />
-                        <stop offset="95%" stopColor="var(--green)" stopOpacity={0.02} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-                    <XAxis dataKey="date" tick={axisTick} axisLine={false} tickLine={false} />
-                    <YAxis
-                      tick={axisTick}
-                      axisLine={false}
-                      tickLine={false}
-                      width={55}
-                      tickFormatter={(v) => (v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v)}
-                    />
-                    <Tooltip
-                      contentStyle={tooltipStyle}
-                      formatter={(v: number, name: string) => [formatNumber(v), name]}
-                    />
-                    <Legend wrapperStyle={{ fontSize: 12 }} />
-                    <Area
-                      type="monotone"
-                      dataKey="promptTokens"
-                      name="Prompt (input)"
-                      stackId="1"
-                      stroke="var(--blue)"
-                      strokeWidth={2}
-                      fill="url(#gradPrompt)"
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="completionTokens"
-                      name="Completion (output)"
-                      stackId="1"
-                      stroke="var(--green)"
-                      strokeWidth={2}
-                      fill="url(#gradCompletion)"
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
+                <DailyTokenChart daily={daily} />
               )}
             </div>
           </div>

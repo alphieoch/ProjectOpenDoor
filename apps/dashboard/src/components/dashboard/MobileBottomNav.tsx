@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChevronDown, LogOut, Menu } from "lucide-react";
@@ -11,9 +11,9 @@ import { InboxMenu } from "@/components/inbox-menu";
 import { ThemeToggle } from "@/components/theme-toggle";
 import {
   CHILD_HIDDEN_HREFS,
-  dashboardNavGroups,
   dockItems,
   isNavActive,
+  navGroupsForViewer,
 } from "@/lib/dashboard-nav";
 import posthog from "posthog-js";
 
@@ -22,11 +22,13 @@ export function MobileBottomNav({
   displayName,
   enterpriseLocked = false,
   protectedChild = false,
+  isSiteAdmin = false,
 }: {
   email: string;
   displayName: string;
   enterpriseLocked?: boolean;
   protectedChild?: boolean;
+  isSiteAdmin?: boolean;
 }) {
   const pathname = usePathname();
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -35,17 +37,16 @@ export function MobileBottomNav({
     build: false,
     account: false,
     governance: false,
+    admin: false,
   });
 
+  useEffect(() => {
+    setSheetOpen(false);
+  }, [pathname]);
+
   const groups = useMemo(
-    () =>
-      dashboardNavGroups.map((group) => ({
-        ...group,
-        items: protectedChild
-          ? group.items.filter((item) => !CHILD_HIDDEN_HREFS.has(item.href))
-          : group.items,
-      })),
-    [protectedChild],
+    () => navGroupsForViewer({ isSiteAdmin, protectedChild }),
+    [isSiteAdmin, protectedChild],
   );
 
   const slots = protectedChild
@@ -82,6 +83,7 @@ export function MobileBottomNav({
             <Link
               key={item.href}
               href={item.href}
+              onClick={() => setSheetOpen(false)}
               className={cn(
                 "flex min-w-0 flex-1 flex-col items-center justify-center gap-1 px-1 transition-transform active:scale-95 motion-reduce:transform-none",
                 active ? "text-blue-500" : "text-muted-foreground",
