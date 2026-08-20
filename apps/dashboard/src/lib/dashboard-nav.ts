@@ -132,15 +132,32 @@ export const dockItems: DashboardNavItem[] = [
   { href: "/dashboard/agents", label: "Agents", icon: AgentsNavIcon },
 ];
 
-export function isNavActive(pathname: string | null, href: string, siblings: { href: string }[]) {
+function collectNavHrefs(items: DashboardNavItem[]): string[] {
+  return items.flatMap((item) => [item.href, ...collectNavHrefs(item.children ?? [])]);
+}
+
+/** Every sidebar href, including cross-group prefixes like /playground vs /playground/media. */
+export function allDashboardNavHrefs(): string[] {
+  return dashboardNavGroups.flatMap((group) => collectNavHrefs(group.items));
+}
+
+export function isNavActive(
+  pathname: string | null,
+  href: string,
+  siblings: { href: string }[] = [],
+) {
   if (!pathname) return false;
   if (href === "/dashboard") return pathname === "/dashboard";
   const matches = pathname === href || pathname.startsWith(`${href}/`);
   if (!matches) return false;
-  return !siblings.some(
-    (s) =>
-      s.href !== href &&
-      s.href.startsWith(`${href}/`) &&
-      (pathname === s.href || pathname.startsWith(`${s.href}/`)),
+  const moreSpecific = new Set([
+    ...siblings.map((s) => s.href),
+    ...allDashboardNavHrefs(),
+  ]);
+  return ![...moreSpecific].some(
+    (other) =>
+      other !== href &&
+      other.startsWith(`${href}/`) &&
+      (pathname === other || pathname.startsWith(`${other}/`)),
   );
 }

@@ -21,6 +21,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { InboxMenu } from "@/components/inbox-menu";
 import { OpenBotSettingsDialog } from "@/components/openbot/settings-dialog";
 import {
+  allDashboardNavHrefs,
   isNavActive,
   navGroupsForViewer,
   type DashboardNavItem,
@@ -589,10 +590,7 @@ export function SidebarNav({
         </div>
         {groups.map((group) => {
           const rows = expanded ? group.items : collapsedRailItems(group.items);
-          const siblings = group.items.flatMap((item) => [
-            ...(item.href ? [{ href: item.href }] : []),
-            ...(item.children ?? []).flatMap((child) => (child.href ? [{ href: child.href }] : [])),
-          ]);
+          const siblings = allDashboardNavHrefs().map((href) => ({ href }));
           return (
             <div
               key={group.heading}
