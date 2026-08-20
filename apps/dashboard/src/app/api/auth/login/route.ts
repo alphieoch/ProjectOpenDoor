@@ -9,7 +9,7 @@ import {
   jsonAuthSuccess,
   workosErrorMessage,
 } from "@/lib/workos-password-auth";
-import { sessionCookieOptions } from "@/lib/workos-sync";
+import { applySessionCookies } from "@/lib/session-cookie";
 import { enforceAuthRateLimit } from "@/lib/auth-rate-limit";
 
 export async function POST(req: NextRequest) {
@@ -94,6 +94,6 @@ export async function POST(req: NextRequest) {
     success: true,
     user: { id: user.id, email: user.email, orgId: user.organizationId },
   });
-  response.cookies.set("session", token, sessionCookieOptions());
+  applySessionCookies(response, token);
   return response;
 }

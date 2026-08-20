@@ -19,6 +19,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useTheme } from 'next-themes';
 import Link from 'next/link';
 import posthog from 'posthog-js';
+import { authErrorMessage } from '@/lib/workos-auth-errors';
 
 const QUOTES = [
 	"Every model. Every provider. One key to rule them all.",
@@ -53,6 +54,7 @@ export function AuthPage() {
 	);
 	const [orgSlug, setOrgSlug] = useState('');
 	const ssoError = searchParams.get('error');
+	const ssoErrorDetail = searchParams.get('error_detail');
 	const ssoSlug = searchParams.get('sso');
 	const segmentParam = searchParams.get('segment');
 	const modeParam = searchParams.get('mode');
@@ -164,18 +166,8 @@ export function AuthPage() {
 		window.location.href = `/api/auth/sso?org=${encodeURIComponent(orgSlug.trim())}`;
 	}
 
-	const ssoErrorMessage =
-		ssoError === 'sso_failed' ? 'SSO authentication failed' :
-		ssoError === 'org_not_found' ? 'Organization not found' :
-		ssoError === 'sso_disabled' ? 'SSO is not enabled for your organization' :
-		ssoError === 'invalid_org' ? 'Invalid organization' :
-		ssoError === 'workos_failed' ? 'Sign-in failed. Try again.' :
-		ssoError === 'workos_sync_failed' ? 'Signed in, but we could not finish account setup.' :
-		ssoError === 'oauth_provider' ? 'Unknown sign-in provider.' :
-		ssoError === 'missing_pkce_cookie' || ssoError === 'oauth_state_mismatch' || ssoError === 'missing_auth_params'
-			? 'Sign-in session expired. Click Continue with Google or GitHub again.' :
-		ssoError === 'missing_tokens' ? 'Sign-in could not be completed. Try again.' :
-		ssoError ? 'SSO callback failed' : null;
+	const ssoErrorMessage = authErrorMessage(ssoError);
+	const showAuthDebug = process.env.NODE_ENV !== 'production';
 
 	function continueWithOAuth(provider: 'google' | 'github') {
 		window.location.href = `/api/auth/oauth/${provider}`;
@@ -277,7 +269,14 @@ export function AuthPage() {
 
 					{(error || ssoErrorMessage) && (
 						<div className="rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-500">
-							{error || ssoErrorMessage}
+							<p>{error || ssoErrorMessage}</p>
+							{ssoError && (
+								<p className="mt-1 text-xs text-red-400/90">
+									{showAuthDebug && ssoErrorDetail
+										? ssoErrorDetail
+										: `Error: ${ssoError}`}
+								</p>
+							)}
 						</div>
 					)}
 
@@ -302,6 +301,12 @@ export function AuthPage() {
 							<GithubIcon className="size-4 me-2" />
 							Continue with GitHub
 						</Button>
+						<p className="text-center text-xs text-zinc-500 dark:text-zinc-400">
+							Trouble signing in?{" "}
+							<a href="/sign-in" className="font-medium underline underline-offset-2 hover:text-zinc-700 dark:hover:text-zinc-200">
+								Use hosted sign-in
+							</a>
+						</p>
 					</div>
 
 					<AuthSeparator />

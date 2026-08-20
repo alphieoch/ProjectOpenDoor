@@ -2,11 +2,71 @@ export function appBaseUrl() {
   return (process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3010").replace(/\/$/, "");
 }
 
+/** Origins we may use as WorkOS redirect / post-login hosts. */
+export const ALLOWED_AUTH_ORIGINS = [
+  "http://localhost:3010",
+  "http://127.0.0.1:3010",
+  "https://opendoor-gcp.web.app",
+  "https://opendoor-dashboard-u5ojp4qjiq-uc.a.run.app",
+] as const;
+
+export type AuthRequestLike = {
+  headers: { get(name: string): string | null };
+  nextUrl?: { origin: string; host?: string; protocol?: string };
+};
+
+export function isAllowedAuthOrigin(origin: string) {
+  try {
+    return (ALLOWED_AUTH_ORIGINS as readonly string[]).includes(new URL(origin).origin);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Prefer the browser-facing host (local or Firebase) when it is allowlisted so
+ * one dashboard build can finish Google OAuth on localhost and prod.
+ */
+export function resolveAppOrigin(request?: AuthRequestLike) {
+  const candidates: string[] = [];
+  if (request) {
+    const forwardedHost = request.headers.get("x-forwarded-host")?.split(",")[0]?.trim();
+    const host = forwardedHost || request.headers.get("host") || request.nextUrl?.host || "";
+    const forwardedProto = request.headers.get("x-forwarded-proto")?.split(",")[0]?.trim();
+    const proto =
+      forwardedProto ||
+      request.nextUrl?.protocol?.replace(":", "") ||
+      (host.startsWith("localhost") || host.startsWith("127.0.0.1") ? "http" : "https");
+    if (host) candidates.push(`${proto}://${host}`);
+    if (request.nextUrl?.origin) candidates.push(request.nextUrl.origin);
+  }
+  for (const raw of candidates) {
+    try {
+      const origin = new URL(raw).origin;
+      if (isAllowedAuthOrigin(origin)) return origin;
+    } catch {
+      // ignore malformed hosts
+    }
+  }
+  return appBaseUrl();
+}
+
 /** AuthKit / Google / GitHub OAuth callback. Must be allowlisted in WorkOS. */
-export function workosRedirectUri() {
+export function workosRedirectUri(request?: AuthRequestLike) {
+  if (request) return `${resolveAppOrigin(request)}/callback`;
   return (
     process.env.NEXT_PUBLIC_WORKOS_REDIRECT_URI || `${appBaseUrl()}/callback`
   );
+}
+
+/** Reject AuthKit `{ url, sealedState }` objects so we never redirect to `/[object Object]`. */
+export function httpAuthorizationUrl(value: unknown): string | null {
+  if (typeof value === "string" && /^https?:\/\//i.test(value)) return value;
+  if (value && typeof value === "object" && "url" in value) {
+    const url = (value as { url?: unknown }).url;
+    if (typeof url === "string" && /^https?:\/\//i.test(url)) return url;
+  }
+  return null;
 }
 
 /** Standalone SSO callback. Must be allowlisted in WorkOS separately from AuthKit. */

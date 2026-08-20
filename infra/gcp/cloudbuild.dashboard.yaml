@@ -48,14 +48,19 @@ steps:
         STRIPE_WEB_SEARCH_ADDON_PRICE_ID=${_STRIPE_WEB_SEARCH_ADDON_PRICE_ID}
         # shellcheck disable=SC1091
         source infra/gcp/cloud-run-env.sh
-        SECRETS=DATABASE_URL=opendoor-database-url:latest,REDIS_URL=opendoor-redis-url:latest,AUTH_SECRET=opendoor-auth-secret:latest,GATEWAY_API_KEY_HASH_SECRET=opendoor-gateway-hash-secret:latest,DB_PASSWORD=opendoor-db-password:latest,WORKOS_API_KEY=opendoor-workos-api-key:latest,WORKOS_CLIENT_ID=opendoor-workos-client-id:latest,WORKOS_COOKIE_PASSWORD=opendoor-workos-cookie-password:latest
-        if gcloud secrets describe opendoor-stripe-secret-key --project=${_DEPLOY_PROJECT} >/dev/null 2>&1; then
-          SECRETS="$${SECRETS},STRIPE_SECRET_KEY=opendoor-stripe-secret-key:latest"
+        # Always bind login + billing + internal keys. Do not gate WorkOS/Stripe
+        # on `gcloud secrets describe` — Cloud Build SA often cannot GET secrets.
+        SECRETS=DATABASE_URL=opendoor-database-url:latest,REDIS_URL=opendoor-redis-url:latest,AUTH_SECRET=opendoor-auth-secret:latest,GATEWAY_API_KEY_HASH_SECRET=opendoor-gateway-hash-secret:latest,DB_PASSWORD=opendoor-db-password:latest,WORKOS_API_KEY=opendoor-workos-api-key:latest,WORKOS_CLIENT_ID=opendoor-workos-client-id:latest,WORKOS_COOKIE_PASSWORD=opendoor-workos-cookie-password:latest,STRIPE_SECRET_KEY=opendoor-stripe-secret-key:latest
+        if gcloud secrets describe opendoor-together-api-key --project=${_DEPLOY_PROJECT} >/dev/null 2>&1; then
+          SECRETS="$${SECRETS},TOGETHER_API_KEY=opendoor-together-api-key:latest"
         fi
         if gcloud secrets describe opendoor-code-sandbox-token --project=${_DEPLOY_PROJECT} >/dev/null 2>&1; then
           SECRETS="$${SECRETS},CODE_SANDBOX_TOKEN=opendoor-code-sandbox-token:latest"
         fi
-        SECRETS="$${SECRETS},OPENBOT_COMPUTER_TOKEN=opendoor-openbot-computer-token:latest"
+        if gcloud secrets describe opendoor-qwen-api-key --project=${_DEPLOY_PROJECT} >/dev/null 2>&1; then
+          SECRETS="$${SECRETS},QWEN_API_KEY=opendoor-qwen-api-key:latest"
+        fi
+        SECRETS="$${SECRETS},OPENBOT_COMPUTER_TOKEN=opendoor-openbot-computer-token:latest,INTERNAL_API_KEY=opendoor-internal-api-key:latest,GATEWAY_INTERNAL_KEY=opendoor-internal-api-key:latest"
         gcloud run deploy opendoor-dashboard \
           --project=${_DEPLOY_PROJECT} \
           --image=$$IMAGE \
@@ -67,7 +72,12 @@ steps:
           --cpu=1 \
           --min-instances=0 \
           --max-instances=20 \
+          --timeout=300 \
           --add-cloudsql-instances=${_SQL_CONNECTION} \
+          --network=default \
+          --subnet=default \
+          --vpc-egress=private-ranges-only \
+          --clear-vpc-connector \
           --set-env-vars="$$(opendoor_dashboard_env ${_DEPLOY_PROJECT} ${_REGION} ${_SQL_CONNECTION} https://${_SITE_ID}.web.app)" \
           --set-secrets=$$SECRETS
 

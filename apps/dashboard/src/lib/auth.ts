@@ -1,11 +1,12 @@
 import { SignJWT, jwtVerify } from "jose";
 import bcrypt from "bcryptjs";
 import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { cache } from "react";
 import { eq } from "drizzle-orm";
 import { users } from "@opendoor/database";
 import { getDb } from "@/lib/db";
+import { readSessionToken } from "@/lib/session-cookie";
 
 const secret = new TextEncoder().encode(
   process.env.AUTH_SECRET || "opendoor-default-secret-change-me"
@@ -53,7 +54,7 @@ export async function verifyToken(token: string) {
 
 export const getSession = cache(async (): Promise<SessionPayload | null> => {
   const cookieStore = await cookies();
-  const token = cookieStore.get("session")?.value;
+  const token = readSessionToken(cookieStore);
   if (!token) return null;
   const payload = await verifyToken(token);
   if (!payload) return null;
@@ -63,7 +64,7 @@ export const getSession = cache(async (): Promise<SessionPayload | null> => {
       where: eq(users.id, session.userId),
       columns: { isSiteAdmin: true },
     });
-    if (row?.isSiteAdmin) session.isSiteAdmin = true;
+    if (row) session.isSiteAdmin = Boolean(row.isSiteAdmin);
   } catch {
     // Keep the JWT flag if the database is unreachable.
   }
@@ -82,17 +83,28 @@ export async function requireAuth(): Promise<SessionPayload> {
   return session;
 }
 
+export function canAccessSiteAdmin(session: { isSiteAdmin?: boolean } | null): boolean {
+  return Boolean(session?.isSiteAdmin);
+}
+
 export async function requireSiteAdmin(): Promise<SessionPayload> {
   const session = await getSession();
   if (!session) redirect("/login");
-  if (!session.isSiteAdmin) redirect("/dashboard");
+  if (!canAccessSiteAdmin(session)) redirect("/dashboard");
+  return session;
+}
+
+export async function requireSiteAdminOrNotFound(): Promise<SessionPayload> {
+  const session = await getSession();
+  if (!session) redirect("/login");
+  if (!canAccessSiteAdmin(session)) notFound();
   return session;
 }
 
 export async function verifySiteAdmin(): Promise<{ session: SessionPayload } | { error: string; status: number }> {
   const session = await getSession();
   if (!session) return { error: "Unauthorized", status: 401 };
-  if (!session.isSiteAdmin) return { error: "Forbidden", status: 403 };
+  if (!canAccessSiteAdmin(session)) return { error: "Forbidden", status: 403 };
   return { session };
 }
 
