@@ -345,6 +345,7 @@ export class OpenDoor {
     stop(id: string): Promise<unknown>;
     computer(id: string, control: "take" | "release"): Promise<unknown>;
     delete(id: string): Promise<unknown>;
+    restore(id: string): Promise<unknown>;
   };
 
   readonly byok: {

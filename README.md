@@ -10,30 +10,35 @@ Docs while the dashboard is running: [http://localhost:3010/docs](http://localho
 
 ### Production
 
-| | URL |
-|---|---|
-| App | https://opendoor-gcp.web.app |
-| OpenBot | https://opendoor-gcp.web.app/dashboard/openbot |
-| Admin (site admins) | https://opendoor-gcp.web.app/dashboard/admin |
-| Dashboard (Cloud Run) | https://opendoor-dashboard-u5ojp4qjiq-uc.a.run.app |
-| Gateway | https://opendoor-gateway-u5ojp4qjiq-uc.a.run.app |
-| Computer (shared Chromium) | https://opendoor-openbot-computer-u5ojp4qjiq-uc.a.run.app |
-| GitHub | https://github.com/alphieoch/ProjectOpenDoor |
-| This branch PR | https://github.com/alphieoch/ProjectOpenDoor/pull/2 |
+| Component | URL / Endpoint | Notes |
+|---|---|---|
+| **Cloudflare Edge Proxy** | [https://opendoor-edge-proxy.cloudflare-edge.workers.dev](https://opendoor-edge-proxy.cloudflare-edge.workers.dev) | Global 300+ city CDN, Auto-SSL, WAF & DDoS |
+| **App (Firebase Edge)** | [https://opendoor-gcp.web.app](https://opendoor-gcp.web.app) | Public HTTPS Edge |
+| **OpenBot Workspace** | [https://opendoor-gcp.web.app/dashboard/openbot](https://opendoor-gcp.web.app/dashboard/openbot) | Autonomous agent runtime |
+| **Admin Console** | [https://opendoor-gcp.web.app/dashboard/admin](https://opendoor-gcp.web.app/dashboard/admin) | Site administration |
+| **Dashboard (Cloud Run)** | `https://opendoor-dashboard-u5ojp4qjiq-uc.a.run.app` | Serverless Next.js App |
+| **Gateway (Cloud Run)** | `https://opendoor-gateway-u5ojp4qjiq-uc.a.run.app` | OpenAI-compatible API Gateway |
+| **Supabase Postgres (GCP)** | `10.128.0.2:6543` (Internal Supavisor) | `e2-standard-4` + 200 GB `pd-ssd` (`opendoor-supabase-0704`) |
+| **Supabase Studio UI** | `http://localhost:54323` (via IAP Tunnel) | Zero-trust admin dashboard |
+| **Disaster Recovery (GCS)** | `gs://opendoor-supabase-0704-supabase-backups` | Continuous WAL streaming + daily snapshots |
+| **VPC Access Connector** | `opendoor-connector` (`10.8.0.0/28`) | Private serverless sub-ms latency |
+| **GitHub Repository** | [https://github.com/alphieoch/ProjectOpenDoor](https://github.com/alphieoch/ProjectOpenDoor) | Source Code & Workflows |
+| **Active Pull Request** | [https://github.com/alphieoch/ProjectOpenDoor/pull/2](https://github.com/alphieoch/ProjectOpenDoor/pull/2) | PR #2 |
 
-Firebase Hosting (`opendoor-gcp`) is the public **HTTPS edge** (Google CDN-like). It rewrites `/v1/**` and `/health` to the gateway; everything else goes to the dashboard. WorkOS callbacks stay on `https://opendoor-gcp.web.app`.
+### Edge & Zero-Trust Network Architecture
 
-A second Google HTTPS load balancer (`opendoor-edge`, IP `34.149.240.132`) sits beside Hosting — not in front of it — so custom-domain / OAuth redirects are not broken:
+```
+User → Cloudflare Edge (*.workers.dev) → Cloud Run Origin → VPC Connector (10.8.0.0/28) → Private Supabase VM (10.128.0.2:6543)
+```
 
-| Piece | Name |
-|---|---|
-| Cloud Armor (WAF + rate limit, allow the world) | `opendoor-armor` |
-| Cloud CDN (static/app) | `opendoor-edge-dash-bs` |
-| Armor-only API backend (no CDN) | `opendoor-edge-gw-bs` |
-| HTTP → HTTPS | `http://34.149.240.132` → `https://opendoor-gcp.web.app` |
-| Cloud DNS | **no zone** in this project (Firebase owns `*.web.app`) |
+- **Cloudflare Edge Layer**: Sits in front of Cloud Run and the API Gateway, handling global CDN edge caching (`/_next/static/*`, media, storage assets), Full (Strict) SSL/TLS 1.3 termination, and DDoS mitigation.
+- **Compute Layer**: Google Cloud Run instances communicate privately through the Serverless VPC Access Connector (`opendoor-connector`).
+- **Database Layer**: Production Supabase stack (`db`, `pooler`, `kong`, `auth`, `rest`, `storage`, `realtime`, `caddy`, `meta`, `studio`) running on GCE with a 200 GB SSD persistent disk. Public database ports (`5432`, `6543`) are strictly blocked from the internet; database traffic is only routed over internal private VPC IPs.
+- **Disaster Recovery**: Automated point-in-time recovery (PITR) with continuous WAL archiving and daily `pg_dumpall` snapshots stored in Google Cloud Storage with 30-day lifecycle auto-expiry.
 
-No Cloudflare. No geo-block (Africa included). Apply: `./scripts/setup-gcp-security.sh`. Zone-to-zone failover (Cloud SQL REGIONAL HA, Cloud Run min instances): `./scripts/setup-gcp-ha.sh`. Details: [infra/gcp/README.md](infra/gcp/README.md).
+Detailed guides:
+- 📖 [Cloudflare Edge Integration Guide](docs/deployment/cloudflare-edge-guide.md)
+- 📖 [Supabase GCP Production Deployment Guide](docs/deployment/supabase-gcp-production-guide.md)
 
 ### Development (local)
 

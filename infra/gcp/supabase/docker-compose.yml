@@ -1,0 +1,300 @@
+version: "3.8"
+
+services:
+  # ------------------------------------------------------------------
+  # Caddy: Auto-TLS Ingress Edge Reverse Proxy
+  # ------------------------------------------------------------------
+  caddy:
+    image: caddy:2.8.4-alpine
+    container_name: supabase-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:-:80}
+      LETSENCRYPT_EMAIL: ${LETSENCRYPT_EMAIL:-admin@opendoor.ai}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ${DATA_DIR:-/var/lib/supabase-data}/caddy_data:/data
+      - ${DATA_DIR:-/var/lib/supabase-data}/caddy_config:/config
+    depends_on:
+      - kong
+      - studio
+    networks:
+      - supabase-net
+
+  # ------------------------------------------------------------------
+  # Kong: API Gateway & Internal Routing
+  # ------------------------------------------------------------------
+  kong:
+    image: kong:2.8.1
+    container_name: supabase-kong
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      KONG_DATABASE: "off"
+      KONG_DECLARATIVE_CONFIG: /var/lib/kong/kong.yml
+      KONG_DNS_ORDER: LAST,A,CNAME
+      KONG_PLUGINS: request-transformer,cors,key-auth,acl
+      KONG_NGINX_PROXY_PROXY_BUFFER_SIZE: 160k
+      KONG_NGINX_PROXY_PROXY_BUFFERS: 64 160k
+      SUPABASE_ANON_KEY: ${ANON_KEY}
+      SUPABASE_SERVICE_KEY: ${SERVICE_ROLE_KEY}
+    volumes:
+      - ./volumes/kong/kong.yml:/var/lib/kong/kong.yml:ro
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - supabase-net
+
+  # ------------------------------------------------------------------
+  # Supabase Studio: Web Dashboard
+  # ------------------------------------------------------------------
+  studio:
+    image: supabase/studio:2026.08.24-sha-8ec45b2
+    container_name: supabase-studio
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      STUDIO_PG_META_URL: http://meta:8080
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      DEFAULT_ORGANIZATION_NAME: ${STUDIO_ORG_NAME:-OpenDoor}
+      DEFAULT_PROJECT_NAME: ${STUDIO_PROJECT_NAME:-Production}
+      SUPABASE_PUBLIC_URL: ${SUPABASE_PUBLIC_URL:-http://localhost:8000}
+      SUPABASE_URL: http://kong:8000
+      SUPABASE_ANON_KEY: ${ANON_KEY}
+      SUPABASE_SERVICE_KEY: ${SERVICE_ROLE_KEY}
+      AUTH_JWT_SECRET: ${JWT_SECRET}
+      LOGFLARE_API_KEY: ${LOGFLARE_API_KEY:-}
+      NEXT_PUBLIC_ENABLE_ROLES: "true"
+      NEXT_ANALYTICS_BACKEND_PROVIDER: postgres
+    depends_on:
+      - meta
+    networks:
+      - supabase-net
+
+  # ------------------------------------------------------------------
+  # Auth (GoTrue): Authentication & JWT Verification
+  # ------------------------------------------------------------------
+  auth:
+    image: supabase/gotrue:v2.164.0
+    container_name: supabase-auth
+    restart: unless-stopped
+    environment:
+      GOTRUE_API_HOST: 0.0.0.0
+      GOTRUE_API_PORT: 9999
+      API_EXTERNAL_URL: ${SUPABASE_PUBLIC_URL:-http://localhost:8000}/auth/v1
+      GOTRUE_DB_DRIVER: postgres
+      GOTRUE_DB_DATABASE_URL: postgres://supabase_auth_admin:${POSTGRES_PASSWORD}@db:5432/postgres?search_path=auth&sslmode=disable
+      GOTRUE_SITE_URL: ${SITE_URL:-http://localhost:3010}
+      GOTRUE_URI_ALLOW_LIST: ${URI_ALLOW_LIST:-*}
+      GOTRUE_JWT_SECRET: ${JWT_SECRET}
+      GOTRUE_JWT_EXP: 3600
+      GOTRUE_JWT_DEFAULT_GROUP_NAME: authenticated
+      GOTRUE_EXTERNAL_EMAIL_ENABLED: ${ENABLE_EMAIL_SIGNUP:-true}
+      GOTRUE_MAILER_AUTOCONFIRM: ${ENABLE_EMAIL_AUTOCONFIRM:-true}
+      GOTRUE_SMTP_HOST: ${SMTP_HOST:-}
+      GOTRUE_SMTP_PORT: ${SMTP_PORT:-587}
+      GOTRUE_SMTP_USER: ${SMTP_USER:-}
+      GOTRUE_SMTP_PASS: ${SMTP_PASS:-}
+      GOTRUE_SMTP_ADMIN_EMAIL: ${SMTP_ADMIN_EMAIL:-admin@opendoor.ai}
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - supabase-net
+
+  # ------------------------------------------------------------------
+  # PostgREST: Instant RESTful API
+  # ------------------------------------------------------------------
+  rest:
+    image: postgrest/postgrest:v12.2.0
+    container_name: supabase-rest
+    restart: unless-stopped
+    environment:
+      PGRST_DB_URI: postgres://authenticator:${POSTGRES_PASSWORD}@db:5432/postgres
+      PGRST_DB_SCHEMAS: public,storage,graphql
+      PGRST_DB_ANON_ROLE: anon
+      PGRST_JWT_SECRET: ${JWT_SECRET}
+      PGRST_DB_USE_LEGACY_GUCS: "false"
+      PGRST_APP_SETTINGS_JWT_SECRET: ${JWT_SECRET}
+      PGRST_APP_SETTINGS_JWT_EXP: "3600"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - supabase-net
+
+  # ------------------------------------------------------------------
+  # Realtime: WebSockets & PostgreSQL CDC
+  # ------------------------------------------------------------------
+  realtime:
+    image: supabase/realtime:v2.30.34
+    container_name: supabase-realtime
+    restart: unless-stopped
+    environment:
+      PORT: 4000
+      APP_NAME: realtime
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: postgres
+      DB_USER: supabase_admin
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      DB_SSL: "false"
+      JWT_SECRET: ${JWT_SECRET}
+      SECRET_KEY_BASE: ${SECRET_KEY_BASE}
+      RLIMIT_NOFILE: "10000"
+      REPLICATION_MODE: RLS
+      REPLICATION_POLL_INTERVAL: 100
+      SECURE_CHANNELS: "true"
+      SLOT_NAME: supabase_realtime_rls
+      TEMPORARY_SLOT: "true"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - supabase-net
+
+  # ------------------------------------------------------------------
+  # Storage API: S3 / Disk-backed Object Store
+  # ------------------------------------------------------------------
+  storage:
+    image: supabase/storage-api:v1.14.5
+    container_name: supabase-storage
+    restart: unless-stopped
+    environment:
+      ANON_KEY: ${ANON_KEY}
+      SERVICE_KEY: ${SERVICE_ROLE_KEY}
+      POSTGREST_URL: http://rest:3000
+      PGRST_JWT_SECRET: ${JWT_SECRET}
+      DATABASE_URL: postgres://supabase_storage_admin:${POSTGRES_PASSWORD}@db:5432/postgres
+      FILE_STORAGE_BACKEND_PATH: /var/lib/storage
+      TENANT_ID: stub
+      REGION: global
+      GLOBAL_S3_BUCKET: stub
+      ENABLE_IMAGE_TRANSFORMATION: "true"
+      IMGPROXY_URL: http://imgproxy:5001
+    volumes:
+      - ${DATA_DIR:-/var/lib/supabase-data}/storage:/var/lib/storage
+    depends_on:
+      db:
+        condition: service_healthy
+      rest:
+        condition: service_started
+    networks:
+      - supabase-net
+
+  # ------------------------------------------------------------------
+  # Imgproxy: Fast Image Resizing & WebP Conversion
+  # ------------------------------------------------------------------
+  imgproxy:
+    image: darthsim/imgproxy:v3.8.0
+    container_name: supabase-imgproxy
+    restart: unless-stopped
+    environment:
+      IMGPROXY_BIND: :5001
+      IMGPROXY_LOCAL_FILESYSTEM_ROOT: /
+    networks:
+      - supabase-net
+
+  # ------------------------------------------------------------------
+  # Postgres Meta: Schema & Query Introspection for Studio
+  # ------------------------------------------------------------------
+  meta:
+    image: supabase/postgres-meta:v0.84.2
+    container_name: supabase-meta
+    restart: unless-stopped
+    environment:
+      PG_META_PORT: 8080
+      PG_META_DB_HOST: db
+      PG_META_DB_PORT: 5432
+      PG_META_DB_NAME: postgres
+      PG_META_DB_USER: supabase_admin
+      PG_META_DB_PASSWORD: ${POSTGRES_PASSWORD}
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - supabase-net
+
+  # ------------------------------------------------------------------
+  # Supavisor: High-Performance Connection Pooler
+  # ------------------------------------------------------------------
+  pooler:
+    image: supabase/supavisor:1.1.56
+    container_name: supabase-pooler
+    restart: unless-stopped
+    ports:
+      - "6543:6543"
+    environment:
+      PORT: 4000
+      PROXY_PORT_TRANSACTION: 6543
+      DATABASE_URL: ecto://supabase_admin:${POSTGRES_PASSWORD}@db:5432/postgres
+      SECRET_KEY_BASE: ${SECRET_KEY_BASE}
+      VAULT_ENC_KEY: ${VAULT_ENC_KEY}
+      API_JWT_SECRET: ${JWT_SECRET}
+      METRICS_PORT: 9095
+    volumes:
+      - ./volumes/pooler/pooler.exs:/etc/pooler/pooler.exs:ro
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - supabase-net
+
+  # ------------------------------------------------------------------
+  # PostgreSQL 15 Engine: pgvector + Continuous WAL Archiving
+  # ------------------------------------------------------------------
+  db:
+    image: supabase/postgres:15.8.1.085
+    container_name: supabase-db
+    restart: unless-stopped
+    command:
+      - postgres
+      - -c
+      - config_file=/etc/postgresql/postgresql.conf
+      - -c
+      - wal_level=replica
+      - -c
+      - archive_mode=on
+      - -c
+      - archive_command=test ! -f /var/lib/supabase-data/wal_archive/%f && cp %p /var/lib/supabase-data/wal_archive/%f
+      - -c
+      - archive_timeout=300
+      - -c
+      - max_connections=200
+      - -c
+      - shared_buffers=2GB
+      - -c
+      - effective_cache_size=6GB
+      - -c
+      - maintenance_work_mem=512MB
+      - -c
+      - checkpoint_completion_target=0.9
+      - -c
+      - wal_buffers=16MB
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: postgres
+      POSTGRES_HOST: /var/run/postgresql
+    volumes:
+      - ${DATA_DIR:-/var/lib/supabase-data}/pgdata:/var/lib/postgresql/data
+      - ${DATA_DIR:-/var/lib/supabase-data}/wal_archive:/var/lib/supabase-data/wal_archive
+      - ./volumes/db/init-scripts:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - supabase-net
+
+networks:
+  supabase-net:
+    driver: bridge
