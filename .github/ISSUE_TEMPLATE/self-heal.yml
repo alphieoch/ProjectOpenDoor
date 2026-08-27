@@ -1,0 +1,29 @@
+name: Self-heal / agent task
+description: Overnight work for Jules or Cursor. Label agent/self-heal (or jules) to start.
+title: "[self-heal] "
+labels: ["self-heal"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Label **`jules`** to start the official Jules GitHub App immediately.
+        Label **`agent`** or **`self-heal`** to run `.github/workflows/self-heal-jules.yml` (after it is on `main`).
+        Mention a Linear id (`OCH-11`) if this mirrors the Self-heal project.
+  - type: textarea
+    id: task
+    attributes:
+      label: Task
+      description: What should Jules fix or implement?
+      placeholder: Reproduce, expected, stack snippet, PostHog issue URL…
+    validations:
+      required: true
+  - type: input
+    id: linear
+    attributes:
+      label: Linear issue
+      placeholder: OCH-11
+  - type: input
+    id: posthog
+    attributes:
+      label: PostHog error URL
+      placeholder: https://us.posthog.com/project/407244/error_tracking/…

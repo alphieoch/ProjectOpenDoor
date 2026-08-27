@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
+import { cn } from "@/lib/utils";
 import {
   Play,
   Pause,
@@ -29,6 +30,7 @@ interface InteractiveVideoTimelineProps {
   onSeek?: (time: number) => void;
   target?: TimelineTarget;
   onTargetChange?: (target: TimelineTarget) => void;
+  compact?: boolean;
 }
 
 function formatTime(seconds: number): string {
@@ -47,6 +49,7 @@ export function InteractiveVideoTimeline({
   onSeek,
   target = { mode: "full" },
   onTargetChange,
+  compact = false,
 }: InteractiveVideoTimelineProps) {
   const [internalTime, setInternalTime] = useState(0);
   const [internalDuration, setInternalDuration] = useState(8);
@@ -102,6 +105,26 @@ export function InteractiveVideoTimeline({
       video.removeEventListener("ended", handleEnded);
     };
   }, [videoRef, isScrubbing, videoUrl]);
+
+  useEffect(() => {
+    if (videoUrl) return;
+    if (customDuration) setInternalDuration(customDuration);
+  }, [videoUrl, customDuration]);
+
+  useEffect(() => {
+    if (!isPlaying || videoRef?.current) return;
+    const interval = window.setInterval(() => {
+      setInternalTime((prev) => {
+        const next = prev + 0.05 * playbackSpeed;
+        if (next >= activeDuration) {
+          setIsPlaying(false);
+          return activeDuration;
+        }
+        return next;
+      });
+    }, 50);
+    return () => window.clearInterval(interval);
+  }, [isPlaying, videoRef, playbackSpeed, activeDuration]);
 
   const seekTo = useCallback(
     (time: number) => {
@@ -235,17 +258,82 @@ export function InteractiveVideoTimeline({
       ? (target.endTime / activeDuration) * 100
       : null;
 
+  if (compact) {
+    return (
+      <div className="mb-2 flex items-center gap-2 rounded-2xl border border-zinc-200 bg-white/95 px-2.5 py-2 shadow-sm dark:border-zinc-800 dark:bg-[rgba(10,12,18,0.94)]">
+        <button
+          type="button"
+          onClick={togglePlay}
+          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-zinc-200 bg-zinc-50 text-zinc-700 hover:bg-zinc-100 dark:border-white/10 dark:bg-white/5 dark:text-zinc-200"
+          title={isPlaying ? "Pause" : "Play"}
+        >
+          {isPlaying ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5 fill-current" />}
+        </button>
+        <span className="shrink-0 font-mono text-[10px] text-zinc-500 dark:text-zinc-400">
+          <span className="font-semibold text-zinc-800 dark:text-zinc-100">{formatTime(activeTime)}</span>
+          <span className="px-1">/</span>
+          <span>{formatTime(activeDuration)}</span>
+        </span>
+        <div
+          ref={trackRef}
+          onMouseDown={handleTrackMouseDown}
+          onMouseMove={handleTrackMouseMove}
+          onMouseLeave={handleTrackMouseLeave}
+          className="relative min-w-0 flex-1 cursor-pointer pt-3"
+        >
+          <div className="relative h-8 overflow-hidden rounded-lg border border-zinc-200 bg-zinc-100 dark:border-white/10 dark:bg-zinc-900">
+            <div className="pointer-events-none absolute inset-0 flex items-center justify-between px-1 opacity-30">
+              {Array.from({ length: 12 }).map((_, i) => (
+                <div key={i} className={cn("h-full w-px", i % 3 === 0 ? "bg-zinc-500" : "bg-zinc-400")} />
+              ))}
+            </div>
+            {rangeStartPercent != null && rangeEndPercent != null && (
+              <div
+                className="pointer-events-none absolute inset-y-0 bg-cyan-400/20"
+                style={{
+                  left: `${Math.min(rangeStartPercent, rangeEndPercent)}%`,
+                  width: `${Math.abs(rangeEndPercent - rangeStartPercent)}%`,
+                }}
+              />
+            )}
+            <div
+              className="pointer-events-none absolute inset-y-0 left-0 bg-emerald-500/15"
+              style={{ width: `${progressPercent}%` }}
+            />
+          </div>
+          <div
+            className="pointer-events-none absolute inset-y-0 z-30 w-3 -translate-x-1/2"
+            style={{ left: `${progressPercent}%` }}
+          >
+            <div
+              className="absolute left-1/2 top-0 h-0 w-0 -translate-x-1/2 border-x-[5px] border-t-[7px] border-x-transparent border-t-cyan-500 drop-shadow-sm"
+              aria-hidden
+            />
+            <div className="absolute left-1/2 top-[6px] h-[calc(100%-6px)] w-px -translate-x-1/2 bg-cyan-500" />
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={markInPoint}
+          className="shrink-0 rounded-md px-1.5 py-1 font-mono text-[10px] font-semibold text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800 dark:hover:bg-white/10 dark:hover:text-white"
+          title="Mark in point"
+        >
+          In
+        </button>
+        <button
+          type="button"
+          onClick={markOutPoint}
+          className="shrink-0 rounded-md px-1.5 py-1 font-mono text-[10px] font-semibold text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800 dark:hover:bg-white/10 dark:hover:text-white"
+          title="Mark out point"
+        >
+          Out
+        </button>
+      </div>
+    );
+  }
+
   return (
-    <div
-      className="flex w-full flex-col gap-2.5 rounded-2xl p-3.5 transition-all duration-200"
-      style={{
-        background: "rgba(16, 18, 27, 0.85)",
-        backdropFilter: "blur(24px)",
-        WebkitBackdropFilter: "blur(24px)",
-        border: "1px solid rgba(255, 255, 255, 0.08)",
-        boxShadow: "inset 0 1px 0 0 rgba(255, 255, 255, 0.1), 0 16px 36px -8px rgba(0, 0, 0, 0.6)",
-      }}
-    >
+    <div className="flex w-full flex-col gap-2.5 rounded-2xl border border-zinc-200 bg-white/95 p-3.5 shadow-sm dark:border-zinc-800 dark:bg-zinc-950/90">
       {/* Top Bar: Playback Controls, Timecode & Target Badges */}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
@@ -330,7 +418,7 @@ export function InteractiveVideoTimeline({
 
           {target.mode === "range" && target.startTime != null && target.endTime != null && (
             <div
-              className="flex items-center gap-1.5 rounded-full border border-indigo-500/30 bg-indigo-500/10 px-3 py-1 text-[11px] font-medium text-indigo-300 shadow-sm"
+              className="flex items-center gap-1.5 rounded-full border border-info/30 bg-info/10 px-3 py-1 text-[11px] font-medium text-info shadow-sm"
             >
               <Scissors className="h-3 w-3" />
               <span>
@@ -420,7 +508,7 @@ export function InteractiveVideoTimeline({
           {/* Range Selection Highlight */}
           {rangeStartPercent != null && rangeEndPercent != null && (
             <div
-              className="absolute top-0 bottom-0 pointer-events-none bg-indigo-500/25 border-x border-indigo-400"
+              className="absolute top-0 bottom-0 pointer-events-none bg-info/25 border-x border-indigo-400"
               style={{
                 left: `${Math.min(rangeStartPercent, rangeEndPercent)}%`,
                 width: `${Math.abs(rangeEndPercent - rangeStartPercent)}%`,

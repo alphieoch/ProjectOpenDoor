@@ -50,9 +50,9 @@ function mapOverallStatus(overall: string): number {
  * Can be triggered by a cron job or called manually.
  */
 export async function cachetSyncHandler(c: Context) {
-  const internalKey = process.env.INTERNAL_API_KEY;
+  const internalKey = process.env.INTERNAL_API_KEY || process.env.GATEWAY_INTERNAL_KEY;
   const authHeader = c.req.header("x-internal-api-key");
-  if (internalKey && authHeader !== internalKey) {
+  if (!internalKey || authHeader !== internalKey) {
     return c.json({ error: "Unauthorized" }, 401);
   }
 

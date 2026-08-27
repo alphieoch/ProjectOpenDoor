@@ -2,9 +2,9 @@
 
 import React from "react";
 import Link from "next/link";
-import { DIcons } from "dicons";
+import { DoorOpen, Mail, Globe, Sun, Moon, ArrowUp } from "lucide-react";
 import { useTheme } from "next-themes";
-import { DoorOpen } from "lucide-react";
+import { OchiengLogoSimple } from "@/components/logos/OchiengLogoSimple";
 import { cn } from "@/lib/utils";
 import { docsHref } from "@/lib/public-urls";
 import { motion, useReducedMotion } from "framer-motion";
@@ -21,40 +21,40 @@ function ThemeToggle() {
   const activeTheme = mounted ? resolvedTheme : "light";
 
   return (
-    <div className="flex items-center rounded-full border border-dotted border-slate-300 bg-white px-1 py-1 shadow-sm dark:border-slate-600 dark:bg-slate-900">
+    <div className="flex items-center rounded-full border border-border bg-background px-1 py-1 shadow-sm">
       <button
         onClick={() => setTheme("light")}
         className={cn(
-          "rounded-full p-2 transition",
-          activeTheme === "light"
-            ? "bg-white text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
-            : "text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-slate-800 dark:hover:text-slate-200",
+            "rounded-full p-2 transition min-h-[44px] min-w-[44px]",
+            activeTheme === "light"
+              ? "bg-background text-foreground ring-1 ring-border"
+              : "text-muted-foreground hover:bg-accent hover:text-foreground",
         )}
         aria-label="Light mode"
       >
-        <DIcons.Sun className="h-4 w-4" strokeWidth={1.5} />
+        <Sun className="h-4 w-4" />
       </button>
 
       <button
         type="button"
         onClick={() => window.scroll({ top: 0, behavior: "smooth" })}
-        className="px-3 text-slate-500 transition hover:text-slate-950 dark:text-slate-400 dark:hover:text-slate-100"
+        className="px-3 text-muted-foreground transition hover:text-foreground"
         aria-label="Scroll to top"
       >
-        <DIcons.ArrowUp className="h-3.5 w-3.5" />
+        <ArrowUp className="h-3.5 w-3.5" />
       </button>
 
       <button
         onClick={() => setTheme("dark")}
         className={cn(
-          "rounded-full p-2 transition",
-          activeTheme === "dark"
-            ? "bg-slate-950 text-white hover:bg-slate-800"
-            : "text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-slate-800 dark:hover:text-slate-200",
+            "rounded-full p-2 transition min-h-[44px] min-w-[44px]",
+            activeTheme === "dark"
+              ? "bg-primary text-primary-foreground"
+              : "text-muted-foreground hover:bg-accent hover:text-foreground",
         )}
         aria-label="Dark mode"
       >
-        <DIcons.Moon className="h-4 w-4" strokeWidth={1.5} />
+        <Moon className="h-4 w-4" />
       </button>
     </div>
   );
@@ -67,12 +67,11 @@ export function StickyFooter({ className, ...props }: StickyFooterProps) {
   return (
     <footer className={cn("relative w-full", className)} {...props}>
       <div className="relative">
-        <div className="relative flex w-full flex-col gap-10 border-t border-slate-200/80 bg-white/70 px-6 py-10 dark:border-slate-700/70 dark:bg-slate-950/80 md:px-12">
+        <div className="relative flex w-full flex-col gap-10 rounded-t-2xl border-t border-border bg-background/70 px-6 py-10 backdrop-blur-md md:px-12">
 
           {/* Subtle radial glow */}
           <div aria-hidden className="absolute inset-0 isolate z-0 contain-strict">
-            <div className="absolute top-0 left-0 h-[300px] w-[180px] -translate-y-[87.5%] -rotate-45 rounded-full bg-[radial-gradient(68.54%_68.72%_at_55.02%_31.46%,rgba(26,115,232,0.06)_0,transparent_80%)]" />
-            <div className="absolute top-0 right-0 h-[300px] w-[200px] -translate-y-[70%] rotate-45 rounded-full bg-[radial-gradient(50%_50%_at_50%_50%,rgba(26,115,232,0.04)_0,transparent_100%)]" />
+            <div className="absolute top-0 left-0 h-[300px] w-[180px] -translate-y-[87.5%] -rotate-45 rounded-full bg-[radial-gradient(68.54%_68.72%_at_55.02%_31.46%,hsl(var(--estate-200)_/_0.4)_0,transparent_80%)]" />
           </div>
 
           {/* ── Brand + nav ── */}
@@ -80,15 +79,13 @@ export function StickyFooter({ className, ...props }: StickyFooterProps) {
             {/* Brand */}
             <AnimatedContainer className="w-full max-w-xs shrink-0 space-y-4">
               <Link href="/" className="flex items-center gap-2.5">
-                <span className="grid h-9 w-9 place-items-center rounded-xl bg-slate-950 text-white shadow-lg shadow-blue-900/10">
+                <span className="grid h-9 w-9 place-items-center rounded-lg bg-primary text-primary-foreground">
                   <DoorOpen className="h-4 w-4" />
                 </span>
-                <span className="text-base font-semibold text-slate-900 dark:text-slate-100">OpenDoor</span>
+                <span className="font-garamond text-base font-semibold text-foreground">OpenDoor</span>
               </Link>
-              <p className="text-sm leading-6 text-slate-500 dark:text-slate-300">
-                Provider-agnostic LLM API gateway. Route, govern, and monitor
-                production AI traffic across every major provider from a
-                single control plane.
+              <p className="text-sm leading-6 text-muted-foreground">
+                Simplifying AI for everyone.
               </p>
               {/* Social icons */}
               <div className="flex flex-wrap gap-2">
@@ -99,7 +96,7 @@ export function StickyFooter({ className, ...props }: StickyFooterProps) {
                     target="_blank"
                     rel="noopener noreferrer"
                     aria-label={link.label}
-                    className="rounded-xl border border-dotted border-slate-300 p-2.5 text-slate-500 transition-transform hover:-translate-y-1 hover:text-slate-950 dark:border-slate-700 dark:text-slate-300 dark:hover:text-white"
+                    className="rounded-lg border border-border p-2.5 text-muted-foreground transition hover:text-foreground"
                   >
                     <link.Icon className="h-4 w-4" />
                   </a>
@@ -108,13 +105,13 @@ export function StickyFooter({ className, ...props }: StickyFooterProps) {
             </AnimatedContainer>
 
             {/* Divider */}
-            <div className="hidden w-px self-stretch border-l border-dotted border-slate-200 dark:border-slate-700 md:block" />
+            <div className="hidden w-px self-stretch border-l border-border md:block" />
 
             {/* Nav columns */}
             <div className="grid flex-1 grid-cols-2 gap-x-8 gap-y-10 sm:grid-cols-4">
               {footerLinkGroups.map((group, i) => (
                 <AnimatedContainer key={group.label} delay={0.1 + i * 0.08}>
-                  <h3 className="text-xs font-semibold uppercase tracking-widest text-slate-900 dark:text-slate-100">
+                  <h3 className="text-xs font-semibold uppercase tracking-widest text-foreground">
                     {group.label}
                   </h3>
                   <ul className="mt-4 space-y-2">
@@ -122,7 +119,7 @@ export function StickyFooter({ className, ...props }: StickyFooterProps) {
                       <li key={link.title}>
                         <Link
                           href={link.href}
-                          className="text-sm text-slate-500 transition hover:text-slate-950 dark:text-slate-300 dark:hover:text-white"
+                          className="text-sm text-muted-foreground transition hover:text-foreground"
                         >
                           {link.title}
                         </Link>
@@ -135,32 +132,31 @@ export function StickyFooter({ className, ...props }: StickyFooterProps) {
           </div>
 
           {/* ── Dotted divider ── */}
-          <div className="relative z-10 my-2 border-t border-dotted border-slate-300 dark:border-slate-700" />
+          <div className="relative z-10 my-2 border-t border-border" />
 
-          {/* ── Bottom row: copyright + theme toggle ── */}
-          <div className="relative z-10 mt-auto flex flex-wrap items-center justify-between gap-4">
-            <p className="flex flex-wrap items-center gap-1.5 text-xs text-slate-500 dark:text-slate-300">
-              <span>© {new Date().getFullYear()} OpenDoor, Inc.</span>
-              <span>—</span>
-              <span>Made with</span>
-              <DIcons.Heart className="h-3.5 w-3.5 animate-pulse text-red-500" />
-              <span>by</span>
+          {/* ── Bottom: copyright, parent mark, theme ── */}
+          <div className="relative z-10 mt-auto flex flex-col gap-4">
+            <div className="grid items-center gap-4 md:grid-cols-3">
+              <p className="text-xs text-muted-foreground md:justify-self-start">
+                © {new Date().getFullYear()} OpenDoor, Inc.
+              </p>
               <a
                 href="https://www.ochiengandco.com"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="font-semibold text-slate-900 transition hover:text-blue-600 dark:text-slate-100 dark:hover:text-blue-400"
+                aria-label="Ochieng and Co"
+                className="flex items-center justify-center gap-2 font-sans text-foreground hover:opacity-80 md:justify-self-center"
               >
-                Ochieng &amp; Co
+                <OchiengLogoSimple size={32} className="dark:invert" />
+                <span className="text-xs font-medium">Ochieng &amp; Co</span>
               </a>
-            </p>
-
-            <div className="flex items-center gap-3">
-              <span className="text-xs text-slate-400 dark:text-slate-500">
-                Provider-agnostic LLM control plane
-              </span>
-              <ThemeToggle />
+              <div className="flex justify-start md:justify-end">
+                <ThemeToggle />
+              </div>
             </div>
+            <p className="text-center font-sans text-sm text-muted-foreground">
+              Simply AI for everyone
+            </p>
           </div>
         </div>
       </div>
@@ -170,11 +166,11 @@ export function StickyFooter({ className, ...props }: StickyFooterProps) {
 
 /* ── Data ── */
 const socialLinks = [
-  { label: "Email", href: "mailto:hello@opendoor.ai", Icon: DIcons.Mail },
+  { label: "Email", href: "mailto:hello@opendoor.ai", Icon: Mail },
   {
     label: "Ochieng & Co",
     href: "https://www.ochiengandco.com",
-    Icon: DIcons.Globe,
+    Icon: Globe,
   },
 ];
 
@@ -193,6 +189,7 @@ const footerLinkGroups = [
     label: "Developers",
     links: [
       { title: "Get started", href: "/get-started" },
+      { title: "SDK & CLI", href: "/sdk" },
       { title: "API keys", href: "/dashboard/api-keys" },
       { title: "Usage", href: "/dashboard/usage" },
       { title: "System status", href: "/status" },

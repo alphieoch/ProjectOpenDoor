@@ -1,0 +1,103 @@
+---
+title: "Python SDK"
+description: "Call the OpenDoor gateway from Python with the opendoor package."
+showPageTitle: true
+---
+
+# Python SDK
+
+The client lives at `packages/python-sdk` in this repo (`import opendoor`). It is a local install — not published to PyPI.
+
+It reads `OPENDOOR_API_KEY` and `OPENDOOR_BASE_URL`. Pass `base_url` if the env var is unset.
+
+## Install
+
+```bash
+pip install -e packages/python-sdk
+```
+
+Requires Python 3.9+ and `httpx`.
+
+## Chat
+
+```python
+import os
+from opendoor import OpenDoor
+
+os.environ.setdefault("OPENDOOR_BASE_URL", "{{GATEWAY_URL}}")
+
+client = OpenDoor()  # OPENDOOR_API_KEY required
+
+out = client.chat.completions.create(
+    model="{{EXAMPLE_MODEL}}",
+    messages=[{"role": "user", "content": "Hello from OpenDoor"}],
+)
+print(out["choices"][0]["message"]["content"])
+```
+
+### Streaming
+
+```python
+stream = client.chat.completions.create(
+    model="{{EXAMPLE_MODEL}}",
+    messages=[{"role": "user", "content": "Hello"}],
+    stream=True,
+)
+for chunk in stream:
+    delta = (chunk.get("choices") or [{}])[0].get("delta") or {}
+    text = delta.get("content")
+    if text:
+        print(text, end="", flush=True)
+```
+
+## Models, Search, agents
+
+```python
+models = client.models.list()
+search = client.plugins.web_search("OpenDoor LLM gateway", max_results=5)
+
+agent = client.agents.create(
+    name="Desk",
+    runtime="openbot",
+    modelId="{{EXAMPLE_MODEL}}",
+)
+turn = client.agents.chat(agent["id"], message="Summarize https://example.com")
+```
+
+`web_search` is `POST /v1/plugins/web-search` (Vertex grounding, $0.10 / query). See [Search](/api-reference/web-search).
+
+Agents need the Agents add-on. See [OpenBot / Agents](/api-reference/agents).
+
+## OpenAI SDK
+
+You can keep `openai` and only change the base URL (note the `/v1` suffix):
+
+```python
+import os
+from openai import OpenAI
+
+client = OpenAI(
+    api_key=os.environ["OPENDOOR_API_KEY"],
+    base_url="{{GATEWAY_URL}}/v1",
+)
+r = client.chat.completions.create(
+    model="{{EXAMPLE_MODEL}}",
+    messages=[{"role": "user", "content": "Hello"}],
+)
+```
+
+## Errors
+
+```python
+from opendoor import OpenDoor, OpenDoorError
+
+try:
+    OpenDoor().chat.completions.create(
+        model="{{EXAMPLE_MODEL}}",
+        messages=[{"role": "user", "content": "Hello"}],
+    )
+except OpenDoorError as exc:
+    print(exc.status_code, exc.body)
+```
+
+See [Errors](/api-reference/errors) and [JavaScript SDK](/getting-started/sdk).

@@ -33,7 +33,7 @@ export async function GET() {
       db
         .select({ count: sql<number>`COUNT(*)` })
         .from(workspaceAgents)
-        .where(and(eq(workspaceAgents.organizationId, orgId), eq(workspaceAgents.status, "running")))
+        .where(and(eq(workspaceAgents.organizationId, orgId), eq(workspaceAgents.status, "running"), isNull(workspaceAgents.deletedAt)))
         .catch(() => [{ count: 0 }]),
     ]);
 

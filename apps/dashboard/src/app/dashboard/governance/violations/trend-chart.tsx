@@ -5,20 +5,20 @@ import {
   Tooltip, ResponsiveContainer,
 } from "recharts";
 
-const axisTick = { fontSize: 11, fill: "var(--ink-4)" } as const;
+const axisTick = { fontSize: 11, fill: "hsl(var(--muted-foreground))" } as const;
 const tooltipStyle = {
-  borderRadius: "8px", border: "1px solid var(--line)",
-  fontSize: "12px", background: "var(--paper-2)", color: "var(--ink)",
+  borderRadius: "8px", border: "1px solid hsl(var(--border))",
+  fontSize: "12px", background: "hsl(var(--card))", color: "hsl(var(--foreground))",
 } as const;
 
 export function ViolationsTrend({ data }: { data: { date: string; count: number }[] }) {
   return (
     <ResponsiveContainer width="100%" height={120}>
       <BarChart data={data} barSize={14}>
-        <CartesianGrid strokeDasharray="3 3" stroke="var(--line-soft)" vertical={false} />
+        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
         <XAxis dataKey="date" tick={axisTick} axisLine={false} tickLine={false} />
         <YAxis tick={axisTick} axisLine={false} tickLine={false} width={20} allowDecimals={false} />
-        <Tooltip contentStyle={tooltipStyle} cursor={{ fill: "var(--paper-3)" }} />
+        <Tooltip contentStyle={tooltipStyle} cursor={{ fill: "hsl(var(--accent))" }} />
         <Bar dataKey="count" name="Violations" fill="var(--red)" radius={[4, 4, 0, 0]} />
       </BarChart>
     </ResponsiveContainer>

@@ -69,7 +69,7 @@ export function DeviceSupportPanel({ modelId }: { modelId: string }) {
 
   return (
     <div>
-      <div className="od-eyebrow">This device</div>
+      <div className="text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">This device</div>
       {needsConsent && !consentGranted ? (
         <div className="mt-3">
           <DeviceInventoryConsent
@@ -89,31 +89,31 @@ export function DeviceSupportPanel({ modelId }: { modelId: string }) {
           Does my device support this?
         </button>
       ) : (
-        <div className="mt-3 rounded-[10px] border p-3" style={{ borderColor: "var(--line)", background: "var(--paper)" }}>
+        <div className="mt-3 rounded-[10px] border p-3" style={{ borderColor: "hsl(var(--border))", background: "hsl(var(--background))" }}>
           {loading ? (
-            <div className="flex items-center gap-2 text-sm" style={{ color: "var(--ink-3)" }}>
+            <div className="flex items-center gap-2 text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
               <Loader2 className="h-4 w-4 animate-spin" />
               Checking Devices…
             </div>
           ) : error ? (
-            <p className="text-sm" style={{ color: "var(--ink-3)" }}>{error}</p>
+            <p className="text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>{error}</p>
           ) : data ? (
             <>
               <div className="flex flex-wrap items-center gap-2">
                 <span className={VERDICT_CLASS[data.support.verdict]}>{VERDICT_LABEL[data.support.verdict]}</span>
-                <span style={{ fontSize: 12, color: "var(--ink-4)" }}>{data.support.deviceLabel}</span>
+                <span style={{ fontSize: 12, color: "hsl(var(--muted-foreground))" }}>{data.support.deviceLabel}</span>
               </div>
-              <p className="mt-2 text-sm leading-6" style={{ color: "var(--ink-2)" }}>
+              <p className="mt-2 text-sm leading-6" style={{ color: "hsl(var(--muted-foreground))" }}>
                 {data.support.title}. {data.support.detail}
               </p>
-              <p className="mt-2 text-xs" style={{ color: "var(--ink-4)" }}>
+              <p className="mt-2 text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
                 Needs ~{data.support.minMemoryGb} GB
                 {data.support.usableMemoryGb != null ? ` · this device has ${data.support.usableMemoryGb} GB` : ""}
                 {data.support.ollamaTag ? ` · Ollama ${data.support.ollamaTag}` : ""}.
               </p>
             </>
           ) : null}
-          <Link href="/dashboard/devices" className="mt-3 inline-block text-xs underline" style={{ color: "var(--ink-3)" }}>
+          <Link href="/dashboard/devices" className="mt-3 inline-block text-xs underline" style={{ color: "hsl(var(--muted-foreground))" }}>
             Open Devices
           </Link>
         </div>

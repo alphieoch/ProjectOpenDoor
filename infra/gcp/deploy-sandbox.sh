@@ -93,7 +93,7 @@ fi
 
 echo "==> Deploy Cloud Run ${SERVICE} (gVisor, vpc-egress=all, timeout 15s)"
 # --vpc-egress=all + isolated VPC with no Cloud NAT = no internet from guest code.
-# Ingress stays public so opendoor-dashboard can call it; auth is CODE_SANDBOX_TOKEN.
+# Ingress is internal (same-project Cloud Run, e.g. dashboard). Auth is CODE_SANDBOX_TOKEN.
 CLEAR_FLAGS=()
 if gcloud run services describe "$SERVICE" --project="$PROJECT" --region="$REGION" >/dev/null 2>&1; then
   CLEAR_FLAGS=(--clear-vpc-connector --clear-cloudsql-instances)
@@ -104,6 +104,7 @@ gcloud run deploy "$SERVICE" \
   --region="$REGION" \
   --platform=managed \
   --allow-unauthenticated \
+  --ingress=internal \
   --port=8080 \
   --memory=512Mi \
   --cpu=1 \

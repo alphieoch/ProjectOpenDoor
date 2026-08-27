@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, BookOpen, KeyRound, Rocket, Server } from "lucide-react";
+import { ArrowRight, BookOpen, KeyRound, Rocket, Server, Terminal } from "lucide-react";
 import { MarketingCtaBanner, MarketingHero } from "@/components/marketing-page-shell";
 import { CopyButton } from "@/components/ui/copy-button";
 import { getDb } from "@/lib/db";
@@ -71,6 +71,12 @@ const next = [
     href: docsHref("/"),
     icon: BookOpen,
   },
+  {
+    title: "SDK & CLI",
+    body: "One key for the terminal and TypeScript client, including OpenBot.",
+    href: "/sdk",
+    icon: Terminal,
+  },
 ];
 
 async function firstModelId() {
@@ -81,9 +87,9 @@ async function firstModelId() {
       .from(models)
       .where(eq(models.enabled, true))
       .limit(1);
-    return row[0]?.modelId || "llama-3.1-8b-instruct";
+    return row[0]?.modelId || "gemma-4-26b-a4b-it";
   } catch {
-    return "llama-3.1-8b-instruct";
+    return "gemma-4-26b-a4b-it";
   }
 }
 
@@ -114,7 +120,7 @@ export default async function HowItWorksPage() {
             </Link>
             <Link
               href={docsHref("/")}
-              className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-6 py-3 text-sm font-semibold text-slate-800 transition hover:bg-slate-50"
+              className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-6 py-3 text-sm font-semibold text-foreground transition hover:bg-slate-50"
             >
               Read the docs
             </Link>
@@ -123,7 +129,7 @@ export default async function HowItWorksPage() {
       />
 
       <section className="mx-auto max-w-7xl px-6 pb-20 lg:px-8">
-        <div className="overflow-hidden rounded-[2.5rem] bg-slate-950 text-white shadow-2xl shadow-slate-950/15">
+        <div className="overflow-hidden rounded-2xl bg-slate-950 text-white shadow-2xl shadow-slate-950/15">
           <div className="grid gap-0 lg:grid-cols-2">
             <div className="space-y-8 p-8 lg:p-12">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-blue-300">
@@ -175,25 +181,25 @@ export default async function HowItWorksPage() {
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
           A request, end to end
         </p>
-        <h2 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">
+        <h2 className="mt-2 text-3xl font-semibold tracking-tight text-foreground">
           Four gates. Then the provider.
         </h2>
         <div className="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {path.map((item) => (
             <div
               key={item.n}
-              className="rounded-[2rem] border border-slate-200/70 bg-white p-6 shadow-sm"
+              className="rounded-2xl border border-border bg-white p-6 shadow-sm"
             >
-              <p className="font-mono text-xs font-semibold text-blue-600">{item.n}</p>
-              <h3 className="mt-3 text-lg font-semibold text-slate-950">{item.title}</h3>
-              <p className="mt-2 text-sm leading-6 text-slate-600">{item.body}</p>
+              <p className="font-mono text-xs font-semibold text-muted-foreground">{item.n}</p>
+              <h3 className="mt-3 text-lg font-semibold text-foreground">{item.title}</h3>
+              <p className="mt-2 text-sm leading-6 text-muted-foreground">{item.body}</p>
             </div>
           ))}
         </div>
       </section>
 
       <section className="mx-auto max-w-7xl px-6 pb-8 lg:px-8">
-        <h2 className="text-3xl font-semibold tracking-tight text-slate-950">
+        <h2 className="text-3xl font-semibold tracking-tight text-foreground">
           Then use it in the product
         </h2>
         <div className="mt-8 grid gap-5 md:grid-cols-2">
@@ -201,14 +207,14 @@ export default async function HowItWorksPage() {
             <Link
               key={item.title}
               href={item.href}
-              className="flex gap-4 rounded-[2rem] border border-slate-200/70 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg"
+              className="flex gap-4 rounded-2xl border border-border bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg"
             >
               <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-slate-950 text-white">
                 <item.icon className="h-5 w-5" />
               </span>
               <div>
-                <h3 className="font-semibold text-slate-950">{item.title}</h3>
-                <p className="mt-1 text-sm leading-6 text-slate-600">{item.body}</p>
+                <h3 className="font-semibold text-foreground">{item.title}</h3>
+                <p className="mt-1 text-sm leading-6 text-muted-foreground">{item.body}</p>
               </div>
             </Link>
           ))}

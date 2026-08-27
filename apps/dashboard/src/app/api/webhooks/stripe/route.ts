@@ -3,6 +3,7 @@ import Stripe from "stripe";
 import { getPlanFromPriceId, getStripeInstance, isAgentsAddonPriceId, isWebSearchAddonPriceId } from "@/lib/stripe";
 import {
   includedCreditCents,
+  PLANS,
   qualifiesForTopupBonus,
   TOPUP_BONUS_CENTS,
   welcomeExpiresAt,
@@ -23,6 +24,8 @@ import {
 } from "@/lib/billing-stripe";
 import { ensureWebSearchAddonColumns } from "@/lib/web-search/entitlement";
 import { posthogServerCapture } from "@/lib/posthog-server";
+import { applyLedgerGrant } from "@/lib/credit-ledger";
+import { ensurePaidSeatQuantityColumn, persistPaidSeatQuantity } from "@/lib/seat-allocation";
 
 function parseAmountCents(value: unknown): number {
   const parsed = Number.parseInt(String(value ?? "0"), 10);
@@ -30,7 +33,7 @@ function parseAmountCents(value: unknown): number {
 }
 
 function asPlanId(value: unknown): PlanId {
-  if (value === "pro" || value === "team" || value === "enterprise") return value;
+  if (typeof value === "string" && value in PLANS) return value as PlanId;
   return "free";
 }
 
@@ -127,13 +130,11 @@ async function applyPlanStipend(
   });
   if (!org) return;
 
-  const current = Number(org.creditsUsdCents || 0);
-  const next = current + amountCents;
-
-  await db
-    .update(organizations)
-    .set({ creditsUsdCents: next })
-    .where(eq(organizations.id, orgId));
+  const next = await applyLedgerGrant({
+    organizationId: orgId,
+    amountCents,
+    bucketType: "subscription_grant",
+  });
 
   await db.insert(creditTransactions).values({
     organizationId: orgId,
@@ -175,10 +176,16 @@ async function applyTopupCredit(
 
   if (!existing) {
     current += amountCents;
-    await db
-      .update(organizations)
-      .set({ creditsUsdCents: current })
-      .where(eq(organizations.id, orgId));
+    await applyLedgerGrant({
+      organizationId: orgId,
+      amountCents,
+      bucketType: "top_up_prepaid",
+    });
+    const synced = await db.query.organizations.findFirst({
+      where: eq(organizations.id, orgId),
+      columns: { creditsUsdCents: true },
+    });
+    current = Number(synced?.creditsUsdCents || current);
     await db.insert(creditTransactions).values({
       organizationId: orgId,
       kind: "topup",
@@ -192,14 +199,20 @@ async function applyTopupCredit(
   if (qualifiesForTopupBonus(amountCents, alreadyGranted)) {
     const bonusCents = TOPUP_BONUS_CENTS;
     const expires = welcomeExpiresAt();
-    current += bonusCents;
-    currentWelcome += bonusCents;
+    await applyLedgerGrant({
+      organizationId: orgId,
+      amountCents: bonusCents,
+      bucketType: "bonus",
+    });
+    const synced = await db.query.organizations.findFirst({
+      where: eq(organizations.id, orgId),
+      columns: { creditsUsdCents: true, welcomeCreditsUsdCents: true },
+    });
+    current = Number(synced?.creditsUsdCents || current + bonusCents);
+    currentWelcome = Number(synced?.welcomeCreditsUsdCents || currentWelcome + bonusCents);
     await db
       .update(organizations)
       .set({
-        creditsUsdCents: current,
-        welcomeCreditsUsdCents: currentWelcome,
-        welcomeExpiresAt: expires,
         signupCreditGranted: true,
       })
       .where(eq(organizations.id, orgId));
@@ -237,6 +250,7 @@ export async function POST(req: NextRequest) {
   }
 
   const db = getDb();
+  await ensurePaidSeatQuantityColumn();
 
   switch (event.type) {
     case "checkout.session.completed": {
@@ -298,6 +312,7 @@ export async function POST(req: NextRequest) {
         await setWebSearchAddon(orgId, "active", session.subscription as string);
       } else if (session.mode === "subscription" && orgId && session.subscription && !assistantId) {
         const plan = getPlanForSession(session);
+        const seats = Math.max(1, Number(session.metadata?.seats || 1));
         await db
           .update(organizations)
           .set({
@@ -305,8 +320,10 @@ export async function POST(req: NextRequest) {
             stripePriceId: (session.metadata?.priceId as string | undefined) || null,
             subscriptionStatus: "active",
             plan,
+            paidSeatQuantity: seats,
           })
           .where(eq(organizations.id, orgId));
+        await persistPaidSeatQuantity(orgId, seats);
         posthogServerCapture(null, orgId, "billing_subscribe", {
           organization_id: orgId,
           plan,
@@ -377,8 +394,10 @@ export async function POST(req: NextRequest) {
               plan,
               stripeSubscriptionId: subscription.id,
               stripePriceId: item?.price.id || null,
+              paidSeatQuantity: seats,
             })
             .where(eq(organizations.id, org.id));
+          await persistPaidSeatQuantity(org.id, seats);
           await applyPlanStipend(org.id, plan, seats, invoice.id);
         }
       }
@@ -484,16 +503,29 @@ export async function POST(req: NextRequest) {
       // Update org plan
       if (subscription.customer) {
         const status = subscription.status;
-        const updates: Record<string, unknown> = { subscriptionStatus: status };
+        const item = subscription.items.data[0];
+        const seats = Math.max(1, item?.quantity || Number(subscription.metadata?.seats || 1));
+        const updates: Record<string, unknown> = { subscriptionStatus: status, paidSeatQuantity: seats };
         if (status === "canceled" || status === "unpaid" || status === "incomplete_expired") {
           updates.plan = "free";
+          updates.paidSeatQuantity = 1;
         }
+        const org = await db.query.organizations.findFirst({
+          where: eq(organizations.stripeCustomerId, subscription.customer as string),
+          columns: { id: true },
+        });
         await db
           .update(organizations)
           .set(updates)
           .where(
             eq(organizations.stripeCustomerId, subscription.customer as string)
           );
+        if (org) {
+          await persistPaidSeatQuantity(
+            org.id,
+            status === "canceled" || status === "unpaid" || status === "incomplete_expired" ? 1 : seats,
+          );
+        }
       }
       break;
     }

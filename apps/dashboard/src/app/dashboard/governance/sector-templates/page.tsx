@@ -45,7 +45,7 @@ const SECTOR_META: Record<
   string,
   { icon: React.ElementType; color: string; bg: string; label: string }
 > = {
-  legal:      { icon: Scale,      color: "#1A73E8", bg: "#D3E4FD", label: "Legal & Professional" },
+  legal:      { icon: Scale,      color: "#0F172A", bg: "hsl(221 83% 97%)", label: "Legal & Professional" },
   finance:    { icon: Landmark,   color: "#1E6E4F", bg: "#C8EDD9", label: "Financial Services" },
   property:   { icon: Building2,  color: "#7A5700", bg: "#FFEFC2", label: "Property & Real Estate" },
   healthcare: { icon: HeartPulse, color: "#B3261E", bg: "#F9DEDC", label: "Healthcare & Life Sciences" },
@@ -60,11 +60,11 @@ const SECTOR_META: Record<
 };
 
 function complianceFramework(code: string) {
-  if (code.startsWith("GDPR")) return { label: "GDPR", cls: "od-tag-brand" };
-  if (code.startsWith("AIACT")) return { label: "EU AI Act", cls: "od-tag-neutral" };
-  if (code.startsWith("ICO")) return { label: "ICO UK", cls: "od-tag-green" };
-  if (code.startsWith("NIST")) return { label: "NIST AI RMF", cls: "od-tag-yellow" };
-  return { label: code, cls: "od-tag-neutral" };
+  if (code.startsWith("GDPR")) return { label: "GDPR", cls: "inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary" };
+  if (code.startsWith("AIACT")) return { label: "EU AI Act", cls: "inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground" };
+  if (code.startsWith("ICO")) return { label: "ICO UK", cls: "inline-flex items-center rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-700 dark:text-emerald-400" };
+  if (code.startsWith("NIST")) return { label: "NIST AI RMF", cls: "inline-flex items-center rounded-full bg-amber-500/10 px-2 py-0.5 text-[11px] font-medium text-amber-700 dark:text-amber-400" };
+  return { label: code, cls: "inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground" };
 }
 
 function uniqueFrameworks(reqs: string[]) {
@@ -143,7 +143,7 @@ function ApplyModal({
             <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: meta.color }}>
               {meta.label}
             </p>
-            <h3 className="text-base font-semibold truncate" style={{ color: "var(--ink)" }}>
+            <h3 className="text-base font-semibold truncate" style={{ color: "hsl(var(--foreground))" }}>
               {template.name}
             </h3>
           </div>
@@ -165,10 +165,10 @@ function ApplyModal({
               >
                 <CheckCircle2 className="h-6 w-6" style={{ color: "var(--green)" }} />
               </div>
-              <p className="text-base font-semibold" style={{ color: "var(--ink)" }}>
+              <p className="text-base font-semibold" style={{ color: "hsl(var(--foreground))" }}>
                 {alreadyApplied ? "Pack already applied" : "Pack applied"}
               </p>
-              <p className="mt-1 text-sm" style={{ color: "var(--ink-3)" }}>
+              <p className="mt-1 text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
                 {alreadyApplied
                   ? "Gateway policies for this pack are already live. Applying again does not create duplicates."
                   : `${policiesCreated} live ${policiesCreated === 1 ? "policy" : "policies"} written for this organisation.`}
@@ -187,7 +187,7 @@ function ApplyModal({
             </div>
           ) : (
             <>
-              <p className="text-sm mb-4" style={{ color: "var(--ink-2)" }}>
+              <p className="text-sm mb-4" style={{ color: "hsl(var(--muted-foreground))" }}>
                 Apply writes gateway policies for this organisation. The next completion with this data class is evaluated against them.
               </p>
 
@@ -206,7 +206,7 @@ function ApplyModal({
                     >
                       <ItemIcon className="h-3.5 w-3.5" style={{ color: "var(--green)" }} />
                     </div>
-                    <span className="text-sm" style={{ color: "var(--ink-2)" }}>{text}</span>
+                    <span className="text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>{text}</span>
                   </li>
                 ))}
               </ul>
@@ -263,7 +263,7 @@ function PackCard({
   const needsApproval = Boolean(template.defaultPolicies?.requireHumanApproval);
 
   return (
-    <div className="card flex flex-col overflow-hidden od-lift">
+    <div className="card flex flex-col overflow-hidden transition-shadow hover:shadow-lg">
       {/* Colored header */}
       <div className="px-5 py-4" style={{ background: meta.bg }}>
         <div className="flex items-center gap-3">
@@ -282,14 +282,14 @@ function PackCard({
             </p>
             <h3
               className="text-sm font-semibold leading-tight"
-              style={{ color: "var(--ink)" }}
+              style={{ color: "hsl(var(--foreground))" }}
             >
               {template.name}
             </h3>
           </div>
           {applied && (
             <div className="ml-auto shrink-0">
-              <span className="od-tag od-tag-green flex items-center gap-1">
+              <span className="inline-flex items-center rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
                 <CheckCircle2 className="h-3 w-3" /> Applied
               </span>
             </div>
@@ -298,13 +298,13 @@ function PackCard({
       </div>
 
       <div className="flex flex-1 flex-col p-5">
-        <p className="text-sm leading-relaxed" style={{ color: "var(--ink-2)" }}>
+        <p className="text-sm leading-relaxed" style={{ color: "hsl(var(--muted-foreground))" }}>
           {template.description}
         </p>
 
         <div
           className="mt-4 grid grid-cols-3 rounded-xl py-3"
-          style={{ background: "var(--paper-3)" }}
+          style={{ background: "hsl(var(--accent))" }}
         >
           {[
             { n: String(policyCount), label: "Live policies" },
@@ -312,10 +312,10 @@ function PackCard({
             { n: needsApproval ? "Required" : "Off", label: "Human review" },
           ].map(({ n, label }) => (
             <div key={label} className="text-center px-1">
-              <p className="text-sm font-semibold capitalize truncate" style={{ color: "var(--ink)" }}>
+              <p className="text-sm font-semibold capitalize truncate" style={{ color: "hsl(var(--foreground))" }}>
                 {n}
               </p>
-              <p className="text-[10px] font-medium" style={{ color: "var(--ink-4)" }}>
+              <p className="text-[10px] font-medium" style={{ color: "hsl(var(--muted-foreground))" }}>
                 {label}
               </p>
             </div>
@@ -324,7 +324,7 @@ function PackCard({
 
         {bannedUses.length > 0 && (
           <div className="mt-4">
-            <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--ink-4)" }}>
+            <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-widest" style={{ color: "hsl(var(--muted-foreground))" }}>
               Banned uses
             </p>
             <div className="flex flex-wrap gap-1">
@@ -332,7 +332,7 @@ function PackCard({
                 <span
                   key={use}
                   className="rounded-full px-2 py-0.5 text-[11px] font-medium"
-                  style={{ background: "var(--paper-3)", color: "var(--ink-2)" }}
+                  style={{ background: "hsl(var(--accent))", color: "hsl(var(--muted-foreground))" }}
                 >
                   {use}
                 </span>
@@ -342,19 +342,19 @@ function PackCard({
         )}
 
         {(template.defaultModels?.length ?? 0) > 0 && (
-          <p className="mt-3 text-xs" style={{ color: "var(--ink-4)" }}>
+          <p className="mt-3 text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
             {template.defaultModels.length} recommended model{template.defaultModels.length === 1 ? "" : "s"} — approve in the Trust Center
           </p>
         )}
 
         {frameworks.length > 0 && (
           <div className="mt-4">
-            <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--ink-4)" }}>
+            <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-widest" style={{ color: "hsl(var(--muted-foreground))" }}>
               Designed around
             </p>
             <div className="flex flex-wrap gap-1">
               {frameworks.map((f) => (
-                <span key={f.label} className={`od-tag ${f.cls}`}>
+                <span key={f.label} className={f.cls}>
                   {f.label}
                 </span>
               ))}
@@ -439,8 +439,8 @@ export default function SectorTemplatesPage() {
         actions={
           !loading && templates.length > 0 ? (
             <div className="flex shrink-0 flex-wrap items-center gap-2">
-              <span className="od-tag od-tag-neutral">{templates.length} industries</span>
-              <span className="od-tag od-tag-green">{appliedIds.size} applied</span>
+              <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">{templates.length} industries</span>
+              <span className="inline-flex items-center rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-700 dark:text-emerald-400">{appliedIds.size} applied</span>
             </div>
           ) : undefined
         }
@@ -448,14 +448,14 @@ export default function SectorTemplatesPage() {
 
       {loading ? (
         <div className="flex h-48 items-center justify-center">
-          <Loader2 className="h-5 w-5 animate-spin" style={{ color: "var(--ink-3)" }} />
+          <Loader2 className="h-5 w-5 animate-spin" style={{ color: "hsl(var(--muted-foreground))" }} />
         </div>
       ) : templates.length === 0 ? (
         <div className="card flex h-48 flex-col items-center justify-center gap-2">
-          <p className="text-sm font-medium" style={{ color: "var(--ink-2)" }}>
+          <p className="text-sm font-medium" style={{ color: "hsl(var(--muted-foreground))" }}>
             No sector packs available
           </p>
-          <p className="text-xs" style={{ color: "var(--ink-4)" }}>
+          <p className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
             Sector packs load automatically the first time you open Governance. Refresh if this stays empty.
           </p>
         </div>
@@ -477,16 +477,16 @@ export default function SectorTemplatesPage() {
                     onClick={() => setFilter(s)}
                     className="flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-medium transition-all"
                     style={{
-                      background: active ? (m?.color ?? "var(--ink)") : "var(--paper-3)",
-                      color: active ? "#fff" : "var(--ink-2)",
+                      background: active ? (m?.color ?? "hsl(var(--foreground))") : "hsl(var(--accent))",
+                      color: active ? "#fff" : "hsl(var(--muted-foreground))",
                     }}
                   >
                     {s === "all" ? "All" : (m?.label ?? s)}
                     <span
                       className="rounded-full px-1.5 py-0 text-[10px] font-semibold tabular-nums"
                       style={{
-                        background: active ? "rgba(255,255,255,0.25)" : "var(--paper-2)",
-                        color: active ? "#fff" : "var(--ink-3)",
+                        background: active ? "rgba(255,255,255,0.25)" : "hsl(var(--card))",
+                        color: active ? "#fff" : "hsl(var(--muted-foreground))",
                       }}
                     >
                       {count}
@@ -502,7 +502,7 @@ export default function SectorTemplatesPage() {
             {filtered.map((t, i) => (
               <div
                 key={t.id}
-                className="od-fade-up"
+                className="animate-in fade-in"
                 style={{ animationDelay: `${i * 30}ms` }}
               >
                 <PackCard

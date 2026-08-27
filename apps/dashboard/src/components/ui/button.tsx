@@ -1,38 +1,28 @@
 import * as React from "react"
 import { Slot } from "@radix-ui/react-slot"
 import { cva, type VariantProps } from "class-variance-authority"
+import { Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-all select-none cursor-pointer disabled:pointer-events-none disabled:opacity-38 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--md-primary)] focus-visible:ring-offset-2",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium transition-colors select-none cursor-pointer disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/70 focus-visible:ring-offset-2 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
-        /* MD3 Filled */
-        default: "md-btn-filled",
-        /* MD3 Filled Tonal */
-        secondary: "md-btn-tonal",
-        /* MD3 Outlined */
-        outline: "md-btn-outlined",
-        /* MD3 Text */
-        ghost: "md-btn-text",
-        /* MD3 Elevated */
-        elevated: "md-btn-elevated",
-        /* Destructive */
-        destructive: [
-          "inline-flex items-center justify-center gap-2 h-10 px-6",
-          "rounded-[var(--md-shape-full)] font-medium text-sm tracking-[0.1px]",
-          "bg-[var(--md-error)] text-white border-none",
-          "hover:shadow-md active:shadow-none",
-          "transition-shadow",
-        ].join(" "),
-        link: "text-[var(--md-primary)] underline-offset-4 hover:underline bg-transparent border-none shadow-none",
+        default: "bg-primary text-primary-foreground shadow-sm shadow-black/5 hover:bg-primary/90",
+        destructive: "bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90",
+        outline: "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
+        secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+        ghost: "hover:bg-accent hover:text-accent-foreground",
+        link: "text-primary underline-offset-4 hover:underline bg-transparent border-none shadow-none",
+        elevated: "bg-card text-primary shadow-sm hover:shadow-md",
       },
       size: {
-        default: "h-10 px-6 text-sm",
-        sm: "h-8 px-4 text-xs",
-        lg: "h-12 px-8 text-base",
-        icon: "h-10 w-10 p-0 rounded-full",
+        default: "h-9 px-4 py-2 max-sm:min-h-[44px]",
+        sm: "h-8 rounded-lg px-3 text-xs max-sm:min-h-[44px]",
+        lg: "h-10 rounded-lg px-8 max-sm:min-h-[44px]",
+        icon: "h-9 w-9 max-sm:h-11 max-sm:w-11",
+        mobile: "h-12 px-6 text-base min-h-[44px]",
       },
     },
     defaultVariants: {
@@ -46,17 +36,28 @@ export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement>,
     VariantProps<typeof buttonVariants> {
   asChild?: boolean
+  isLoading?: boolean
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, asChild = false, ...props }, ref) => {
+  ({ className, variant, size, asChild = false, isLoading, children, disabled, ...props }, ref) => {
     const Comp = asChild ? Slot : "button"
     return (
       <Comp
         className={cn(buttonVariants({ variant, size, className }))}
         ref={ref}
+        disabled={disabled || isLoading}
         {...props}
-      />
+      >
+        {asChild ? (
+          children
+        ) : (
+          <>
+            {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+            {children}
+          </>
+        )}
+      </Comp>
     )
   },
 )

@@ -3,6 +3,7 @@ import { getDb } from "@/lib/db";
 import { organizations } from "@opendoor/database";
 import { eq } from "drizzle-orm";
 import { verifySiteAdmin, createToken } from "@/lib/auth";
+import { applySessionCookies } from "@/lib/session-cookie";
 
 export async function POST(req: NextRequest) {
   const auth = await verifySiteAdmin();
@@ -34,13 +35,7 @@ export async function POST(req: NextRequest) {
   });
 
   const response = NextResponse.json({ success: true });
-  response.cookies.set("session", token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    maxAge: 60 * 60 * 24 * 7,
-    path: "/",
-  });
+  applySessionCookies(response, token);
 
   return response;
 }

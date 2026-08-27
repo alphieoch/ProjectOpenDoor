@@ -1,12 +1,72 @@
 ---
-title: "Bring your own key"
-description: "Org-scoped provider keys used by the gateway before platform env keys."
+title: "Bring your own keys"
+description: "Org provider keys (Vertex, Together, OpenAI, …) encrypted at rest. The secret is never returned."
+showPageTitle: true
 ---
 
-# Bring your own key
+# Bring your own keys
 
-Add a provider secret in **Dashboard → API Keys**. It is encrypted with `API_SECRET_KEY` (AES-256-GCM) and never returned after create.
+Store an upstream provider secret on the organization. The gateway uses that key for the matching slug **before** the platform env key, then falls through unless `alwaysUse` is set or `provider.allow_fallbacks` is false.
 
-The gateway prefers that key for the matching slug, then the platform env key, then fallbacks — unless `provider.allow_fallbacks` is false or the key is marked always-use.
+The raw secret is encrypted (AES-256-GCM) and **never returned** after create. List responses show `providerSlug`, `label`, `keyPrefix` (for example `sk-a…xyz1`), and `alwaysUse`. Saving a second key for the same slug **rotates** the active row (old secret is revoked immediately).
 
-See [BYOK API](/api-reference/byok).
+## Dashboard
+
+1. [Dashboard → API keys]({{APP_URL}}/dashboard/api-keys) (Bring your own key section), or
+2. [Settings → Provider Keys]({{APP_URL}}/dashboard/settings/byok)
+
+Allowed slugs: `vertex`, `together`, `openai`, `anthropic`, `google`, `cohere`, `mistral`, `deepseek`, `qwen`, `groq`, `xai`, `azure-foundry`, `cerebras`, `perplexity`.
+
+`alwaysUse` pins that slug to the front of the chat provider chain.
+
+## Gateway API
+
+Same objects, API-key auth:
+
+```
+GET    /v1/byok
+POST   /v1/byok
+DELETE /v1/byok/:id
+```
+
+```bash
+export OPENDOOR_API_KEY=opd_…
+export OPENDOOR_BASE_URL={{GATEWAY_URL}}
+
+curl "$OPENDOOR_BASE_URL/v1/byok" \
+  -H "Authorization: Bearer $OPENDOOR_API_KEY"
+
+curl "$OPENDOOR_BASE_URL/v1/byok" \
+  -H "Authorization: Bearer $OPENDOOR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "providerSlug": "vertex",
+    "apiKey": "YOUR_PROVIDER_SECRET",
+    "label": "Prod Vertex",
+    "alwaysUse": false
+  }'
+```
+
+`provider` is accepted as an alias for `providerSlug`; `secret` is accepted as an alias for `apiKey`. The 201 body is the public row only — no secret field.
+
+```ts
+await client.byok.create({
+  providerSlug: "together",
+  apiKey: process.env.TOGETHER_API_KEY,
+  label: "Together overflow",
+});
+```
+
+## GCP on the team page
+
+[Dashboard → Team]({{APP_URL}}/dashboard/team) can store a **Google Cloud project id** and last-sync time for the workspace (`google-mcp`). That metadata is not a provider secret and is not echoed as a key. Platform Vertex chat / Search still use OpenDoor’s Cloud Run service account unless you add a `vertex` BYOK row.
+
+## Chat
+
+After a `vertex` (or `together`, …) key is saved, `POST /v1/chat/completions` can prefer that slug:
+
+```json
+{ "provider": { "order": ["vertex"], "allow_fallbacks": true } }
+```
+
+See [Chat](/api-reference/chat-completions) and [BYOK API](/api-reference/byok).

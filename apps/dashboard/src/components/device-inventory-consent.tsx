@@ -61,7 +61,7 @@ export function DeviceInventoryConsent({
 
   if (!consent && !error) {
     return (
-      <p className="text-sm" style={{ color: "var(--ink-3)", textAlign: "left" }}>
+      <p className="text-sm" style={{ color: "hsl(var(--muted-foreground))", textAlign: "left" }}>
         Checking permission…
       </p>
     );
@@ -70,7 +70,7 @@ export function DeviceInventoryConsent({
   if (consent?.granted) {
     return (
       <div style={{ textAlign: "left" }}>
-        <p className="text-sm" style={{ color: "var(--ink-3)" }}>
+        <p className="text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
           You allowed a one-time read of this machine so we can show dedicated-metal capacity. You can withdraw that permission.
         </p>
         <button
@@ -88,17 +88,17 @@ export function DeviceInventoryConsent({
 
   return (
     <div style={{ textAlign: "left" }}>
-      <p className="text-sm" style={{ lineHeight: 1.55, color: "var(--ink-3)" }}>
+      <p className="text-sm" style={{ lineHeight: 1.55, color: "hsl(var(--muted-foreground))" }}>
         We do not read this machine unless you allow it. If you allow, we look at Metal or GPU presence,
         usable memory, Ollama status, and local model tags — only to say whether dedicated metals can run a model.
         This is optional. Ochieng & Co cloud services work without it.{" "}
-        <Link href="/privacy" className="underline" style={{ color: "var(--ink-2)" }}>
+        <Link href="/privacy" className="underline" style={{ color: "hsl(var(--muted-foreground))" }}>
           Privacy policy
         </Link>
         .
       </p>
       {error ? (
-        <p className="mt-2 text-sm" style={{ color: "var(--ink-3)" }}>
+        <p className="mt-2 text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
           {error}
         </p>
       ) : null}

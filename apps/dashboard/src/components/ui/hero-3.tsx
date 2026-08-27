@@ -22,8 +22,7 @@ export function HeroSection({ signedIn = false, preview = null }: HeroSectionPro
         aria-hidden="true"
         className="pointer-events-none absolute inset-0"
       >
-        <div className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_60%_50%_at_10%_0%,rgba(59,130,246,0.12),transparent)]" />
-        <div className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_40%_60%_at_80%_-10%,rgba(99,102,241,0.10),transparent)]" />
+        <div className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_60%_50%_at_10%_0%,hsl(var(--estate-100)),transparent)]" />
       </div>
 
       {/* ── Centered content ── */}
@@ -33,14 +32,14 @@ export function HeroSection({ signedIn = false, preview = null }: HeroSectionPro
         <a
           href="/platform"
           className={cn(
-            "group flex w-fit items-center gap-3 rounded-full border border-slate-200 bg-white px-1.5 py-1 shadow-sm",
+            "group flex w-fit items-center gap-3 rounded-lg border border-border bg-card px-1.5 py-1 shadow-sm",
             "animate-in fade-in slide-in-from-bottom-4 fill-mode-backwards delay-500 duration-500 ease-out"
           )}
         >
-          <div className="rounded-full bg-blue-600 px-2.5 py-0.5">
-            <p className="font-mono text-xs font-semibold text-white">NEW</p>
+          <div className="rounded-full bg-blue-100 px-2.5 py-0.5 dark:bg-blue-900/80">
+            <p className="font-inter text-xs font-semibold text-blue-700 dark:text-blue-300">NEW</p>
           </div>
-          <span className="text-xs font-medium text-slate-600">
+          <span className="text-xs font-medium text-muted-foreground">
             Multi-provider routing with automatic fallback — now live
           </span>
           <span className="block h-4 border-l border-slate-200" />
@@ -52,7 +51,7 @@ export function HeroSection({ signedIn = false, preview = null }: HeroSectionPro
         {/* H1 */}
         <h1
           className={cn(
-            "text-balance text-5xl font-semibold leading-tight tracking-[-0.05em] text-slate-950 sm:text-6xl lg:text-7xl",
+            "text-balance font-garamond text-5xl font-semibold leading-tight tracking-[-0.03em] text-foreground sm:text-6xl lg:text-7xl",
             "animate-in fade-in slide-in-from-bottom-6 fill-mode-backwards delay-100 duration-500 ease-out"
           )}
         >
@@ -62,7 +61,7 @@ export function HeroSection({ signedIn = false, preview = null }: HeroSectionPro
         {/* Subhead */}
         <p
           className={cn(
-            "max-w-2xl text-lg leading-8 text-slate-600 sm:text-xl",
+            "max-w-2xl font-inter text-lg leading-8 text-muted-foreground sm:text-xl",
             "animate-in fade-in slide-in-from-bottom-6 fill-mode-backwards delay-200 duration-500 ease-out"
           )}
         >
@@ -81,7 +80,7 @@ export function HeroSection({ signedIn = false, preview = null }: HeroSectionPro
           {signedIn ? (
             <Link
               href="/dashboard"
-              className="inline-flex items-center justify-center gap-2 rounded-full bg-blue-600 px-7 py-4 text-base font-semibold text-white shadow-2xl shadow-blue-600/25 transition hover:-translate-y-0.5 hover:bg-blue-700"
+              className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg bg-primary px-7 py-4 text-base font-semibold text-primary-foreground transition hover:bg-primary/90"
             >
               Open dashboard <ArrowRight className="h-5 w-5" />
             </Link>
@@ -89,13 +88,13 @@ export function HeroSection({ signedIn = false, preview = null }: HeroSectionPro
             <>
               <Link
                 href="/get-started"
-                className="inline-flex items-center justify-center gap-2 rounded-full bg-blue-600 px-7 py-4 text-base font-semibold text-white shadow-2xl shadow-blue-600/25 transition hover:-translate-y-0.5 hover:bg-blue-700"
+                className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg bg-primary px-7 py-4 text-base font-semibold text-primary-foreground transition hover:bg-primary/90"
               >
                 Get started free <ArrowRight className="h-5 w-5" />
               </Link>
               <Link
                 href="/login"
-                className="inline-flex items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-7 py-4 text-base font-semibold text-slate-800 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300"
+                className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg border border-input bg-background px-7 py-4 text-base font-semibold text-foreground shadow-sm transition hover:bg-accent"
               >
                 Sign in <ChevronRight className="h-5 w-5" />
               </Link>

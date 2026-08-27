@@ -74,14 +74,14 @@ type EditState = Record<string, { status: string; evidence: string; saving?: boo
 const levelStyle: Record<string, { bg: string; color: string }> = {
   required:    { bg: "var(--red-soft)",    color: "var(--red)"    },
   recommended: { bg: "var(--yellow-soft)", color: "var(--yellow)" },
-  optional:    { bg: "var(--paper-3)",     color: "var(--ink-3)"  },
+  optional:    { bg: "hsl(var(--accent))",     color: "hsl(var(--muted-foreground))"  },
 };
 
 const statusStyle: Record<string, { bg: string; color: string }> = {
   compliant:     { bg: "var(--green-soft)",  color: "var(--green)"  },
   partial:       { bg: "var(--yellow-soft)", color: "var(--yellow)" },
   non_compliant: { bg: "var(--red-soft)",    color: "var(--red)"    },
-  not_assessed:  { bg: "var(--paper-3)",     color: "var(--ink-3)"  },
+  not_assessed:  { bg: "hsl(var(--accent))",     color: "hsl(var(--muted-foreground))"  },
 };
 
 const checkStatusStyle: Record<string, { bg: string; color: string; icon: any }> = {
@@ -108,7 +108,7 @@ const severityStyle = (s: string) => {
   if (s === "critical") return { bg: "var(--red-soft)", color: "var(--red)" };
   if (s === "high")     return { bg: "var(--orange-soft)", color: "var(--orange)" };
   if (s === "medium")   return { bg: "var(--yellow-soft)", color: "var(--yellow)" };
-  return { bg: "var(--paper-3)", color: "var(--ink-3)" };
+  return { bg: "hsl(var(--accent))", color: "hsl(var(--muted-foreground))" };
 };
 
 /* ── Page ── */
@@ -264,7 +264,7 @@ export default function CompliancePage() {
       />
 
       {/* Tabs */}
-      <div className="mb-6 flex gap-1 border-b" style={{ borderColor: "var(--line-soft)" }}>
+      <div className="mb-6 flex gap-1 border-b" style={{ borderColor: "hsl(var(--border))" }}>
         {([
           { id: "manual" as Tab,    label: "Manual Tracking",      icon: FileText },
           { id: "automated" as Tab, label: "Automated Compliance",  icon: Play     },
@@ -272,8 +272,8 @@ export default function CompliancePage() {
           <button key={id} onClick={() => setActiveTab(id)}
             className="flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors"
             style={{
-              color: activeTab === id ? "var(--ink)" : "var(--ink-4)",
-              borderBottom: activeTab === id ? "2px solid var(--ink)" : "2px solid transparent",
+              color: activeTab === id ? "hsl(var(--foreground))" : "hsl(var(--muted-foreground))",
+              borderBottom: activeTab === id ? "2px solid hsl(var(--foreground))" : "2px solid transparent",
               marginBottom: "-1px", background: "transparent", cursor: "pointer",
             }}>
             <Icon className="h-4 w-4" />
@@ -286,7 +286,7 @@ export default function CompliancePage() {
       {activeTab === "manual" && (
         loading ? (
           <div className="flex h-64 items-center justify-center">
-            <Loader2 className="h-5 w-5 animate-spin" style={{ color: "var(--ink-3)" }} />
+            <Loader2 className="h-5 w-5 animate-spin" style={{ color: "hsl(var(--muted-foreground))" }} />
           </div>
         ) : (
           <div className="space-y-6">
@@ -294,16 +294,16 @@ export default function CompliancePage() {
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 {frameworkStats.map(({ fw, total, compliant, partial, nonCompliant, notAssessed }) => (
                   <div key={fw} className="card p-4">
-                    <div className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--ink-4)" }}>
+                    <div className="text-xs font-semibold uppercase tracking-wider" style={{ color: "hsl(var(--muted-foreground))" }}>
                       {fw.replace(/_/g, " ")}
                     </div>
-                    <div className="mt-2 text-2xl font-semibold" style={{ color: "var(--ink)" }}>
+                    <div className="mt-2 text-2xl font-semibold" style={{ color: "hsl(var(--foreground))" }}>
                       {compliant}/{total}
                     </div>
                     <div className="mt-1 flex flex-wrap gap-x-2 text-xs">
                       {partial > 0      && <span style={{ color: "var(--yellow)" }}>{partial} partial</span>}
                       {nonCompliant > 0 && <span style={{ color: "var(--red)" }}>{nonCompliant} non-compliant</span>}
-                      {notAssessed > 0  && <span style={{ color: "var(--ink-4)" }}>{notAssessed} not assessed</span>}
+                      {notAssessed > 0  && <span style={{ color: "hsl(var(--muted-foreground))" }}>{notAssessed} not assessed</span>}
                     </div>
                   </div>
                 ))}
@@ -311,7 +311,7 @@ export default function CompliancePage() {
             )}
             {models.length > 0 && (
               <div className="flex items-center gap-3">
-                <label className="text-sm font-medium" style={{ color: "var(--ink)" }}>Model</label>
+                <label className="text-sm font-medium" style={{ color: "hsl(var(--foreground))" }}>Model</label>
                 <select value={selectedModel} onChange={(e) => setSelected(e.target.value)} className="input w-auto">
                   {models.map((m) => <option key={m.id} value={m.id}>{m.displayName}</option>)}
                 </select>
@@ -319,14 +319,14 @@ export default function CompliancePage() {
             )}
             {frameworks.map((fw) => (
               <div key={fw} className="card overflow-hidden">
-                <div className="px-5 py-3" style={{ borderBottom: "1px solid var(--line)", background: "var(--paper-3)" }}>
-                  <h3 className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--ink-2)" }}>
+                <div className="px-5 py-3" style={{ borderBottom: "1px solid hsl(var(--border))", background: "hsl(var(--accent))" }}>
+                  <h3 className="text-xs font-semibold uppercase tracking-wider" style={{ color: "hsl(var(--muted-foreground))" }}>
                     {fw.replace(/_/g, " ")}
                   </h3>
                 </div>
                 <table className="w-full">
                   <thead>
-                    <tr style={{ borderBottom: "1px solid var(--line-soft)" }}>
+                    <tr style={{ borderBottom: "1px solid hsl(var(--border))" }}>
                       <th className="table-header-cell text-left">Control</th>
                       <th className="table-header-cell text-left">Level</th>
                       <th className="table-header-cell text-left">Status</th>
@@ -343,11 +343,11 @@ export default function CompliancePage() {
                       const st = statusStyle[currentStatus] ?? statusStyle.not_assessed;
                       const edit = edits[ctrl.id];
                       return (
-                        <tr key={ctrl.id} style={{ borderBottom: "1px solid var(--line-soft)" }}>
+                        <tr key={ctrl.id} style={{ borderBottom: "1px solid hsl(var(--border))" }}>
                           <td className="table-cell">
-                            <div className="font-medium" style={{ color: "var(--ink)" }}>{ctrl.controlCode}</div>
-                            <div className="text-xs mt-0.5" style={{ color: "var(--ink-2)" }}>{ctrl.controlName}</div>
-                            {ctrl.description && <div className="text-xs mt-0.5" style={{ color: "var(--ink-3)" }}>{ctrl.description}</div>}
+                            <div className="font-medium" style={{ color: "hsl(var(--foreground))" }}>{ctrl.controlCode}</div>
+                            <div className="text-xs mt-0.5" style={{ color: "hsl(var(--muted-foreground))" }}>{ctrl.controlName}</div>
+                            {ctrl.description && <div className="text-xs mt-0.5" style={{ color: "hsl(var(--muted-foreground))" }}>{ctrl.description}</div>}
                           </td>
                           <td className="table-cell">
                             <span className="inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium capitalize"
@@ -393,7 +393,7 @@ export default function CompliancePage() {
       {/* ── Automated Tab ── */}
       {activeTab === "automated" && loadingAuto && (
         <div className="flex h-40 items-center justify-center">
-          <Loader2 className="h-5 w-5 animate-spin" style={{ color: "var(--ink-3)" }} />
+          <Loader2 className="h-5 w-5 animate-spin" style={{ color: "hsl(var(--muted-foreground))" }} />
         </div>
       )}
       {activeTab === "automated" && !loadingAuto && (
@@ -402,19 +402,19 @@ export default function CompliancePage() {
           <div className="card p-4">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-3">
-                <label className="text-sm font-medium" style={{ color: "var(--ink)" }}>Model</label>
+                <label className="text-sm font-medium" style={{ color: "hsl(var(--foreground))" }}>Model</label>
                 <select value={selectedModel} onChange={(e) => setSelected(e.target.value)} className="input w-auto">
                   {models.map((m) => <option key={m.id} value={m.id}>{m.displayName}</option>)}
                 </select>
               </div>
               <div className="flex items-center gap-3">
-                <div className="flex gap-1 border-b" style={{ borderColor: "var(--line-soft)" }}>
+                <div className="flex gap-1 border-b" style={{ borderColor: "hsl(var(--border))" }}>
                   {([["rules", "Rules"], ["reports", `Reports (${reports.length})`]] as [AutoSubTab, string][]).map(([id, label]) => (
                     <button key={id} onClick={() => { setAutoSubTab(id); setSelectedReport(null); }}
                       className="px-3 py-2 text-xs font-medium transition-colors"
                       style={{
-                        color: autoSubTab === id ? "var(--ink)" : "var(--ink-4)",
-                        borderBottom: autoSubTab === id ? "2px solid var(--ink)" : "2px solid transparent",
+                        color: autoSubTab === id ? "hsl(var(--foreground))" : "hsl(var(--muted-foreground))",
+                        borderBottom: autoSubTab === id ? "2px solid hsl(var(--foreground))" : "2px solid transparent",
                         marginBottom: "-1px", background: "transparent", cursor: "pointer",
                       }}>
                       {label}
@@ -436,17 +436,17 @@ export default function CompliancePage() {
           {/* Sub: Rules */}
           {autoSubTab === "rules" && (
             <div className="card overflow-hidden">
-              <div className="px-5 py-3" style={{ borderBottom: "1px solid var(--line)", background: "var(--paper-3)" }}>
-                <h3 className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--ink-2)" }}>
+              <div className="px-5 py-3" style={{ borderBottom: "1px solid hsl(var(--border))", background: "hsl(var(--accent))" }}>
+                <h3 className="text-xs font-semibold uppercase tracking-wider" style={{ color: "hsl(var(--muted-foreground))" }}>
                   Automated Compliance Rules
                 </h3>
-                <p className="mt-1 text-xs" style={{ color: "var(--ink-3)" }}>
+                <p className="mt-1 text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
                   These rules are automatically evaluated when you run a compliance check.
                 </p>
               </div>
               <table className="w-full">
                 <thead>
-                  <tr style={{ borderBottom: "1px solid var(--line-soft)" }}>
+                  <tr style={{ borderBottom: "1px solid hsl(var(--border))" }}>
                     <th className="table-header-cell text-left">Rule</th>
                     <th className="table-header-cell text-left">Framework</th>
                     <th className="table-header-cell text-left">Severity</th>
@@ -456,19 +456,19 @@ export default function CompliancePage() {
                 </thead>
                 <tbody>
                   {rules.map((rule) => (
-                    <tr key={rule.id} style={{ borderBottom: "1px solid var(--line-soft)" }}>
+                    <tr key={rule.id} style={{ borderBottom: "1px solid hsl(var(--border))" }}>
                       <td className="table-cell">
-                        <div className="font-medium text-sm" style={{ color: "var(--ink)" }}>{rule.name}</div>
-                        <div className="text-xs mt-0.5" style={{ color: "var(--ink-3)" }}>{rule.description}</div>
+                        <div className="font-medium text-sm" style={{ color: "hsl(var(--foreground))" }}>{rule.name}</div>
+                        <div className="text-xs mt-0.5" style={{ color: "hsl(var(--muted-foreground))" }}>{rule.description}</div>
                         {rule.recommendation && (
-                          <div className="flex items-start gap-1 text-xs mt-1" style={{ color: "var(--ink-2)" }}>
+                          <div className="flex items-start gap-1 text-xs mt-1" style={{ color: "hsl(var(--muted-foreground))" }}>
                             <Info className="h-3 w-3 mt-0.5 shrink-0" />
                             {rule.recommendation}
                           </div>
                         )}
                       </td>
                       <td className="table-cell">
-                        <span className="text-xs font-medium uppercase" style={{ color: "var(--ink-2)" }}>
+                        <span className="text-xs font-medium uppercase" style={{ color: "hsl(var(--muted-foreground))" }}>
                           {rule.framework?.replace(/_/g, " ")}
                         </span>
                       </td>
@@ -479,12 +479,12 @@ export default function CompliancePage() {
                         </span>
                       </td>
                       <td className="table-cell">
-                        <span className="text-xs" style={{ color: "var(--ink-3)" }}>{rule.ruleType.replace(/_/g, " ")}</span>
+                        <span className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>{rule.ruleType.replace(/_/g, " ")}</span>
                       </td>
                       <td className="table-cell">
                         {rule.referenceUrl && (
                           <a href={rule.referenceUrl} target="_blank" rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 text-xs" style={{ color: "var(--brand, #1A73E8)" }}>
+                            className="inline-flex items-center gap-1 text-xs" style={{ color: "var(--brand, #0F172A)" }}>
                             <ExternalLink className="h-3 w-3" />
                             {rule.referenceName || "Reference"}
                           </a>
@@ -502,9 +502,9 @@ export default function CompliancePage() {
             <div className="space-y-4">
               {reports.length === 0 ? (
                 <div className="card p-8 text-center">
-                  <ShieldCheck className="h-8 w-8 mx-auto mb-3" style={{ color: "var(--ink-3)" }} />
-                  <p className="text-sm font-medium" style={{ color: "var(--ink)" }}>No reports yet</p>
-                  <p className="text-xs mt-1" style={{ color: "var(--ink-3)" }}>
+                  <ShieldCheck className="h-8 w-8 mx-auto mb-3" style={{ color: "hsl(var(--muted-foreground))" }} />
+                  <p className="text-sm font-medium" style={{ color: "hsl(var(--foreground))" }}>No reports yet</p>
+                  <p className="text-xs mt-1" style={{ color: "hsl(var(--muted-foreground))" }}>
                     Run an automated compliance check to generate your first report.
                   </p>
                 </div>
@@ -515,16 +515,16 @@ export default function CompliancePage() {
                       <div className="flex items-start justify-between">
                         <div>
                           <div className="flex items-center gap-2">
-                            <h3 className="text-sm font-medium" style={{ color: "var(--ink)" }}>{report.title}</h3>
+                            <h3 className="text-sm font-medium" style={{ color: "hsl(var(--foreground))" }}>{report.title}</h3>
                             <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${report.passed ? "text-green-700" : "text-red-700"}`}
                               style={{ background: report.passed ? "var(--green-soft)" : "var(--red-soft)" }}>
                               {report.passed ? <ShieldCheck className="h-3 w-3" /> : <ShieldAlert className="h-3 w-3" />}
                               {report.passed ? "Passed" : "Issues Found"}
                             </span>
                           </div>
-                          <p className="text-xs mt-1" style={{ color: "var(--ink-3)" }}>{report.description}</p>
-                          <div className="flex gap-3 mt-2 text-xs" style={{ color: "var(--ink-3)" }}>
-                            <span>Score: <strong style={{ color: "var(--ink)" }}>{report.score}%</strong></span>
+                          <p className="text-xs mt-1" style={{ color: "hsl(var(--muted-foreground))" }}>{report.description}</p>
+                          <div className="flex gap-3 mt-2 text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
+                            <span>Score: <strong style={{ color: "hsl(var(--foreground))" }}>{report.score}%</strong></span>
                             <span>{report.findings?.length || 0} checks</span>
                             <span>{report.recommendations?.length || 0} recommendations</span>
                             <span>{new Date(report.generatedAt).toLocaleDateString()}</span>
@@ -565,9 +565,9 @@ export default function CompliancePage() {
                 <div className="card p-6">
                   <div className="flex items-start justify-between">
                     <div>
-                      <h2 className="text-xl font-semibold" style={{ color: "var(--ink)" }}>{selectedReport.title}</h2>
-                      <p className="text-sm mt-1" style={{ color: "var(--ink-3)" }}>{selectedReport.description}</p>
-                      <p className="text-xs mt-2" style={{ color: "var(--ink-4)" }}>
+                      <h2 className="text-xl font-semibold" style={{ color: "hsl(var(--foreground))" }}>{selectedReport.title}</h2>
+                      <p className="text-sm mt-1" style={{ color: "hsl(var(--muted-foreground))" }}>{selectedReport.description}</p>
+                      <p className="text-xs mt-2" style={{ color: "hsl(var(--muted-foreground))" }}>
                         Generated on {new Date(selectedReport.generatedAt).toLocaleString()}
                       </p>
                     </div>
@@ -596,9 +596,9 @@ export default function CompliancePage() {
                         <div className="text-lg font-semibold" style={{ color: "var(--yellow)" }}>{selectedReport.statusSummary.warning}</div>
                         <div className="text-xs" style={{ color: "var(--yellow)" }}>Warnings</div>
                       </div>
-                      <div className="rounded-lg p-3 text-center" style={{ background: "var(--paper-3)" }}>
-                        <div className="text-lg font-semibold" style={{ color: "var(--ink)" }}>{selectedReport.statusSummary.total}</div>
-                        <div className="text-xs" style={{ color: "var(--ink-3)" }}>Total Checks</div>
+                      <div className="rounded-lg p-3 text-center" style={{ background: "hsl(var(--accent))" }}>
+                        <div className="text-lg font-semibold" style={{ color: "hsl(var(--foreground))" }}>{selectedReport.statusSummary.total}</div>
+                        <div className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>Total Checks</div>
                       </div>
                     </div>
                   )}
@@ -606,12 +606,12 @@ export default function CompliancePage() {
 
                 {/* Findings */}
                 <div className="card overflow-hidden">
-                  <div className="px-5 py-3" style={{ borderBottom: "1px solid var(--line)", background: "var(--paper-3)" }}>
-                    <h3 className="text-sm font-semibold" style={{ color: "var(--ink)" }}>Findings</h3>
+                  <div className="px-5 py-3" style={{ borderBottom: "1px solid hsl(var(--border))", background: "hsl(var(--accent))" }}>
+                    <h3 className="text-sm font-semibold" style={{ color: "hsl(var(--foreground))" }}>Findings</h3>
                   </div>
                   <table className="w-full">
                     <thead>
-                      <tr style={{ borderBottom: "1px solid var(--line-soft)" }}>
+                      <tr style={{ borderBottom: "1px solid hsl(var(--border))" }}>
                         <th className="table-header-cell text-left">Check</th>
                         <th className="table-header-cell text-left">Framework</th>
                         <th className="table-header-cell text-left">Severity</th>
@@ -624,12 +624,12 @@ export default function CompliancePage() {
                         const st = checkStatusStyle[finding.status] || checkStatusStyle.warning;
                         const Icon = st.icon;
                         return (
-                          <tr key={idx} style={{ borderBottom: "1px solid var(--line-soft)" }}>
+                          <tr key={idx} style={{ borderBottom: "1px solid hsl(var(--border))" }}>
                             <td className="table-cell">
-                              <div className="font-medium text-sm" style={{ color: "var(--ink)" }}>{finding.ruleName}</div>
+                              <div className="font-medium text-sm" style={{ color: "hsl(var(--foreground))" }}>{finding.ruleName}</div>
                             </td>
                             <td className="table-cell">
-                              <span className="text-xs uppercase" style={{ color: "var(--ink-3)" }}>
+                              <span className="text-xs uppercase" style={{ color: "hsl(var(--muted-foreground))" }}>
                                 {finding.framework?.replace(/_/g, " ")}
                               </span>
                             </td>
@@ -646,7 +646,7 @@ export default function CompliancePage() {
                                 {finding.status}
                               </span>
                             </td>
-                            <td className="table-cell text-xs max-w-xs" style={{ color: "var(--ink-2)" }}>
+                            <td className="table-cell text-xs max-w-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
                               {finding.detail}
                             </td>
                           </tr>
@@ -659,12 +659,12 @@ export default function CompliancePage() {
                 {/* Recommendations */}
                 {selectedReport.recommendations && selectedReport.recommendations.length > 0 && (
                   <div className="card overflow-hidden">
-                    <div className="px-5 py-3" style={{ borderBottom: "1px solid var(--line)", background: "var(--paper-3)" }}>
-                      <h3 className="text-sm font-semibold" style={{ color: "var(--ink)" }}>
+                    <div className="px-5 py-3" style={{ borderBottom: "1px solid hsl(var(--border))", background: "hsl(var(--accent))" }}>
+                      <h3 className="text-sm font-semibold" style={{ color: "hsl(var(--foreground))" }}>
                         Recommendations & Action Items
                       </h3>
                     </div>
-                    <div className="divide-y" style={{ borderColor: "var(--line)" }}>
+                    <div className="divide-y" style={{ borderColor: "hsl(var(--border))" }}>
                       {selectedReport.recommendations.map((rec: any, idx: number) => (
                         <div key={idx} className="px-5 py-4">
                           <div className="flex items-start gap-3">
@@ -673,16 +673,16 @@ export default function CompliancePage() {
                             </div>
                             <div className="flex-1">
                               <div className="flex items-center gap-2">
-                                <span className="text-sm font-medium" style={{ color: "var(--ink)" }}>{rec.ruleName}</span>
+                                <span className="text-sm font-medium" style={{ color: "hsl(var(--foreground))" }}>{rec.ruleName}</span>
                                 <span className="inline-flex rounded-full px-2 py-0.5 text-xs font-medium capitalize"
                                   style={{ background: severityStyle(rec.severity).bg, color: severityStyle(rec.severity).color }}>
                                   {rec.severity}
                                 </span>
                               </div>
-                              <p className="text-sm mt-1" style={{ color: "var(--ink-2)" }}>{rec.recommendation}</p>
+                              <p className="text-sm mt-1" style={{ color: "hsl(var(--muted-foreground))" }}>{rec.recommendation}</p>
                               {rec.referenceUrl && (
                                 <a href={rec.referenceUrl} target="_blank" rel="noopener noreferrer"
-                                  className="inline-flex items-center gap-1 text-xs mt-2" style={{ color: "var(--brand)" }}>
+                                  className="inline-flex items-center gap-1 text-xs mt-2" style={{ color: "hsl(var(--primary))" }}>
                                   <ExternalLink className="h-3 w-3" />
                                   {rec.referenceName || "Learn more"}
                                 </a>
@@ -698,11 +698,11 @@ export default function CompliancePage() {
                 {/* Framework breakdown */}
                 {selectedReport.statusSummary?.frameworks && (
                   <div className="card p-5">
-                    <h3 className="text-sm font-semibold mb-4" style={{ color: "var(--ink)" }}>Framework Breakdown</h3>
+                    <h3 className="text-sm font-semibold mb-4" style={{ color: "hsl(var(--foreground))" }}>Framework Breakdown</h3>
                     <div className="grid gap-3 sm:grid-cols-2">
                       {Object.entries(selectedReport.statusSummary.frameworks).map(([fw, stats]: [string, any]) => (
-                        <div key={fw} className="rounded-lg border p-3" style={{ borderColor: "var(--line)" }}>
-                          <div className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--ink-4)" }}>
+                        <div key={fw} className="rounded-lg border p-3" style={{ borderColor: "hsl(var(--border))" }}>
+                          <div className="text-xs font-semibold uppercase tracking-wider" style={{ color: "hsl(var(--muted-foreground))" }}>
                             {fw.replace(/_/g, " ")}
                           </div>
                           <div className="mt-2 flex gap-3 text-xs">
@@ -717,7 +717,7 @@ export default function CompliancePage() {
                 )}
 
                 {/* Footer */}
-                <div className="text-center text-xs py-4" style={{ color: "var(--ink-4)" }}>
+                <div className="text-center text-xs py-4" style={{ color: "hsl(var(--muted-foreground))" }}>
                   <p>This report was generated automatically by OpenDoor Governance.</p>
                   <p className="mt-1">For questions about compliance requirements, consult your legal and risk teams.</p>
                 </div>

@@ -4,6 +4,9 @@ import { getDb } from "@/lib/db";
 import { aiAssistants, organizations } from "@opendoor/database";
 import { eq } from "drizzle-orm";
 import { getSession } from "@/lib/auth";
+import { publicErrorMessage } from "@/lib/client-error";
+import { ALLOWED_AUTH_ORIGINS, resolveAppOrigin } from "@/lib/public-urls";
+import { safeReturnUrl } from "@/lib/safe-redirect";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
   try {
@@ -54,7 +57,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
     }
 
     const body = await req.json().catch(() => ({}));
-    const returnUrl = body.returnUrl || `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3002"}/ai/${slug}`;
+    const origin = resolveAppOrigin(req);
+    const returnUrl =
+      safeReturnUrl(body.returnUrl, [...ALLOWED_AUTH_ORIGINS, origin]) ||
+      `${origin}/ai/${slug}`;
 
     const checkoutSession = await stripe.checkout.sessions.create({
       customer: customerId,
@@ -74,10 +80,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
     });
 
     return NextResponse.json({ url: checkoutSession.url });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Assistant checkout error:", error);
     return NextResponse.json(
-      { error: error.message || "Failed to create checkout session" },
+      { error: publicErrorMessage(error, "Failed to create checkout session") },
       { status: 500 }
     );
   }

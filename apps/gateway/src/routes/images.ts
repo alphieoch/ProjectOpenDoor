@@ -22,6 +22,7 @@ import {
   defaultImageModel,
   generateVertexImage,
   isOpenAiImageModel,
+  isVertexImageRequest,
   listedImageModels,
   vertexMediaConfigured,
 } from "../lib/vertex-media.js";
@@ -61,7 +62,8 @@ async function readImageBody(c: { req: { header: (name: string) => string | unde
       steps: form.get("steps") != null ? Number(form.get("steps")) : undefined,
       negative_prompt: String(form.get("negative_prompt") || form.get("negativePrompt") || ""),
       quality: form.get("quality") ? String(form.get("quality")) : undefined,
-      aspect_ratio: form.get("aspect_ratio") ? String(form.get("aspect_ratio")) : undefined,
+      aspect_ratio: form.get("aspect_ratio") || form.get("aspectRatio") ? String(form.get("aspect_ratio") || form.get("aspectRatio")) : undefined,
+      image_size: form.get("image_size") || form.get("imageSize") ? String(form.get("image_size") || form.get("imageSize")) : undefined,
       mask: form.get("mask") || undefined,
     };
   }
@@ -85,6 +87,7 @@ async function readImageBody(c: { req: { header: (name: string) => string | unde
           : "",
     quality: body.quality,
     aspect_ratio: body.aspect_ratio || body.aspectRatio,
+    image_size: body.image_size || body.imageSize,
     mask: body.mask,
   };
 }
@@ -316,17 +319,23 @@ imagesRouter.post("/generations", async (c) => {
   const generateVertex = async () => {
     if (!vertexOn) return null;
     const generated = await generateVertexImage({
-      model:
-        isOpenAiImageModel(model) ||
-        model.startsWith("opendoor-") ||
-        model.startsWith("premium:") ||
-        model.startsWith("custom:")
+      model: isVertexImageRequest(model)
+        ? model
+        : isOpenAiImageModel(model) ||
+            model.startsWith("opendoor-") ||
+            model.startsWith("premium:") ||
+            model.startsWith("custom:")
           ? defaultImageModel()
           : model || defaultImageModel(),
       prompt,
       n,
       size: body.size,
-      aspect_ratio: body.aspect_ratio,
+      aspect_ratio: typeof body.aspect_ratio === "string" ? body.aspect_ratio : undefined,
+      image_size:
+        body.image_size === "1K" || body.image_size === "2K" || body.image_size === "4K"
+          ? body.image_size
+          : undefined,
+      quality: typeof body.quality === "string" ? body.quality : undefined,
       image: body.image,
       mask: body.mask,
     });
@@ -347,6 +356,28 @@ imagesRouter.post("/generations", async (c) => {
   };
 
   try {
+    if (isVertexImageRequest(model)) {
+      if (!vertexOn) {
+        return c.json(
+          { error: "Google image generation is not configured. Set Vertex credentials for Nano Banana." },
+          503
+        );
+      }
+      try {
+        const vertex = await generateVertex();
+        if (vertex) return vertex;
+      } catch (err) {
+        if (err instanceof VertexMediaConfigError) {
+          return c.json({ error: err.message }, 503);
+        }
+        if (err instanceof VertexMediaUpstreamError) {
+          const status = err.status === 404 ? 404 : err.status === 400 ? 400 : 502;
+          return c.json({ error: err.message }, status);
+        }
+        throw err;
+      }
+    }
+
     if (preferPrivate) {
       try {
         return await generateOnPrivateGpu();

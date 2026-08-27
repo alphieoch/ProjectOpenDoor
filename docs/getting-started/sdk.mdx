@@ -1,10 +1,12 @@
 ---
-title: "TypeScript SDK"
+title: "JavaScript SDK"
 description: "Call the OpenDoor gateway from Node, Bun, or the browser with @opendoor/sdk."
 showPageTitle: true
 ---
 
-`@opendoor/sdk` is a small `fetch`-based client. It reads `OPENDOOR_API_KEY` and `OPENDOOR_BASE_URL` (default `http://localhost:3001`).
+# JavaScript SDK
+
+`@opendoor/sdk` is a `fetch` client in `packages/sdk`. It reads `OPENDOOR_API_KEY` and `OPENDOOR_BASE_URL` (gateway origin, **no** `/v1` suffix).
 
 ## Install
 
@@ -14,36 +16,31 @@ From this monorepo:
 bun add @opendoor/sdk
 ```
 
-The package lives at `packages/sdk` and is exported as `@opendoor/sdk`.
-
-## Usage
+## Chat
 
 ```ts
 import { OpenDoor } from "@opendoor/sdk";
 
-const client = new OpenDoor();
-// or: new OpenDoor({ apiKey: "opd_…", baseURL: "http://localhost:3001" })
+const client = new OpenDoor({
+  apiKey: process.env.OPENDOOR_API_KEY,
+  baseURL: process.env.OPENDOOR_BASE_URL ?? "{{GATEWAY_URL}}",
+});
 
 const chat = await client.chat.completions.create({
-  model: "llama-3.1-8b-instruct",
-  messages: [{ role: "user", content: "Hello" }],
-  provider: {
-    sort: "price",
-    allow_fallbacks: true,
-    order: ["together", "groq"],
-  },
+  model: "{{EXAMPLE_MODEL}}",
+  messages: [{ role: "user", content: "Hello from OpenDoor" }],
 });
 
 console.log(chat.choices[0]?.message.content);
 ```
 
-`provider` is OpenRouter-shaped: `{ order, allow_fallbacks, sort, only, ignore }`. Omit it to use the gateway default.
+`provider` is OpenRouter-shaped: `{ order, allow_fallbacks, sort, only, ignore }`. Omit it for the gateway default.
 
 ### Streaming
 
 ```ts
 const stream = await client.chat.completions.create({
-  model: "llama-3.1-8b-instruct",
+  model: "{{EXAMPLE_MODEL}}",
   messages: [{ role: "user", content: "Hello" }],
   stream: true,
 });
@@ -54,28 +51,36 @@ for await (const chunk of stream) {
 }
 ```
 
-### Other methods
+### OpenAI SDK
 
 ```ts
-await client.catalog.list(); // every /v1 endpoint
-await client.account.get();
-await client.account.balance();
-await client.usage.get({ days: 30 });
-await client.models.list();
-await client.assistants.create({ name: "Bot", modelId: "opendoor/auto" });
-await client.assistants.chat(id, { messages: [{ role: "user", content: "Hi" }] });
-await client.workflows.run(id, { query: "Summarize billing" });
-await client.generations.get("request-uuid");
-await client.images.generate({ model: "gemini-2.5-flash-image", prompt: "a red door" });
-await client.videos.generate({ model: "veo-3.1-fast-generate-001", prompt: "a red cube" });
-await client.audio.transcribe({ model: "whisper-1", file });
-await client.batches.list();
+import OpenAI from "openai";
+
+const client = new OpenAI({
+  apiKey: process.env.OPENDOOR_API_KEY,
+  baseURL: "{{GATEWAY_URL}}/v1",
+});
 ```
 
-The same key covers assistants, workflows, training, deployments, agents, BYOK, policies, files, and premium rentals. See [Platform API](/api-reference/platform).
+## Models, Search, OpenBot
 
-## Related
+```ts
+await client.models.list();
+await client.plugins.webSearch({ query: "OpenDoor LLM gateway", max_results: 5 });
 
-- [CLI](/getting-started/cli)
-- [Chat completions](/api-reference/chat-completions)
-- [Playground](/how-it-works/playground)
+const agent = await client.agents.create({
+  name: "Desk",
+  runtime: "openbot",
+  modelId: "{{EXAMPLE_MODEL}}",
+});
+const turn = await client.agents.chat(agent.id, {
+  message: "Open https://example.com and summarize the page.",
+});
+await client.agents.computer(agent.id, "take");
+```
+
+Search is Vertex grounding at **$0.10 / query** (included on Enterprise). Agents need the Agents add-on. See [Search](/api-reference/web-search) and [Agents](/api-reference/agents).
+
+`client.catalog.list()` is `GET /v1/catalog` — every mounted `/v1` path.
+
+Errors: `OpenDoorError` with `.status` and `.body`. See [Errors](/api-reference/errors) and [Python SDK](/getting-started/python).

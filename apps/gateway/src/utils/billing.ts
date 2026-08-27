@@ -1,9 +1,11 @@
 // @ts-nocheck
-import { db, organizations, creditTransactions } from "@opendoor/database";
-import { eq } from "drizzle-orm";
-import { splitCreditBuckets, welcomeAllowedForFamily } from "@opendoor/shared";
+import { db, organizations, creditTransactions, users } from "@opendoor/database";
+import { and, eq, gte, sql } from "drizzle-orm";
+import { billingIsUnlimited, evaluateMonthlySeatCap, splitCreditBuckets, welcomeAllowedForFamily } from "@opendoor/shared";
 import type { BillingPlan, ModelFamily } from "./pricing.js";
+import { spendFifoCredits } from "./credit-ledger.js";
 import { createRedis } from "../lib/redis.js";
+import { asUuid } from "../lib/provider-id.js";
 
 const redis = createRedis();
 const FOUR_HOURS_MS = 4 * 60 * 60 * 1000;
@@ -15,6 +17,7 @@ export interface BillingContext {
   useFromPlan: boolean;
   useFromCredits: boolean;
   estimatedCostUsd?: number;
+  userId?: string | null;
 }
 
 export function getPlanBudgetLimitCents(_plan: BillingPlan): number {
@@ -26,6 +29,76 @@ export function getPlanBudgetLimitCents(_plan: BillingPlan): number {
 
 export function usdToCents(usd: number): number {
   return Math.max(0, Math.ceil(usd * 100));
+}
+
+export async function monthUserSpendCents(orgId: string, userId: string) {
+  const monthStart = new Date();
+  monthStart.setUTCDate(1);
+  monthStart.setUTCHours(0, 0, 0, 0);
+  const spent = await db
+    .select({
+      total: sql<number>`COALESCE(SUM(CASE WHEN ${creditTransactions.amountCents} < 0 THEN -${creditTransactions.amountCents} ELSE 0 END), 0)`,
+    })
+    .from(creditTransactions)
+    .where(
+      and(
+        eq(creditTransactions.organizationId, orgId),
+        gte(creditTransactions.createdAt, monthStart),
+        sql`${creditTransactions.metadata}->>'userId' = ${userId}`,
+      ),
+    );
+  return Number(spent[0]?.total || 0);
+}
+
+export async function assertMonthlySeatCap(
+  orgId: string,
+  userId: string | null | undefined,
+  estimatedCostCents = 0,
+): Promise<
+  | { ok: true }
+  | { ok: false; status: 402; body: Record<string, unknown> }
+> {
+  if (!userId || !asUuid(userId)) return { ok: true };
+  const member = await db.query.users.findFirst({
+    where: and(eq(users.id, userId), eq(users.organizationId, orgId)),
+    columns: { monthlyCreditSubCapCents: true, isSiteAdmin: true },
+  });
+  if (!member || member.isSiteAdmin) return { ok: true };
+  const usedCents = await monthUserSpendCents(orgId, userId);
+  const decision = evaluateMonthlySeatCap({
+    monthlyCreditSubCapCents: member.monthlyCreditSubCapCents,
+    usedCents,
+    estimatedCostCents,
+  });
+  if (decision.ok) return { ok: true };
+  return {
+    ok: false,
+    status: 402,
+    body: {
+      error: decision.error,
+      monthlyCreditSubCapCents: decision.monthlyCreditSubCapCents,
+      usedCents: decision.usedCents,
+    },
+  };
+}
+
+export async function orgHasUnlimitedSpend(
+  org: { id: string; plan?: string | null },
+  userId?: string | null
+) {
+  if (billingIsUnlimited({ plan: org.plan })) return true;
+  if (asUuid(userId)) {
+    const member = await db.query.users.findFirst({
+      where: and(eq(users.id, userId), eq(users.organizationId, org.id)),
+      columns: { isSiteAdmin: true },
+    });
+    return billingIsUnlimited({ isSiteAdmin: member?.isSiteAdmin, plan: org.plan });
+  }
+  const siteAdmin = await db.query.users.findFirst({
+    where: and(eq(users.organizationId, org.id), eq(users.isSiteAdmin, true)),
+    columns: { id: true },
+  });
+  return Boolean(siteAdmin);
 }
 
 export function centsToUsd(cents: number): number {
@@ -130,81 +203,16 @@ export async function debitCredits(
   orgId: string,
   amountCents: number,
   requestId?: string,
-  options?: { allowWelcome?: boolean }
+  options?: { allowWelcome?: boolean; userId?: string | null; source?: string }
 ) {
   if (amountCents <= 0) return 0;
-  const allowWelcome = Boolean(options?.allowWelcome);
-
-  return db.transaction(async (tx) => {
-    const org = await tx.query.organizations.findFirst({
-      where: eq(organizations.id, orgId),
-      columns: {
-        creditsUsdCents: true,
-        welcomeCreditsUsdCents: true,
-        welcomeExpiresAt: true,
-      },
-    });
-    if (!org) {
-      throw new Error("Organization not found");
-    }
-
-    let buckets = splitCreditBuckets(org);
-    if (buckets.expired && buckets.clawbackCents > 0) {
-      const nextTotal = Math.max(0, buckets.totalCents - buckets.clawbackCents);
-      await tx
-        .update(organizations)
-        .set({ creditsUsdCents: nextTotal, welcomeCreditsUsdCents: 0 })
-        .where(eq(organizations.id, orgId));
-      await tx.insert(creditTransactions).values({
-        organizationId: orgId,
-        kind: "welcome_expire",
-        amountCents: -buckets.clawbackCents,
-        balanceAfterCents: nextTotal,
-        metadata: { source: "welcome_expiry" },
-      });
-      buckets = splitCreditBuckets({
-        creditsUsdCents: nextTotal,
-        welcomeCreditsUsdCents: 0,
-        welcomeExpiresAt: org.welcomeExpiresAt,
-      });
-    }
-
-    const spendable = allowWelcome ? buckets.totalCents : buckets.paidCents;
-    if (spendable < amountCents) {
-      throw new Error(
-        allowWelcome
-          ? "Insufficient prepaid balance"
-          : "Welcome credit cannot cover this charge. Add prepaid credit."
-      );
-    }
-
-    const fromWelcome = allowWelcome
-      ? Math.min(buckets.welcomeCents, amountCents)
-      : 0;
-    const newBalance = buckets.totalCents - amountCents;
-    const newWelcome = buckets.welcomeCents - fromWelcome;
-
-    await tx
-      .update(organizations)
-      .set({
-        creditsUsdCents: newBalance,
-        welcomeCreditsUsdCents: newWelcome,
-      })
-      .where(eq(organizations.id, orgId));
-
-    await tx.insert(creditTransactions).values({
-      organizationId: orgId,
-      kind: "usage",
-      amountCents: -amountCents,
-      balanceAfterCents: newBalance,
-      requestId: requestId || null,
-      metadata: {
-        from_welcome_cents: fromWelcome,
-        from_paid_cents: amountCents - fromWelcome,
-      },
-    });
-
-    return newBalance;
+  return spendFifoCredits({
+    organizationId: orgId,
+    amountCents,
+    requestId: requestId || null,
+    allowBonus: Boolean(options?.allowWelcome),
+    source: options?.source || "gateway",
+    userId: options?.userId || null,
   });
 }
 
@@ -263,6 +271,8 @@ export async function debitUsage(
   if (billingContext.useFromCredits) {
     await debitCredits(orgId, costCents, requestId, {
       allowWelcome: welcomeAllowedForFamily(billingContext.family),
+      userId: billingContext.userId,
+      source: "gateway",
     });
   }
 }

@@ -1,0 +1,65 @@
+# Desired us-central1 zone-to-zone failover (not geo / not Cloudflare).
+# Apply: ./scripts/setup-gcp-ha.sh
+# Firebase Hosting stays the public edge. Armor `opendoor-armor` + CDN unchanged.
+# Never geo-block Africa (Armor default allow *).
+#
+# Project: project-800192c2-3ecc-4889-8f7
+# Region:  us-central1
+
+project: project-800192c2-3ecc-4889-8f7
+region: us-central1
+
+cloud_sql:
+  instance: opendoor-pg
+  edition: ENTERPRISE
+  availability_type: REGIONAL   # primary + standby in another us-central1 zone
+  backups: true                 # required for REGIONAL
+  point_in_time_recovery: true  # required for REGIONAL (Postgres)
+  backup_start_time_utc: "10:00"
+  maintenance_window:
+    day: SUN
+    hour_utc: 7
+  notes: >
+    Connection name and IP stay the same after failover. Apps keep using
+    /cloudsql/... or the Auth Proxy. Do not recreate the instance.
+
+memorystore_redis:
+  instance: opendoor-redis-psa
+  tier: BASIC                   # zonal; cannot in-place upgrade to STANDARD_HA
+  migrate_in_place: false
+  cache_only: true
+  notes: >
+    BASIC → STANDARD_HA requires a new instance and a new IP (cache flush +
+    REDIS_URL secret rewrite). Leave BASIC: rate-limit / prompt-cache / usage
+    counters fail open. Zonal Redis loss is acceptable.
+
+cloud_run:
+  launch: regional              # --region=us-central1, not --zone / city
+  services:
+    - name: opendoor-dashboard
+      min_instances: 2
+      cpu_throttling: default
+    - name: opendoor-gateway
+      min_instances: 2
+      cpu_throttling: default
+    - name: opendoor-openbot-computer
+      min_instances: 1
+      max_instances: 1          # shared Chromium + session affinity
+      cpu_throttling: false     # already required; do not add elsewhere
+
+load_balancer:
+  name: opendoor-edge
+  frontend: global              # anycast IP; not a regional TCP/UDP LB
+  negs: regional                # us-central1 serverless NEGs
+  backends:
+    - opendoor-edge-dash-bs     # Cloud CDN CACHE_ALL_STATIC + Armor
+    - opendoor-edge-gw-bs       # Armor only
+  notes: >
+    Serverless NEGs have no zonal endpoints. GFE sends to Cloud Run in
+    us-central1; Cloud Run places instances across zones automatically.
+
+edge:
+  public: firebase_hosting      # opendoor-gcp.web.app
+  armor: opendoor-armor
+  cloudflare: false
+  geo_block: false

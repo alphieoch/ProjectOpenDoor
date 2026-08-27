@@ -5,6 +5,7 @@ import { eq, and, isNull, gt } from "drizzle-orm";
 import { requireAuth } from "@/lib/auth";
 import { logAuditEvent } from "@/lib/audit";
 import { sendEmail, buildInviteEmail } from "@/lib/email";
+import { assertOrgCanInvite } from "@/lib/seat-allocation";
 import { randomBytes } from "crypto";
 
 export async function GET() {
@@ -47,6 +48,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         { error: "Email is required" },
         { status: 400 }
+      );
+    }
+
+    const cap = await assertOrgCanInvite(orgId);
+    if (!cap.ok) {
+      return NextResponse.json(
+        { error: cap.decision.error, code: cap.decision.code, useBilling: true },
+        { status: 400 },
       );
     }
 

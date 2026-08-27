@@ -81,6 +81,14 @@ if (cmd === "help" || cmd === "--help") {
   training jobs
   deployments list
   agents list
+  agents create --name <name> --runtime openbot|openclaw|hermes|nemoclaw --model <id> [--kind leader|coworker]
+  agents get --id <id>
+  agents start --id <id>
+  agents stop --id <id>
+  agents chat --id <id> --message <text>
+  agents computer --id <id> --take|--release
+  agents delete --id <id>
+  agents restore --id <id>
   byok list
   keys list
   requests [--limit 20]
@@ -147,6 +155,56 @@ if (cmd === "catalog") {
   console.log(JSON.stringify(body, null, 2));
 } else if (cmd === "agents" && process.argv[3] === "list") {
   const { body } = await api("/v1/agents");
+  console.log(JSON.stringify(body, null, 2));
+} else if (cmd === "agents" && process.argv[3] === "create") {
+  const { body } = await api("/v1/agents", {
+    method: "POST",
+    body: JSON.stringify({
+      name: arg("--name", "OpenBot desk"),
+      runtime: arg("--runtime", "openbot"),
+      modelId: arg("--model"),
+      systemPrompt: arg("--system") || undefined,
+      kind: arg("--kind") || undefined,
+    }),
+  });
+  console.log(JSON.stringify(body, null, 2));
+} else if (cmd === "agents" && process.argv[3] === "get") {
+  const { body } = await api(`/v1/agents/${arg("--id")}`);
+  console.log(JSON.stringify(body, null, 2));
+} else if (cmd === "agents" && process.argv[3] === "start") {
+  const { body } = await api(`/v1/agents/${arg("--id")}`, {
+    method: "PATCH",
+    body: JSON.stringify({ status: "running" }),
+  });
+  console.log(JSON.stringify(body, null, 2));
+} else if (cmd === "agents" && process.argv[3] === "stop") {
+  const { body } = await api(`/v1/agents/${arg("--id")}`, {
+    method: "PATCH",
+    body: JSON.stringify({ status: "stopped" }),
+  });
+  console.log(JSON.stringify(body, null, 2));
+} else if (cmd === "agents" && process.argv[3] === "chat") {
+  const { body } = await api(`/v1/agents/${arg("--id")}/chat`, {
+    method: "POST",
+    body: JSON.stringify({ message: arg("--message", "Hello") }),
+  });
+  console.log(JSON.stringify(body, null, 2));
+} else if (cmd === "agents" && process.argv[3] === "computer") {
+  const control = hasFlag("--take") ? "take" : hasFlag("--release") ? "release" : "";
+  if (!control) {
+    console.error("agents computer requires --take or --release");
+    process.exit(1);
+  }
+  const { body } = await api(`/v1/agents/${arg("--id")}`, {
+    method: "PATCH",
+    body: JSON.stringify({ computerControl: control }),
+  });
+  console.log(JSON.stringify(body, null, 2));
+} else if (cmd === "agents" && process.argv[3] === "delete") {
+  const { body } = await api(`/v1/agents/${arg("--id")}`, { method: "DELETE" });
+  console.log(JSON.stringify(body, null, 2));
+} else if (cmd === "agents" && process.argv[3] === "restore") {
+  const { body } = await api(`/v1/agents/${arg("--id")}/restore`, { method: "POST" });
   console.log(JSON.stringify(body, null, 2));
 } else if (cmd === "byok" && process.argv[3] === "list") {
   const { body } = await api("/v1/byok");

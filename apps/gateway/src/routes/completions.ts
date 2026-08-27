@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import type { ChatCompletionRequest, ProviderPreferences } from "@opendoor/shared";
+import { getPlan } from "@opendoor/shared";
 import { instantiateProvider, resolveProvider } from "../providers/index.js";
 import { calculateCost } from "../utils/pricing.js";
 import { debitUsage } from "../utils/billing.js";
@@ -93,7 +94,7 @@ completionsRouter.post("/", async (c) => {
     promptTokens: estimateTokens(promptText),
     completionTokens:
       typeof body.max_tokens === "number" && body.max_tokens > 0 ? body.max_tokens : 256,
-    plan: (billingContext.plan || "free") as "free" | "pro" | "team" | "enterprise",
+    plan: getPlan(billingContext.plan).id,
     family: billingContext.family || "closed",
     region,
   });
@@ -159,7 +160,7 @@ completionsRouter.post("/", async (c) => {
                   completionTokens,
                 });
                 await debitUsage(organization.id, cost.totalCost, undefined, {
-                  plan: (billingContext.plan || "free") as "free" | "pro" | "team" | "enterprise",
+                  plan: getPlan(billingContext.plan).id,
                   family: billingContext.family || "closed",
                   providerSlug: slug,
                   useFromPlan: false,
@@ -204,7 +205,7 @@ completionsRouter.post("/", async (c) => {
         });
         costUsd = cost.totalCost;
         await debitUsage(organization.id, costUsd, undefined, {
-          plan: (billingContext.plan || "free") as "free" | "pro" | "team" | "enterprise",
+          plan: getPlan(billingContext.plan).id,
           family: billingContext.family || "closed",
           providerSlug: slug,
           useFromPlan: false,

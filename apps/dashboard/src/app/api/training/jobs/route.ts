@@ -34,12 +34,28 @@ export async function POST(req: NextRequest) {
   const method = String(body.method || "sft").toLowerCase();
   const baseModelId = String(body.baseModelId || body.base_model_id || "").trim();
   const datasetId = body.datasetId || body.dataset_id || null;
-  const hyperparameters = body.hyperparameters || {
-    lora: body.lora !== false,
-    epochs: body.epochs ?? 3,
-    learning_rate: body.learningRate ?? body.learning_rate ?? 0.0001,
-    batch_size: body.batchSize ?? body.batch_size ?? 4,
-  };
+  const hyperparameters: Record<string, unknown> = body.hyperparameters && typeof body.hyperparameters === "object"
+    ? { ...body.hyperparameters }
+    : {
+        lora: body.lora !== false,
+        epochs: body.epochs ?? 3,
+        learning_rate: body.learningRate ?? body.learning_rate ?? 0.0001,
+        batch_size: body.batchSize ?? body.batch_size ?? 4,
+      };
+  if (body.plan && typeof body.plan === "object") {
+    hyperparameters.plan = body.plan;
+  }
+  if (typeof body.lora === "boolean") hyperparameters.lora = body.lora;
+  if (body.epochs != null) hyperparameters.epochs = body.epochs;
+  if (body.learningRate != null || body.learning_rate != null) {
+    hyperparameters.learning_rate = body.learningRate ?? body.learning_rate;
+  }
+  if (body.batchSize != null || body.batch_size != null) {
+    hyperparameters.batch_size = body.batchSize ?? body.batch_size;
+  }
+  if (body.lora_rank != null || body.loraRank != null) {
+    hyperparameters.lora_rank = body.lora_rank ?? body.loraRank;
+  }
 
   if (!name || !baseModelId) {
     return NextResponse.json(

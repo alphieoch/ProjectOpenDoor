@@ -7,12 +7,15 @@ import { cn } from '@/lib/utils';
 import { MenuToggleIcon } from '@/components/ui/menu-toggle-icon';
 import { useScroll } from '@/components/ui/use-scroll';
 import { docsHref } from '@/lib/public-urls';
+import { LocalePicker } from '@/components/i18n/locale-picker';
+import { useI18n } from '@/components/i18n/i18n-provider';
 
 const NAV_LINKS = [
   { label: 'Platform', href: '/platform' },
   { label: 'Pricing', href: '/pricing' },
   { label: 'Rankings', href: '/rankings' },
   { label: 'How it works', href: '/how-it-works' },
+  { label: 'SDK', href: '/sdk' },
   { label: 'Security', href: '/security' },
   { label: 'Status', href: '/status' },
   { label: 'Docs', href: docsHref('/') },
@@ -33,6 +36,7 @@ export function Header({ signedIn = false }: HeaderProps) {
   const [open, setOpen] = React.useState(false);
   const scrolled = useScroll(10);
   const pathname = usePathname();
+  const { t } = useI18n();
 
   React.useEffect(() => {
     document.body.style.overflow = open ? 'hidden' : '';
@@ -40,27 +44,28 @@ export function Header({ signedIn = false }: HeaderProps) {
   }, [open]);
 
   return (
-    <header
-      className={cn(
-        'sticky top-0 z-50 mx-auto w-full transition-all duration-300 ease-out',
-        scrolled && !open
-          ? 'border-b border-slate-200/80 bg-white/90 shadow-sm shadow-slate-950/5 backdrop-blur-xl md:top-3 md:max-w-5xl md:rounded-2xl md:border md:border-slate-200/80'
-          : 'border-b border-white/70 bg-white/75 backdrop-blur-xl',
-        open && 'bg-white/95',
-      )}
-    >
+    <div className="sticky top-0 z-50">
+      <header
+        className={cn(
+          'mx-auto w-full transition-[max-width,margin,border-radius,box-shadow,background-color] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none',
+          scrolled && !open
+            ? 'border-b border-border bg-background/90 shadow-sm backdrop-blur-xl md:mt-3 md:max-w-5xl md:rounded-2xl md:border'
+            : 'border-b border-border/70 bg-background/75 backdrop-blur-xl',
+          open && 'bg-background/95',
+        )}
+      >
       <nav
         className={cn(
-          'flex h-20 w-full items-center justify-between px-6 transition-all duration-300 ease-out lg:px-8',
+          'flex h-20 w-full items-center justify-between px-6 transition-[height,padding] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none lg:px-8',
           scrolled && !open && 'md:h-14 md:px-5',
         )}
       >
         {/* Logo */}
         <Link href="/" className="flex items-center gap-3" onClick={() => setOpen(false)}>
-          <span className="grid h-11 w-11 place-items-center rounded-2xl bg-slate-950 text-white shadow-lg shadow-blue-900/10 transition-all duration-300 ease-out">
+          <span className="grid h-11 w-11 place-items-center rounded-lg bg-primary text-primary-foreground">
             <DoorOpen className="h-5 w-5" />
           </span>
-          <span className="text-lg font-semibold tracking-tight text-slate-950">OpenDoor</span>
+          <span className="font-garamond text-lg font-semibold tracking-tight text-foreground">OpenDoor</span>
         </Link>
 
           {/* Desktop nav */}
@@ -74,10 +79,10 @@ export function Header({ signedIn = false }: HeaderProps) {
                 scroll
                 aria-current={active ? 'page' : undefined}
                 className={cn(
-                  'rounded-full px-4 py-2 text-sm font-medium transition',
+                  'rounded-lg px-4 py-2 text-sm font-medium transition-colors duration-200 ease-out',
                   active
-                    ? 'bg-slate-950 text-white'
-                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950',
+                    ? 'bg-primary text-primary-foreground'
+                    : 'text-muted-foreground hover:bg-accent hover:text-foreground',
                 )}
               >
                 {link.label}
@@ -88,26 +93,27 @@ export function Header({ signedIn = false }: HeaderProps) {
 
         {/* Desktop CTAs */}
         <div className="hidden items-center gap-3 md:flex">
+          <LocalePicker compact />
           {signedIn ? (
             <Link
               href="/dashboard"
-              className="inline-flex items-center gap-2 rounded-full bg-slate-950 px-5 py-2.5 text-sm font-semibold text-white shadow-xl shadow-slate-950/10 transition hover:-translate-y-0.5 hover:bg-slate-800"
+              className="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90"
             >
-              Open dashboard <ArrowRight className="h-4 w-4" />
+              {t('common.openDashboard')} <ArrowRight className="h-4 w-4" />
             </Link>
           ) : (
             <>
               <Link
                 href="/login"
-                className="rounded-full px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+                className="rounded-lg px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-accent"
               >
-                Sign in
+                {t('common.signIn')}
               </Link>
               <Link
                 href="/get-started"
-                className="inline-flex items-center gap-2 rounded-full bg-slate-950 px-5 py-2.5 text-sm font-semibold text-white shadow-xl shadow-slate-950/10 transition hover:-translate-y-0.5 hover:bg-slate-800"
+                className="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90"
               >
-                Get started <ArrowRight className="h-4 w-4" />
+                {t('common.getStarted')} <ArrowRight className="h-4 w-4" />
               </Link>
             </>
           )}
@@ -116,17 +122,17 @@ export function Header({ signedIn = false }: HeaderProps) {
         {/* Mobile menu toggle */}
         <button
           onClick={() => setOpen(!open)}
-          className="grid h-10 w-10 place-items-center rounded-full border border-slate-200 bg-white shadow-sm transition hover:bg-slate-50 md:hidden"
+          className="grid h-10 w-10 min-h-[44px] min-w-[44px] place-items-center rounded-lg border border-border bg-background shadow-sm transition hover:bg-accent md:hidden"
           aria-label={open ? 'Close menu' : 'Open menu'}
         >
-          <MenuToggleIcon open={open} className="h-5 w-5 text-slate-700" duration={300} />
+          <MenuToggleIcon open={open} className="h-5 w-5 text-foreground" duration={300} />
         </button>
       </nav>
 
       {/* Mobile menu overlay */}
       <div
         className={cn(
-          'fixed inset-x-0 top-[80px] bottom-0 z-50 border-t border-slate-200/80 bg-white/95 backdrop-blur-xl md:hidden',
+          'fixed inset-x-0 top-[80px] bottom-0 z-50 border-t border-border bg-background/95 backdrop-blur-xl md:hidden',
           open ? 'flex flex-col' : 'hidden',
         )}
       >
@@ -148,10 +154,10 @@ export function Header({ signedIn = false }: HeaderProps) {
                   onClick={() => setOpen(false)}
                   aria-current={active ? 'page' : undefined}
                   className={cn(
-                    'rounded-2xl px-4 py-3 text-base font-medium transition',
+                    'rounded-lg px-4 py-3 text-base font-medium transition min-h-[44px]',
                     active
-                      ? 'bg-slate-950 text-white'
-                      : 'text-slate-700 hover:bg-slate-100 hover:text-slate-950',
+                      ? 'bg-primary text-primary-foreground'
+                      : 'text-foreground hover:bg-accent',
                   )}
                 >
                   {link.label}
@@ -161,35 +167,37 @@ export function Header({ signedIn = false }: HeaderProps) {
           </div>
 
           <div className="flex flex-col gap-3 pb-4">
+            <LocalePicker />
             {signedIn ? (
               <Link
                 href="/dashboard"
                 onClick={() => setOpen(false)}
-                className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-slate-950 px-6 py-3.5 text-sm font-semibold text-white transition hover:bg-slate-800"
+                className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-6 py-3.5 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 min-h-[44px]"
               >
-                Open dashboard <ArrowRight className="h-4 w-4" />
+                {t('common.openDashboard')} <ArrowRight className="h-4 w-4" />
               </Link>
             ) : (
               <>
                 <Link
                   href="/login"
                   onClick={() => setOpen(false)}
-                  className="inline-flex w-full items-center justify-center rounded-full border border-slate-200 bg-white px-6 py-3.5 text-sm font-semibold text-slate-800 transition hover:bg-slate-50"
+                  className="inline-flex w-full items-center justify-center rounded-lg border border-input bg-background px-6 py-3.5 text-sm font-semibold text-foreground transition hover:bg-accent min-h-[44px]"
                 >
-                  Sign in
+                  {t('common.signIn')}
                 </Link>
                 <Link
                   href="/get-started"
                   onClick={() => setOpen(false)}
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-slate-950 px-6 py-3.5 text-sm font-semibold text-white transition hover:bg-slate-800"
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-6 py-3.5 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 min-h-[44px]"
                 >
-                  Get started <ArrowRight className="h-4 w-4" />
+                  {t('common.getStarted')} <ArrowRight className="h-4 w-4" />
                 </Link>
               </>
             )}
           </div>
         </div>
       </div>
-    </header>
+      </header>
+    </div>
   );
 }

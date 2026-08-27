@@ -2,26 +2,14 @@
 import { db } from "@opendoor/database";
 import { pricingRules, providers, fineTunedModels } from "@opendoor/database";
 import { eq, and, sql } from "drizzle-orm";
-import { PLANS, type PlanId } from "@opendoor/shared";
+import { getPlan, type PlanId } from "@opendoor/shared";
 
 export type BillingPlan = PlanId;
 export type ModelFamily = "closed" | "open_weight";
 
-/** Open-weight is the product — lower markup than closed marketplace passthrough. */
-const MARKUP_TABLE: Record<ModelFamily, Record<BillingPlan, number>> = {
-  closed: {
-    free: PLANS.free.markupByFamily.closed,
-    pro: PLANS.pro.markupByFamily.closed,
-    team: PLANS.team.markupByFamily.closed,
-    enterprise: PLANS.enterprise.markupByFamily.closed,
-  },
-  open_weight: {
-    free: PLANS.free.markupByFamily.open_weight,
-    pro: PLANS.pro.markupByFamily.open_weight,
-    team: PLANS.team.markupByFamily.open_weight,
-    enterprise: PLANS.enterprise.markupByFamily.open_weight,
-  },
-};
+export function getMarkupPercent(plan: BillingPlan, family: ModelFamily): number {
+  return getPlan(plan).markupByFamily[family];
+}
 
 export interface CalculatedCost {
   inputCost: number;
@@ -40,10 +28,6 @@ export interface CalculatedCost {
   uncachedPromptTokens: number;
 }
 
-export function getMarkupPercent(plan: BillingPlan, family: ModelFamily): number {
-  return MARKUP_TABLE[family]?.[plan] ?? MARKUP_TABLE.closed.free;
-}
-
 interface CalculateCostInput {
   providerSlug: string;
   modelId: string;
@@ -56,6 +40,7 @@ interface CalculateCostInput {
   family?: ModelFamily;
   /** Batch jobs bill at batch_multiplier (default 0.5) */
   batch?: boolean;
+  serviceTier?: "standard" | "priority";
 }
 
 export async function calculateCost({
@@ -68,6 +53,7 @@ export async function calculateCost({
   plan = "free",
   family = "closed",
   batch = false,
+  serviceTier = "standard",
 }: CalculateCostInput): Promise<CalculatedCost> {
   // Fireworks-style: fine-tunes bill at base model list price when bill_as_base
   let billModelId = modelId;
@@ -165,9 +151,10 @@ export async function calculateCost({
   const baseInputCost = baseUncachedCost + baseCachedCost;
   const markupPercent = getMarkupPercent(plan, family);
   const multiplier = 1 + markupPercent / 100;
-  const inputCost = baseUncachedCost * multiplier;
-  const cachedInputCost = baseCachedCost * multiplier;
-  const outputCost = baseOutputCost * multiplier;
+  const priorityMult = serviceTier === "priority" ? 1.25 : 1;
+  const inputCost = baseUncachedCost * multiplier * priorityMult;
+  const cachedInputCost = baseCachedCost * multiplier * priorityMult;
+  const outputCost = baseOutputCost * multiplier * priorityMult;
 
   return {
     inputCost,

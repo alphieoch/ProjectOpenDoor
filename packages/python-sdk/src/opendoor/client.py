@@ -36,7 +36,7 @@ class OpenDoor:
             raise OpenDoorError("api_key is required (or set OPENDOOR_API_KEY)")
         self.api_key = key
         self.base_url = (
-            base_url or os.environ.get("OPENDOOR_BASE_URL") or "https://api.opendoor.ai"
+            base_url or os.environ.get("OPENDOOR_BASE_URL") or "http://localhost:3001"
         ).rstrip("/")
         self.timeout = timeout
         self.chat = ChatResource(self)
@@ -462,8 +462,27 @@ class AgentsResource:
     def get(self, agent_id: str) -> Any:
         return self._client.request("GET", f"/v1/agents/{agent_id}")
 
+    def update(self, agent_id: str, **kwargs: Any) -> Any:
+        return self._client.request("PATCH", f"/v1/agents/{agent_id}", json=kwargs)
+
+    def chat(self, agent_id: str, message: str, **kwargs: Any) -> Any:
+        body: dict[str, Any] = {"message": message, **kwargs}
+        return self._client.request("POST", f"/v1/agents/{agent_id}/chat", json=body)
+
+    def start(self, agent_id: str) -> Any:
+        return self.update(agent_id, status="running")
+
+    def stop(self, agent_id: str) -> Any:
+        return self.update(agent_id, status="stopped")
+
+    def computer(self, agent_id: str, control: str) -> Any:
+        return self.update(agent_id, computerControl=control)
+
     def delete(self, agent_id: str) -> Any:
         return self._client.request("DELETE", f"/v1/agents/{agent_id}")
+
+    def restore(self, agent_id: str) -> Any:
+        return self._client.request("POST", f"/v1/agents/{agent_id}/restore")
 
 
 class ByokResource:

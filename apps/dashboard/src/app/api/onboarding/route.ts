@@ -4,44 +4,44 @@ import { organizations } from "@opendoor/database";
 import { eq } from "drizzle-orm";
 import { requireAuth } from "@/lib/auth";
 import { posthogServerCapture } from "@/lib/posthog-server";
+import { loadOnboardingHome } from "@/lib/onboarding-progress";
 import {
-  isChecklistComplete,
-  normalizeOnboardingSegment,
   parseOnboardingChecklist,
+  type OnboardingChecklist,
 } from "@/lib/onboarding";
 
-type SupportedStep = "api_key_created" | "first_chat_completed" | "enterprise_reviewed";
+type SupportedStep =
+  | "api_key_created"
+  | "first_chat_completed"
+  | "enterprise_reviewed"
+  | "dismissed";
 
 function applyStep(
-  checklist: Record<string, unknown>,
+  checklist: OnboardingChecklist,
   step: SupportedStep
-): Record<string, unknown> {
+): OnboardingChecklist {
   const next = { ...checklist };
   if (step === "api_key_created") next.apiKeyCreated = true;
   if (step === "first_chat_completed") next.firstChatCompleted = true;
   if (step === "enterprise_reviewed") next.enterpriseReviewed = true;
+  if (step === "dismissed") next.dismissedAt = new Date().toISOString();
   return next;
 }
 
 export async function GET() {
   const session = await requireAuth();
   const orgId = session.orgId as string;
-  const db = getDb();
+  const home = await loadOnboardingHome(orgId, { isSiteAdmin: session.isSiteAdmin });
 
-  const org = await db.query.organizations.findFirst({
-    where: eq(organizations.id, orgId),
-    columns: {
-      onboardingSegment: true,
-      metadata: true,
-    },
+  return NextResponse.json({
+    segment: home.evidence.onboardingSegment,
+    plan: home.evidence.plan,
+    planLabel: home.progress.planLabel,
+    checklist: home.checklist,
+    progress: home.progress,
+    evidence: home.evidence,
+    completed: home.progress.completed,
   });
-
-  const segment = normalizeOnboardingSegment(org?.onboardingSegment);
-  const metadata = (org?.metadata as Record<string, unknown> | null) || {};
-  const checklist = parseOnboardingChecklist(metadata.onboarding_checklist);
-  const completed = isChecklistComplete(segment, checklist);
-
-  return NextResponse.json({ segment, checklist, completed });
 }
 
 export async function POST(req: NextRequest) {
@@ -52,6 +52,7 @@ export async function POST(req: NextRequest) {
     "api_key_created",
     "first_chat_completed",
     "enterprise_reviewed",
+    "dismissed",
   ]);
 
   if (!step || !allowed.has(step)) {
@@ -62,24 +63,14 @@ export async function POST(req: NextRequest) {
   const org = await db.query.organizations.findFirst({
     where: eq(organizations.id, orgId),
     columns: {
-      onboardingSegment: true,
       metadata: true,
     },
   });
 
-  const segment = normalizeOnboardingSegment(org?.onboardingSegment);
   const metadata = (org?.metadata as Record<string, unknown> | null) || {};
   const currentChecklist = parseOnboardingChecklist(metadata.onboarding_checklist);
-  const nextChecklist = applyStep(
-    currentChecklist as Record<string, unknown>,
-    step
-  );
-
-  const wasComplete = isChecklistComplete(segment, currentChecklist);
-  const nowComplete = isChecklistComplete(segment, nextChecklist);
-  if (nowComplete) {
-    nextChecklist.completedAt = new Date().toISOString();
-  }
+  const before = await loadOnboardingHome(orgId, { isSiteAdmin: session.isSiteAdmin });
+  const nextChecklist = applyStep(currentChecklist, step);
 
   await db
     .update(organizations)
@@ -92,12 +83,19 @@ export async function POST(req: NextRequest) {
     })
     .where(eq(organizations.id, orgId));
 
-  if (!wasComplete && nowComplete) {
+  const home = await loadOnboardingHome(orgId, { isSiteAdmin: session.isSiteAdmin });
+  if (!before.progress.completed && home.progress.completed) {
     posthogServerCapture(req, session.userId, "onboarding_completed", {
       organization_id: orgId,
-      onboarding_segment: segment,
+      onboarding_plan: home.progress.planLabel,
+      onboarding_step: step,
     });
   }
 
-  return NextResponse.json({ ok: true, checklist: nextChecklist });
+  return NextResponse.json({
+    ok: true,
+    checklist: nextChecklist,
+    progress: home.progress,
+    completed: home.progress.completed,
+  });
 }

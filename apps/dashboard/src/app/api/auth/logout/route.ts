@@ -1,21 +1,13 @@
 import { NextResponse } from "next/server";
+import { clearSessionCookies, sessionCookieOptions } from "@/lib/session-cookie";
 
 export async function POST() {
   const response = NextResponse.json({ success: true });
-  const clear = {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax" as const,
-    maxAge: 0,
-    path: "/",
-  };
-  // OpenDoor JWT session
-  response.cookies.set("session", "", clear);
-  // WorkOS AuthKit sealed session (default cookie name)
+  clearSessionCookies(response);
   response.cookies.set(
     process.env.WORKOS_COOKIE_NAME || "wos-session",
     "",
-    clear
+    sessionCookieOptions(0)
   );
   return response;
 }

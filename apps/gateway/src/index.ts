@@ -4,6 +4,7 @@ initTracing();
 import { Hono } from "hono";
 import { serve } from "@hono/node-server";
 import { cors } from "hono/cors";
+import { resolveGatewayCorsOrigin } from "./lib/cors-origin.js";
 import { logger } from "hono/logger";
 import { authMiddleware } from "./middleware/auth.js";
 import { rateLimitMiddleware } from "./middleware/rate-limit.js";
@@ -35,13 +36,27 @@ import keysRouter from "./routes/keys.js";
 import requestsRouter from "./routes/requests.js";
 import policiesRouter from "./routes/policies.js";
 import catalogRouter from "./routes/catalog.js";
+import toolsRouter from "./routes/tools.js";
 import { statusHandler } from "./routes/status.js";
 import { cachetSyncHandler } from "./routes/cachet-sync.js";
 import { startBatchWorker } from "./lib/batch-worker.js";
 
 const app = new Hono();
 
-app.use(cors());
+app.use(
+  cors({
+    origin: (origin) => resolveGatewayCorsOrigin(origin),
+    credentials: false,
+    allowMethods: ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowHeaders: [
+      "Authorization",
+      "Content-Type",
+      "X-OpenDoor-Organization-Id",
+      "X-OpenDoor-Assistant-Id",
+      "X-Data-Class",
+    ],
+  })
+);
 app.use(logger());
 
 app.get("/health", (c) => {
@@ -55,6 +70,8 @@ app.get("/health", (c) => {
 
 /** Public status: Postgres, Redis, and which LLM providers loaded (real env configuration). */
 app.get("/status", (c) => statusHandler(c));
+/** Same JSON when Firebase Hosting `/status` is the dashboard marketing page. */
+app.get("/gateway/status", (c) => statusHandler(c));
 
 /** Push health data to Cachet status page. */
 app.post("/internal/cachet-sync", (c) => cachetSyncHandler(c));
@@ -91,6 +108,7 @@ app.route("/v1/keys", keysRouter);
 app.route("/v1/requests", requestsRouter);
 app.route("/v1/policies", policiesRouter);
 app.route("/v1/catalog", catalogRouter);
+app.route("/v1/tools", toolsRouter);
 
 app.onError((err, c) => {
   const orgId = c.get("organization")?.id || "gateway";
@@ -99,8 +117,14 @@ app.onError((err, c) => {
       captureGatewayException(orgId, err, { path: c.req.path });
     })
     .catch(() => undefined);
+  const expose = process.env.NODE_ENV !== "production";
   return c.json(
-    { error: { message: err.message || "Internal error", type: "internal_error" } },
+    {
+      error: {
+        message: expose ? err.message || "Internal error" : "Internal error",
+        type: "internal_error",
+      },
+    },
     500
   );
 });

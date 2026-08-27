@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import {
-  Bot, Plus, Copy, Check, Globe, Lock, Users, Shield,
+  Plus, Copy, Check, Globe, Lock, Users, Shield,
   Pencil, Trash2, Radio, Loader2, ExternalLink,
   Upload, FileText, X, Search, LinkIcon, Info, Eye,
   Server, FileCheck, AlertTriangle, Plug, Zap, ChevronDown, ChevronUp,
@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
+import { AiCrest } from "@/components/ui/ai-crest";
 import { PageHeader } from "@/components/ui/page-header";
 
 /* ── Types ── */
@@ -113,11 +114,11 @@ interface ApiConnection {
 /* ── Constants ── */
 type CatalogOption = { id: string; label: string; provider: string };
 
-const COLORS = ["#1A73E8", "#7C3AED", "#059669", "#DC2626", "#D97706", "#0891B2", "#374151"];
+const COLORS = ["#0F172A", "#7C3AED", "#059669", "#DC2626", "#D97706", "#0891B2", "#374151"];
 
 const defaultForm = {
   name: "", slug: "", description: "",
-  avatarLetter: "", logoUrl: "", primaryColor: "#1A73E8",
+  avatarLetter: "", logoUrl: "", primaryColor: "#0F172A",
   modelId: "", systemPrompt: "", welcomeMessage: "",
   maxMessages: "100", visibility: "private",
   monetization: "free", priceCents: "", sellerEarningsCents: "",
@@ -156,13 +157,13 @@ function Hint({ text }: { text: string }) {
     <span className="group/hint relative inline-flex" tabIndex={0} aria-label={text}>
       <Info
         className="h-3.5 w-3.5 cursor-help outline-none"
-        style={{ color: "var(--ink-4)" }}
+        style={{ color: "hsl(var(--muted-foreground))" }}
         aria-hidden="true"
       />
       <span
         role="tooltip"
         className="pointer-events-none absolute left-1/2 top-full z-[110] mt-1.5 -translate-x-1/2 whitespace-normal rounded-md px-2.5 py-1.5 text-[11px] font-normal normal-case tracking-normal leading-snug opacity-0 shadow-lg transition-opacity duration-150 group-hover/hint:opacity-100 group-focus/hint:opacity-100"
-        style={{ background: "var(--ink)", color: "var(--paper-2)", width: "max-content", maxWidth: 240 }}
+        style={{ background: "hsl(var(--foreground))", color: "hsl(var(--card))", width: "max-content", maxWidth: 240 }}
       >
         {text}
       </span>
@@ -172,23 +173,23 @@ function Hint({ text }: { text: string }) {
 
 function Label({ children, sub, hint }: { children: React.ReactNode; sub?: React.ReactNode; hint?: string }) {
   return (
-    <label className="mb-1.5 flex items-center gap-1.5 text-sm font-medium" style={{ color: "var(--ink)" }}>
+    <label className="mb-1.5 flex items-center gap-1.5 text-sm font-medium" style={{ color: "hsl(var(--foreground))" }}>
       <span>{children}</span>
       {hint && <Hint text={hint} />}
-      {sub && <span className="ml-1 font-normal text-xs" style={{ color: "var(--ink-3)" }}>{sub}</span>}
+      {sub && <span className="ml-1 font-normal text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>{sub}</span>}
     </label>
   );
 }
 
 function SectionHead({ children, hint }: { children: React.ReactNode; hint?: string }) {
   return (
-    <p className="mb-4 flex items-center gap-2 text-xs font-semibold uppercase tracking-widest" style={{ color: "var(--ink-4)" }}>
-      <span className="h-px flex-1" style={{ background: "var(--line)" }} />
+    <p className="mb-4 flex items-center gap-2 text-xs font-semibold uppercase tracking-widest" style={{ color: "hsl(var(--muted-foreground))" }}>
+      <span className="h-px flex-1" style={{ background: "hsl(var(--border))" }} />
       <span className="inline-flex items-center gap-1.5">
         {children}
         {hint && <Hint text={hint} />}
       </span>
-      <span className="h-px flex-1" style={{ background: "var(--line)" }} />
+      <span className="h-px flex-1" style={{ background: "hsl(var(--border))" }} />
     </p>
   );
 }
@@ -564,7 +565,7 @@ export default function AIAssistantsPage() {
     setForm({
       name: a.name, slug: a.slug, description: a.description ?? "",
       avatarLetter: a.avatarLetter ?? "", logoUrl: a.logoUrl ?? "",
-      primaryColor: a.primaryColor ?? "#1A73E8",
+      primaryColor: a.primaryColor ?? "#0F172A",
       modelId: a.modelId ?? "", systemPrompt: a.systemPrompt ?? "",
       welcomeMessage: a.welcomeMessage ?? "", maxMessages: a.maxMessages?.toString() ?? "",
       visibility: a.visibility ?? "private", monetization: a.monetization ?? "free",
@@ -753,7 +754,7 @@ export default function AIAssistantsPage() {
   const f = form;
   const set = (k: keyof typeof defaultForm, v: string) => setForm((p) => ({ ...p, [k]: v }));
 
-  const previewColor  = f.primaryColor || "#1A73E8";
+  const previewColor  = f.primaryColor || "#0F172A";
   const previewLetter = f.avatarLetter || f.name.charAt(0).toUpperCase() || "A";
 
   return (
@@ -773,21 +774,21 @@ export default function AIAssistantsPage() {
         <div
           className="mb-6 flex flex-col gap-3 rounded-xl border px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
           style={{
-            borderColor: billing.cutOff ? "var(--red)" : "var(--line)",
-            background: billing.cutOff ? "var(--red-soft)" : "var(--paper-2)",
+            borderColor: billing.cutOff ? "var(--red)" : "hsl(var(--border))",
+            background: billing.cutOff ? "var(--red-soft)" : "hsl(var(--card))",
           }}
         >
           <div className="flex items-start gap-3 min-w-0">
-            <Wallet className="mt-0.5 h-4 w-4 shrink-0" style={{ color: billing.cutOff ? "var(--red)" : "var(--ink-3)" }} />
+            <Wallet className="mt-0.5 h-4 w-4 shrink-0" style={{ color: billing.cutOff ? "var(--red)" : "hsl(var(--muted-foreground))" }} />
             <div className="min-w-0">
-              <p className="text-sm font-medium" style={{ color: billing.cutOff ? "var(--red)" : "var(--ink)" }}>
+              <p className="text-sm font-medium" style={{ color: billing.cutOff ? "var(--red)" : "hsl(var(--foreground))" }}>
                 {billing.cutOff
                   ? billing.welcomeCreditsUsdCents > 0
                     ? "Included credit and prepaid are used up"
                     : "Assistants are paused — included credit and prepaid are used up"
                   : "Every chat bills this workspace"}
               </p>
-              <p className="mt-0.5 text-xs leading-relaxed" style={{ color: billing.cutOff ? "var(--red)" : "var(--ink-3)" }}>
+              <p className="mt-0.5 text-xs leading-relaxed" style={{ color: billing.cutOff ? "var(--red)" : "hsl(var(--muted-foreground))" }}>
                 {billing.cutOff
                   ? billing.welcomeCreditsUsdCents > 0
                     ? `Closed models are cut off. ${formatUsd(billing.welcomeCreditsUsdCents)} open-weight bonus can still run until it expires.`
@@ -799,13 +800,13 @@ export default function AIAssistantsPage() {
           <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
             <span
               className="rounded-md px-2 py-1 text-xs font-medium tabular-nums"
-              style={{ background: "var(--paper-3)", color: "var(--ink-2)" }}
+              style={{ background: "hsl(var(--accent))", color: "hsl(var(--muted-foreground))" }}
             >
               Included {formatUsd(billing.includedQuotaCents)}
             </span>
             <span
               className="rounded-md px-2 py-1 text-xs font-medium tabular-nums"
-              style={{ background: "var(--paper-3)", color: "var(--ink-2)" }}
+              style={{ background: "hsl(var(--accent))", color: "hsl(var(--muted-foreground))" }}
             >
               Prepaid {formatUsd(billing.prepaidCreditsUsdCents)}
             </span>
@@ -819,16 +820,16 @@ export default function AIAssistantsPage() {
       {/* List / empty state */}
       {loading ? (
         <div className="flex h-64 items-center justify-center">
-          <Loader2 className="h-5 w-5 animate-spin" style={{ color: "var(--ink-3)" }} />
+          <Loader2 className="h-5 w-5 animate-spin" style={{ color: "hsl(var(--muted-foreground))" }} />
         </div>
       ) : assistants.length === 0 ? (
         <div className="card flex flex-col items-center justify-center gap-4 py-24 text-center">
-          <div className="grid h-16 w-16 place-items-center rounded-2xl" style={{ background: "var(--brand-container)" }}>
-            <Bot className="h-8 w-8" style={{ color: "var(--brand)" }} />
+          <div className="grid h-16 w-16 place-items-center">
+            <AiCrest mood="idle" size={45} />
           </div>
           <div>
-            <p className="text-base font-semibold" style={{ color: "var(--ink)" }}>No AI assistants yet</p>
-            <p className="mt-1 text-sm" style={{ color: "var(--ink-3)" }}>
+            <p className="text-base font-semibold" style={{ color: "hsl(var(--foreground))" }}>No AI assistants yet</p>
+            <p className="mt-1 text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
               Create your first branded AI assistant and publish it to a shareable URL.
             </p>
           </div>
@@ -839,10 +840,8 @@ export default function AIAssistantsPage() {
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {assistants.map((a) => {
-            const color      = a.primaryColor ?? "#1A73E8";
             const live       = !!a.publishedAt;
             const modelLabel = availableModels.find((m) => m.id === a.modelId)?.label ?? a.modelId;
-            const letter     = (a.avatarLetter || a.name.charAt(0)).toUpperCase();
             const addedDate  = new Date(a.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
             return (
               <div
@@ -850,7 +849,7 @@ export default function AIAssistantsPage() {
                 className="flex flex-col overflow-hidden transition-transform duration-150 hover:-translate-y-px"
                 style={{
                   background: "var(--md-surface-container-lowest)",
-                  border: "1px solid var(--md-outline-variant)",
+                  border: "1px solid hsl(var(--border))",
                   borderRadius: "12px",
                 }}
               >
@@ -860,54 +859,51 @@ export default function AIAssistantsPage() {
                   {/* Row 1: name + status */}
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2 min-w-0">
-                      <div
-                        className="h-6 w-6 shrink-0 rounded grid place-items-center text-[11px] font-bold text-white overflow-hidden"
-                        style={{ background: color }}
-                      >
+                      <div className="h-6 w-6 shrink-0 grid place-items-center overflow-hidden">
                         {a.logoUrl
                           // eslint-disable-next-line @next/next/no-img-element
-                          ? <img src={a.logoUrl} alt="" className="h-full w-full object-cover" />
-                          : letter}
+                          ? <img src={a.logoUrl} alt="" className="h-6 w-6 rounded object-cover" />
+                          : <AiCrest mood="ready" size={20} />}
                       </div>
-                      <span className="truncate text-sm font-semibold" style={{ color: "var(--ink)" }}>{a.name}</span>
+                      <span className="truncate text-sm font-semibold" style={{ color: "hsl(var(--foreground))" }}>{a.name}</span>
                     </div>
                     <span
                       className="shrink-0 inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] font-medium"
                       style={live
                         ? { background: "var(--green-soft)", color: "var(--green)" }
-                        : { background: "var(--paper-3)", color: "var(--ink-3)" }}
+                        : { background: "hsl(var(--accent))", color: "hsl(var(--muted-foreground))" }}
                     >
                       <span
                         className="h-1.5 w-1.5 shrink-0 rounded-full"
-                        style={{ background: live ? "var(--green)" : "var(--ink-4)" }}
+                        style={{ background: live ? "var(--green)" : "hsl(var(--muted-foreground))" }}
                       />
                       {live ? "Live" : "Draft"}
                     </span>
                   </div>
 
                   {/* Row 2: model · slug eyebrow */}
-                  <p className="font-mono text-[11px] leading-none" style={{ color: "var(--ink-4)" }}>
+                  <p className="font-mono text-[11px] leading-none" style={{ color: "hsl(var(--muted-foreground))" }}>
                     {modelLabel}
                     <span className="mx-1.5 opacity-30">·</span>
                     /{a.slug}
                   </p>
 
                   {/* Row 3: description */}
-                  <p className="text-xs leading-relaxed line-clamp-2" style={{ color: a.description ? "var(--ink-3)" : "var(--ink-4)" }}>
+                  <p className="text-xs leading-relaxed line-clamp-2" style={{ color: a.description ? "hsl(var(--muted-foreground))" : "hsl(var(--muted-foreground))" }}>
                     {a.description || <span className="italic">No description</span>}
                   </p>
 
                   {/* Row 4: metadata */}
                   <div className="mt-auto grid grid-cols-2 gap-x-4 gap-y-2 pt-1">
                     <div>
-                      <p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: "var(--ink-4)" }}>Access</p>
-                      <p className="mt-0.5 inline-flex items-center gap-1 text-xs font-medium capitalize" style={{ color: "var(--ink-2)" }}>
+                      <p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: "hsl(var(--muted-foreground))" }}>Access</p>
+                      <p className="mt-0.5 inline-flex items-center gap-1 text-xs font-medium capitalize" style={{ color: "hsl(var(--muted-foreground))" }}>
                         <VisibilityIcon v={a.visibility} /> {a.visibility ?? "private"}
                       </p>
                     </div>
                     <div>
-                      <p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: "var(--ink-4)" }}>Added</p>
-                      <p className="mt-0.5 text-xs font-medium tabular-nums" style={{ color: "var(--ink-2)" }}>{addedDate}</p>
+                      <p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: "hsl(var(--muted-foreground))" }}>Added</p>
+                      <p className="mt-0.5 text-xs font-medium tabular-nums" style={{ color: "hsl(var(--muted-foreground))" }}>{addedDate}</p>
                     </div>
                   </div>
                 </div>
@@ -915,7 +911,7 @@ export default function AIAssistantsPage() {
                 {/* Footer actions */}
                 <div
                   className="flex items-center gap-0.5 px-3 py-2"
-                  style={{ borderTop: "1px solid var(--md-outline-variant)" }}
+                  style={{ borderTop: "1px solid hsl(var(--border))" }}
                 >
                   <button onClick={() => openEdit(a)} className="btn-ghost btn-sm">
                     <Pencil className="h-3.5 w-3.5" /> Edit
@@ -940,7 +936,7 @@ export default function AIAssistantsPage() {
                     onClick={() => togglePublish(a)}
                     disabled={publishing === a.id}
                     className="btn-ghost btn-sm ml-auto"
-                    style={{ color: live ? "var(--ink-3)" : "var(--brand)" }}
+                    style={{ color: live ? "hsl(var(--muted-foreground))" : "hsl(var(--primary))" }}
                   >
                     {publishing === a.id
                       ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -988,7 +984,7 @@ export default function AIAssistantsPage() {
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1.5 text-xs font-medium hover:underline"
-                  style={{ color: "var(--brand)" }}
+                  style={{ color: "hsl(var(--primary))" }}
                 >
                   <Eye className="h-3.5 w-3.5" /> Preview
                 </a>
@@ -1016,7 +1012,7 @@ export default function AIAssistantsPage() {
                     {/* Preview */}
                     <div
                       className="grid h-14 w-14 shrink-0 place-items-center rounded-xl overflow-hidden border-2 transition-all"
-                      style={{ borderColor: "var(--line)", background: previewColor }}
+                      style={{ borderColor: "hsl(var(--border))", background: previewColor }}
                     >
                       {f.logoUrl
                         // eslint-disable-next-line @next/next/no-img-element
@@ -1120,7 +1116,7 @@ export default function AIAssistantsPage() {
                     <label className="relative h-7 w-7 cursor-pointer" title="Custom colour">
                       <span
                         className="block h-7 w-7 rounded-full border-2 border-dashed transition-all hover:scale-110"
-                        style={{ borderColor: "var(--line)", background: COLORS.includes(f.primaryColor) ? "transparent" : f.primaryColor }}
+                        style={{ borderColor: "hsl(var(--border))", background: COLORS.includes(f.primaryColor) ? "transparent" : f.primaryColor }}
                       />
                       <input type="color" value={f.primaryColor} onChange={(e) => set("primaryColor", e.target.value)} className="sr-only" />
                     </label>
@@ -1167,7 +1163,7 @@ export default function AIAssistantsPage() {
                       )}
                     </SelectContent>
                   </Select>
-                  <p className="mt-1.5 text-xs" style={{ color: "var(--ink-3)" }}>
+                  <p className="mt-1.5 text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
                     Inference draws included credit first, then prepaid. The assistant is cut off at $0.
                   </p>
                 </div>
@@ -1233,13 +1229,13 @@ export default function AIAssistantsPage() {
                         className={cn(
                           "relative flex flex-col items-center gap-1.5 rounded-xl border p-3.5 text-sm transition-all",
                           f.visibility === value
-                            ? "border-[var(--brand)] bg-[var(--brand-container)]"
-                            : "border-[var(--line)] hover:bg-[var(--paper-3)]",
+                            ? "border-[hsl(var(--primary))] bg-[var(--brand-container)]"
+                            : "border-border hover:bg-accent",
                         )}
                       >
-                        <Icon className="h-4 w-4" style={{ color: f.visibility === value ? "var(--brand)" : "var(--ink-3)" }} />
-                        <span className="font-semibold text-xs" style={{ color: "var(--ink)" }}>{label}</span>
-                        <span className="text-xs leading-tight text-center" style={{ color: "var(--ink-3)" }}>{desc}</span>
+                        <Icon className="h-4 w-4" style={{ color: f.visibility === value ? "hsl(var(--primary))" : "hsl(var(--muted-foreground))" }} />
+                        <span className="font-semibold text-xs" style={{ color: "hsl(var(--foreground))" }}>{label}</span>
+                        <span className="text-xs leading-tight text-center" style={{ color: "hsl(var(--muted-foreground))" }}>{desc}</span>
                       </button>
                     ))}
                   </div>
@@ -1272,12 +1268,12 @@ export default function AIAssistantsPage() {
                           className={cn(
                             "flex flex-col items-center gap-1 rounded-xl border p-3.5 text-sm transition-all",
                             f.monetization === value
-                              ? "border-[var(--brand)] bg-[var(--brand-container)]"
-                              : "border-[var(--line)] hover:bg-[var(--paper-3)]",
+                              ? "border-[hsl(var(--primary))] bg-[var(--brand-container)]"
+                              : "border-border hover:bg-accent",
                           )}
                         >
-                          <span className="font-semibold text-xs" style={{ color: "var(--ink)" }}>{label}</span>
-                          <span className="text-xs" style={{ color: "var(--ink-3)" }}>{desc}</span>
+                          <span className="font-semibold text-xs" style={{ color: "hsl(var(--foreground))" }}>{label}</span>
+                          <span className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>{desc}</span>
                         </button>
                       ))}
                     </div>
@@ -1303,12 +1299,12 @@ export default function AIAssistantsPage() {
                                 className={cn(
                                   "flex flex-col items-center gap-1 rounded-xl border p-3 text-sm transition-all",
                                   f.usageMode === value
-                                    ? "border-[var(--brand)] bg-[var(--brand-container)]"
-                                    : "border-[var(--line)] hover:bg-[var(--paper-3)]",
+                                    ? "border-[hsl(var(--primary))] bg-[var(--brand-container)]"
+                                    : "border-border hover:bg-accent",
                                 )}
                               >
-                                <span className="font-semibold text-xs" style={{ color: "var(--ink)" }}>{label}</span>
-                                <span className="text-xs" style={{ color: "var(--ink-3)" }}>{desc}</span>
+                                <span className="font-semibold text-xs" style={{ color: "hsl(var(--foreground))" }}>{label}</span>
+                                <span className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>{desc}</span>
                               </button>
                             ))}
                           </div>
@@ -1316,9 +1312,9 @@ export default function AIAssistantsPage() {
 
                         {/* Period limit */}
                         {f.usageMode === "included" && (
-                          <div className="mt-4 rounded-xl border p-4 space-y-3" style={{ borderColor: "var(--line)" }}>
-                            <p className="text-sm font-medium" style={{ color: "var(--ink)" }}>Period limit</p>
-                            <p className="text-xs" style={{ color: "var(--ink-3)" }}>
+                          <div className="mt-4 rounded-xl border p-4 space-y-3" style={{ borderColor: "hsl(var(--border))" }}>
+                            <p className="text-sm font-medium" style={{ color: "hsl(var(--foreground))" }}>Period limit</p>
+                            <p className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
                               Like Claude Pro — limit how many messages a user can send in a rolling time window.
                             </p>
                             <div className="grid grid-cols-2 gap-3">
@@ -1357,9 +1353,9 @@ export default function AIAssistantsPage() {
 
                         {/* Weekly limit */}
                         {f.usageMode === "included" && (
-                          <div className="mt-4 rounded-xl border p-4 space-y-3" style={{ borderColor: "var(--line)" }}>
-                            <p className="text-sm font-medium" style={{ color: "var(--ink)" }}>Weekly cap</p>
-                            <p className="text-xs" style={{ color: "var(--ink-3)" }}>
+                          <div className="mt-4 rounded-xl border p-4 space-y-3" style={{ borderColor: "hsl(var(--border))" }}>
+                            <p className="text-sm font-medium" style={{ color: "hsl(var(--foreground))" }}>Weekly cap</p>
+                            <p className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
                               An overall weekly message budget on top of other limits. Resets every 7 days.
                             </p>
                             <div>
@@ -1377,9 +1373,9 @@ export default function AIAssistantsPage() {
                         )}
 
                         {/* Token limits */}
-                        <div className="mt-4 rounded-xl border p-4 space-y-3" style={{ borderColor: "var(--line)" }}>
-                          <p className="text-sm font-medium" style={{ color: "var(--ink)" }}>Token limits</p>
-                          <p className="text-xs" style={{ color: "var(--ink-3)" }}>
+                        <div className="mt-4 rounded-xl border p-4 space-y-3" style={{ borderColor: "hsl(var(--border))" }}>
+                          <p className="text-sm font-medium" style={{ color: "hsl(var(--foreground))" }}>Token limits</p>
+                          <p className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
                             Prevent buyers from burning through credits with huge messages or expensive loops.
                           </p>
                           <div className="grid grid-cols-2 gap-3">
@@ -1432,14 +1428,14 @@ export default function AIAssistantsPage() {
                         </div>
 
                         {/* Feature toggles */}
-                        <div className="mt-4 rounded-xl border p-4 space-y-3" style={{ borderColor: "var(--line)" }}>
+                        <div className="mt-4 rounded-xl border p-4 space-y-3" style={{ borderColor: "hsl(var(--border))" }}>
                           <div className="flex items-center justify-between">
-                            <p className="text-sm font-medium" style={{ color: "var(--ink)" }}>Feature toggles</p>
+                            <p className="text-sm font-medium" style={{ color: "hsl(var(--foreground))" }}>Feature toggles</p>
                             <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
                               Uses more tokens
                             </span>
                           </div>
-                          <p className="text-xs" style={{ color: "var(--ink-3)" }}>
+                          <p className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
                             Enable advanced capabilities buyers can use. Each enabled feature increases token consumption.
                           </p>
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -1457,7 +1453,7 @@ export default function AIAssistantsPage() {
                                   <div
                                     key={feat.key}
                                     className="flex items-center gap-3 rounded-lg border p-3 text-left"
-                                    style={{ borderColor: "var(--line)" }}
+                                    style={{ borderColor: "hsl(var(--border))" }}
                                   >
                                     <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-gray-400 dark:bg-gray-800">
                                       <feat.icon className="h-4 w-4" />
@@ -1470,7 +1466,7 @@ export default function AIAssistantsPage() {
                                       <Link
                                         href="/dashboard/billing"
                                         className="mt-1 inline-block text-[11px] font-medium underline"
-                                        style={{ color: "var(--ink)" }}
+                                        style={{ color: "hsl(var(--foreground))" }}
                                       >
                                         Upgrade on Billing · ${webSearchAddon.amountUsd}/mo
                                       </Link>
@@ -1489,7 +1485,7 @@ export default function AIAssistantsPage() {
                                       ? "border-primary-200 bg-primary-50 dark:border-primary-800 dark:bg-primary-950/30"
                                       : "border-dashed hover:border-solid",
                                   )}
-                                  style={enabled ? undefined : { borderColor: "var(--line)" }}
+                                  style={enabled ? undefined : { borderColor: "hsl(var(--border))" }}
                                 >
                                   <div className={cn(
                                     "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg",
@@ -1517,9 +1513,9 @@ export default function AIAssistantsPage() {
 
                         {/* Metered pricing */}
                         {f.usageMode === "metered" && (
-                          <div className="mt-4 rounded-xl border p-4 space-y-3" style={{ borderColor: "var(--line)" }}>
-                            <p className="text-sm font-medium" style={{ color: "var(--ink)" }}>Metered pricing</p>
-                            <p className="text-xs" style={{ color: "var(--ink-3)" }}>
+                          <div className="mt-4 rounded-xl border p-4 space-y-3" style={{ borderColor: "hsl(var(--border))" }}>
+                            <p className="text-sm font-medium" style={{ color: "hsl(var(--foreground))" }}>Metered pricing</p>
+                            <p className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
                               Charge buyers for each message beyond their included allowance.
                             </p>
                             <div className="grid grid-cols-2 gap-3">
@@ -1563,14 +1559,14 @@ export default function AIAssistantsPage() {
                               placeholder="60"
                               min={1}
                             />
-                            <p className="text-xs mt-1" style={{ color: "var(--ink-3)" }}>
+                            <p className="text-xs mt-1" style={{ color: "hsl(var(--muted-foreground))" }}>
                               Leave blank to permanently block users after they reach the session limit.
                             </p>
                           </div>
                         )}
 
                         {/* Fee calculator */}
-                        <div className="mt-4 rounded-xl border p-4 space-y-3" style={{ borderColor: "var(--line)" }}>
+                        <div className="mt-4 rounded-xl border p-4 space-y-3" style={{ borderColor: "hsl(var(--border))" }}>
                           <div>
                             <Label hint="What you want to earn per sale or per month. Fees are added on top.">Your earnings (£)</Label>
                             <input
@@ -1593,29 +1589,29 @@ export default function AIAssistantsPage() {
                           {pricingPreview && pricingPreview.earningsCents > 0 && (
                             <div className="space-y-1.5 text-sm">
                               <div className="flex justify-between">
-                                <span style={{ color: "var(--ink-2)" }}>Your earnings</span>
-                                <span className="font-medium" style={{ color: "var(--ink)" }}>£{(pricingPreview.earningsCents / 100).toFixed(2)}</span>
+                                <span style={{ color: "hsl(var(--muted-foreground))" }}>Your earnings</span>
+                                <span className="font-medium" style={{ color: "hsl(var(--foreground))" }}>£{(pricingPreview.earningsCents / 100).toFixed(2)}</span>
                               </div>
                               {pricingPreview.aiCostCents > 0 && (
                                 <div className="flex justify-between">
-                                  <span style={{ color: "var(--ink-2)" }}>Est. AI cost per user</span>
-                                  <span style={{ color: "var(--ink-2)" }}>£{(pricingPreview.aiCostCents / 100).toFixed(2)}</span>
+                                  <span style={{ color: "hsl(var(--muted-foreground))" }}>Est. AI cost per user</span>
+                                  <span style={{ color: "hsl(var(--muted-foreground))" }}>£{(pricingPreview.aiCostCents / 100).toFixed(2)}</span>
                                 </div>
                               )}
                               <div className="flex justify-between">
-                                <span style={{ color: "var(--ink-2)" }}>Platform fee ({pricingPreview.platformFeePercent}%)</span>
-                                <span style={{ color: "var(--ink-2)" }}>£{(pricingPreview.platformFeeCents / 100).toFixed(2)}</span>
+                                <span style={{ color: "hsl(var(--muted-foreground))" }}>Platform fee ({pricingPreview.platformFeePercent}%)</span>
+                                <span style={{ color: "hsl(var(--muted-foreground))" }}>£{(pricingPreview.platformFeeCents / 100).toFixed(2)}</span>
                               </div>
                               <div className="flex justify-between">
-                                <span style={{ color: "var(--ink-2)" }}>Processing fee (est.)</span>
-                                <span style={{ color: "var(--ink-2)" }}>£{(pricingPreview.stripeFeeCents / 100).toFixed(2)}</span>
+                                <span style={{ color: "hsl(var(--muted-foreground))" }}>Processing fee (est.)</span>
+                                <span style={{ color: "hsl(var(--muted-foreground))" }}>£{(pricingPreview.stripeFeeCents / 100).toFixed(2)}</span>
                               </div>
-                              <div className="pt-1.5 border-t flex justify-between" style={{ borderColor: "var(--line)" }}>
-                                <span className="font-medium" style={{ color: "var(--ink)" }}>Buyer pays</span>
-                                <span className="font-bold" style={{ color: "var(--brand)" }}>£{(pricingPreview.buyerTotalCents / 100).toFixed(2)}</span>
+                              <div className="pt-1.5 border-t flex justify-between" style={{ borderColor: "hsl(var(--border))" }}>
+                                <span className="font-medium" style={{ color: "hsl(var(--foreground))" }}>Buyer pays</span>
+                                <span className="font-bold" style={{ color: "hsl(var(--primary))" }}>£{(pricingPreview.buyerTotalCents / 100).toFixed(2)}</span>
                               </div>
-                              <div className="pt-1.5 border-t flex justify-between" style={{ borderColor: "var(--line)" }}>
-                                <span className="font-medium" style={{ color: "var(--ink)" }}>Your profit per user</span>
+                              <div className="pt-1.5 border-t flex justify-between" style={{ borderColor: "hsl(var(--border))" }}>
+                                <span className="font-medium" style={{ color: "hsl(var(--foreground))" }}>Your profit per user</span>
                                 <span className={pricingPreview.profitCents < 0 ? "font-bold" : "font-bold"} style={{ color: pricingPreview.profitCents < 0 ? "var(--red)" : "#059669" }}>
                                   £{(pricingPreview.profitCents / 100).toFixed(2)}
                                 </span>
@@ -1626,23 +1622,23 @@ export default function AIAssistantsPage() {
                                 </p>
                               )}
                               {pricingPreview.pricingFound === false && (
-                                <p className="text-xs mt-1" style={{ color: "var(--ink-3)" }}>
+                                <p className="text-xs mt-1" style={{ color: "hsl(var(--muted-foreground))" }}>
                                   No catalog price for this model yet — AI cost is omitted until pricing is seeded.
                                 </p>
                               )}
                               {pricingPreview.profitCents >= 0 && pricingPreview.aiCostCents > 0 && (
-                                <p className="text-xs mt-1" style={{ color: "var(--ink-3)" }}>
+                                <p className="text-xs mt-1" style={{ color: "hsl(var(--muted-foreground))" }}>
                                   AI cost is estimated for {f.maxMessages || 20} messages using {availableModels.find(m => m.id === f.modelId)?.label || f.modelId}. Actual usage may vary.
                                 </p>
                               )}
-                              <p className="text-xs" style={{ color: "var(--ink-3)" }}>
+                              <p className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
                                 Processing fees are estimated ({pricingPreview.stripeFeeRate}). Actual fees may vary slightly.
                               </p>
                             </div>
                           )}
 
                           {pricingLoading && (
-                            <div className="flex items-center gap-2 text-xs" style={{ color: "var(--ink-3)" }}>
+                            <div className="flex items-center gap-2 text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
                               <Loader2 className="h-3 w-3 animate-spin" />
                               Calculating fees…
                             </div>
@@ -1655,12 +1651,12 @@ export default function AIAssistantsPage() {
                             checked={termsAccepted}
                             onCheckedChange={(v) => setTermsAccepted(v === true)}
                           />
-                          <label htmlFor="terms-check" className="text-xs leading-relaxed cursor-pointer" style={{ color: "var(--ink-2)" }}>
+                          <label htmlFor="terms-check" className="text-xs leading-relaxed cursor-pointer" style={{ color: "hsl(var(--muted-foreground))" }}>
                             I have read and agree to the{" "}
                             <button
                               type="button"
-                              className="underline hover:text-[var(--brand)] transition-colors"
-                              style={{ color: "var(--brand)" }}
+                              className="underline hover:text-primary transition-colors"
+                              style={{ color: "hsl(var(--primary))" }}
                               onClick={(e) => { e.preventDefault(); setTermsCheckbox(false); setShowTermsDialog(true); }}
                             >
                               Terms & Conditions
@@ -1674,13 +1670,13 @@ export default function AIAssistantsPage() {
                 )}
 
                 {/* Password protection */}
-                <div className="rounded-xl border p-4" style={{ borderColor: "var(--line)" }}>
+                <div className="rounded-xl border p-4" style={{ borderColor: "hsl(var(--border))" }}>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <Shield className="h-4 w-4" style={{ color: "var(--ink-3)" }} />
+                      <Shield className="h-4 w-4" style={{ color: "hsl(var(--muted-foreground))" }} />
                       <div>
-                        <p className="text-sm font-medium" style={{ color: "var(--ink)" }}>Password protection</p>
-                        <p className="text-xs" style={{ color: "var(--ink-3)" }}>Require a password before users can chat</p>
+                        <p className="text-sm font-medium" style={{ color: "hsl(var(--foreground))" }}>Password protection</p>
+                        <p className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>Require a password before users can chat</p>
                       </div>
                     </div>
                     <button
@@ -1688,7 +1684,7 @@ export default function AIAssistantsPage() {
                       onClick={() => setForm((p) => ({ ...p, passwordProtected: !p.passwordProtected }))}
                       className={cn(
                         "relative h-6 w-11 rounded-full transition-colors",
-                        f.passwordProtected ? "bg-[var(--brand)]" : "bg-[var(--ink-4)]",
+                        f.passwordProtected ? "bg-primary" : "bg-muted-foreground",
                       )}
                     >
                       <span
@@ -1733,7 +1729,7 @@ export default function AIAssistantsPage() {
                   </Label>
 
                   {!editing ? (
-                    <p className="rounded-xl border border-dashed p-4 text-center text-sm" style={{ borderColor: "var(--line)", color: "var(--ink-3)" }}>
+                    <p className="rounded-xl border border-dashed p-4 text-center text-sm" style={{ borderColor: "hsl(var(--border))", color: "hsl(var(--muted-foreground))" }}>
                       Save the assistant first to add knowledge files.
                     </p>
                   ) : (
@@ -1746,14 +1742,14 @@ export default function AIAssistantsPage() {
                         onClick={() => docInputRef.current?.click()}
                         className={cn(
                           "flex cursor-pointer flex-col items-center gap-2 rounded-xl border-2 border-dashed p-6 transition-colors",
-                          dragOver ? "border-[var(--brand)] bg-[var(--brand-container)]" : "border-[var(--line)] hover:border-[var(--brand)] hover:bg-[var(--paper-3)]",
+                          dragOver ? "border-[hsl(var(--primary))] bg-[var(--brand-container)]" : "border-border hover:border-[hsl(var(--primary))] hover:bg-accent",
                         )}
                       >
                         {docUploading
-                          ? <Loader2 className="h-6 w-6 animate-spin" style={{ color: "var(--ink-3)" }} />
-                          : <Upload className="h-6 w-6" style={{ color: "var(--ink-3)" }} />}
-                        <p className="text-sm" style={{ color: "var(--ink-3)" }}>
-                          Drop files here or <span style={{ color: "var(--brand)" }}>browse</span>
+                          ? <Loader2 className="h-6 w-6 animate-spin" style={{ color: "hsl(var(--muted-foreground))" }} />
+                          : <Upload className="h-6 w-6" style={{ color: "hsl(var(--muted-foreground))" }} />}
+                        <p className="text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
+                          Drop files here or <span style={{ color: "hsl(var(--primary))" }}>browse</span>
                         </p>
                       </div>
                       <input
@@ -1768,16 +1764,16 @@ export default function AIAssistantsPage() {
                       {/* Document list */}
                       {docsLoading ? (
                         <div className="flex justify-center py-3">
-                          <Loader2 className="h-4 w-4 animate-spin" style={{ color: "var(--ink-3)" }} />
+                          <Loader2 className="h-4 w-4 animate-spin" style={{ color: "hsl(var(--muted-foreground))" }} />
                         </div>
                       ) : documents.length > 0 && (
                         <ul className="mt-3 space-y-2">
                           {documents.map((doc) => (
-                            <li key={doc.id} className="flex items-center gap-3 rounded-lg px-3 py-2" style={{ background: "var(--paper-2)" }}>
-                              <FileText className="h-4 w-4 shrink-0" style={{ color: "var(--ink-3)" }} />
+                            <li key={doc.id} className="flex items-center gap-3 rounded-lg px-3 py-2" style={{ background: "hsl(var(--card))" }}>
+                              <FileText className="h-4 w-4 shrink-0" style={{ color: "hsl(var(--muted-foreground))" }} />
                               <div className="min-w-0 flex-1">
-                                <p className="truncate text-sm font-medium" style={{ color: "var(--ink)" }}>{doc.name}</p>
-                                <p className="text-xs" style={{ color: "var(--ink-3)" }}>
+                                <p className="truncate text-sm font-medium" style={{ color: "hsl(var(--foreground))" }}>{doc.name}</p>
+                                <p className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
                                   {doc.fileType?.toUpperCase()} · {formatBytes(doc.fileSizeBytes)}
                                 </p>
                               </div>
@@ -1801,14 +1797,14 @@ export default function AIAssistantsPage() {
                 <div>
                   <div className="mb-2 flex items-center justify-between">
                     <Label hint="Connect external tools (GitHub, Notion, Slack…) via Composio so the assistant can read or write data on your behalf during a conversation.">
-                      Integrations <span className="ml-1 rounded-full px-1.5 py-0.5 text-[10px] font-semibold" style={{ background: "var(--brand-container)", color: "var(--brand)" }}>1036+ toolkits</span>
+                      Integrations <span className="ml-1 rounded-full px-1.5 py-0.5 text-[10px] font-semibold" style={{ background: "var(--brand-container)", color: "hsl(var(--primary))" }}>1036+ toolkits</span>
                     </Label>
-                    {!editing && <span className="text-xs" style={{ color: "var(--ink-3)" }}>Save assistant first</span>}
+                    {!editing && <span className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>Save assistant first</span>}
                   </div>
 
                   {/* Search */}
                   <div className="relative mb-3">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5" style={{ color: "var(--ink-3)" }} />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5" style={{ color: "hsl(var(--muted-foreground))" }} />
                     <input
                       className="input w-full pl-9 text-sm"
                       placeholder="Search toolkits… (GitHub, Notion, Jira, Slack…)"
@@ -1824,10 +1820,10 @@ export default function AIAssistantsPage() {
                   {/* App grid */}
                   {appsLoading ? (
                     <div className="flex justify-center py-6">
-                      <Loader2 className="h-5 w-5 animate-spin" style={{ color: "var(--ink-3)" }} />
+                      <Loader2 className="h-5 w-5 animate-spin" style={{ color: "hsl(var(--muted-foreground))" }} />
                     </div>
                   ) : composioApps.length === 0 ? (
-                    <p className="text-center text-sm py-4" style={{ color: "var(--ink-3)" }}>
+                    <p className="text-center text-sm py-4" style={{ color: "hsl(var(--muted-foreground))" }}>
                       {appSearch ? "No toolkits found." : "Start typing to search toolkits."}
                     </p>
                   ) : (
@@ -1847,29 +1843,29 @@ export default function AIAssistantsPage() {
                               "relative flex flex-col items-center gap-1.5 rounded-xl border p-3 text-center transition-all",
                               isConnected
                                 ? "border-[var(--green)] bg-[var(--green-soft)]"
-                                : "border-[var(--line)] hover:border-[var(--brand)] hover:bg-[var(--paper-3)]",
+                                : "border-border hover:border-[hsl(var(--primary))] hover:bg-accent",
                               (!editing || isPending) && "opacity-60 cursor-not-allowed",
                             )}
                           >
                             {/* App logo */}
-                            <div className="h-8 w-8 rounded-lg overflow-hidden flex items-center justify-center" style={{ background: "var(--paper-3)" }}>
+                            <div className="h-8 w-8 rounded-lg overflow-hidden flex items-center justify-center" style={{ background: "hsl(var(--accent))" }}>
                               {app.logo
                                 // eslint-disable-next-line @next/next/no-img-element
                                 ? <img src={app.logo} alt={app.name} className="h-full w-full object-contain p-1" />
-                                : <LinkIcon className="h-4 w-4" style={{ color: "var(--ink-3)" }} />}
+                                : <LinkIcon className="h-4 w-4" style={{ color: "hsl(var(--muted-foreground))" }} />}
                             </div>
-                            <span className="text-[11px] font-medium leading-tight" style={{ color: "var(--ink)" }}>{app.name}</span>
+                            <span className="text-[11px] font-medium leading-tight" style={{ color: "hsl(var(--foreground))" }}>{app.name}</span>
 
                             {!editing ? (
-                              <span className="text-[10px]" style={{ color: "var(--ink-3)" }}>Save to connect</span>
+                              <span className="text-[10px]" style={{ color: "hsl(var(--muted-foreground))" }}>Save to connect</span>
                             ) : isConnected ? (
                               <span className="text-[10px] font-semibold" style={{ color: "var(--green)" }}>
                                 {toolCount > 0 ? `${toolCount} tool${toolCount > 1 ? "s" : ""}` : "✓ Connected"}
                               </span>
                             ) : isPending ? (
-                              <Loader2 className="h-3 w-3 animate-spin" style={{ color: "var(--brand)" }} />
+                              <Loader2 className="h-3 w-3 animate-spin" style={{ color: "hsl(var(--primary))" }} />
                             ) : (
-                              <span className="text-[10px] font-semibold" style={{ color: "var(--brand)" }}>
+                              <span className="text-[10px] font-semibold" style={{ color: "hsl(var(--primary))" }}>
                                 Select tools →
                               </span>
                             )}
@@ -1881,31 +1877,31 @@ export default function AIAssistantsPage() {
 
                   {/* Tool selection panel */}
                   {toolPanelApp && (
-                    <div className="mt-3 rounded-xl border p-3" style={{ borderColor: "var(--line)", background: "var(--paper-2)" }}>
+                    <div className="mt-3 rounded-xl border p-3" style={{ borderColor: "hsl(var(--border))", background: "hsl(var(--card))" }}>
                       <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm font-medium" style={{ color: "var(--ink)" }}>
+                        <span className="text-sm font-medium" style={{ color: "hsl(var(--foreground))" }}>
                           {toolPanelApp.name} — Select tools
                         </span>
                         <button
                           type="button"
                           onClick={() => setToolPanelApp(null)}
-                          className="rounded p-1 hover:bg-[var(--paper-3)]"
+                          className="rounded p-1 hover:bg-accent"
                         >
-                          <X className="h-3.5 w-3.5" style={{ color: "var(--ink-3)" }} />
+                          <X className="h-3.5 w-3.5" style={{ color: "hsl(var(--muted-foreground))" }} />
                         </button>
                       </div>
                       {toolsLoading ? (
                         <div className="flex justify-center py-4">
-                          <Loader2 className="h-4 w-4 animate-spin" style={{ color: "var(--ink-3)" }} />
+                          <Loader2 className="h-4 w-4 animate-spin" style={{ color: "hsl(var(--muted-foreground))" }} />
                         </div>
                       ) : appTools.length === 0 ? (
-                        <p className="text-center text-xs py-2" style={{ color: "var(--ink-3)" }}>No tools available.</p>
+                        <p className="text-center text-xs py-2" style={{ color: "hsl(var(--muted-foreground))" }}>No tools available.</p>
                       ) : (
                         <div className="max-h-40 overflow-y-auto space-y-1 pr-1">
                           {appTools.map((t) => (
                             <label
                               key={t.slug}
-                              className="flex items-start gap-2 rounded-lg px-2 py-1.5 cursor-pointer hover:bg-[var(--paper-3)]"
+                              className="flex items-start gap-2 rounded-lg px-2 py-1.5 cursor-pointer hover:bg-accent"
                             >
                               <input
                                 type="checkbox"
@@ -1919,9 +1915,9 @@ export default function AIAssistantsPage() {
                                 }}
                               />
                               <div className="min-w-0">
-                                <p className="text-xs font-medium" style={{ color: "var(--ink)" }}>{t.name}</p>
+                                <p className="text-xs font-medium" style={{ color: "hsl(var(--foreground))" }}>{t.name}</p>
                                 {t.description && (
-                                  <p className="text-[11px] leading-tight" style={{ color: "var(--ink-3)" }}>{t.description}</p>
+                                  <p className="text-[11px] leading-tight" style={{ color: "hsl(var(--muted-foreground))" }}>{t.description}</p>
                                 )}
                               </div>
                             </label>
@@ -1987,23 +1983,23 @@ export default function AIAssistantsPage() {
                 <div>
                   <div className="mb-2 flex items-center justify-between">
                     <Label hint="Connect Model Context Protocol (MCP) servers to give your assistant access to local tools, databases, and APIs.">
-                      MCP Servers <span className="ml-1 rounded-full px-1.5 py-0.5 text-[10px] font-semibold" style={{ background: "var(--brand-container)", color: "var(--brand)" }}>Beta</span>
+                      MCP Servers <span className="ml-1 rounded-full px-1.5 py-0.5 text-[10px] font-semibold" style={{ background: "var(--brand-container)", color: "hsl(var(--primary))" }}>Beta</span>
                     </Label>
                   </div>
-                  <p className="text-xs mb-3" style={{ color: "var(--ink-3)" }}>
+                  <p className="text-xs mb-3" style={{ color: "hsl(var(--muted-foreground))" }}>
                     MCP servers let your assistant call external tools during conversations.
                   </p>
 
                   {/* MCP server list */}
                   <div className="space-y-2">
                     {f.mcpServers.map((server, idx) => (
-                      <div key={server.id} className="rounded-xl border p-3" style={{ borderColor: "var(--line)" }}>
+                      <div key={server.id} className="rounded-xl border p-3" style={{ borderColor: "hsl(var(--border))" }}>
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center gap-2">
-                            <Server className="h-3.5 w-3.5" style={{ color: "var(--ink-3)" }} />
+                            <Server className="h-3.5 w-3.5" style={{ color: "hsl(var(--muted-foreground))" }} />
                             <input
                               className="text-sm font-medium bg-transparent border-none outline-none p-0 w-40"
-                              style={{ color: "var(--ink)" }}
+                              style={{ color: "hsl(var(--foreground))" }}
                               value={server.name}
                               onChange={(e) => {
                                 const next = [...f.mcpServers];
@@ -2025,7 +2021,7 @@ export default function AIAssistantsPage() {
                                 "text-[10px] px-2 py-0.5 rounded-full font-medium",
                                 server.enabled
                                   ? "bg-[var(--green-soft)] text-[var(--green)]"
-                                  : "bg-[var(--paper-3)] text-[var(--ink-3)]",
+                                  : "bg-accent text-muted-foreground",
                               )}
                             >
                               {server.enabled ? "Enabled" : "Disabled"}
@@ -2097,21 +2093,21 @@ export default function AIAssistantsPage() {
                 <div>
                   <div className="mb-2 flex items-center justify-between">
                     <Label hint="Connect external REST APIs by providing an API key and documentation URL. An AI helper parses the docs and auto-generates callable tools for your assistant.">
-                      API Connections <span className="ml-1 rounded-full px-1.5 py-0.5 text-[10px] font-semibold" style={{ background: "var(--brand-container)", color: "var(--brand)" }}>New</span>
+                      API Connections <span className="ml-1 rounded-full px-1.5 py-0.5 text-[10px] font-semibold" style={{ background: "var(--brand-container)", color: "hsl(var(--primary))" }}>New</span>
                     </Label>
                   </div>
-                  <p className="text-xs mb-3" style={{ color: "var(--ink-3)" }}>
+                  <p className="text-xs mb-3" style={{ color: "hsl(var(--muted-foreground))" }}>
                     Give your assistant access to any REST API. We auto-parse the docs and generate tools.
                   </p>
 
                   {!editing ? (
-                    <p className="rounded-xl border border-dashed p-4 text-center text-sm" style={{ borderColor: "var(--line)", color: "var(--ink-3)" }}>
+                    <p className="rounded-xl border border-dashed p-4 text-center text-sm" style={{ borderColor: "hsl(var(--border))", color: "hsl(var(--muted-foreground))" }}>
                       Save the assistant first to add API connections.
                     </p>
                   ) : (
                     <>
                       {/* Add connection form */}
-                      <div className="rounded-xl border p-4 space-y-3" style={{ borderColor: "var(--line)" }}>
+                      <div className="rounded-xl border p-4 space-y-3" style={{ borderColor: "hsl(var(--border))" }}>
                         <div className="grid grid-cols-2 gap-3">
                           <div>
                             <Label sub="e.g. Stripe, SendGrid">Name</Label>
@@ -2192,17 +2188,17 @@ export default function AIAssistantsPage() {
                       {/* Existing connections */}
                       {apiConnLoading ? (
                         <div className="flex justify-center py-4">
-                          <Loader2 className="h-4 w-4 animate-spin" style={{ color: "var(--ink-3)" }} />
+                          <Loader2 className="h-4 w-4 animate-spin" style={{ color: "hsl(var(--muted-foreground))" }} />
                         </div>
                       ) : apiConnections.length > 0 ? (
                         <div className="mt-3 space-y-2">
                           {apiConnections.map((conn) => (
-                            <div key={conn.id} className="rounded-xl border p-3" style={{ borderColor: "var(--line)" }}>
+                            <div key={conn.id} className="rounded-xl border p-3" style={{ borderColor: "hsl(var(--border))" }}>
                               <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-2">
-                                  <Plug className="h-3.5 w-3.5" style={{ color: "var(--ink-3)" }} />
-                                  <span className="text-sm font-medium" style={{ color: "var(--ink)" }}>{conn.name}</span>
-                                  <span className="text-[10px] font-mono px-1.5 py-0.5 rounded" style={{ background: "var(--paper-3)", color: "var(--ink-3)" }}>
+                                  <Plug className="h-3.5 w-3.5" style={{ color: "hsl(var(--muted-foreground))" }} />
+                                  <span className="text-sm font-medium" style={{ color: "hsl(var(--foreground))" }}>{conn.name}</span>
+                                  <span className="text-[10px] font-mono px-1.5 py-0.5 rounded" style={{ background: "hsl(var(--accent))", color: "hsl(var(--muted-foreground))" }}>
                                     {conn.baseUrl}
                                   </span>
                                 </div>
@@ -2214,7 +2210,7 @@ export default function AIAssistantsPage() {
                                       "text-[10px] px-2 py-0.5 rounded-full font-medium",
                                       conn.enabled
                                         ? "bg-[var(--green-soft)] text-[var(--green)]"
-                                        : "bg-[var(--paper-3)] text-[var(--ink-3)]",
+                                        : "bg-accent text-muted-foreground",
                                     )}
                                   >
                                     {conn.enabled ? "Enabled" : "Disabled"}
@@ -2222,12 +2218,12 @@ export default function AIAssistantsPage() {
                                   <button
                                     type="button"
                                     onClick={() => setExpandedConnId(expandedConnId === conn.id ? null : conn.id)}
-                                    className="rounded p-1 hover:bg-[var(--paper-3)]"
+                                    className="rounded p-1 hover:bg-accent"
                                   >
                                     {expandedConnId === conn.id ? (
-                                      <ChevronUp className="h-3.5 w-3.5" style={{ color: "var(--ink-3)" }} />
+                                      <ChevronUp className="h-3.5 w-3.5" style={{ color: "hsl(var(--muted-foreground))" }} />
                                     ) : (
-                                      <ChevronDown className="h-3.5 w-3.5" style={{ color: "var(--ink-3)" }} />
+                                      <ChevronDown className="h-3.5 w-3.5" style={{ color: "hsl(var(--muted-foreground))" }} />
                                     )}
                                   </button>
                                   <button
@@ -2244,7 +2240,7 @@ export default function AIAssistantsPage() {
                               {expandedConnId === conn.id && (
                                 <div className="mt-3 space-y-2">
                                   <div className="flex items-center justify-between">
-                                    <p className="text-xs font-medium" style={{ color: "var(--ink-3)" }}>
+                                    <p className="text-xs font-medium" style={{ color: "hsl(var(--muted-foreground))" }}>
                                       {conn.endpoints?.filter((e) => e.enabled).length ?? 0} / {conn.endpoints?.length ?? 0} tools active
                                     </p>
                                   </div>
@@ -2257,7 +2253,7 @@ export default function AIAssistantsPage() {
                                             "flex items-start gap-2 rounded-lg px-2 py-1.5 cursor-pointer transition-colors",
                                             ep.enabled ? "opacity-100" : "opacity-50",
                                           )}
-                                          style={{ background: "var(--paper-2)" }}
+                                          style={{ background: "hsl(var(--card))" }}
                                         >
                                           <input
                                             type="checkbox"
@@ -2268,17 +2264,17 @@ export default function AIAssistantsPage() {
                                           <span
                                             className="shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded"
                                             style={{
-                                              background: ep.method === "GET" ? "var(--green-soft)" : ep.method === "POST" ? "var(--brand-container)" : "var(--paper-3)",
-                                              color: ep.method === "GET" ? "var(--green)" : ep.method === "POST" ? "var(--brand)" : "var(--ink-3)",
+                                              background: ep.method === "GET" ? "var(--green-soft)" : ep.method === "POST" ? "var(--brand-container)" : "hsl(var(--accent))",
+                                              color: ep.method === "GET" ? "var(--green)" : ep.method === "POST" ? "hsl(var(--primary))" : "hsl(var(--muted-foreground))",
                                             }}
                                           >
                                             {ep.method}
                                           </span>
                                           <div className="min-w-0 flex-1">
-                                            <p className="text-xs font-medium font-mono" style={{ color: "var(--ink)" }}>{ep.path}</p>
-                                            <p className="text-[11px] leading-tight" style={{ color: "var(--ink-3)" }}>{ep.description}</p>
+                                            <p className="text-xs font-medium font-mono" style={{ color: "hsl(var(--foreground))" }}>{ep.path}</p>
+                                            <p className="text-[11px] leading-tight" style={{ color: "hsl(var(--muted-foreground))" }}>{ep.description}</p>
                                             {ep.parameters && ep.parameters.length > 0 && (
-                                              <p className="text-[10px] mt-0.5" style={{ color: "var(--ink-4)" }}>
+                                              <p className="text-[10px] mt-0.5" style={{ color: "hsl(var(--muted-foreground))" }}>
                                                 Params: {ep.parameters.map((p) => `${p.name} (${p.location})`).join(", ")}
                                               </p>
                                             )}
@@ -2322,28 +2318,28 @@ export default function AIAssistantsPage() {
         <DialogContent className="max-w-lg max-h-[85vh] flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <FileCheck className="h-5 w-5" style={{ color: "var(--brand)" }} />
+              <FileCheck className="h-5 w-5" style={{ color: "hsl(var(--primary))" }} />
               Terms & Conditions
             </DialogTitle>
           </DialogHeader>
           <ScrollArea className="flex-1 pr-4 -mr-2">
-            <div className="space-y-4 text-sm" style={{ color: "var(--ink-2)" }}>
-              <p className="font-medium" style={{ color: "var(--ink)" }}>1. Monetization Agreement</p>
+            <div className="space-y-4 text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
+              <p className="font-medium" style={{ color: "hsl(var(--foreground))" }}>1. Monetization Agreement</p>
               <p>By enabling monetization for this AI assistant, you agree to comply with all applicable laws and regulations regarding the sale of digital goods and services in your jurisdiction.</p>
 
-              <p className="font-medium" style={{ color: "var(--ink)" }}>2. Pricing & Fees</p>
+              <p className="font-medium" style={{ color: "hsl(var(--foreground))" }}>2. Pricing & Fees</p>
               <p>You are responsible for setting fair and accurate pricing. Platform processing fees and applicable taxes may be deducted from your earnings. Payouts are subject to verification and minimum thresholds.</p>
 
-              <p className="font-medium" style={{ color: "var(--ink)" }}>3. Content Responsibility</p>
+              <p className="font-medium" style={{ color: "hsl(var(--foreground))" }}>3. Content Responsibility</p>
               <p>You retain full responsibility for the content, behaviour, and outputs of your assistant. You must not offer illegal, harmful, discriminatory, or otherwise prohibited content or services.</p>
 
-              <p className="font-medium" style={{ color: "var(--ink)" }}>4. Refund Policy</p>
+              <p className="font-medium" style={{ color: "hsl(var(--foreground))" }}>4. Refund Policy</p>
               <p>For one-time purchases, refunds may be granted at our discretion within 14 days if the assistant is materially non-functional. Subscription refunds are prorated and subject to review.</p>
 
-              <p className="font-medium" style={{ color: "var(--ink)" }}>5. Account Suspension</p>
+              <p className="font-medium" style={{ color: "hsl(var(--foreground))" }}>5. Account Suspension</p>
               <p>We reserve the right to suspend monetization or remove your assistant from the platform if you violate these terms, receive excessive refund requests, or engage in fraudulent activity.</p>
 
-              <p className="font-medium" style={{ color: "var(--ink)" }}>6. Changes to Terms</p>
+              <p className="font-medium" style={{ color: "hsl(var(--foreground))" }}>6. Changes to Terms</p>
               <p>These terms may be updated from time to time. Continued use of monetization features after changes constitutes acceptance of the revised terms.</p>
             </div>
           </ScrollArea>
@@ -2354,7 +2350,7 @@ export default function AIAssistantsPage() {
                 checked={termsCheckbox}
                 onCheckedChange={(v) => setTermsCheckbox(v === true)}
               />
-              <label htmlFor="terms-dialog-check" className="text-sm cursor-pointer" style={{ color: "var(--ink-2)" }}>
+              <label htmlFor="terms-dialog-check" className="text-sm cursor-pointer" style={{ color: "hsl(var(--muted-foreground))" }}>
                 I agree to the Terms & Conditions
               </label>
             </div>
@@ -2403,10 +2399,10 @@ export default function AIAssistantsPage() {
           {assistantToDelete && (
             <div className="px-6 py-5 space-y-4">
               {/* Identity preview */}
-              <div className="flex items-center gap-3 rounded-xl border p-3" style={{ borderColor: "var(--line)", background: "var(--paper-2)" }}>
+              <div className="flex items-center gap-3 rounded-xl border p-3" style={{ borderColor: "hsl(var(--border))", background: "hsl(var(--card))" }}>
                 <div
                   className="h-10 w-10 shrink-0 rounded-xl grid place-items-center text-base font-bold text-white overflow-hidden"
-                  style={{ background: assistantToDelete.primaryColor ?? "#1A73E8" }}
+                  style={{ background: assistantToDelete.primaryColor ?? "#0F172A" }}
                   aria-hidden="true"
                 >
                   {assistantToDelete.logoUrl
@@ -2415,8 +2411,8 @@ export default function AIAssistantsPage() {
                     : (assistantToDelete.avatarLetter || assistantToDelete.name.charAt(0)).toUpperCase()}
                 </div>
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold" style={{ color: "var(--ink)" }}>{assistantToDelete.name}</p>
-                  <p className="truncate font-mono text-xs" style={{ color: "var(--ink-3)" }}>/ai/{assistantToDelete.slug}</p>
+                  <p className="truncate text-sm font-semibold" style={{ color: "hsl(var(--foreground))" }}>{assistantToDelete.name}</p>
+                  <p className="truncate font-mono text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>/ai/{assistantToDelete.slug}</p>
                 </div>
               </div>
 

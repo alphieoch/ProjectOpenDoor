@@ -70,10 +70,9 @@ export async function POST(req: NextRequest) {
           : {}),
       }),
     });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Gateway unreachable";
+  } catch {
     return NextResponse.json(
-      { error: `Cannot reach the gateway at ${url}. ${message}` },
+      { error: "Cannot reach the gateway." },
       { status: 502 },
     );
   }

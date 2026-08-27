@@ -1,9 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import {
-  Check,
   ChevronDown,
   Lock,
   MessageSquare,
@@ -21,13 +21,27 @@ import {
   looksLikeCapabilityGuide,
 } from "@/components/house-chat-guides";
 import StreamingText from "@/components/ui/streaming-text";
-import LoadingState from "@/components/ui/loading-state";
-import ThinkingState from "@/components/ui/thinking-state";
-import GradientChatInput, {
-  SpectrumGlow,
-} from "@/components/ruixen/gradient-chat-input";
-import { Liquid } from "@/components/ui/liquid-gooey";
-import { ThinkingOrb, type OrbState } from "thinking-orbs";
+import { AiCrest } from "@/components/ui/ai-crest";
+import type { OrbState } from "thinking-orbs";
+
+const LoadingState = dynamic(() => import("@/components/ui/loading-state"), {
+  ssr: false,
+});
+const ThinkingState = dynamic(() => import("@/components/ui/thinking-state"), {
+  ssr: false,
+});
+const GradientChatInput = dynamic(
+  () => import("@/components/ruixen/gradient-chat-input"),
+  { ssr: false },
+);
+const SpectrumGlow = dynamic(
+  () => import("@/components/ruixen/gradient-chat-input").then((m) => m.SpectrumGlow),
+  { ssr: false },
+);
+const ChatModeMenu = dynamic(
+  () => import("./chat-mode-menu").then((m) => m.ChatModeMenu),
+  { ssr: false },
+);
 
 type Allowance = {
   periodUsed: number;
@@ -60,10 +74,11 @@ type ChatMessage = {
 };
 
 const MODES: { id: HouseChatMode; label: string; hint: string }[] = [
+  { id: "flash", label: "Flash", hint: "Free taste" },
   { id: "auto", label: "Auto", hint: "Let Qwen decide" },
   { id: "thinking", label: "Thinking", hint: "Reason first" },
-  { id: "fast", label: "Fast", hint: "Answer only" },
   { id: "max", label: "MAX", hint: "Think + full Max answer" },
+  { id: "max_fast", label: "Max Fast", hint: "Priority thinking" },
 ];
 
 export default function HouseChatPage() {
@@ -76,7 +91,7 @@ export default function HouseChatPage() {
   const [viewingMemberId, setViewingMemberId] = useState<string | null>(null);
   const [isOrganizer, setIsOrganizer] = useState(false);
   const [readOnly, setReadOnly] = useState(false);
-  const [mode, setMode] = useState<HouseChatMode>("fast");
+  const [mode, setMode] = useState<HouseChatMode>("flash");
   const [modeOpen, setModeOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -340,7 +355,7 @@ export default function HouseChatPage() {
 
   const modeLabel = MODES.find((m) => m.id === mode)?.label || "Fast";
   const liveOrb: OrbState =
-    mode === "thinking" || mode === "max" ? "solving" : mode === "fast" ? "composing" : "working";
+    mode === "thinking" || mode === "max" || mode === "max_fast" ? "solving" : mode === "flash" || mode === "fast" ? "composing" : "working";
   const lastAssistant = [...messages].reverse().find((m) => m.role === "assistant");
   const lastUser = [...messages].reverse().find((m) => m.role === "user");
   const showThreadGuides =
@@ -352,14 +367,14 @@ export default function HouseChatPage() {
   return (
     <div
       className="flex h-full min-h-0 w-full flex-1 overflow-hidden"
-      style={{ background: "var(--paper)" }}
+      style={{ background: "hsl(var(--background))" }}
     >
       {/* Thread rail */}
       <aside
         className="hidden md:flex w-56 shrink-0 flex-col border-r"
-        style={{ borderColor: "var(--line)", background: "var(--paper-2)" }}
+        style={{ borderColor: "hsl(var(--border))", background: "hsl(var(--card))" }}
       >
-        <div className="p-3 border-b" style={{ borderColor: "var(--line)" }}>
+        <div className="p-3 border-b" style={{ borderColor: "hsl(var(--border))" }}>
           <button
             type="button"
             onClick={() => {
@@ -369,15 +384,15 @@ export default function HouseChatPage() {
               setError(null);
             }}
             className="flex w-full items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold text-white"
-            style={{ background: "var(--brand)" }}
+            style={{ background: "hsl(var(--primary))" }}
           >
             <Plus className="h-3.5 w-3.5" />
             New chat
           </button>
         </div>
         {isOrganizer && children.length > 0 && (
-          <div className="px-3 py-2 border-b space-y-1" style={{ borderColor: "var(--line)" }}>
-            <p className="text-[10px] font-mono uppercase tracking-wider" style={{ color: "var(--ink-4)" }}>
+          <div className="px-3 py-2 border-b space-y-1" style={{ borderColor: "hsl(var(--border))" }}>
+            <p className="text-[10px] font-mono uppercase tracking-wider" style={{ color: "hsl(var(--muted-foreground))" }}>
               View
             </p>
             <button
@@ -395,7 +410,7 @@ export default function HouseChatPage() {
                   ? "font-semibold"
                   : "opacity-70"
               )}
-              style={{ color: "var(--ink-2)" }}
+              style={{ color: "hsl(var(--muted-foreground))" }}
             >
               My chats
             </button>
@@ -413,7 +428,7 @@ export default function HouseChatPage() {
                   "w-full rounded-lg px-2 py-1.5 text-left text-xs flex items-center gap-1",
                   viewingMemberId === c.id ? "font-semibold" : "opacity-70"
                 )}
-                style={{ color: "var(--ink-2)" }}
+                style={{ color: "hsl(var(--muted-foreground))" }}
               >
                 <Lock className="h-3 w-3" />
                 {c.name}
@@ -429,9 +444,9 @@ export default function HouseChatPage() {
               onClick={() => void loadChat(t.id)}
               className={cn(
                 "group flex w-full items-center gap-1 rounded-lg px-2.5 py-2 text-left text-xs",
-                chatId === t.id ? "bg-[var(--brand-soft)]" : "hover:bg-[var(--paper-3)]"
+                chatId === t.id ? "bg-[var(--brand-soft)]" : "hover:bg-accent"
               )}
-              style={{ color: "var(--ink-2)" }}
+              style={{ color: "hsl(var(--muted-foreground))" }}
             >
               <MessageSquare className="h-3 w-3 shrink-0 opacity-50" />
               <span className="flex-1 truncate">{t.title}</span>
@@ -444,7 +459,7 @@ export default function HouseChatPage() {
                 }}
                 className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-[var(--red-soft)]"
               >
-                <Trash2 className="h-3 w-3" style={{ color: "var(--ink-4)" }} />
+                <Trash2 className="h-3 w-3" style={{ color: "hsl(var(--muted-foreground))" }} />
               </span>
             </button>
           ))}
@@ -456,26 +471,26 @@ export default function HouseChatPage() {
         <SpectrumGlow active={rainbowOn} />
         <header
           className="relative z-10 flex shrink-0 items-center gap-2 px-4 py-3 border-b"
-          style={{ borderColor: "var(--line)", background: "var(--paper)" }}
+          style={{ borderColor: "hsl(var(--border))", background: "hsl(var(--background))" }}
         >
-          <MessageSquare className="h-4 w-4" style={{ color: "var(--brand)" }} />
+          <MessageSquare className="h-4 w-4" style={{ color: "hsl(var(--primary))" }} />
           <div className="min-w-0">
             <div className="flex items-center gap-1.5">
-              <span className="text-sm font-semibold" style={{ color: "var(--ink)" }}>
+              <span className="text-sm font-semibold" style={{ color: "hsl(var(--foreground))" }}>
                 OpenDoor Chat
               </span>
               <ChevronDown className="h-3.5 w-3.5 opacity-40" />
               {protectedChild && (
                 <span
                   className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium"
-                  style={{ background: "var(--brand-soft)", color: "var(--brand)" }}
+                  style={{ background: "var(--brand-soft)", color: "hsl(var(--primary))" }}
                 >
                   <Lock className="h-2.5 w-2.5" />
                   Protected by a parent
                 </span>
               )}
             </div>
-            <p className="text-[11px] font-mono" style={{ color: "var(--ink-4)" }}>
+            <p className="text-[11px] font-mono" style={{ color: "hsl(var(--muted-foreground))" }}>
               {allowanceLine}
             </p>
           </div>
@@ -485,22 +500,11 @@ export default function HouseChatPage() {
           {messages.length === 0 && (
             <div className="mx-auto flex max-w-2xl flex-col pt-4">
               <div className="flex flex-col items-center gap-2 text-center mb-1">
-                <Liquid
-                  blur={10}
-                  contrast={18}
-                  fill="var(--brand-soft)"
-                  className="relative flex h-[72px] w-[72px] items-center justify-center"
-                >
-                  <Liquid.Item>
-                    <div className="flex h-16 w-16 items-center justify-center rounded-full">
-                      <ThinkingOrb state="breathing" size={64} />
-                    </div>
-                  </Liquid.Item>
-                </Liquid>
-                <p className="text-sm font-semibold" style={{ color: "var(--ink-3)" }}>
+                <AiCrest mood="idle" size={45} />
+                <p className="text-sm font-semibold" style={{ color: "hsl(var(--muted-foreground))" }}>
                   Ask OpenDoor
                 </p>
-                <p className="text-xs max-w-sm" style={{ color: "var(--ink-4)" }}>
+                <p className="text-xs max-w-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
                   Open a box for questions, writing, code, tutoring, or a plain chat — then ask something basic and see how it goes.
                 </p>
               </div>
@@ -520,7 +524,7 @@ export default function HouseChatPage() {
                 <div key={msg.id} className="flex justify-end">
                   <div
                     className="max-w-[85%] rounded-2xl rounded-br-md px-3.5 py-2 text-sm"
-                    style={{ background: "var(--brand-soft)", color: "var(--ink)" }}
+                    style={{ background: "var(--brand-soft)", color: "hsl(var(--foreground))" }}
                   >
                     {msg.content}
                   </div>
@@ -611,7 +615,7 @@ export default function HouseChatPage() {
                 {images.map((src, i) => (
                   <div key={i} className="relative">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={src} alt="" className="h-14 w-14 rounded-lg object-cover border" style={{ borderColor: "var(--line)" }} />
+                    <img src={src} alt="" className="h-14 w-14 rounded-lg object-cover border" style={{ borderColor: "hsl(var(--border))" }} />
                     <button
                       type="button"
                       onClick={() => setImages((prev) => prev.filter((_, j) => j !== i))}
@@ -660,39 +664,20 @@ export default function HouseChatPage() {
                         type="button"
                         onClick={() => setModeOpen((o) => !o)}
                         className="flex items-center gap-1 rounded-full border px-3 py-1.5 text-xs font-semibold disabled:opacity-40"
-                        style={{ borderColor: "var(--line)", background: "var(--paper)", color: "var(--ink)" }}
+                        style={{ borderColor: "hsl(var(--border))", background: "hsl(var(--background))", color: "hsl(var(--foreground))" }}
                       >
                         {modeLabel}
                         <ChevronDown className="h-3 w-3 opacity-60" />
                       </button>
                       {modeOpen && (
-                        <Liquid
-                          blur={8}
-                          contrast={18}
-                          fill="var(--paper)"
-                          shadow="0 10px 28px rgba(0,0,0,0.18)"
-                          className="absolute bottom-full right-0 z-20 mb-2 flex w-48 flex-col p-1"
-                        >
-                          {MODES.map((m, i) => (
-                            <Liquid.Item key={m.id} delay={i * 28} transition="snappy">
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setMode(m.id);
-                                  setModeOpen(false);
-                                }}
-                                className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-xs"
-                                style={{ background: "transparent", color: "var(--ink)" }}
-                              >
-                                <span>
-                                  <span className="font-semibold">{m.label}</span>
-                                  <span className="ml-1.5 opacity-50">{m.hint}</span>
-                                </span>
-                                {mode === m.id && <Check className="h-3.5 w-3.5" style={{ color: "var(--brand)" }} />}
-                              </button>
-                            </Liquid.Item>
-                          ))}
-                        </Liquid>
+                        <ChatModeMenu
+                          modes={MODES}
+                          mode={mode}
+                          onSelect={(id) => {
+                            setMode(id);
+                            setModeOpen(false);
+                          }}
+                        />
                       )}
                     </div>
                   }
@@ -703,7 +688,7 @@ export default function HouseChatPage() {
                 />
               </div>
             )}
-            <p className="mt-2 text-center text-[10px]" style={{ color: "var(--ink-4)" }}>
+            <p className="mt-2 text-center text-[10px]" style={{ color: "hsl(var(--muted-foreground))" }}>
               AI-generated content may not be accurate.
             </p>
           </div>
@@ -725,8 +710,8 @@ export default function HouseChatPage() {
               <AlertDialog.Heading>Delete chat permanently?</AlertDialog.Heading>
             </AlertDialog.Header>
             <AlertDialog.Body>
-              <p className="text-sm leading-relaxed" style={{ color: "var(--ink-2)" }}>
-                This will permanently delete <strong className="font-semibold text-[var(--ink)]">{deleteTarget?.title || "this chat"}</strong> and remove all of its messages. This action cannot be undone.
+              <p className="text-sm leading-relaxed" style={{ color: "hsl(var(--muted-foreground))" }}>
+                This will permanently delete <strong className="font-semibold text-foreground">{deleteTarget?.title || "this chat"}</strong> and remove all of its messages. This action cannot be undone.
               </p>
             </AlertDialog.Body>
             <AlertDialog.Footer>
@@ -755,6 +740,6 @@ export default function HouseChatPage() {
 
 function normalizeMode(m: string): HouseChatMode {
   const x = m.toLowerCase();
-  if (x === "thinking" || x === "fast" || x === "max" || x === "auto") return x;
+  if (x === "thinking" || x === "fast" || x === "flash" || x === "max" || x === "max_fast" || x === "auto") return x;
   return "auto";
 }

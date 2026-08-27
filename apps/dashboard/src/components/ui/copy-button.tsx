@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { Check, Copy } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 export function CopyButton({
   value,
@@ -15,30 +17,19 @@ export function CopyButton({
   const [copied, setCopied] = useState(false);
 
   return (
-    <button
+    <Button
       type="button"
-      className={className}
+      variant="outline"
+      size="sm"
+      className={cn(className)}
       onClick={() => {
         void navigator.clipboard.writeText(value);
         setCopied(true);
         window.setTimeout(() => setCopied(false), 1600);
       }}
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        gap: 6,
-        padding: "8px 14px",
-        borderRadius: 999,
-        border: "1px solid var(--line)",
-        background: "var(--paper-2)",
-        color: "var(--ink-2)",
-        fontSize: 13,
-        fontWeight: 500,
-        cursor: "pointer",
-      }}
     >
-      {copied ? <Check style={{ width: 13, height: 13 }} /> : <Copy style={{ width: 13, height: 13 }} />}
+      {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
       {copied ? "Copied" : label}
-    </button>
+    </Button>
   );
 }

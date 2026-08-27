@@ -4,10 +4,10 @@ export default function DashboardLoading() {
   return (
     <div
       className="flex h-full min-h-[60vh] flex-col items-center justify-center gap-5"
-      style={{ background: "var(--paper)" }}
+      style={{ background: "hsl(var(--background))" }}
     >
       <LumaSpin />
-      <p className="text-xs font-medium tracking-wide" style={{ color: "var(--ink-3)" }}>
+      <p className="text-xs font-medium tracking-wide" style={{ color: "hsl(var(--muted-foreground))" }}>
         Loading…
       </p>
     </div>

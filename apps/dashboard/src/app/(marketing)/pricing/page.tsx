@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "Pricing — OpenDoor",
   description:
-    "No free plan. Pro $12/mo vs Perplexity $20. Top up $20+ and get $5 of open-weight credit.",
+    "Student $9.99 and Pro $12 vs Perplexity $20. Small included taste, then warehouse-rate tokens.",
 };
 
 async function loadPricing() {

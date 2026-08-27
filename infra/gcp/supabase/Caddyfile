@@ -1,0 +1,46 @@
+{
+	admin off
+	# Global options: auto_https is enabled by default when domain is provided
+	email {$LETSENCRYPT_EMAIL:admin@opendoor.ai}
+}
+
+{$SITE_ADDRESS::80} {
+	# Security headers
+	header {
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "SAMEORIGIN"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+
+	# API Gateway routes (Kong)
+	@api {
+		path /rest/v1/*
+		path /auth/v1/*
+		path /storage/v1/*
+		path /realtime/v1/*
+		path /graphql/v1/*
+	}
+	reverse_proxy @api kong:8000 {
+		header_up Host {host}
+		header_up X-Real-IP {remote_host}
+		header_up X-Forwarded-For {remote_host}
+		header_up X-Forwarded-Proto {scheme}
+	}
+
+	# Supabase Studio UI
+	@studio {
+		path /studio*
+		path /_next*
+		path /api*
+	}
+	reverse_proxy @studio studio:3000 {
+		header_up Host {host}
+		header_up X-Real-IP {remote_host}
+		header_up X-Forwarded-For {remote_host}
+		header_up X-Forwarded-Proto {scheme}
+	}
+
+	# Default fallback to Kong for API root
+	reverse_proxy * kong:8000
+}

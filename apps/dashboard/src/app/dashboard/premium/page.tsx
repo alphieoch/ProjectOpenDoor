@@ -1,807 +1,1122 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
-  Loader2,
-  Play,
-  Square,
-  Cpu,
-  Zap,
-  Check,
-  Activity,
   ArrowUpRight,
-  ExternalLink,
   Clock,
-  Info,
-  X,
+  Cpu,
+  ExternalLink,
   Gauge,
-  ShieldCheck,
-  Moon,
   ListOrdered,
+  Loader2,
+  Moon,
+  Play,
+  Share2,
+  ShieldCheck,
+  Square,
+  Zap,
 } from "lucide-react";
+import { gcpStartCreditCents } from "@opendoor/shared";
 import { cn } from "@/lib/utils";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { PageHeader } from "@/components/ui/page-header";
+import {
+  capacityGuideRates,
+  CLASS_COMPARISON,
+  defaultRentFromUsSku,
+  displaySkus,
+  ENTERPRISE_CLUSTER_SKU,
+  EXECUTION_MODES,
+  modeToProvision,
+  premiumProductFromSelection,
+  provisionLabel,
+  rentFromUsCta,
+  rentalHoursLeft,
+  shortGpuLabel,
+  specForSku,
+  type DisplaySku,
+  type ExecutionMode,
+  type PremiumHubLane,
+} from "@/lib/premium/display";
+import {
+  earningsCentsForElapsed,
+  formatEarningsUsd,
+  SHARED_METAL_DEFAULT_HOURLY_USD,
+  useVsShareCopy,
+} from "@/lib/premium/host-share";
 
-/* ── Compute Execution Modes ── */
-export type ExecutionMode = "on-demand" | "off-peak" | "batch";
+type CatalogModel = {
+  id: string;
+  displayName: string;
+  status: string;
+  note?: string;
+};
 
-interface ExecutionModeConfig {
-  id: ExecutionMode;
-  label: string;
-  badge: string;
-  discountText: string;
-  description: string;
-  availabilityNote: string;
-  sla: string;
-}
-
-const EXECUTION_MODES: ExecutionModeConfig[] = [
-  {
-    id: "on-demand",
-    label: "On-Demand Dedicated",
-    badge: "Instant Real-Time",
-    discountText: "Full Price",
-    description: "Immediate dedicated GPU instance with zero cold starts, zero queue, and guaranteed non-interrupted runtime.",
-    availabilityNote: "Instant launch · 100% Dedicated VRAM",
-    sla: "Interactive Sub-Second",
-  },
-  {
-    id: "off-peak",
-    label: "Off-Peak Scheduled",
-    badge: "10 PM – 8 AM UK & Weekends",
-    discountText: "~40% Discount",
-    description: "Scheduled compute during predictable low-demand hours (10:00 PM – 8:00 AM UK time & all weekend). Uninterrupted once started.",
-    availabilityNote: "Low-demand window · Uninterrupted once provisioned",
-    sla: "Scheduled Dedicated",
-  },
-  {
-    id: "batch",
-    label: "Flexible Batch Queue",
-    badge: "Async Queue (~60% Off)",
-    discountText: "Cheapest Rate",
-    description: "Cheaper, asynchronous batch processing for bulk image generation and long video diffusion. Jobs queue and process with auto-checkpointing.",
-    availabilityNote: "Queue-based · Auto-resumes on spare capacity",
-    sla: "Asynchronous Batch (Slower, High Throughput)",
-  },
-];
-
-/* ── GPU Fleet Tier Specifications ── */
-interface GpuTier {
-  id: "standard" | "pro" | "max" | "ultra" | "enterprise";
+type DeployRow = {
+  id: string;
   name: string;
-  classEquivalent: string;
-  subtitle: string;
-  vram: string;
-  coreSpeed: string;
-  bandwidth: string;
-  onDemandHourly: number;
-  offPeakHourly: number;
-  batchHourly: number;
-  recommendedFor: string;
-  benchmarks: {
-    fluxDev: string;
-    imagen3: string;
-    veoVideo: string;
-  };
-  badge?: string;
-  popular?: boolean;
-  totalAllocations: number;
-  availableAllocations: number;
-}
-
-const GPU_TIERS: GpuTier[] = [
-  {
-    id: "standard",
-    name: "Standard GPU",
-    classEquivalent: "L4 / Metal Class",
-    subtitle: "24GB Dedicated VRAM",
-    vram: "24 GB High-Speed VRAM",
-    coreSpeed: "120 TFLOPS Core Speed",
-    bandwidth: "300 GB/s Memory Bandwidth",
-    onDemandHourly: 0.79,
-    offPeakHourly: 0.47,
-    batchHourly: 0.29,
-    recommendedFor: "Fast SDXL, Flux Schnell 1024px, LoRA testing & low-latency prototyping.",
-    benchmarks: {
-      fluxDev: "2.1s / step",
-      imagen3: "1.9s (1024px)",
-      veoVideo: "Standard Queue",
-    },
-    badge: "Entry",
-    totalAllocations: 16,
-    availableAllocations: 11,
-  },
-  {
-    id: "pro",
-    name: "Pro GPU",
-    classEquivalent: "RTX 4090 / A10G Class",
-    subtitle: "24GB Ultra-Fast VRAM",
-    vram: "24 GB Ultra-Fast VRAM",
-    coreSpeed: "250 TFLOPS Core Speed",
-    bandwidth: "600 GB/s Memory Bandwidth",
-    onDemandHourly: 1.49,
-    offPeakHourly: 0.89,
-    batchHourly: 0.59,
-    recommendedFor: "Real-time Flux Dev Canvas, ComfyUI node workflows, image-to-video SDV.",
-    badge: "Popular",
-    popular: true,
-    benchmarks: {
-      fluxDev: "0.85s / step",
-      imagen3: "1.1s (1024px)",
-      veoVideo: "6.2s (720p)",
-    },
-    totalAllocations: 12,
-    availableAllocations: 5,
-  },
-  {
-    id: "max",
-    name: "Max GPU",
-    classEquivalent: "A100 80GB SXM4 Class",
-    subtitle: "80GB High-Bandwidth VRAM",
-    vram: "80 GB High-Bandwidth VRAM",
-    coreSpeed: "312 TFLOPS Core Speed",
-    bandwidth: "1,935 GB/s Memory Bandwidth",
-    onDemandHourly: 3.29,
-    offPeakHourly: 1.98,
-    batchHourly: 1.29,
-    recommendedFor: "High-res Flux 1.1 Pro, multi-modal video synthesis, full-batch LoRA training.",
-    badge: "80GB VRAM",
-    benchmarks: {
-      fluxDev: "0.48s / step",
-      imagen3: "0.72s (1024px)",
-      veoVideo: "3.8s (1080p)",
-    },
-    totalAllocations: 8,
-    availableAllocations: 3,
-  },
-  {
-    id: "ultra",
-    name: "Ultra GPU",
-    classEquivalent: "H100 80GB SXM5 Class",
-    subtitle: "80GB Ultra-Bandwidth VRAM",
-    vram: "80 GB Ultra-Bandwidth VRAM",
-    coreSpeed: "750 TFLOPS Core Speed",
-    bandwidth: "3,350 GB/s Memory Bandwidth",
-    onDemandHourly: 5.95,
-    offPeakHourly: 3.57,
-    batchHourly: 2.38,
-    recommendedFor: "Cinematic Veo 2 / Wan 2.1 video generation, 4K rendering pipelines, LLM fine-tuning.",
-    badge: "Ultra Fast",
-    benchmarks: {
-      fluxDev: "0.19s / step",
-      imagen3: "0.35s (1024px)",
-      veoVideo: "1.9s (1080p 60fps)",
-    },
-    totalAllocations: 6,
-    availableAllocations: 2,
-  },
-  {
-    id: "enterprise",
-    name: "Enterprise GPUs",
-    classEquivalent: "8x H100 640GB Cluster",
-    subtitle: "640GB Clustered VRAM",
-    vram: "640 GB Clustered VRAM",
-    coreSpeed: "6,000 TFLOPS Cluster Compute",
-    bandwidth: "3.2 Tbps Ultra Interconnect",
-    onDemandHourly: 39.50,
-    offPeakHourly: 23.70,
-    batchHourly: 18.50,
-    recommendedFor: "Production-scale video generation pipelines, high-concurrency enterprise studio endpoints.",
-    badge: "Cluster Power",
-    benchmarks: {
-      fluxDev: "< 0.05s / batch",
-      imagen3: "0.12s (4K Ultra)",
-      veoVideo: "0.65s (4K Cinema)",
-    },
-    totalAllocations: 4,
-    availableAllocations: 1,
-  },
-];
+  target: string;
+  gpuType: string | null;
+  status: string;
+  fqdn: string | null;
+  reserved?: boolean;
+  scaleToZero?: boolean;
+};
 
 type Rental = {
   id: string;
   model: string;
   customModel: string | null;
-  deploymentId: string | null;
   sku: string;
-  gpuTierName?: string;
   status: string;
   hourlyRate: number;
   hours: number | null;
   modelId: string | null;
   weightsUri: string | null;
+  hostShareId?: string | null;
+  earningsCents?: number;
   startedAt: string | null;
   endedAt: string | null;
-  executionMode: ExecutionMode;
+  catalog: { displayName?: string } | null;
   deployment: {
     id: string;
     name: string;
     target: string;
+    gpuType?: string | null;
     status: string;
+    statusMessage?: string | null;
     fqdn: string | null;
+    runtimeModel?: string | null;
+    reserved?: boolean;
+    scaleToZero?: boolean;
+    regionLocked?: boolean;
+    hostShareId?: string | null;
   } | null;
 };
 
+type HostListing = {
+  id: string;
+  status: string;
+  hourlyUsd: number;
+  displayName: string;
+  chip: string | null;
+  gpuName: string | null;
+  memoryGb: number | null;
+  workerKind: string | null;
+  isDemo: boolean;
+  earningsCents: number;
+  listedAt: string | null;
+  inUse: boolean;
+  activeRentalCount: number;
+  isOwn?: boolean;
+};
+
+type HostEligibility = {
+  eligible: boolean;
+  reasons: string[];
+  hasAccelerator: boolean;
+  memoryOk: boolean;
+  workerUp: boolean;
+  label: string;
+  workerKind: "studio" | "ollama" | null;
+};
+
+type InboundRental = {
+  id: string;
+  status: string;
+  hourlyRate: number;
+  earningsCents: number;
+  startedAt: string | null;
+  endedAt: string | null;
+  isPreview: boolean;
+};
+
+function CompactSku({
+  selected,
+  name,
+  price,
+  onPick,
+  onPreview,
+}: {
+  selected: boolean;
+  name: string;
+  price: string;
+  onPick: () => void;
+  onPreview?: (on: boolean) => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onPick}
+      onMouseEnter={() => onPreview?.(true)}
+      onMouseLeave={() => onPreview?.(false)}
+      onFocus={() => onPreview?.(true)}
+      onBlur={() => onPreview?.(false)}
+      className={cn(
+        "min-w-0 flex-1 py-1.5 text-left border-b-2 transition-colors",
+        selected
+          ? "border-primary text-foreground"
+          : "border-transparent text-muted-foreground hover:text-foreground hover:border-border",
+      )}
+    >
+      <span className="block text-[11px] font-semibold truncate">{name}</span>
+      <span className="block text-[10px] font-mono">{price}</span>
+    </button>
+  );
+}
+
+function SkuSpecSheet({
+  sku,
+  localLabel,
+}: {
+  sku: DisplaySku;
+  localLabel: string;
+}) {
+  const windows = capacityGuideRates(sku.hourlyUsd);
+  const listed = sku.rentable
+    ? sku.sku === "metal"
+      ? "$0.00/hr"
+      : `$${sku.hourlyUsd.toFixed(2)}/hr`
+    : "Quote";
+  return (
+    <div className="space-y-3">
+      <div className="flex items-start gap-2.5">
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+          <Cpu className="h-4 w-4" />
+        </div>
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <h3 className="text-sm font-bold text-foreground">
+              {sku.sku === "metal" ? localLabel : sku.displayName}
+            </h3>
+            <span className="font-mono text-[10px] font-bold text-primary">{sku.classEquivalent}</span>
+          </div>
+          <p className="font-mono text-[11px] font-semibold text-success">{sku.vram}</p>
+          {sku.badge ? (
+            <p className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">{sku.badge}</p>
+          ) : null}
+        </div>
+      </div>
+      <p className="text-[11px] leading-relaxed text-muted-foreground">{sku.recommendedFor}</p>
+      <p className="font-mono text-[10px] text-muted-foreground">
+        {sku.coreSpeed} · {sku.bandwidth} · {sku.region}
+      </p>
+      <div>
+        <h4 className="font-mono text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+          Pricing by compute window
+        </h4>
+        <div className="mt-1 grid grid-cols-3 gap-2 font-mono text-[11px]">
+          <div className="border-t border-border py-1">
+            <span className="block text-[10px] text-muted-foreground">On-Demand billed</span>
+            <span className="font-bold text-foreground">{listed}</span>
+          </div>
+          <div className="border-t border-border py-1">
+            <span className="block text-[10px] text-primary">Off-Peak window</span>
+            <span className="font-bold text-success">
+              {sku.rentable ? `$${windows.offPeak.toFixed(2)}/hr` : "Quote"}
+            </span>
+          </div>
+          <div className="border-t border-border py-1">
+            <span className="block text-[10px] text-warning">Batch window</span>
+            <span className="font-bold text-warning">
+              {sku.rentable ? `$${windows.batch.toFixed(2)}/hr` : "Quote"}
+            </span>
+          </div>
+        </div>
+      </div>
+      <div>
+        <h4 className="flex items-center gap-1 font-mono text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+          <Gauge className="h-3 w-3 text-primary" />
+          Class benchmarks
+        </h4>
+        <div className="mt-1 grid grid-cols-3 gap-2 text-[11px]">
+          <div className="border-t border-border py-1">
+            <span className="block text-[10px] text-muted-foreground">Flux.1 class</span>
+            <span className="font-mono font-bold text-primary">{sku.benchmarks.fluxDev}</span>
+          </div>
+          <div className="border-t border-border py-1">
+            <span className="block text-[10px] text-muted-foreground">Imagen path</span>
+            <span className="font-mono font-bold text-primary">{sku.benchmarks.imagen3}</span>
+          </div>
+          <div className="border-t border-border py-1">
+            <span className="block text-[10px] text-muted-foreground">Video class</span>
+            <span className="font-mono font-bold text-primary">{sku.benchmarks.veoVideo}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function PremiumGpuPage() {
-  const [selectedTier, setSelectedTier] = useState<GpuTier["id"]>("pro");
-  const [executionMode, setExecutionMode] = useState<ExecutionMode>("off-peak");
-  const [inspectModalTier, setInspectModalTier] = useState<GpuTier | null>(null);
-  const [durationHours, setDurationHours] = useState<number>(12);
-  const [selectedModel, setSelectedModel] = useState("flux-1-dev");
+  const selfUse = useVsShareCopy("self-use");
+  const shareCopy = useVsShareCopy("share");
+  const openDoor = useVsShareCopy("opendoor");
+  const [skus, setSkus] = useState<DisplaySku[]>([]);
+  const [catalog, setCatalog] = useState<CatalogModel[]>([]);
+  const [rentals, setRentals] = useState<Rental[]>([]);
+  const [deployments, setDeployments] = useState<DeployRow[]>([]);
+  const [availableHosts, setAvailableHosts] = useState<HostListing[]>([]);
+  const [listing, setListing] = useState<HostListing | null>(null);
+  const [eligibility, setEligibility] = useState<HostEligibility | null>(null);
+  const [inbound, setInbound] = useState<InboundRental[]>([]);
+  const [imageEndpoint, setImageEndpoint] = useState<{ url?: string; kind?: string } | null>(null);
+  const [isSiteAdmin, setIsSiteAdmin] = useState(false);
+  const [hubLane, setHubLane] = useState<PremiumHubLane>("use");
+  const [selectedSku, setSelectedSku] = useState("nvidia-l4");
+  const [selectedHostId, setSelectedHostId] = useState("");
+  const [executionMode, setExecutionMode] = useState<ExecutionMode>("on-demand");
+  const [hoverSku, setHoverSku] = useState<string | null>(null);
+  const [durationHours, setDurationHours] = useState(12);
+  const [runUntilStop, setRunUntilStop] = useState(false);
+  const [modelId, setModelId] = useState("");
+  const [attachId, setAttachId] = useState("");
+  const [shareHourly, setShareHourly] = useState(SHARED_METAL_DEFAULT_HOURLY_USD);
+  const [loading, setLoading] = useState(true);
   const [starting, setStarting] = useState(false);
-  const [activeTab, setActiveTab] = useState<"configure" | "active">("configure");
+  const [listingBusy, setListingBusy] = useState(false);
+  const [stopId, setStopId] = useState<string | null>(null);
+  const [stopping, setStopping] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [billingHref, setBillingHref] = useState(false);
+  const [nowTick, setNowTick] = useState(() => Date.now());
+  const [detailsOpen, setDetailsOpen] = useState(false);
 
-  const [rentals, setRentals] = useState<Rental[]>([
-    {
-      id: "rent-1",
-      model: "premium:flux-1-dev-pro",
-      customModel: null,
-      deploymentId: "dep-1",
-      sku: "pro-gpu-24gb",
-      gpuTierName: "Pro GPU (24GB Ultra-Fast · RTX 4090 Class)",
-      status: "active",
-      hourlyRate: 0.89,
-      hours: 12,
-      executionMode: "off-peak",
-      modelId: "flux-1-dev",
-      weightsUri: "black-forest-labs/FLUX.1-dev",
-      startedAt: new Date(Date.now() - 45 * 60000).toISOString(),
-      endedAt: null,
-      deployment: {
-        id: "dep-1",
-        name: "Dedicated Pro GPU Node",
-        target: "cloud",
-        status: "running",
-        fqdn: "gpu-node-us-central1.opendoor.ai",
-      },
-    },
-  ]);
+  const load = useCallback(async () => {
+    let res: Response;
+    try {
+      res = await fetch("/api/premium/rentals", { credentials: "include" });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load rentals");
+      setSkus(displaySkus([]));
+      setLoading(false);
+      return;
+    }
+    const data = (await res.json().catch(() => ({}))) as {
+      rentals?: Rental[];
+      skus?: Array<{ sku: string; displayName: string; hourlyUsd: number; target: "local" | "gcp"; regionMultiplier?: number }>;
+      catalog?: CatalogModel[];
+      deployments?: DeployRow[];
+      availableHosts?: HostListing[];
+      host?: { listing?: HostListing | null; eligibility?: HostEligibility; inbound?: InboundRental[] };
+      imageEndpoint?: { url?: string; kind?: string } | null;
+      isSiteAdmin?: boolean;
+      error?: string;
+      warning?: string;
+    };
+    const nextSkus = displaySkus(Array.isArray(data.skus) ? data.skus : []);
+    setSkus(nextSkus);
+    setRentals(Array.isArray(data.rentals) ? data.rentals : []);
+    if (Array.isArray(data.catalog)) setCatalog(data.catalog);
+    if (Array.isArray(data.deployments)) setDeployments(data.deployments);
+    if (Array.isArray(data.availableHosts)) setAvailableHosts(data.availableHosts);
+    if (data.host) {
+      setListing(data.host.listing ?? null);
+      setEligibility(data.host.eligibility ?? null);
+      setInbound(Array.isArray(data.host.inbound) ? data.host.inbound : []);
+    }
+    if (data.imageEndpoint !== undefined) setImageEndpoint(data.imageEndpoint || null);
+    if (data.isSiteAdmin !== undefined) setIsSiteAdmin(Boolean(data.isSiteAdmin));
+    setSelectedSku((current) => {
+      if (nextSkus.some((s) => s.sku === current)) return current;
+      return defaultRentFromUsSku(nextSkus);
+    });
+    setModelId((current) => current || data.catalog?.[0]?.id || "");
+    if (data.host?.listing?.hourlyUsd) setShareHourly(data.host.listing.hourlyUsd);
+    setError(data.error || data.warning || (res.ok ? null : "Failed to load rentals"));
+    setLoading(false);
+  }, []);
 
-  const activeTier = GPU_TIERS.find((t) => t.id === selectedTier) || GPU_TIERS[1];
-  const activeModeConfig = EXECUTION_MODES.find((m) => m.id === executionMode) || EXECUTION_MODES[1];
+  useEffect(() => {
+    void load();
+    const t = setInterval(() => void load(), 8000);
+    return () => clearInterval(t);
+  }, [load]);
 
-  const effectiveHourlyRate =
-    executionMode === "batch"
-      ? activeTier.batchHourly
-      : executionMode === "off-peak"
-        ? activeTier.offPeakHourly
-        : activeTier.onDemandHourly;
+  useEffect(() => {
+    const t = setInterval(() => setNowTick(Date.now()), 15_000);
+    return () => clearInterval(t);
+  }, []);
 
-  const totalCost = (effectiveHourlyRate * durationHours).toFixed(2);
-  const standardCost = (activeTier.onDemandHourly * durationHours).toFixed(2);
-  const savings = (Number(standardCost) - Number(totalCost)).toFixed(2);
+  const cards = skus.length > 0 ? skus : displaySkus([]);
+  const openDoorCards = cards.filter((c) => c.target === "gcp");
+  const localCards = cards.filter((c) => c.target === "local");
+  const selectedHost = hubLane === "share" ? availableHosts.find((h) => h.id === selectedHostId) || null : null;
+  const activeSku = cards.find((s) => s.sku === selectedSku) || cards.find((s) => s.rentable) || cards[0];
+  const previewSku = (hoverSku && cards.find((s) => s.sku === hoverSku)) || activeSku;
+  const product = premiumProductFromSelection({
+    hub: hubLane,
+    sku: activeSku?.sku,
+    target: activeSku?.target,
+  });
+  const activeMode = EXECUTION_MODES.find((m) => m.id === executionMode) || EXECUTION_MODES[0];
+  const provision = modeToProvision(executionMode);
+  const attached = deployments.find((d) => d.id === attachId);
+  const billedHourly = selectedHost
+    ? selectedHost.hourlyUsd
+    : attached
+      ? cards.find((s) => s.sku === attached.gpuType)?.hourlyUsd ?? activeSku?.hourlyUsd ?? 0
+      : activeSku?.hourlyUsd ?? 0;
+  const hours = runUntilStop ? null : durationHours;
+  const estimate = hours == null ? null : (billedHourly * hours).toFixed(2);
+  const guides = capacityGuideRates(billedHourly);
+  const liveCount = rentals.filter((r) => r.status === "active" || r.status === "pending").length;
+  const reservedCredit = (gcpStartCreditCents(true) / 100).toFixed(0);
+  const scaleCredit = (gcpStartCreditCents(false) / 100).toFixed(0);
+  const canDemoList = Boolean(isSiteAdmin && eligibility && !eligibility.eligible);
+  const liveInbound = inbound.filter((r) => r.status === "active" || r.status === "pending");
+  const listingInUse = Boolean(listing?.inUse || liveInbound.length > 0);
+
+  const skuName = useMemo(() => {
+    const map = new Map(cards.map((s) => [s.sku, s.displayName]));
+    return (sku: string) => map.get(sku) || specForSku(sku).classEquivalent || sku;
+  }, [cards]);
+
+  function liveEarnings(r: { hourlyRate: number; earningsCents: number; startedAt: string | null; endedAt: string | null; status: string }) {
+    if (!r.startedAt) return r.earningsCents;
+    const end = r.endedAt || new Date(nowTick).toISOString();
+    return Math.max(r.earningsCents, earningsCentsForElapsed(r.hourlyRate, r.startedAt, end));
+  }
+
+  function runningUsd(r: { hourlyRate: number; startedAt: string | null; endedAt: string | null }) {
+    if (!r.startedAt) return 0;
+    const end = r.endedAt ? new Date(r.endedAt).getTime() : nowTick;
+    return Math.max(0, ((end - new Date(r.startedAt).getTime()) / 3_600_000) * r.hourlyRate);
+  }
 
   async function startGpuRental(e: React.FormEvent) {
     e.preventDefault();
+    if (!selectedHost && !activeSku?.rentable && !attachId) return;
     setStarting(true);
-
-    try {
-      const newRental: Rental = {
-        id: `rent-${Date.now()}`,
-        model: `premium:${selectedModel}`,
-        customModel: null,
-        deploymentId: null,
-        sku: activeTier.id,
-        gpuTierName: `${activeTier.name} (${activeTier.classEquivalent})`,
-        status: "active",
-        hourlyRate: effectiveHourlyRate,
-        hours: durationHours,
-        executionMode: executionMode,
-        modelId: selectedModel,
-        weightsUri: null,
-        startedAt: new Date().toISOString(),
-        endedAt: null,
-        deployment: {
-          id: `dep-${Date.now()}`,
-          name: `${activeTier.name} Node`,
-          target: "cloud",
-          status: "running",
-          fqdn: `gpu-${activeTier.id}.opendoor.ai`,
-        },
-      };
-      setRentals((prev) => [newRental, ...prev]);
-      setActiveTab("active");
-    } finally {
-      setStarting(false);
+    setError(null);
+    setBillingHref(false);
+    const body = selectedHost
+      ? { target: "shared", hostShareId: selectedHost.id, hours, modelId }
+      : attachId
+        ? { target: "attach", deploymentId: attachId, hours, modelId }
+        : {
+            target: activeSku.target,
+            sku: activeSku.sku,
+            hours,
+            modelId,
+            reserved: activeSku.target === "gcp" ? provision.reserved : true,
+            scaleToZero: activeSku.target === "gcp" ? provision.scaleToZero : false,
+          };
+    const res = await fetch("/api/premium/rentals", {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const data = (await res.json().catch(() => ({}))) as { error?: string; requiredCents?: number };
+    if (!res.ok) {
+      setError(data.error || "Could not start rental");
+      setBillingHref(res.status === 402);
     }
+    setStarting(false);
+    await load();
   }
 
-  async function stopGpuRental(id: string) {
-    setRentals((prev) => prev.filter((r) => r.id !== id));
+  async function confirmStopRental() {
+    if (!stopId) return;
+    setStopping(true);
+    const res = await fetch(`/api/premium/rentals/${encodeURIComponent(stopId)}`, {
+      method: "DELETE",
+      credentials: "include",
+    });
+    const data = (await res.json().catch(() => ({}))) as { error?: string };
+    if (!res.ok) setError(data.error || "Could not stop rental");
+    setStopping(false);
+    setStopId(null);
+    await load();
   }
 
-  return (
-    <div className="flex flex-col h-[calc(100vh-5.5rem)] overflow-hidden space-y-3">
-      {/* ── Compact Header Bar with Transparent Policy Definition ── */}
-      <div className="flex items-center justify-between shrink-0 bg-black/40 border border-white/10 rounded-2xl px-4 py-2.5 backdrop-blur-md">
-        <div className="flex items-center gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">
-            <Cpu className="h-4 w-4" />
-          </div>
-          <div>
-            <h1 className="text-sm font-bold text-white tracking-tight flex items-center gap-2">
-              <span>GPU Rental Hub</span>
-              <span className={cn(
-                "rounded-full px-2 py-0.5 text-[10px] font-mono border",
-                executionMode === "batch"
-                  ? "bg-amber-500/15 text-amber-300 border-amber-500/30"
-                  : executionMode === "off-peak"
-                    ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/20"
-                    : "bg-indigo-500/15 text-indigo-300 border-indigo-500/20"
-              )}>
-                {executionMode === "batch"
-                  ? "📦 BATCH QUEUE (~60% OFF)"
-                  : executionMode === "off-peak"
-                    ? "🌙 OFF-PEAK HOURS (10 PM–8 AM UK)"
-                    : "⚡ ON-DEMAND DEDICATED"}
-              </span>
-            </h1>
-            <p className="text-[11px] text-zinc-400 font-mono">
-              Off-peak: 10:00 PM–8:00 AM UK time & weekends · Batch: Asynchronous bulk rendering · No cold starts on dedicated
-            </p>
-          </div>
-        </div>
+  async function listHost() {
+    setListingBusy(true);
+    setError(null);
+    const res = await fetch("/api/premium/host", {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ hourlyUsd: shareHourly }),
+    });
+    const data = (await res.json().catch(() => ({}))) as { error?: string };
+    if (!res.ok) setError(data.error || "Could not list this host");
+    setListingBusy(false);
+    await load();
+  }
 
-        {/* 3-Way Mode Switcher */}
-        <div className="flex items-center gap-2">
-          <div className="flex items-center rounded-xl bg-black/60 p-0.5 border border-white/10 text-xs">
-            {EXECUTION_MODES.map((mode) => (
-              <button
-                key={mode.id}
-                type="button"
-                onClick={() => setExecutionMode(mode.id)}
-                className={cn(
-                  "px-2.5 py-1 text-[11px] font-medium rounded-lg transition-all flex items-center gap-1",
-                  executionMode === mode.id
-                    ? "bg-indigo-600 text-white shadow-xs font-semibold"
-                    : "text-zinc-400 hover:text-white",
-                )}
-              >
-                {mode.id === "on-demand" && <Zap className="h-3 w-3" />}
-                {mode.id === "off-peak" && <Moon className="h-3 w-3" />}
-                {mode.id === "batch" && <ListOrdered className="h-3 w-3" />}
-                <span>{mode.label.split(" ")[0]}</span>
-              </button>
-            ))}
-          </div>
+  async function unlistHost() {
+    setListingBusy(true);
+    setError(null);
+    const res = await fetch("/api/premium/host", { method: "DELETE", credentials: "include" });
+    const data = (await res.json().catch(() => ({}))) as { error?: string };
+    if (!res.ok) setError(data.error || "Could not unlist this host");
+    setListingBusy(false);
+    await load();
+  }
 
-          <Link href="/dashboard/studio" className="btn-secondary text-xs px-3 py-1.5 flex items-center gap-1.5">
-            <span>Studio</span>
-            <ExternalLink className="h-3 w-3" />
-          </Link>
-        </div>
-      </div>
+  const startLabel = selectedHost
+    ? selectedHost.isOwn
+      ? "Preview as renter"
+      : useVsShareCopy("shared-rental").verb
+    : attachId
+      ? "Attach GPU"
+      : product === "self-use"
+        ? selfUse.verb
+        : rentFromUsCta({
+            sku: activeSku?.sku || "nvidia-l4",
+            displayName: activeSku?.displayName,
+            rentable: activeSku?.rentable,
+            hours,
+            executionMode,
+          });
 
-      {/* ── 1. 5-Tier GPU Selection Row ── */}
-      <div className="grid grid-cols-5 gap-2.5 shrink-0">
-        {GPU_TIERS.map((tier) => {
-          const isSelected = selectedTier === tier.id;
-          const currentHourly =
-            executionMode === "batch"
-              ? tier.batchHourly
-              : executionMode === "off-peak"
-                ? tier.offPeakHourly
-                : tier.onDemandHourly;
+  function pickUseSku(tier: DisplaySku) {
+    setHubLane("use");
+    setSelectedSku(tier.sku);
+    setAttachId("");
+    setSelectedHostId("");
+    setHoverSku(null);
+  }
 
-          const percentAvailable = Math.round((tier.availableAllocations / tier.totalAllocations) * 100);
-
-          return (
-            <div
-              key={tier.id}
-              onClick={() => setSelectedTier(tier.id)}
-              className={cn(
-                "group relative cursor-pointer flex flex-col justify-between rounded-2xl border p-3 transition-all duration-200 hover:scale-[1.02] hover:shadow-lg",
-                isSelected
-                  ? "border-indigo-500 bg-gradient-to-b from-indigo-950/40 via-purple-950/20 to-black/80 shadow-indigo-500/20 ring-1 ring-indigo-500"
-                  : "border-white/10 bg-black/40 hover:border-indigo-400/40 hover:bg-white/5",
-              )}
-            >
-              {/* Header with Title & Info Button */}
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold font-mono text-zinc-200 group-hover:text-white truncate">
-                  {tier.name}
-                </span>
-
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setInspectModalTier(tier);
-                  }}
-                  className="rounded-full p-1 text-zinc-400 hover:text-white hover:bg-white/10 transition-colors"
-                  title="View speed & performance benchmarks"
-                >
-                  <Info className="h-3.5 w-3.5 text-indigo-400" />
-                </button>
-              </div>
-
-              {/* Class Equivalent & VRAM */}
-              <div className="mt-1">
-                <span className="inline-block rounded-md bg-white/5 px-1.5 py-0.5 text-[9px] font-mono text-indigo-300 border border-white/5 mb-1">
-                  {tier.classEquivalent}
-                </span>
-                <p className="text-[10px] text-emerald-400 font-mono font-semibold truncate">{tier.vram}</p>
-                <div className="mt-1 flex items-baseline gap-1">
-                  <span className="text-base font-bold font-mono text-emerald-400">${currentHourly.toFixed(2)}</span>
-                  <span className="text-[10px] text-zinc-400 font-mono">/ hr</span>
-                </div>
-              </div>
-
-              {/* Core Speed Specs */}
-              <div className="mt-2 flex items-center justify-between text-[10px] border-t border-white/10 pt-1.5 text-zinc-400 font-mono">
-                <span>Speed</span>
-                <span className="text-zinc-200 font-semibold">{tier.coreSpeed.split(" ")[0]} {tier.coreSpeed.split(" ")[1]}</span>
-              </div>
-
-              {/* Slot Allocation Counter */}
-              <div className="mt-1.5 space-y-1">
-                <div className="flex justify-between text-[9px] font-mono">
-                  <span className="text-zinc-500">Slots</span>
-                  <span className={tier.availableAllocations <= 2 ? "text-amber-400" : "text-emerald-400"}>
-                    {tier.availableAllocations}/{tier.totalAllocations} Left
-                  </span>
-                </div>
-                <div className="h-1 w-full rounded-full bg-white/10 overflow-hidden">
-                  <div
-                    className={cn("h-full rounded-full", tier.availableAllocations <= 2 ? "bg-amber-400" : "bg-emerald-400")}
-                    style={{ width: `${percentAvailable}%` }}
-                  />
-                </div>
-              </div>
-
-              {/* Select Action */}
-              <div className="mt-2">
-                <div
-                  className={cn(
-                    "w-full rounded-lg py-1 text-[10px] font-semibold text-center transition-all",
-                    isSelected ? "bg-indigo-600 text-white shadow-xs" : "bg-white/5 text-zinc-400 group-hover:text-zinc-200",
-                  )}
-                >
-                  {isSelected ? "Selected" : "Choose"}
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* ── 2. Lower Main Workspace Grid (Fit to Viewport) ── */}
-      <div className="grid grid-cols-12 gap-3 flex-1 min-h-0">
-        {/* Left Form: Configure & Launch (Col 7) */}
-        <div className="col-span-7 card p-4 flex flex-col justify-between border-indigo-500/30 bg-gradient-to-br from-black/80 via-black/90 to-indigo-950/20 backdrop-blur-xl">
-          <div className="flex items-center justify-between pb-3 border-b border-white/10 shrink-0">
-            <div className="flex items-center gap-2">
-              <Zap className="h-4 w-4 text-indigo-400" />
-              <div>
-                <h2 className="text-xs font-bold text-white">Configure {activeTier.name} ({activeModeConfig.label})</h2>
-                <p className="text-[10px] text-zinc-400">{activeModeConfig.availabilityNote}</p>
-              </div>
-            </div>
-            <span className="text-xs font-mono text-emerald-400 font-semibold shrink-0">
-              ${effectiveHourlyRate.toFixed(2)} / hr ({executionMode.toUpperCase()})
-            </span>
-          </div>
-
-          <form onSubmit={startGpuRental} className="flex-1 flex flex-col justify-between py-2 space-y-3">
-            {/* Duration Range (7h - 24h) */}
-            <div className="space-y-2 rounded-xl border border-white/10 bg-white/5 p-3">
-              <div className="flex items-center justify-between text-xs">
-                <div className="flex items-center gap-1.5 text-white font-medium">
-                  <Clock className="h-3.5 w-3.5 text-indigo-400" />
-                  <span>Duration: <span className="font-mono text-indigo-300 font-bold">{durationHours} Hours</span></span>
-                  {durationHours === 24 && <span className="text-[10px] text-emerald-400 font-mono">(1 Full Day)</span>}
-                </div>
-                <span className="text-[10px] font-mono text-zinc-400">Min 7h · Max 24h</span>
-              </div>
-
-              <input
-                type="range"
-                min={7}
-                max={24}
-                step={1}
-                value={durationHours}
-                onChange={(e) => setDurationHours(Number(e.target.value))}
-                className="w-full h-1.5 bg-white/10 rounded-lg appearance-none cursor-pointer accent-indigo-500"
-              />
-
-              <div className="grid grid-cols-4 gap-1.5">
-                {[
-                  { label: "7h (Min)", val: 7 },
-                  { label: "12h (Half Day)", val: 12 },
-                  { label: "18h (Extended)", val: 18 },
-                  { label: "24h (Full Day)", val: 24 },
-                ].map((p) => (
-                  <button
-                    key={p.val}
-                    type="button"
-                    onClick={() => setDurationHours(p.val)}
-                    className={cn(
-                      "py-1 text-[10px] font-mono rounded-lg border transition-all text-center",
-                      durationHours === p.val
-                        ? "border-indigo-500 bg-indigo-500/20 text-white font-bold"
-                        : "border-white/5 bg-black/40 text-zinc-400 hover:text-white",
-                    )}
-                  >
-                    {p.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Model Selector & LoRA URI */}
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              <div>
-                <label className="block text-[11px] text-zinc-300 mb-1">Preloaded Model Pipeline</label>
-                <select
-                  value={selectedModel}
-                  onChange={(e) => setSelectedModel(e.target.value)}
-                  className="input w-full text-xs font-mono py-1.5"
-                >
-                  <option value="flux-1-dev">Flux.1 Dev (1024px Full Precision)</option>
-                  <option value="flux-1-schnell">Flux.1 Schnell (4-Step Realtime)</option>
-                  <option value="google-imagen-3">Google Imagen 3 (Ultra 8K)</option>
-                  <option value="google-veo-2">Google Veo 2 (Video Diffusion)</option>
-                  <option value="comfyui-flux">ComfyUI Suite + Node Graph</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-[11px] text-zinc-300 mb-1">Execution SLA Guarantee</label>
-                <input
-                  type="text"
-                  readOnly
-                  value={activeModeConfig.sla}
-                  className="input w-full text-xs font-mono py-1.5 opacity-90 cursor-default"
-                />
-              </div>
-            </div>
-
-            {/* Total Cost & Launch Button */}
-            <div className="flex items-center justify-between pt-2 border-t border-white/10 shrink-0">
-              <div>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-[11px] text-zinc-400">Total ({durationHours}h):</span>
-                  <span className="font-mono font-bold text-emerald-400 text-base">${totalCost} USD</span>
-                  {executionMode !== "on-demand" && Number(savings) > 0 && (
-                    <span className="text-[11px] text-zinc-500 line-through font-mono">${standardCost}</span>
-                  )}
-                </div>
-                {executionMode !== "on-demand" && Number(savings) > 0 && (
-                  <p className="text-[10px] text-emerald-400 font-mono">
-                    Save ${savings} USD with {activeModeConfig.label}
+  const rentalsList = (
+    <div className="min-h-0 overflow-y-auto pr-1">
+      <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+        Your rentals
+        <span className="ml-2 font-mono text-success">{liveCount}</span>
+      </p>
+      {rentals.length === 0 ? (
+        <p className="mt-2 text-[12px] text-muted-foreground">No rentals yet — premium_rentals only.</p>
+      ) : (
+        <ul className="mt-2 space-y-2">
+          {rentals.map((r) => {
+            const left = rentalHoursLeft(r);
+            const live = r.status === "active" || r.status === "pending";
+            const mode = provisionLabel({ ...r.deployment, hostShareId: r.hostShareId });
+            return (
+              <li key={r.id} className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="text-[11px] font-semibold text-foreground truncate">
+                    {r.catalog?.displayName || r.modelId || skuName(r.sku)}
                   </p>
-                )}
-              </div>
-
-              <button
-                type="submit"
-                disabled={starting || activeTier.availableAllocations <= 0}
-                className="btn-primary flex items-center gap-2 px-5 py-2 text-xs rounded-xl shadow-md shadow-indigo-600/30"
-              >
-                {starting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
-                <span>
-                  {executionMode === "batch" ? "Submit to Batch Queue" : `Rent ${activeTier.name} (${durationHours}h)`}
-                </span>
-              </button>
-            </div>
-          </form>
-        </div>
-
-        {/* Right Panel: Active Nodes & Hardware Specs (Col 5) */}
-        <div className="col-span-5 card p-4 flex flex-col justify-between border-white/10 bg-black/40 backdrop-blur-xl">
-          {/* Tab Switcher for Right Panel */}
-          <div className="flex items-center justify-between pb-2 border-b border-white/10 shrink-0">
-            <div className="flex items-center gap-1.5">
-              <button
-                type="button"
-                onClick={() => setActiveTab("configure")}
-                className={cn(
-                  "px-2.5 py-1 text-xs font-semibold rounded-lg transition-colors",
-                  activeTab === "configure" ? "bg-white/10 text-white" : "text-zinc-400 hover:text-white",
-                )}
-              >
-                Pricing & SLAs
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab("active")}
-                className={cn(
-                  "px-2.5 py-1 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1",
-                  activeTab === "active" ? "bg-white/10 text-white" : "text-zinc-400 hover:text-white",
-                )}
-              >
-                <span>Active Nodes</span>
-                <span className="rounded-full bg-emerald-500/20 px-1.5 text-[9px] font-mono text-emerald-300">
-                  {rentals.length}
-                </span>
-              </button>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => setInspectModalTier(activeTier)}
-              className="text-[11px] text-indigo-400 hover:text-indigo-300 flex items-center gap-1 font-medium"
-            >
-              <span>Full Details</span>
-              <ArrowUpRight className="h-3 w-3" />
-            </button>
-          </div>
-
-          {activeTab === "configure" ? (
-            <div className="flex-1 flex flex-col justify-between py-2 text-xs space-y-2">
-              <div className="space-y-1.5 font-mono">
-                <div className="flex justify-between py-1 border-b border-white/5">
-                  <span className="text-zinc-400 font-sans">On-Demand Dedicated</span>
-                  <span className="text-zinc-200">${activeTier.onDemandHourly.toFixed(2)}/hr (Instant)</span>
-                </div>
-                <div className="flex justify-between py-1 border-b border-white/5">
-                  <span className="text-zinc-400 font-sans">Off-Peak (10 PM–8 AM UK)</span>
-                  <span className="text-emerald-400 font-bold">${activeTier.offPeakHourly.toFixed(2)}/hr</span>
-                </div>
-                <div className="flex justify-between py-1 border-b border-white/5">
-                  <span className="text-zinc-400 font-sans">Flexible Batch Queue</span>
-                  <span className="text-amber-300 font-bold">${activeTier.batchHourly.toFixed(2)}/hr (Async)</span>
-                </div>
-                <div className="flex justify-between py-1 border-b border-white/5">
-                  <span className="text-zinc-400 font-sans">Flux.1 Dev Latency</span>
-                  <span className="text-indigo-300 font-bold">{activeTier.benchmarks.fluxDev}</span>
-                </div>
-              </div>
-
-              {/* Policy Explanation Box */}
-              <div className="rounded-xl bg-indigo-500/10 border border-indigo-500/20 p-2.5 text-[11px] text-zinc-300">
-                <p className="font-semibold text-indigo-300 flex items-center gap-1">
-                  <ShieldCheck className="h-3.5 w-3.5 text-indigo-400" />
-                  <span>Workload & Interruption Transparency</span>
-                </p>
-                <p className="text-zinc-400 mt-0.5 leading-relaxed text-[10px]">
-                  • <strong>On-Demand & Off-Peak</strong>: 100% dedicated, non-interrupted instances.<br/>
-                  • <strong>Batch Queue</strong>: Jobs process asynchronously when capacity frees up.
-                </p>
-              </div>
-            </div>
-          ) : (
-            <div className="flex-1 flex flex-col justify-between py-1 overflow-y-auto space-y-2">
-              {rentals.map((r) => (
-                <div key={r.id} className="rounded-xl border border-white/10 bg-white/5 p-2.5 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-400">
-                      <Activity className="h-3.5 w-3.5" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-semibold text-white">{r.gpuTierName || r.model}</p>
-                      <p className="text-[10px] text-zinc-400 font-mono">${r.hourlyRate.toFixed(2)}/hr · {r.hours}h ({r.executionMode})</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-1.5">
-                    <Link href="/dashboard/studio" className="btn-secondary text-[10px] px-2 py-1 flex items-center gap-1">
-                      <span>Studio</span>
+                  <p className="text-[10px] text-muted-foreground font-mono truncate">
+                    {r.hostShareId ? "Shared host" : skuName(r.sku)} · ${Number(r.hourlyRate).toFixed(2)}/hr · {r.status}
+                    {mode ? ` · ${mode}` : ""}
+                    {r.hostShareId
+                      ? ` · earned ${formatEarningsUsd(liveEarnings({ ...r, earningsCents: r.earningsCents ?? 0 }))}`
+                      : ""}
+                    {" · "}
+                    {left.label}
+                  </p>
+                  <div className="mt-0.5 flex flex-wrap items-center gap-2">
+                    <Link href="/dashboard/studio" className="text-[10px] underline flex items-center gap-0.5">
+                      Studio
                       <ArrowUpRight className="h-2.5 w-2.5" />
                     </Link>
-                    <button
-                      type="button"
-                      onClick={() => stopGpuRental(r.id)}
-                      className="rounded-lg p-1 text-zinc-500 hover:text-red-400 hover:bg-white/10"
-                    >
-                      <Square className="h-3 w-3" />
-                    </button>
+                    {r.deployment?.fqdn ? (
+                      <a
+                        href={r.deployment.fqdn}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-[10px] underline font-mono truncate max-w-[12rem]"
+                      >
+                        {r.deployment.fqdn}
+                      </a>
+                    ) : r.deployment?.statusMessage ? (
+                      <span className="text-[10px] text-muted-foreground truncate max-w-[12rem]">{r.deployment.statusMessage}</span>
+                    ) : null}
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
+                {live ? (
+                  <button type="button" onClick={() => setStopId(r.id)} className="btn-danger btn-sm shrink-0">
+                    <Square className="h-3 w-3" />
+                    Stop
+                  </button>
+                ) : null}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
 
-      {/* ── 3. Interactive Detail & Benchmark Modal Dialog ── */}
-      {inspectModalTier && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div
-            className="absolute inset-0 bg-black/80 backdrop-blur-md"
-            onClick={() => setInspectModalTier(null)}
-          />
-
-          <div
-            className="relative z-10 w-full max-w-lg rounded-2xl border border-white/20 p-6 shadow-2xl backdrop-blur-2xl space-y-5 animate-in fade-in zoom-in-95 duration-200"
-            style={{ background: "rgba(14, 16, 26, 0.98)" }}
-          >
-            {/* Modal Header */}
-            <div className="flex items-center justify-between pb-3 border-b border-white/10">
-              <div className="flex items-center gap-2.5">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">
-                  <Cpu className="h-5 w-5" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-base font-bold text-white">{inspectModalTier.name}</h3>
-                    <span className="rounded-md bg-indigo-500/20 px-2 py-0.5 text-[10px] font-mono font-bold text-indigo-300">
-                      {inspectModalTier.classEquivalent}
-                    </span>
-                  </div>
-                  <p className="text-xs text-emerald-400 font-mono font-semibold">{inspectModalTier.vram}</p>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setInspectModalTier(null)}
-                className="rounded-full p-1 text-zinc-400 hover:text-white hover:bg-white/10 transition-colors"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-
-            {/* Pricing by Execution Mode */}
-            <div className="space-y-2">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-400 font-mono">
-                Pricing by Compute Execution Mode
-              </h4>
-              <div className="grid grid-cols-3 gap-2 text-xs font-mono">
-                <div className="rounded-xl bg-white/5 p-2.5 border border-white/5">
-                  <span className="text-zinc-500 text-[10px] block">⚡ On-Demand</span>
-                  <span className="text-white font-bold">${inspectModalTier.onDemandHourly.toFixed(2)}/hr</span>
-                  <span className="text-[9px] text-zinc-400 block mt-0.5">Instant dedicated</span>
-                </div>
-                <div className="rounded-xl bg-indigo-500/10 p-2.5 border border-indigo-500/30">
-                  <span className="text-indigo-300 text-[10px] block">🌙 Off-Peak (10 PM–8 AM)</span>
-                  <span className="text-emerald-400 font-bold">${inspectModalTier.offPeakHourly.toFixed(2)}/hr</span>
-                  <span className="text-[9px] text-emerald-300 block mt-0.5">Uninterrupted</span>
-                </div>
-                <div className="rounded-xl bg-amber-500/10 p-2.5 border border-amber-500/30">
-                  <span className="text-amber-300 text-[10px] block">📦 Batch Queue</span>
-                  <span className="text-amber-300 font-bold">${inspectModalTier.batchHourly.toFixed(2)}/hr</span>
-                  <span className="text-[9px] text-amber-400 block mt-0.5">Async throughput</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Inference Speed Benchmarks */}
-            <div className="space-y-2">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-400 font-mono flex items-center gap-1.5">
-                <Gauge className="h-3.5 w-3.5 text-indigo-400" />
-                <span>Live Inference Benchmarks</span>
-              </h4>
-              <div className="grid grid-cols-3 gap-2 text-center text-xs">
-                <div className="rounded-xl bg-indigo-500/10 border border-indigo-500/20 p-2">
-                  <span className="text-[10px] text-zinc-400 block">Flux.1 Dev</span>
-                  <span className="font-mono text-indigo-300 font-bold mt-0.5 block">{inspectModalTier.benchmarks.fluxDev}</span>
-                </div>
-                <div className="rounded-xl bg-indigo-500/10 border border-indigo-500/20 p-2">
-                  <span className="text-[10px] text-zinc-400 block">Google Imagen 3</span>
-                  <span className="font-mono text-indigo-300 font-bold mt-0.5 block">{inspectModalTier.benchmarks.imagen3}</span>
-                </div>
-                <div className="rounded-xl bg-indigo-500/10 border border-indigo-500/20 p-2">
-                  <span className="text-[10px] text-zinc-400 block">Veo 2 Video</span>
-                  <span className="font-mono text-indigo-300 font-bold mt-0.5 block">{inspectModalTier.benchmarks.veoVideo}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Action */}
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-white/10">
-              <button
-                type="button"
-                onClick={() => setInspectModalTier(null)}
-                className="btn-secondary text-xs px-4 py-2"
-              >
-                Close
-              </button>
+  return (
+    <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
+      <PageHeader
+        compact
+        className="mb-2 shrink-0 [&_h1]:text-base [&_h1]:leading-tight [&_p]:text-[11px] [&_p]:mt-0.5"
+        eyebrow="Premium"
+        title={
+          product === "share"
+            ? shareCopy.title
+            : product === "self-use"
+              ? selfUse.title
+              : `${openDoor.title} · ${shortGpuLabel(activeSku?.sku || "nvidia-l4", activeSku?.displayName)}`
+        }
+        description={
+          product === "share"
+            ? "List this Mac at a real $/hr. Eligibility stays on Share."
+            : product === "self-use"
+              ? "$0 on this machine — not a rental from OpenDoor."
+              : `${shortGpuLabel(activeSku?.sku || "nvidia-l4", activeSku?.displayName)} · $${(activeSku?.hourlyUsd ?? 0).toFixed(2)}/hr · ${activeSku?.region || "your GCP project"}`
+        }
+        actions={
+          <div className="flex flex-wrap items-center gap-1.5">
+            <div className="flex items-center rounded-md bg-muted p-0.5 text-xs">
               <button
                 type="button"
                 onClick={() => {
-                  setSelectedTier(inspectModalTier.id);
-                  setInspectModalTier(null);
+                  setHubLane("use");
+                  setSelectedHostId("");
                 }}
-                className="btn-primary text-xs px-4 py-2 flex items-center gap-1.5"
+                className={cn(
+                  "px-2 py-0.5 text-[11px] font-medium rounded transition-colors",
+                  hubLane === "use"
+                    ? "bg-primary text-primary-foreground font-semibold"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
               >
-                <Check className="h-3.5 w-3.5" />
-                <span>Select {inspectModalTier.name}</span>
+                Use
+              </button>
+              <button
+                type="button"
+                onClick={() => setHubLane("share")}
+                className={cn(
+                  "px-2 py-0.5 text-[11px] font-medium rounded transition-colors",
+                  hubLane === "share"
+                    ? "bg-primary text-primary-foreground font-semibold"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                Share
               </button>
             </div>
+            {product === "opendoor" ? (
+              <div className="flex items-center rounded-md bg-muted p-0.5 text-xs">
+                {EXECUTION_MODES.map((mode) => (
+                  <button
+                    key={mode.id}
+                    type="button"
+                    onClick={() => setExecutionMode(mode.id)}
+                    className={cn(
+                      "px-2 py-0.5 text-[11px] font-medium rounded transition-colors flex items-center gap-1",
+                      executionMode === mode.id
+                        ? "bg-primary text-primary-foreground font-semibold"
+                        : "text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    {mode.id === "on-demand" && <Zap className="h-3 w-3" />}
+                    {mode.id === "off-peak" && <Moon className="h-3 w-3" />}
+                    {mode.id === "batch" && <ListOrdered className="h-3 w-3" />}
+                    <span>{mode.label.split(" ")[0]}</span>
+                  </button>
+                ))}
+              </div>
+            ) : null}
+            <button type="button" onClick={() => setDetailsOpen(true)} className="btn-ghost text-[11px] px-2 py-1">
+              Full details
+            </button>
+            <Link href="/dashboard/studio" className="btn-secondary text-[11px] px-2 py-1 flex items-center gap-1">
+              Studio
+              <ExternalLink className="h-3 w-3" />
+            </Link>
           </div>
+        }
+      />
+
+      {error ? (
+        <div className="alert-error mb-2 shrink-0 text-[12px]" role="alert">
+          {error}{" "}
+          {billingHref ? (
+            <Link href="/dashboard/billing" className="underline font-medium">
+              Add credit
+            </Link>
+          ) : null}
+        </div>
+      ) : null}
+
+      {loading ? (
+        <div className="flex min-h-0 flex-1 items-center justify-center">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
+      ) : (
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          {hubLane === "use" ? (
+            <>
+              <div className="flex shrink-0 flex-wrap gap-x-3 gap-y-0 border-b border-border">
+                {openDoorCards.map((tier) => (
+                  <CompactSku
+                    key={tier.sku}
+                    selected={selectedSku === tier.sku && !attachId}
+                    name={shortGpuLabel(tier.sku, tier.displayName)}
+                    price={tier.rentable ? `$${tier.hourlyUsd.toFixed(2)}/hr` : "Quote"}
+                    onPick={() => pickUseSku(tier)}
+                    onPreview={(on) => setHoverSku(on ? tier.sku : null)}
+                  />
+                ))}
+                {localCards.map((tier) => (
+                  <CompactSku
+                    key={tier.sku}
+                    selected={selectedSku === tier.sku && !attachId}
+                    name={selfUse.title}
+                    price="$0.00/hr"
+                    onPick={() => pickUseSku(tier)}
+                    onPreview={(on) => setHoverSku(on ? tier.sku : null)}
+                  />
+                ))}
+              </div>
+
+              <div className="mt-2 flex min-h-0 flex-1 flex-col gap-3 overflow-hidden lg:grid lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] lg:gap-4">
+                <form onSubmit={startGpuRental} className="flex shrink-0 flex-col lg:min-h-0 lg:overflow-hidden">
+                  <p className="shrink-0 text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+                    Configure {product === "self-use" ? selfUse.title : shortGpuLabel(activeSku?.sku || "GPU", activeSku?.displayName)}
+                  </p>
+                  <p className="mt-0.5 shrink-0 text-[11px] font-mono text-muted-foreground">
+                    {product === "opendoor" && activeSku
+                      ? `$${activeSku.hourlyUsd.toFixed(2)}/hr · ${activeSku.region}`
+                      : product === "self-use"
+                        ? imageEndpoint?.url
+                          ? `Studio live · ${imageEndpoint.kind}`
+                          : "Studio offline — rental stays pending until Studio or Ollama is up"
+                        : activeMode.availabilityNote}
+                  </p>
+
+                  <div className="mt-2 shrink-0">
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="flex items-center gap-1 font-medium text-foreground">
+                        <Clock className="h-3 w-3 text-primary" />
+                        {runUntilStop ? "Until stop" : `${durationHours}h`}
+                      </span>
+                      <span className="font-mono text-[10px] text-muted-foreground">7–24h</span>
+                    </div>
+                    <input
+                      type="range"
+                      min={7}
+                      max={24}
+                      step={1}
+                      value={durationHours}
+                      disabled={runUntilStop}
+                      onChange={(e) => setDurationHours(Number(e.target.value))}
+                      className="mt-1 h-1.5 w-full cursor-pointer appearance-none rounded-lg bg-muted accent-primary disabled:opacity-40"
+                    />
+                    <div className="mt-1 flex gap-2">
+                      {[7, 12, 18, 24].map((val) => (
+                        <button
+                          key={val}
+                          type="button"
+                          onClick={() => {
+                            setRunUntilStop(false);
+                            setDurationHours(val);
+                          }}
+                          className={cn(
+                            "text-[10px] font-mono border-b-2 pb-0.5",
+                            !runUntilStop && durationHours === val
+                              ? "border-primary font-bold text-foreground"
+                              : "border-transparent text-muted-foreground",
+                          )}
+                        >
+                          {val}h
+                        </button>
+                      ))}
+                      <label className="ml-auto flex items-center gap-1 text-[10px] text-muted-foreground">
+                        <input
+                          type="checkbox"
+                          checked={runUntilStop}
+                          onChange={(e) => setRunUntilStop(e.target.checked)}
+                          className="h-3 w-3 accent-[hsl(var(--primary))]"
+                        />
+                        Until stop
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className="mt-2 grid shrink-0 grid-cols-2 gap-2 text-xs">
+                    <label>
+                      <span className="mb-0.5 block text-[10px] text-muted-foreground">Model</span>
+                      <select
+                        value={modelId}
+                        onChange={(e) => setModelId(e.target.value)}
+                        className="input w-full py-1 font-mono text-[11px]"
+                      >
+                        {catalog.length === 0 ? (
+                          <option value="">No catalog models</option>
+                        ) : (
+                          catalog.map((m) => (
+                            <option key={m.id} value={m.id}>
+                              {m.displayName}
+                            </option>
+                          ))
+                        )}
+                      </select>
+                    </label>
+                    <label>
+                      <span className="mb-0.5 block text-[10px] text-muted-foreground">SLA</span>
+                      <input
+                        type="text"
+                        readOnly
+                        value={activeMode.sla}
+                        className="input w-full cursor-default py-1 font-mono text-[11px] opacity-90"
+                      />
+                    </label>
+                  </div>
+
+                  {deployments.length > 0 ? (
+                    <label className="mt-2 block shrink-0 text-xs">
+                      <span className="mb-0.5 block text-[10px] text-muted-foreground">Attach running deployment</span>
+                      <select
+                        className="input w-full py-1 font-mono text-[11px]"
+                        value={attachId}
+                        onChange={(e) => {
+                          setAttachId(e.target.value);
+                          setSelectedHostId("");
+                        }}
+                      >
+                        <option value="">
+                          New {activeSku?.sku === "metal" ? selfUse.title : `rental on ${shortGpuLabel(activeSku?.sku || "GPU", activeSku?.displayName)}`}
+                        </option>
+                        {deployments.map((d) => (
+                          <option key={d.id} value={d.id}>
+                            {d.name} · {d.target} · {d.gpuType || "gpu"}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  ) : null}
+
+                  <div className="mt-auto flex shrink-0 items-center justify-between gap-2 border-t border-border pt-2">
+                    <div className="min-w-0">
+                      <p className="text-[11px] text-muted-foreground">
+                        {attachId ? "Attach" : hours == null ? "Until stop" : `Total (${hours}h)`}
+                        {estimate ? <span className="ml-1 font-mono font-bold text-foreground">${estimate}</span> : null}
+                      </p>
+                      <p className="truncate font-mono text-[10px] text-muted-foreground">
+                        {activeSku?.target === "gcp" && !attachId
+                          ? provision.scaleToZero
+                            ? `Idle $0 · $${billedHourly.toFixed(2)}/hr warm · $${scaleCredit} prepaid`
+                            : `Reserved $${billedHourly.toFixed(2)}/hr · $${reservedCredit} prepaid`
+                          : `${selfUse.title} is $0`}
+                      </p>
+                    </div>
+                    {product === "opendoor" && !activeSku?.rentable ? (
+                      <Link href="/dashboard/support" className="btn-primary shrink-0 px-3 py-1.5 text-[11px]">
+                        Talk to Support
+                      </Link>
+                    ) : (
+                      <button
+                        type="submit"
+                        disabled={starting || (!modelId && !attachId) || (!attachId && !activeSku?.rentable)}
+                        className="btn-primary flex shrink-0 items-center gap-1.5 px-3 py-1.5 text-[11px]"
+                      >
+                        {starting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Play className="h-3 w-3" />}
+                        {startLabel}
+                      </button>
+                    )}
+                  </div>
+                </form>
+
+                <div className="flex min-h-0 flex-col overflow-hidden lg:border-l lg:border-border lg:pl-4">
+                  <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+                    {previewSku ? <SkuSpecSheet sku={previewSku} localLabel={selfUse.sku} /> : null}
+                    <div className="mt-3 border-t border-border pt-2">{rentalsList}</div>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-3 border-t border-border pt-2 text-[11px] text-muted-foreground">
+                    <button type="button" onClick={() => setDetailsOpen(true)} className="underline hover:text-foreground">
+                      Full details
+                    </button>
+                    <button type="button" onClick={() => setHubLane("share")} className="hover:text-foreground">
+                      {shareCopy.title} →
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden lg:grid lg:grid-cols-2 lg:gap-4">
+              <div className="flex shrink-0 flex-col overflow-hidden lg:min-h-0">
+                <p className="shrink-0 text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+                  {shareCopy.title}
+                </p>
+                {eligibility ? (
+                  <p className="mt-1 shrink-0 text-[12px] text-foreground">
+                    {eligibility.label}
+                    <span className="font-mono text-[11px] text-muted-foreground">
+                      {eligibility.workerKind ? ` · ${eligibility.workerKind}` : ""}
+                      {eligibility.eligible ? " · eligible to list" : " · not eligible"}
+                    </span>
+                  </p>
+                ) : (
+                  <p className="mt-1 shrink-0 text-[12px] text-muted-foreground">Checking whether this Mac can be listed…</p>
+                )}
+                {eligibility && !eligibility.eligible ? (
+                  <ul className="mt-1 shrink-0 space-y-0.5 text-[11px] text-muted-foreground">
+                    {eligibility.reasons.map((reason) => (
+                      <li key={reason}>{reason}</li>
+                    ))}
+                    {canDemoList ? <li className="text-foreground">Site admin: you can still create a demo listing.</li> : null}
+                  </ul>
+                ) : null}
+
+                {listing?.status === "listed" ? (
+                  <div className="mt-2 flex shrink-0 items-end justify-between gap-2">
+                    <div>
+                      <p className="text-[12px] font-medium text-foreground">
+                        Listed ${listing.hourlyUsd.toFixed(2)}/hr
+                        {listing.isDemo ? <span className="ml-1 font-mono text-[10px] uppercase text-warning">Demo</span> : null}
+                      </p>
+                      <p className="font-mono text-[10px] text-muted-foreground">
+                        {listingInUse ? `In use · ${liveInbound.length}` : "Idle"}
+                        {" · "}
+                        Earned {formatEarningsUsd(
+                          listing.earningsCents +
+                            liveInbound.reduce((sum, r) => sum + Math.max(0, liveEarnings(r) - r.earningsCents), 0),
+                        )}
+                        {liveInbound[0]?.startedAt ? ` · $${runningUsd(liveInbound[0]).toFixed(4)} running` : ""}
+                      </p>
+                      {liveInbound.map((r) => (
+                        <p key={r.id} className="font-mono text-[10px] text-muted-foreground">
+                          {r.isPreview ? "Preview" : "Inbound"} · {r.status} · {formatEarningsUsd(liveEarnings(r))}
+                          <button type="button" onClick={() => setStopId(r.id)} className="ml-2 underline">
+                            Stop
+                          </button>
+                        </p>
+                      ))}
+                    </div>
+                    <button
+                      type="button"
+                      disabled={listingBusy || listingInUse}
+                      onClick={() => void unlistHost()}
+                      className="btn-secondary px-2 py-1 text-[11px]"
+                    >
+                      {listingBusy ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
+                      {listingInUse ? "Unlist when idle" : "Unlist"}
+                    </button>
+                  </div>
+                ) : (
+                  <div className="mt-2 flex shrink-0 items-end gap-2">
+                    <label className="text-xs">
+                      <span className="mb-0.5 block text-[10px] text-muted-foreground">Listed $/hr</span>
+                      <input
+                        type="number"
+                        min={0.25}
+                        max={4}
+                        step={0.05}
+                        value={shareHourly}
+                        onChange={(e) => setShareHourly(Number(e.target.value))}
+                        className="input w-24 py-1 font-mono text-[11px]"
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      disabled={listingBusy || (!eligibility?.eligible && !canDemoList)}
+                      onClick={() => void listHost()}
+                      className="btn-primary flex items-center gap-1 px-2 py-1 text-[11px]"
+                    >
+                      {listingBusy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Share2 className="h-3 w-3" />}
+                      {canDemoList ? "List demo" : shareCopy.verb}
+                    </button>
+                  </div>
+                )}
+
+                {selectedHost ? (
+                  <form onSubmit={startGpuRental} className="mt-3 flex min-h-0 flex-1 flex-col overflow-hidden border-t border-border pt-2">
+                    <p className="shrink-0 text-[11px] font-medium text-foreground">Rent {selectedHost.displayName}</p>
+                    <p className="font-mono text-[10px] text-muted-foreground">${selectedHost.hourlyUsd.toFixed(2)}/hr listed</p>
+                    <div className="mt-auto flex shrink-0 items-center justify-between gap-2 pt-2">
+                      <span className="text-[11px] text-muted-foreground">
+                        {hours == null ? "Until stop" : `${hours}h`}
+                        {estimate ? <span className="ml-1 font-mono font-bold text-foreground">${estimate}</span> : null}
+                      </span>
+                      <button
+                        type="submit"
+                        disabled={starting || !modelId || Boolean(selectedHost.inUse)}
+                        className="btn-primary flex items-center gap-1 px-3 py-1.5 text-[11px]"
+                      >
+                        {starting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Play className="h-3 w-3" />}
+                        {startLabel}
+                      </button>
+                    </div>
+                  </form>
+                ) : (
+                  <div className="mt-auto shrink-0 border-t border-border pt-2 text-[11px] text-muted-foreground">
+                    <button type="button" onClick={() => setDetailsOpen(true)} className="underline hover:text-foreground">
+                      Full details
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex min-h-0 flex-col overflow-hidden lg:border-l lg:border-border lg:pl-4">
+                <p className="shrink-0 text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+                  Available hosts
+                </p>
+                <div className="mt-1 min-h-0 flex-1 overflow-y-auto pr-1">
+                  {availableHosts.length === 0 ? (
+                    <p className="text-[12px] text-muted-foreground">
+                      No hosts listed yet. Real <span className="font-mono">gpu_host_shares</span> rows only.
+                    </p>
+                  ) : (
+                    <ul className="space-y-2">
+                      {availableHosts.map((host) => {
+                        const selected = selectedHostId === host.id;
+                        return (
+                          <li key={host.id} className="flex items-center justify-between gap-2">
+                            <div className="min-w-0">
+                              <p className="truncate text-[12px] font-medium text-foreground">
+                                {host.displayName}
+                                {host.isOwn ? (
+                                  <span className="ml-1 font-mono text-[10px] uppercase text-muted-foreground">You</span>
+                                ) : null}
+                                {host.isDemo ? (
+                                  <span className="ml-1 font-mono text-[10px] uppercase text-warning">Demo</span>
+                                ) : null}
+                              </p>
+                              <p className="font-mono text-[10px] text-muted-foreground">
+                                ${host.hourlyUsd.toFixed(2)}/hr · {host.inUse ? "In use" : "Open"}
+                                {host.workerKind ? ` · ${host.workerKind}` : ""}
+                                {host.memoryGb != null ? ` · ${host.memoryGb} GB` : ""}
+                              </p>
+                            </div>
+                            <button
+                              type="button"
+                              disabled={host.inUse && !selected}
+                              onClick={() => {
+                                setSelectedHostId(host.id);
+                                setAttachId("");
+                              }}
+                              className={cn(
+                                "shrink-0 rounded-md border px-2 py-1 text-[11px]",
+                                selected ? "border-primary text-foreground" : "border-border text-muted-foreground",
+                              )}
+                            >
+                              {host.inUse ? "In use" : host.isOwn ? "Preview" : "Select"}
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                </div>
+                <div className="mt-2 flex min-h-0 max-h-[28%] flex-col overflow-hidden border-t border-border pt-2">
+                  {rentalsList}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
+
+      <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
+        <DialogContent className="max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>How Premium works</DialogTitle>
+            <DialogDescription>
+              Listed gpu_skus rates on your GCP project. Off-peak and batch are capacity windows, not a silent discount.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 text-[13px] text-muted-foreground">
+            {hubLane === "share" ? (
+              <ol className="space-y-2">
+                <li>
+                  <span className="font-semibold text-foreground">1. Check this host.</span> Eligibility only applies when
+                  you want to list.
+                </li>
+                <li>
+                  <span className="font-semibold text-foreground">2. List at a real $/hr.</span> Unlist only when idle.
+                </li>
+                <li>
+                  <span className="font-semibold text-foreground">3. Earn while away.</span> Cents accrue on the listing
+                  and each inbound rental.
+                </li>
+              </ol>
+            ) : (
+              <ol className="space-y-2">
+                <li>
+                  <span className="font-semibold text-foreground">1. Pick an OpenDoor GPU.</span> L4, A100, or H100 at the
+                  listed rate on your GCP project.
+                </li>
+                <li>
+                  <span className="font-semibold text-foreground">2. Set duration and start.</span> Cloud Run via
+                  deployGpuToGcp. {selfUse.title} is the $0 local card only.
+                </li>
+                <li>
+                  <span className="font-semibold text-foreground">3. Stop when done.</span> Owned Cloud Run services are
+                  torn down.
+                </li>
+              </ol>
+            )}
+            <div className="space-y-1 font-mono text-[11px]">
+              <div className="flex justify-between border-b border-border py-1">
+                <span className="font-sans text-muted-foreground">On-Demand (billed)</span>
+                <span className="text-foreground">${guides.onDemand.toFixed(2)}/hr</span>
+              </div>
+              <div className="flex justify-between border-b border-border py-1">
+                <span className="font-sans text-muted-foreground">Off-Peak guide</span>
+                <span className="text-success">${guides.offPeak.toFixed(2)}/hr · not a meter</span>
+              </div>
+              <div className="flex justify-between border-b border-border py-1">
+                <span className="font-sans text-muted-foreground">Batch guide</span>
+                <span className="text-warning">${guides.batch.toFixed(2)}/hr · not a meter</span>
+              </div>
+            </div>
+            <p className="text-[11px] leading-relaxed">
+              <ShieldCheck className="mr-1 inline h-3.5 w-3.5 text-primary" />
+              You are billed the listed hour while the instance is warm. Off-peak and batch map to Cloud Run
+              scale-to-zero ($0 idle).
+            </p>
+            <ul className="space-y-1 font-mono text-[11px]">
+              {CLASS_COMPARISON.map((row) => (
+                <li key={row.cls}>
+                  <span className="text-foreground">{row.cls}:</span> {row.note}
+                </li>
+              ))}
+            </ul>
+            <p className="text-[11px]">
+              <Link href="/docs/how-it-works/premium" className="underline">
+                How Premium works
+              </Link>
+              {" · "}
+              <Link href="/dashboard/deployments" className="underline">
+                Deployments
+              </Link>
+              {" · "}
+              <Link href="/dashboard/support" className="underline">
+                Support for clusters
+              </Link>
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={Boolean(stopId)} onOpenChange={(open) => { if (!open && !stopping) setStopId(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Stop this rental?</DialogTitle>
+            <DialogDescription>
+              Owned GPUs are torn down. Attached boxes stay in place. Shared-host earnings settle up to this moment.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <button type="button" className="btn-ghost" disabled={stopping} onClick={() => setStopId(null)}>
+              Keep running
+            </button>
+            <button type="button" className="btn-danger" disabled={stopping} onClick={() => void confirmStopRental()}>
+              {stopping ? <Loader2 className="size-4 animate-spin" /> : null}
+              Stop rental
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
     </div>
   );
 }

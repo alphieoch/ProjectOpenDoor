@@ -218,7 +218,7 @@ export function PromptEngine({
                 value={strength}
                 onChange={(e) => setStrength(parseFloat(e.target.value))}
                 disabled={disabled}
-                className="w-18 accent-indigo-400"
+                className="w-18 accent-[hsl(var(--info))]"
               />
               <span className="w-7 text-[11px] font-mono text-[var(--studio-muted)] text-right">
                 {Math.round(strength * 100)}%

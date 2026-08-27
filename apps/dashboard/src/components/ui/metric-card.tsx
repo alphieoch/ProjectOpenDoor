@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Sparkline } from "@/components/ui/sparkline";
+import { GlassCard } from "@/components/ui/glass-card";
 import { cn } from "@/lib/utils";
 
 export function MetricCard({
@@ -22,28 +23,34 @@ export function MetricCard({
   featured?: boolean;
 }) {
   return (
-    <div
-      className={cn("od-numberblock od-lift", className)}
-      style={
-        featured
-          ? { background: "linear-gradient(160deg, #16140f 0%, #1A73E8 118%)", border: "none", color: "white" }
-          : undefined
-      }
+    <GlassCard
+      className={cn(
+        featured && "bg-primary text-primary-foreground dark:bg-primary border-transparent",
+        className,
+      )}
     >
       <div
-        className="od-numberblock__label"
-        style={featured ? { color: "rgba(255,255,255,0.62)" } : undefined}
+        className={cn(
+          "flex items-center gap-1.5 font-inter text-[11px] font-medium uppercase tracking-[0.12em]",
+          featured ? "text-primary-foreground/70" : "text-muted-foreground",
+        )}
       >
         {icon} {label}
       </div>
-      <div className="od-display" style={{ fontSize: 36, marginTop: 8, ...(featured ? { color: "white" } : {}) }}>
+      <div className={cn("mt-2 font-garamond text-4xl tracking-tight", featured ? "text-primary-foreground" : "text-foreground")}>
         {value}
       </div>
-      <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 10, marginTop: 10 }}>
+      <div className="mt-2.5 flex items-end justify-between gap-2.5">
         {delta ? (
           <div
-            className={deltaUp ? "od-numberblock__delta-up" : "od-numberblock__delta-down"}
-            style={featured ? { color: "#8EF0C8" } : undefined}
+            className={cn(
+              "font-inter text-[11px]",
+              featured
+                ? "text-primary-foreground/80"
+                : deltaUp
+                  ? "text-success"
+                  : "text-destructive",
+            )}
           >
             {deltaUp ? "↑" : "↓"} {delta}
           </div>
@@ -51,9 +58,9 @@ export function MetricCard({
           <span />
         )}
         {series && series.length > 0 ? (
-          <Sparkline values={series} color={featured ? "#8EF0C8" : "var(--md-primary)"} />
+          <Sparkline values={series} color={featured ? "hsl(var(--primary-foreground))" : "hsl(var(--primary))"} />
         ) : null}
       </div>
-    </div>
+    </GlassCard>
   );
 }

@@ -1,10 +1,11 @@
 import { getDb } from "@/lib/db";
 import { sql } from "drizzle-orm";
 
-const g = global as typeof global & { _agentSchemaReady?: boolean };
+const AGENT_SCHEMA_VERSION = 2;
+const g = global as typeof global & { _agentSchemaVersion?: number };
 
 export async function ensureAgentSchema() {
-  if (g._agentSchemaReady) return;
+  if (g._agentSchemaVersion === AGENT_SCHEMA_VERSION) return;
   const db = getDb();
 
   await db.execute(sql`
@@ -28,13 +29,20 @@ export async function ensureAgentSchema() {
       last_used_at timestamptz,
       started_at timestamptz,
       stopped_at timestamptz,
+      deleted_at timestamptz,
       created_at timestamptz NOT NULL DEFAULT now(),
       updated_at timestamptz NOT NULL DEFAULT now(),
       UNIQUE (organization_id, slug)
     )
   `);
+  await db.execute(sql`ALTER TABLE workspace_agents ADD COLUMN IF NOT EXISTS deleted_at timestamptz`);
   await db.execute(sql`CREATE INDEX IF NOT EXISTS workspace_agents_org_idx ON workspace_agents(organization_id)`);
   await db.execute(sql`CREATE INDEX IF NOT EXISTS workspace_agents_status_idx ON workspace_agents(status)`);
+  await db.execute(sql`
+    CREATE INDEX IF NOT EXISTS workspace_agents_deleted_at_idx
+    ON workspace_agents(deleted_at)
+    WHERE deleted_at IS NOT NULL
+  `);
   await db.execute(sql`
     CREATE TABLE IF NOT EXISTS workspace_agent_messages (
       id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -49,5 +57,5 @@ export async function ensureAgentSchema() {
   `);
   await db.execute(sql`CREATE INDEX IF NOT EXISTS workspace_agent_messages_agent_idx ON workspace_agent_messages(agent_id)`);
   await db.execute(sql`CREATE INDEX IF NOT EXISTS workspace_agent_messages_org_idx ON workspace_agent_messages(organization_id)`);
-  g._agentSchemaReady = true;
+  g._agentSchemaVersion = AGENT_SCHEMA_VERSION;
 }

@@ -1,4 +1,4 @@
-import { flattenMessageText, type ChatMessage } from "@opendoor/shared";
+import { flattenMessageText, getPlan, type ChatMessage } from "@opendoor/shared";
 import { resolveProvider } from "../providers/index.js";
 import { calculateCost } from "../utils/pricing.js";
 import { debitUsage, usdToCents } from "../utils/billing.js";
@@ -73,7 +73,7 @@ export async function runBilledChat(params: BilledChatParams): Promise<BilledCha
   const started = Date.now();
   const providerSlug = resolved.provider.slug;
   const family = inferFamily(params.model, providerSlug);
-  const plan = (params.organization.plan || "free") as "free" | "pro" | "team" | "enterprise";
+  const plan = getPlan(params.organization.plan).id;
 
   const completion = await resolved.provider.chatCompletion({
     model: resolved.model,

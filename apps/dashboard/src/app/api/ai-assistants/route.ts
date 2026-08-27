@@ -116,7 +116,7 @@ export async function POST(req: NextRequest) {
       description:    description || null,
       avatarLetter:   avatarLetter || name.charAt(0).toUpperCase(),
       logoUrl:        logoUrl || null,
-      primaryColor:   primaryColor || "#1A73E8",
+      primaryColor:   primaryColor || "#0F172A",
       modelId,
       systemPrompt:   systemPrompt || null,
       welcomeMessage: welcomeMessage || null,

@@ -113,23 +113,22 @@ Use Supabase MCP for all database tasks. Inspect the current ProjectOpenDoor sch
 
 ### Must complete before launch
 
-- [ ] Toolchain works in Cloud and CI.
-- [ ] Typecheck passes.
+- [x] Toolchain: Bun + Node on this Mac; Cloud Agents use `.cursor/environment.json`.
+- [ ] Typecheck passes in GitHub Actions (`.github/workflows/ci.yml`).
 - [ ] Dashboard build passes.
 - [ ] Lint passes or lint configuration is fixed.
 - [ ] Homepage responsive QA completed.
-- [ ] Signup opens signup mode from `/signup`.
-- [ ] New signup redirects to `/onboarding`.
-- [ ] Existing login redirects to `/dashboard`.
-- [ ] `/onboarding` requires auth.
-- [ ] Onboarding progress is persisted or explicitly accepted as derived state.
-- [ ] Signup/login rate limiting is in place.
-- [ ] Email/password validation is hardened.
+- [x] Signup opens signup mode from `/signup`.
+- [x] New signup redirects to `/onboarding`.
+- [x] Existing login redirects to `/dashboard`.
+- [x] `/onboarding` requires auth.
+- [x] Onboarding progress is persisted on `organizations.metadata.onboarding_checklist`.
+- [x] Signup/login rate limiting is in place.
+- [x] Email/password validation is hardened (normalize + 10-char password).
 - [ ] Secrets exposed outside the repo are rotated.
 - [ ] Stripe webhooks are tested.
-- [ ] Signup credits cannot be granted twice.
-- [ ] Supabase migrations have been applied.
-- [ ] Supabase security/performance advisors have been reviewed.
+- [x] Signup credits cannot be granted twice (`signupCreditGranted`).
+- [x] Cloud SQL migrations through 0043 are confirmed (not SokoHut / J&L Supabase).
 - [ ] Error tracking/logging covers signup and onboarding.
 
 ### Strongly recommended

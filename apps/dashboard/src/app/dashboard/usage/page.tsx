@@ -1,24 +1,33 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import {
-  BarChart,
-  Bar,
-  AreaChart,
-  Area,
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Legend,
-} from "recharts";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { formatCurrency, formatNumber } from "@/lib/utils";
 import { PageHeader } from "@/components/ui/page-header";
 import { MetricCard } from "@/components/ui/metric-card";
+import {
+  errorRateLabel,
+  formatLatencyMs,
+  periodEmptyCopy,
+  splitModelTokens,
+  summarizeDailyUsage,
+  tokenSplit,
+  unlimitedReasonLabel,
+} from "@/lib/usage-format";
+
+const DailyRequestChart = dynamic(
+  () => import("./usage-charts").then((m) => m.DailyRequestChart),
+  { ssr: false, loading: () => <LoadingChart /> },
+);
+const DailyCostChart = dynamic(
+  () => import("./usage-charts").then((m) => m.DailyCostChart),
+  { ssr: false, loading: () => <LoadingChart /> },
+);
+const DailyTokenChart = dynamic(
+  () => import("./usage-charts").then((m) => m.DailyTokenChart),
+  { ssr: false, loading: () => <LoadingChart /> },
+);
 
 interface DailyUsage {
   date: string;
@@ -36,6 +45,8 @@ interface ModelBreakdownRow {
   modelId: string;
   providerName: string;
   requests: number;
+  promptTokens?: number;
+  completionTokens?: number;
   totalTokens: number;
   costUsd: number;
   avgLatencyMs: number;
@@ -48,15 +59,6 @@ interface OverviewData {
 }
 
 type Tab = "overview" | "tokens" | "models" | "latency";
-
-const axisTick = { fontSize: 11, fill: "var(--ink-4)" } as const;
-const tooltipStyle = {
-  borderRadius: "8px",
-  border: "1px solid var(--line)",
-  fontSize: "12px",
-  background: "var(--paper-2)",
-  color: "var(--ink)",
-} as const;
 
 function StatCard({
   label,
@@ -71,17 +73,17 @@ function StatCard({
 }) {
   return (
     <div className="card p-5">
-      <p className="text-xs font-medium uppercase tracking-wide" style={{ color: "var(--ink-4)" }}>
+      <p className="text-xs font-medium uppercase tracking-wide" style={{ color: "hsl(var(--muted-foreground))" }}>
         {label}
       </p>
       <p
         className="mt-2 text-2xl font-semibold tabular-nums"
-        style={{ color: accent ?? "var(--ink)" }}
+        style={{ color: accent ?? "hsl(var(--foreground))" }}
       >
         {value}
       </p>
       {sub && (
-        <p className="mt-0.5 text-xs" style={{ color: "var(--ink-4)" }}>
+        <p className="mt-0.5 text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
           {sub}
         </p>
       )}
@@ -89,12 +91,20 @@ function StatCard({
   );
 }
 
-function EmptyChart() {
+function EmptyChart({ days }: { days: number }) {
+  const copy = periodEmptyCopy(days);
   return (
-    <div className="flex h-64 items-center justify-center">
-      <p className="text-sm" style={{ color: "var(--ink-4)" }}>
-        No usage data yet
-      </p>
+    <div className="flex h-64 flex-col items-center justify-center gap-3 px-6 text-center">
+      <p className="text-sm font-medium text-foreground">{copy.title}</p>
+      <p className="text-sm text-muted-foreground">{copy.body}</p>
+      <div className="flex flex-wrap justify-center gap-2">
+        <Link href="/dashboard/playground" className="btn-secondary">
+          Open playground
+        </Link>
+        <Link href="/dashboard/api-keys" className="btn-secondary">
+          Create an API key
+        </Link>
+      </div>
     </div>
   );
 }
@@ -102,7 +112,7 @@ function EmptyChart() {
 function LoadingChart() {
   return (
     <div className="flex h-64 items-center justify-center">
-      <p className="text-sm" style={{ color: "var(--ink-4)" }}>
+      <p className="text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
         Loading…
       </p>
     </div>
@@ -114,6 +124,9 @@ export default function UsagePage() {
   const [overview, setOverview] = useState<OverviewData | null>(null);
   const [days, setDays] = useState(30);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [unlimited, setUnlimited] = useState(false);
+  const [unlimitedReason, setUnlimitedReason] = useState<"site_admin" | "plan" | null>(null);
   const [tab, setTab] = useState<Tab>("overview");
   const [modelSort, setModelSort] = useState<keyof ModelBreakdownRow>("costUsd");
 
@@ -121,74 +134,66 @@ export default function UsagePage() {
     let cancelled = false;
     async function fetchAll() {
       setLoading(true);
-      const [usageRes, overviewRes] = await Promise.all([
-        fetch(`/api/usage?days=${days}`),
-        fetch(`/api/analytics/overview?days=${days}`),
-      ]);
-
-      if (!cancelled) {
-        if (usageRes.ok) {
-          const result = await usageRes.json();
-          setDaily(
-            (result.daily ?? []).map((d: any) => ({
-              date: new Date(d.date).toLocaleDateString("en-US", {
-                month: "short",
-                day: "numeric",
-              }),
-              requests: Number(d.requests ?? 0),
-              promptTokens: Number(d.promptTokens ?? 0),
-              completionTokens: Number(d.completionTokens ?? 0),
-              totalTokens: Number(d.totalTokens ?? 0),
-              costUsd: Number(d.costUsd ?? 0),
-              successCount: d.successCount != null ? Number(d.successCount) : undefined,
-              errorCount: d.errorCount != null ? Number(d.errorCount) : undefined,
-              cachedCount: d.cachedCount != null ? Number(d.cachedCount) : undefined,
-            }))
-          );
+      setError(null);
+      try {
+        const usageRes = await fetch(`/api/usage?days=${days}`, { credentials: "include" });
+        const result = await usageRes.json().catch(() => ({}));
+        if (!usageRes.ok) {
+          if (!cancelled) {
+            setError(result.error || "Failed to load usage.");
+            setDaily([]);
+            setOverview(null);
+          }
+          return;
         }
-        if (overviewRes.ok) {
-          const ov = await overviewRes.json();
-          setOverview(ov);
+        if (cancelled) return;
+        setUnlimited(Boolean(result.unlimited));
+        setUnlimitedReason(result.unlimitedReason || null);
+        setDaily(
+          (result.daily ?? []).map((d: Record<string, unknown>) => ({
+            date: new Date(String(d.date)).toLocaleDateString("en-US", {
+              month: "short",
+              day: "numeric",
+            }),
+            requests: Number(d.requests ?? 0),
+            promptTokens: Number(d.promptTokens ?? 0),
+            completionTokens: Number(d.completionTokens ?? 0),
+            totalTokens: Number(d.totalTokens ?? 0),
+            costUsd: Number(d.costUsd ?? 0),
+            successCount: d.successCount != null ? Number(d.successCount) : undefined,
+            errorCount: d.errorCount != null ? Number(d.errorCount) : undefined,
+            cachedCount: d.cachedCount != null ? Number(d.cachedCount) : undefined,
+          })),
+        );
+        if (result.overview) {
+          setOverview(result.overview);
         } else {
+          const overviewRes = await fetch(`/api/analytics/overview?days=${days}`, { credentials: "include" });
+          setOverview(overviewRes.ok ? await overviewRes.json() : null);
+        }
+      } catch {
+        if (!cancelled) {
+          setError("Failed to load usage.");
+          setDaily([]);
           setOverview(null);
         }
-        setLoading(false);
+      } finally {
+        if (!cancelled) setLoading(false);
       }
     }
-    fetchAll();
+    void fetchAll();
     return () => {
       cancelled = true;
     };
   }, [days]);
 
-  const totals = useMemo(
-    () =>
-      daily.reduce(
-        (acc, d) => ({
-          requests: acc.requests + d.requests,
-          promptTokens: acc.promptTokens + d.promptTokens,
-          completionTokens: acc.completionTokens + d.completionTokens,
-          cost: acc.cost + d.costUsd,
-          errors: acc.errors + (d.errorCount ?? 0),
-          hasStatus: acc.hasStatus || d.errorCount != null,
-        }),
-        { requests: 0, promptTokens: 0, completionTokens: 0, cost: 0, errors: 0, hasStatus: false }
-      ),
-    [daily]
-  );
-
-  const errorRate =
-    totals.hasStatus && totals.requests > 0
-      ? ((totals.errors / totals.requests) * 100).toFixed(1) + "%"
-      : "—";
-
-  const p50 = overview?.percentiles?.p50
-    ? `${Math.round(overview.percentiles.p50)}ms`
-    : "—";
-
-  const tokenTotal = totals.promptTokens + totals.completionTokens;
-  const promptPct = tokenTotal > 0 ? Math.round((totals.promptTokens / tokenTotal) * 100) : 0;
-  const completionPct = 100 - promptPct;
+  const totals = useMemo(() => summarizeDailyUsage(daily), [daily]);
+  const errorRate = errorRateLabel(totals.errors, totals.requests, totals.hasStatus);
+  const p50 = formatLatencyMs(overview?.percentiles?.p50);
+  const split = tokenSplit(totals.promptTokens, totals.completionTokens);
+  const tokenTotal = split.total;
+  const promptPct = split.promptPct;
+  const completionPct = split.completionPct;
 
   const sortedModels = useMemo(() => {
     if (!overview?.topModels) return [];
@@ -227,14 +232,26 @@ export default function UsagePage() {
         }
       />
 
-      <div className="od-metric-grid" style={{ marginBottom: 22, gridTemplateColumns: "repeat(3, minmax(0, 1fr))" }}>
+      {error && (
+        <div className="mb-6 alert-error">
+          <p className="font-medium">{error}</p>
+        </div>
+      )}
+
+      {unlimited && (
+        <div className="mb-6 rounded-lg border border-border bg-card px-4 py-3 text-sm text-foreground">
+          {unlimitedReasonLabel(unlimitedReason)}
+        </div>
+      )}
+
+      <div className="mb-6 grid gap-3 sm:grid-cols-3">
         <MetricCard
           label="Requests"
           value={formatNumber(totals.requests)}
           series={daily.map((d) => d.requests)}
         />
         <MetricCard
-          label="Total cost"
+          label={unlimited ? "Metered cost (not billed)" : "Total cost"}
           value={formatCurrency(totals.cost)}
           series={daily.map((d) => d.costUsd)}
           featured
@@ -255,7 +272,7 @@ export default function UsagePage() {
       </div>
 
       <div className="mt-6">
-        <div className="od-seg mb-5">
+        <div className="inline-flex rounded-lg border border-border bg-muted p-0.5 mb-5">
           {tabs.map((t) => (
             <button
               key={t.id}
@@ -276,26 +293,9 @@ export default function UsagePage() {
               {loading ? (
                 <LoadingChart />
               ) : daily.length === 0 ? (
-                <EmptyChart />
+                <EmptyChart days={days} />
               ) : (
-                <ResponsiveContainer width="100%" height={280}>
-                  <BarChart data={daily} barSize={16}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="var(--line-soft)" vertical={false} />
-                    <XAxis dataKey="date" tick={axisTick} axisLine={false} tickLine={false} />
-                    <YAxis tick={axisTick} axisLine={false} tickLine={false} width={40} />
-                    <Tooltip contentStyle={tooltipStyle} cursor={{ fill: "var(--paper-3)" }} />
-                    <Legend wrapperStyle={{ fontSize: 12 }} />
-                    {daily[0]?.successCount != null ? (
-                      <>
-                        <Bar dataKey="successCount" name="Success" stackId="a" fill="var(--green)" radius={[0, 0, 0, 0]} />
-                        <Bar dataKey="cachedCount" name="Cached" stackId="a" fill="var(--blue)" radius={[0, 0, 0, 0]} />
-                        <Bar dataKey="errorCount" name="Error" stackId="a" fill="var(--red)" radius={[4, 4, 0, 0]} />
-                      </>
-                    ) : (
-                      <Bar dataKey="requests" name="Requests" fill="var(--ink)" radius={[4, 4, 0, 0]} />
-                    )}
-                  </BarChart>
-                </ResponsiveContainer>
+                <DailyRequestChart daily={daily} />
               )}
             </div>
 
@@ -304,35 +304,9 @@ export default function UsagePage() {
               {loading ? (
                 <LoadingChart />
               ) : daily.length === 0 ? (
-                <EmptyChart />
+                <EmptyChart days={days} />
               ) : (
-                <ResponsiveContainer width="100%" height={240}>
-                  <LineChart data={daily}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="var(--line-soft)" vertical={false} />
-                    <XAxis dataKey="date" tick={axisTick} axisLine={false} tickLine={false} />
-                    <YAxis
-                      tick={axisTick}
-                      axisLine={false}
-                      tickLine={false}
-                      width={60}
-                      tickFormatter={(v) => formatCurrency(v)}
-                    />
-                    <Tooltip
-                      contentStyle={tooltipStyle}
-                      formatter={(v: number) => [formatCurrency(v), "Cost"]}
-                      cursor={{ stroke: "var(--line)" }}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="costUsd"
-                      name="Cost"
-                      stroke="var(--green)"
-                      strokeWidth={2}
-                      dot={false}
-                      activeDot={{ r: 4 }}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
+                <DailyCostChart daily={daily} />
               )}
             </div>
           </div>
@@ -344,14 +318,14 @@ export default function UsagePage() {
             {/* Token ratio callout */}
             <div className="card p-5 flex items-center gap-6">
               <div>
-                <p className="text-xs font-medium uppercase tracking-wide" style={{ color: "var(--ink-4)" }}>
+                <p className="text-xs font-medium uppercase tracking-wide" style={{ color: "hsl(var(--muted-foreground))" }}>
                   Input / Output Split
                 </p>
-                <p className="mt-1 text-lg font-semibold" style={{ color: "var(--ink)" }}>
+                <p className="mt-1 text-lg font-semibold" style={{ color: "hsl(var(--foreground))" }}>
                   {promptPct}% input · {completionPct}% output
                 </p>
               </div>
-              <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: "var(--paper-3)" }}>
+              <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: "hsl(var(--accent))" }}>
                 <div
                   className="h-full rounded-full"
                   style={{
@@ -361,8 +335,8 @@ export default function UsagePage() {
                 />
               </div>
               <div className="text-right">
-                <p className="text-xs" style={{ color: "var(--ink-4)" }}>Total</p>
-                <p className="text-sm font-semibold" style={{ color: "var(--ink)" }}>
+                <p className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>Total</p>
+                <p className="text-sm font-semibold" style={{ color: "hsl(var(--foreground))" }}>
                   {formatNumber(tokenTotal)}
                 </p>
               </div>
@@ -373,54 +347,9 @@ export default function UsagePage() {
               {loading ? (
                 <LoadingChart />
               ) : daily.length === 0 ? (
-                <EmptyChart />
+                <EmptyChart days={days} />
               ) : (
-                <ResponsiveContainer width="100%" height={300}>
-                  <AreaChart data={daily}>
-                    <defs>
-                      <linearGradient id="gradPrompt" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="var(--blue)" stopOpacity={0.25} />
-                        <stop offset="95%" stopColor="var(--blue)" stopOpacity={0.02} />
-                      </linearGradient>
-                      <linearGradient id="gradCompletion" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="var(--green)" stopOpacity={0.25} />
-                        <stop offset="95%" stopColor="var(--green)" stopOpacity={0.02} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="var(--line-soft)" vertical={false} />
-                    <XAxis dataKey="date" tick={axisTick} axisLine={false} tickLine={false} />
-                    <YAxis
-                      tick={axisTick}
-                      axisLine={false}
-                      tickLine={false}
-                      width={55}
-                      tickFormatter={(v) => (v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v)}
-                    />
-                    <Tooltip
-                      contentStyle={tooltipStyle}
-                      formatter={(v: number, name: string) => [formatNumber(v), name]}
-                    />
-                    <Legend wrapperStyle={{ fontSize: 12 }} />
-                    <Area
-                      type="monotone"
-                      dataKey="promptTokens"
-                      name="Prompt (input)"
-                      stackId="1"
-                      stroke="var(--blue)"
-                      strokeWidth={2}
-                      fill="url(#gradPrompt)"
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="completionTokens"
-                      name="Completion (output)"
-                      stackId="1"
-                      stroke="var(--green)"
-                      strokeWidth={2}
-                      fill="url(#gradCompletion)"
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
+                <DailyTokenChart daily={daily} />
               )}
             </div>
           </div>
@@ -430,10 +359,10 @@ export default function UsagePage() {
         {tab === "models" && (
           <div className="mt-5">
             <div className="card overflow-hidden">
-              <div className="flex items-center justify-between px-6 py-4 border-b" style={{ borderColor: "var(--line-soft)" }}>
+              <div className="flex items-center justify-between px-6 py-4 border-b" style={{ borderColor: "hsl(var(--border))" }}>
                 <h2 className="section-title">Top Models</h2>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs" style={{ color: "var(--ink-4)" }}>Sort by</span>
+                  <span className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>Sort by</span>
                   <select
                     value={modelSort}
                     onChange={(e) => setModelSort(e.target.value as keyof ModelBreakdownRow)}
@@ -450,21 +379,16 @@ export default function UsagePage() {
 
               {loading ? (
                 <div className="flex h-40 items-center justify-center">
-                  <p className="text-sm" style={{ color: "var(--ink-4)" }}>Loading…</p>
-                </div>
-              ) : !overview ? (
-                <div className="flex h-40 flex-col items-center justify-center gap-2">
-                  <p className="text-sm font-medium" style={{ color: "var(--ink-3)" }}>Analytics engine unavailable</p>
-                  <p className="text-xs" style={{ color: "var(--ink-4)" }}>Enable DuckDB analytics to view model breakdowns</p>
+                  <p className="text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>Loading…</p>
                 </div>
               ) : sortedModels.length === 0 ? (
                 <div className="flex h-40 items-center justify-center">
-                  <p className="text-sm" style={{ color: "var(--ink-4)" }}>No model data yet</p>
+                  <p className="text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>No model data yet</p>
                 </div>
               ) : (
                 <table className="w-full">
                   <thead>
-                    <tr style={{ borderBottom: "1px solid var(--line-soft)" }}>
+                    <tr style={{ borderBottom: "1px solid hsl(var(--border))" }}>
                       <th className="table-header-cell text-left">Model</th>
                       <th className="table-header-cell text-left">Provider</th>
                       <th className="table-header-cell text-right">Requests</th>
@@ -478,23 +402,39 @@ export default function UsagePage() {
                     {sortedModels.map((m, i) => (
                       <tr
                         key={m.modelId + i}
-                        style={{ borderBottom: "1px solid var(--line-soft)" }}
+                        style={{ borderBottom: "1px solid hsl(var(--border))" }}
                       >
                         <td className="table-cell font-mono text-xs">{m.modelId}</td>
-                        <td className="table-cell" style={{ color: "var(--ink-3)" }}>
+                        <td className="table-cell" style={{ color: "hsl(var(--muted-foreground))" }}>
                           {m.providerName}
                         </td>
                         <td className="table-cell text-right tabular-nums">{formatNumber(m.requests)}</td>
                         <td className="table-cell text-right tabular-nums" style={{ color: "var(--blue)" }}>
-                          {formatNumber(Math.round(m.totalTokens * (totals.promptTokens / (totals.promptTokens + totals.completionTokens || 1))))}
+                          {formatNumber(
+                            splitModelTokens({
+                              totalTokens: m.totalTokens,
+                              promptTokens: m.promptTokens,
+                              completionTokens: m.completionTokens,
+                              orgPromptTokens: totals.promptTokens,
+                              orgCompletionTokens: totals.completionTokens,
+                            }).promptTokens,
+                          )}
                         </td>
                         <td className="table-cell text-right tabular-nums" style={{ color: "var(--green)" }}>
-                          {formatNumber(Math.round(m.totalTokens * (totals.completionTokens / (totals.promptTokens + totals.completionTokens || 1))))}
+                          {formatNumber(
+                            splitModelTokens({
+                              totalTokens: m.totalTokens,
+                              promptTokens: m.promptTokens,
+                              completionTokens: m.completionTokens,
+                              orgPromptTokens: totals.promptTokens,
+                              orgCompletionTokens: totals.completionTokens,
+                            }).completionTokens,
+                          )}
                         </td>
                         <td className="table-cell text-right tabular-nums font-medium">
                           {formatCurrency(Number(m.costUsd))}
                         </td>
-                        <td className="table-cell text-right tabular-nums" style={{ color: "var(--ink-3)" }}>
+                        <td className="table-cell text-right tabular-nums" style={{ color: "hsl(var(--muted-foreground))" }}>
                           {m.avgLatencyMs ? `${Math.round(Number(m.avgLatencyMs))}ms` : "—"}
                         </td>
                       </tr>
@@ -515,20 +455,20 @@ export default function UsagePage() {
                 <div key={pct} className="card p-6 text-center">
                   <p
                     className="text-xs font-semibold uppercase tracking-widest"
-                    style={{ color: "var(--ink-4)" }}
+                    style={{ color: "hsl(var(--muted-foreground))" }}
                   >
                     {pct.toUpperCase()}
                   </p>
                   <p
                     className="mt-3 text-4xl font-semibold tabular-nums"
-                    style={{ color: "var(--ink)" }}
+                    style={{ color: "hsl(var(--foreground))" }}
                   >
                     {overview?.percentiles?.[pct]
                       ? Math.round(overview.percentiles[pct])
                       : "—"}
                   </p>
                   {overview?.percentiles?.[pct] && (
-                    <p className="mt-1 text-sm" style={{ color: "var(--ink-4)" }}>
+                    <p className="mt-1 text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
                       ms
                     </p>
                   )}
@@ -536,24 +476,21 @@ export default function UsagePage() {
               ))}
             </div>
 
-            {!overview && (
-              <div
-                className="card p-5 text-center text-sm"
-                style={{ color: "var(--ink-4)", background: "var(--paper)" }}
-              >
-                Latency analytics require the DuckDB analytics engine to be enabled.
+            {!overview && !loading && (
+              <div className="card p-5 text-center text-sm text-muted-foreground">
+                No latency samples in this period.
               </div>
             )}
 
             {/* Top models by latency */}
             {overview && overview.topModels.length > 0 && (
               <div className="card overflow-hidden">
-                <div className="px-6 py-4 border-b" style={{ borderColor: "var(--line-soft)" }}>
+                <div className="px-6 py-4 border-b" style={{ borderColor: "hsl(var(--border))" }}>
                   <h2 className="section-title">Models by Latency</h2>
                 </div>
                 <table className="w-full">
                   <thead>
-                    <tr style={{ borderBottom: "1px solid var(--line-soft)" }}>
+                    <tr style={{ borderBottom: "1px solid hsl(var(--border))" }}>
                       <th className="table-header-cell text-left">Model</th>
                       <th className="table-header-cell text-left">Provider</th>
                       <th className="table-header-cell text-right">Requests</th>
@@ -566,10 +503,10 @@ export default function UsagePage() {
                       .map((m, i) => (
                         <tr
                           key={m.modelId + i}
-                          style={{ borderBottom: "1px solid var(--line-soft)" }}
+                          style={{ borderBottom: "1px solid hsl(var(--border))" }}
                         >
                           <td className="table-cell font-mono text-xs">{m.modelId}</td>
-                          <td className="table-cell" style={{ color: "var(--ink-3)" }}>
+                          <td className="table-cell" style={{ color: "hsl(var(--muted-foreground))" }}>
                             {m.providerName}
                           </td>
                           <td className="table-cell text-right tabular-nums">

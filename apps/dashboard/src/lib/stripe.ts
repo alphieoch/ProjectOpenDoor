@@ -1,5 +1,5 @@
 import Stripe from "stripe";
-import { PLANS, type PlanId } from "@opendoor/shared";
+import { PLANS, getPlan, type PlanId } from "@opendoor/shared";
 
 let _stripe: Stripe | null = null;
 
@@ -28,6 +28,15 @@ export const STRIPE_PLANS = [
     amount: PLANS.free.amountUsd,
     includedCreditsCents: PLANS.free.includedCreditsCents,
     markupByFamily: PLANS.free.markupByFamily,
+  },
+  {
+    id: "student" as const,
+    name: getPlan("student").name,
+    description: "Student membership with a small inference taste, then warehouse-rate tokens",
+    priceId: process.env.STRIPE_STUDENT_PRICE_ID || "",
+    amount: getPlan("student").amountUsd,
+    includedCreditsCents: getPlan("student").includedCreditsCents,
+    markupByFamily: getPlan("student").markupByFamily,
   },
   {
     id: "pro" as const,
@@ -92,6 +101,7 @@ export const TOPUP_PRESETS = [
 
 const PLAN_PRICE_ENV: Record<Exclude<PlanId, "free">, string> = {
   starter: "STRIPE_STARTER_PRICE_ID",
+  student: "STRIPE_STUDENT_PRICE_ID",
   pro: "STRIPE_PRO_PRICE_ID",
   ultra: "STRIPE_ULTRA_PRICE_ID",
   family: "STRIPE_FAMILY_PRICE_ID",
@@ -107,7 +117,7 @@ export function getPriceIdForPlan(planId: PlanId): string {
 
 export function getPlanFromPriceId(priceId: string): PlanId {
   if (!priceId) return "free";
-  for (const id of ["starter", "pro", "ultra", "family", "family_max", "team", "enterprise"] as const) {
+  for (const id of ["starter", "student", "pro", "ultra", "family", "family_max", "team", "enterprise"] as const) {
     if (getPriceIdForPlan(id) === priceId) return id;
   }
   return "free";

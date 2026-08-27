@@ -1,4 +1,9 @@
 import { NextResponse } from "next/server";
+import {
+  appBaseUrl,
+  gatewayInternalUrl,
+  gatewayStatusCollidesWithApp,
+} from "@/lib/public-urls";
 
 type ProviderRow = {
   name: string;
@@ -6,14 +11,6 @@ type ProviderRow = {
   status: "up" | "down" | "unknown" | "not_configured";
   latencyMs: number | null;
 };
-
-function gatewayBaseUrl(): string {
-  const raw =
-    process.env.NEXT_PUBLIC_GATEWAY_URL ||
-    process.env.GATEWAY_URL ||
-    "http://localhost:3001";
-  return raw.replace(/\/$/, "");
-}
 
 async function legacyGatewayHealth(gatewayUrl: string): Promise<{
   gateway: { status: "up" | "down"; latencyMs: number | null; url: string };
@@ -33,17 +30,50 @@ async function legacyGatewayHealth(gatewayUrl: string): Promise<{
   }
 }
 
+function statusUrls(gatewayUrl: string): string[] {
+  if (gatewayStatusCollidesWithApp(gatewayUrl)) {
+    return [`${gatewayUrl}/gateway/status`];
+  }
+  return [`${gatewayUrl}/status`, `${gatewayUrl}/gateway/status`];
+}
+
+async function readJson(res: Response): Promise<Record<string, unknown> | null> {
+  const contentType = res.headers.get("content-type") || "";
+  if (!contentType.includes("application/json")) return null;
+  try {
+    return (await res.json()) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+}
+
 export async function GET() {
-  const gatewayUrl = gatewayBaseUrl();
+  const gatewayUrl = gatewayInternalUrl();
   const started = Date.now();
 
-  let res: Response;
-  try {
-    res = await fetch(`${gatewayUrl}/status`, {
-      cache: "no-store",
-      signal: AbortSignal.timeout(10_000),
-    });
-  } catch {
+  let res: Response | null = null;
+  let usedUrl = gatewayUrl;
+  for (const url of statusUrls(gatewayUrl)) {
+    try {
+      const attempt = await fetch(url, {
+        cache: "no-store",
+        signal: AbortSignal.timeout(10_000),
+        headers: { Accept: "application/json" },
+      });
+      const json = attempt.ok ? await readJson(attempt) : null;
+      if (attempt.ok && json) {
+        res = attempt;
+        usedUrl = url;
+        const gatewayLatency = Date.now() - started;
+        return toBoard(json, gatewayUrl, gatewayLatency);
+      }
+      if (!res) res = attempt;
+    } catch {
+      /* try next */
+    }
+  }
+
+  if (!res) {
     const { gateway } = await legacyGatewayHealth(gatewayUrl);
     return NextResponse.json({
       status: "degraded",
@@ -53,6 +83,7 @@ export async function GET() {
       redis: { status: "unknown" as const, latencyMs: null },
       providers: [] as ProviderRow[],
       source: "gateway_unreachable",
+      app: appBaseUrl(),
     });
   }
 
@@ -71,38 +102,34 @@ export async function GET() {
     });
   }
 
-  if (!res.ok) {
-    const { gateway } = await legacyGatewayHealth(gatewayUrl);
-    return NextResponse.json({
-      status: "degraded",
-      timestamp: new Date().toISOString(),
-      gateway: { ...gateway, latencyMs: gatewayLatency },
-      database: { status: "unknown" as const, latencyMs: null },
-      redis: { status: "unknown" as const, latencyMs: null },
-      providers: [] as ProviderRow[],
-      source: "gateway_status_http_error",
-    });
-  }
+  const { gateway } = await legacyGatewayHealth(gatewayUrl);
+  return NextResponse.json({
+    status: "degraded",
+    timestamp: new Date().toISOString(),
+    gateway: { ...gateway, latencyMs: gatewayLatency, url: usedUrl },
+    database: { status: "unknown" as const, latencyMs: null },
+    redis: { status: "unknown" as const, latencyMs: null },
+    providers: [] as ProviderRow[],
+    source: "gateway_status_http_error",
+  });
+}
 
-  const body = (await res.json()) as {
-    timestamp?: string;
-    status?: string;
-    database?: { status: "up" | "down"; latencyMs: number | null };
-    redis?: { status: "up" | "down"; latencyMs: number | null };
-    providers?: { slug: string; name: string; configured: boolean }[];
-    azure?: {
-      configured: boolean;
-      host: string | null;
-      deploymentCount?: number;
-      deployments: { id: string; model: string; status: string }[];
-      fetchError: string | null;
-    };
+function toBoard(
+  body: Record<string, unknown>,
+  gatewayUrl: string,
+  gatewayLatency: number
+) {
+  const database = (body.database as { status: "up" | "down"; latencyMs: number | null } | undefined) ?? {
+    status: "unknown" as const,
+    latencyMs: null,
+  };
+  const redis = (body.redis as { status: "up" | "down"; latencyMs: number | null } | undefined) ?? {
+    status: "unknown" as const,
+    latencyMs: null,
   };
 
-  const database = body.database ?? { status: "unknown" as const, latencyMs: null };
-  const redis = body.redis ?? { status: "unknown" as const, latencyMs: null };
-
-  const providers: ProviderRow[] = (body.providers ?? []).map((p) => ({
+  const rawProviders = (body.providers as { slug: string; name: string; configured: boolean }[] | undefined) ?? [];
+  const providers: ProviderRow[] = rawProviders.map((p) => ({
     name: p.name,
     slug: p.slug,
     status: p.configured ? "up" : "not_configured",
@@ -110,20 +137,29 @@ export async function GET() {
   }));
 
   const infraUp = database.status === "up" && redis.status === "up";
+  const azureRaw = body.azure as
+    | {
+        configured: boolean;
+        host: string | null;
+        deploymentCount?: number;
+        deployments?: { id: string; model: string; status: string }[];
+        fetchError: string | null;
+      }
+    | undefined;
 
-  const azure = body.azure
+  const azure = azureRaw
     ? {
-        configured: body.azure.configured,
-        host: body.azure.host ?? null,
-        deploymentCount: body.azure.deploymentCount ?? body.azure.deployments?.length ?? 0,
-        deployments: body.azure.deployments ?? [],
-        fetchError: body.azure.fetchError ?? null,
+        configured: azureRaw.configured,
+        host: azureRaw.host ?? null,
+        deploymentCount: azureRaw.deploymentCount ?? azureRaw.deployments?.length ?? 0,
+        deployments: azureRaw.deployments ?? [],
+        fetchError: azureRaw.fetchError ?? null,
       }
     : undefined;
 
   return NextResponse.json({
-    status: body.status || (infraUp ? "operational" : "degraded"),
-    timestamp: body.timestamp || new Date().toISOString(),
+    status: (body.status as string) || (infraUp ? "operational" : "degraded"),
+    timestamp: (body.timestamp as string) || new Date().toISOString(),
     gateway: {
       status: "up",
       latencyMs: gatewayLatency,

@@ -62,7 +62,7 @@ const STATUS_STYLE: Record<string, { bg: string; color: string }> = {
   pending: { bg: "var(--yellow-soft)", color: "var(--yellow)" },
   in_review: { bg: "#DBEAFE", color: "#1565C0" },
   rejected: { bg: "var(--red-soft)", color: "var(--red)" },
-  deprecated: { bg: "var(--paper-3)", color: "var(--ink-3)" },
+  deprecated: { bg: "hsl(var(--accent))", color: "hsl(var(--muted-foreground))" },
 };
 
 const RISK_STYLE: Record<string, { bg: string; color: string }> = {
@@ -141,7 +141,7 @@ export default function GovernanceModelPage() {
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center">
-        <Loader2 className="h-5 w-5 animate-spin" style={{ color: "var(--ink-3)" }} />
+        <Loader2 className="h-5 w-5 animate-spin" style={{ color: "hsl(var(--muted-foreground))" }} />
       </div>
     );
   }
@@ -149,7 +149,7 @@ export default function GovernanceModelPage() {
   if (!model) {
     return (
       <div className="card flex flex-col items-center justify-center gap-3 py-16 text-center">
-        <p className="text-sm font-medium" style={{ color: "var(--ink)" }}>Model not found</p>
+        <p className="text-sm font-medium" style={{ color: "hsl(var(--foreground))" }}>Model not found</p>
         <Link href="/dashboard/governance" className="md-btn-outlined text-sm px-4 py-2">
           Back to Trust Center
         </Link>
@@ -187,26 +187,26 @@ export default function GovernanceModelPage() {
 
       <div className="grid gap-4 sm:grid-cols-3">
         <div className="card p-4">
-          <p className="text-xs" style={{ color: "var(--ink-4)" }}>Status</p>
+          <p className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>Status</p>
           <span className="mt-2 inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium capitalize" style={status}>
             {model.approvalStatus.replace("_", " ")}
           </span>
         </div>
         <div className="card p-4">
-          <p className="text-xs" style={{ color: "var(--ink-4)" }}>Risk</p>
+          <p className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>Risk</p>
           <span className="mt-2 inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium capitalize" style={risk}>
             {model.riskLevel}
           </span>
         </div>
         <div className="card p-4">
-          <p className="text-xs" style={{ color: "var(--ink-4)" }}>Owner</p>
-          <p className="mt-2 text-sm font-medium" style={{ color: "var(--ink)" }}>{model.ownerTeam || "Unassigned"}</p>
+          <p className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>Owner</p>
+          <p className="mt-2 text-sm font-medium" style={{ color: "hsl(var(--foreground))" }}>{model.ownerTeam || "Unassigned"}</p>
         </div>
       </div>
 
       <div className="card p-5 space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-sm font-semibold" style={{ color: "var(--ink)" }}>Registry</h2>
+          <h2 className="text-sm font-semibold" style={{ color: "hsl(var(--foreground))" }}>Registry</h2>
           <div className="flex flex-wrap gap-2">
             <select
               className="input w-auto text-sm"
@@ -236,20 +236,20 @@ export default function GovernanceModelPage() {
 
         <dl className="grid gap-3 sm:grid-cols-2 text-sm">
           <div>
-            <dt className="text-xs" style={{ color: "var(--ink-4)" }}>Model ID</dt>
-            <dd className="od-mono mt-1" style={{ color: "var(--ink-2)" }}>{model.modelId}</dd>
+            <dt className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>Model ID</dt>
+            <dd className="font-mono mt-1" style={{ color: "hsl(var(--muted-foreground))" }}>{model.modelId}</dd>
           </div>
           <div>
-            <dt className="text-xs" style={{ color: "var(--ink-4)" }}>License</dt>
-            <dd className="mt-1" style={{ color: "var(--ink-2)" }}>{model.licenseType || "—"}</dd>
+            <dt className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>License</dt>
+            <dd className="mt-1" style={{ color: "hsl(var(--muted-foreground))" }}>{model.licenseType || "—"}</dd>
           </div>
           <div>
-            <dt className="text-xs" style={{ color: "var(--ink-4)" }}>Context</dt>
-            <dd className="mt-1" style={{ color: "var(--ink-2)" }}>{model.contextWindow?.toLocaleString() || "—"}</dd>
+            <dt className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>Context</dt>
+            <dd className="mt-1" style={{ color: "hsl(var(--muted-foreground))" }}>{model.contextWindow?.toLocaleString() || "—"}</dd>
           </div>
           <div>
-            <dt className="text-xs" style={{ color: "var(--ink-4)" }}>Regions</dt>
-            <dd className="mt-1 uppercase" style={{ color: "var(--ink-2)" }}>{model.allowedRegions?.join(" · ") || "—"}</dd>
+            <dt className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>Regions</dt>
+            <dd className="mt-1 uppercase" style={{ color: "hsl(var(--muted-foreground))" }}>{model.allowedRegions?.join(" · ") || "—"}</dd>
           </div>
         </dl>
 
@@ -259,7 +259,7 @@ export default function GovernanceModelPage() {
             { ok: model.biasReviewed, label: "Bias audit" },
             { ok: model.safetyReviewed, label: "Safety" },
           ].map(({ ok, label }) => (
-            <span key={label} className="flex items-center gap-1 text-xs" style={{ color: ok ? "var(--green)" : "var(--ink-4)" }}>
+            <span key={label} className="flex items-center gap-1 text-xs" style={{ color: ok ? "var(--green)" : "hsl(var(--muted-foreground))" }}>
               {ok ? <CheckCircle2 className="h-3.5 w-3.5" /> : <XCircle className="h-3.5 w-3.5" />}
               {label}
             </span>
@@ -269,25 +269,27 @@ export default function GovernanceModelPage() {
         {model.dataClassesAllowed?.length > 0 && (
           <div className="flex flex-wrap gap-1.5">
             {model.dataClassesAllowed.map((cls) => (
-              <span key={cls} className="od-tag od-tag-green capitalize">{cls}</span>
+              <span key={cls} className="inline-flex items-center rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-700 dark:text-emerald-400 capitalize">{cls}</span>
             ))}
           </div>
         )}
       </div>
 
       <div className="card p-5">
-        <h2 className="mb-3 text-sm font-semibold" style={{ color: "var(--ink)" }}>Evaluations</h2>
+        <h2 className="mb-3 text-sm font-semibold" style={{ color: "hsl(var(--foreground))" }}>Evaluations</h2>
         {evals.length === 0 ? (
-          <p className="text-sm" style={{ color: "var(--ink-4)" }}>No evaluations recorded yet.</p>
+          <p className="text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>No evaluations recorded yet.</p>
         ) : (
           <div className="space-y-2">
             {evals.map((ev) => (
-              <div key={ev.id} className="flex items-center justify-between rounded-lg px-3 py-2" style={{ background: "var(--paper-3)" }}>
+              <div key={ev.id} className="flex items-center justify-between rounded-lg px-3 py-2" style={{ background: "hsl(var(--accent))" }}>
                 <div>
-                  <p className="text-sm font-medium" style={{ color: "var(--ink)" }}>{ev.evaluationName}</p>
-                  <p className="text-xs capitalize" style={{ color: "var(--ink-4)" }}>{ev.evaluationType.replace("_", " ")}</p>
+                  <p className="text-sm font-medium" style={{ color: "hsl(var(--foreground))" }}>{ev.evaluationName}</p>
+                  <p className="text-xs capitalize" style={{ color: "hsl(var(--muted-foreground))" }}>{ev.evaluationType.replace("_", " ")}</p>
                 </div>
-                <span className={`od-tag ${ev.passed ? "od-tag-green" : "od-tag-red"}`}>
+                <span className={ev.passed
+                  ? "inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-700 dark:text-emerald-400"
+                  : "inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-0.5 text-[11px] font-medium text-destructive"}>
                   {ev.score ? `${ev.score}%` : ev.passed ? "Pass" : "Fail"}
                 </span>
               </div>
@@ -298,22 +300,22 @@ export default function GovernanceModelPage() {
 
       <div className="card p-5">
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-sm font-semibold" style={{ color: "var(--ink)" }}>Compliance mappings</h2>
-          <Link href="/dashboard/governance/compliance" className="text-xs" style={{ color: "var(--ink-3)" }}>
+          <h2 className="text-sm font-semibold" style={{ color: "hsl(var(--foreground))" }}>Compliance mappings</h2>
+          <Link href="/dashboard/governance/compliance" className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
             Open Compliance →
           </Link>
         </div>
         {compliance.length === 0 ? (
-          <p className="text-sm" style={{ color: "var(--ink-4)" }}>No control mappings yet.</p>
+          <p className="text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>No control mappings yet.</p>
         ) : (
           <div className="space-y-1.5">
             {compliance.slice(0, 12).map((row) => (
               <div key={row.mappingId} className="flex items-center justify-between gap-3 text-sm">
-                <span style={{ color: "var(--ink-2)" }}>
-                  <span className="od-mono text-xs" style={{ color: "var(--ink-4)" }}>{row.controlCode}</span>{" "}
+                <span style={{ color: "hsl(var(--muted-foreground))" }}>
+                  <span className="font-mono text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>{row.controlCode}</span>{" "}
                   {row.controlName}
                 </span>
-                <span className="capitalize text-xs" style={{ color: row.status === "compliant" ? "var(--green)" : "var(--ink-4)" }}>
+                <span className="capitalize text-xs" style={{ color: row.status === "compliant" ? "var(--green)" : "hsl(var(--muted-foreground))" }}>
                   {row.status.replace("_", " ")}
                 </span>
               </div>

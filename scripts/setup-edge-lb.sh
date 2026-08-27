@@ -87,7 +87,7 @@ if ! gcloud compute forwarding-rules describe "${NAME}-http-fr" --global --proje
     --project="$PROJECT"
 fi
 
-echo "Edge HTTP IP: http://${IP}/"
-echo "  /pricing → dashboard · /v1/* → gateway"
-echo "For HTTPS: create a managed cert for your domain and attach a target-https-proxy."
-echo "Firebase (when ToS accepted) remains the preferred *.web.app surface."
+echo "Edge IP reserved: ${IP}"
+echo "  Firebase Hosting remains the public HTTPS edge (https://opendoor-gcp.web.app)."
+echo "  Attach Cloud Armor + HTTPS + HTTP redirect:"
+echo "    ./scripts/setup-gcp-security.sh"

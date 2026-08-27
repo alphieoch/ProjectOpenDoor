@@ -11,11 +11,8 @@ import { eq } from "drizzle-orm";
 import { requireAuth } from "@/lib/auth";
 import { logAuditEvent } from "@/lib/audit";
 import { appBaseUrl } from "@/lib/public-urls";
-import type { PlanId } from "@opendoor/shared";
-
-function asCheckoutPlan(value: unknown): Extract<PlanId, "pro" | "team"> | null {
-  return value === "pro" || value === "team" ? value : null;
-}
+import { checkoutSeatQuantity } from "@opendoor/shared";
+import { resolveCheckoutRequest } from "@/lib/signup-plan";
 
 export async function POST(req: NextRequest) {
   try {
@@ -23,21 +20,38 @@ export async function POST(req: NextRequest) {
     const orgId = session.orgId as string;
     const body = await req.json();
 
-    const requestedPlan = asCheckoutPlan(body.planId);
     const requestedPriceId =
       typeof body.priceId === "string" && body.priceId.startsWith("price_")
         ? body.priceId
         : "";
-
-    if (body.planId === "enterprise") {
+    const namedPlan = body.planId ?? body.plan;
+    const requested = namedPlan
+      ? resolveCheckoutRequest({ planId: body.planId, plan: body.plan })
+      : null;
+    if (requested && !requested.ok) {
       return NextResponse.json(
-        { error: "Enterprise is billed through sales", sales: "mailto:sales@opendoor.ai?subject=OpenDoor%20Enterprise" },
+        { error: requested.error, ...(requested.sales ? { sales: requested.sales } : {}) },
+        { status: requested.status }
+      );
+    }
+
+    const planFromPrice = requestedPriceId ? getPlanFromPriceId(requestedPriceId) : null;
+    if (planFromPrice === "enterprise") {
+      const blocked = resolveCheckoutRequest({ planId: "enterprise" });
+      return NextResponse.json(
+        {
+          error: blocked.ok ? "Enterprise is billed through sales" : blocked.error,
+          sales: blocked.ok ? undefined : blocked.sales,
+        },
         { status: 400 }
       );
     }
 
-    const plan = requestedPlan || (requestedPriceId ? getPlanFromPriceId(requestedPriceId) : null);
-    const priceId = (requestedPlan ? getPriceIdForPlan(requestedPlan) : requestedPriceId) || "";
+    const plan =
+      (requested && requested.ok ? requested.plan : null) ||
+      (planFromPrice && planFromPrice !== "free" ? planFromPrice : null);
+    const priceId =
+      (requested && requested.ok ? getPriceIdForPlan(requested.plan) : requestedPriceId) || "";
 
     if (!plan || plan === "free" || !priceId) {
       return NextResponse.json(
@@ -46,10 +60,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const seats =
-      plan === "team"
-        ? Math.min(500, Math.max(1, Number(body.seats) || 1))
-        : 1;
+    const seats = checkoutSeatQuantity(plan, body.seats);
 
     const db = getDb();
     const org = await db.query.organizations.findFirst({
@@ -117,11 +128,9 @@ export async function POST(req: NextRequest) {
     });
 
     return NextResponse.json({ url: checkoutSession.url });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Failed to create checkout session";
     console.error("Checkout error:", error);
-    return NextResponse.json(
-      { error: error.message || "Failed to create checkout session" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

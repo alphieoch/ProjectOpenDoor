@@ -5,6 +5,7 @@ import { eq } from "drizzle-orm";
 import { requireAuth } from "@/lib/auth";
 import { logAuditEvent } from "@/lib/audit";
 import { loadEnterpriseAccess } from "@/lib/enterprise";
+import { workspaceHasEnterpriseTools } from "@opendoor/shared";
 
 export async function GET() {
   try {
@@ -12,118 +13,56 @@ export async function GET() {
     const orgId = session.orgId as string;
 
     const db = getDb();
-    let org = orgId
-      ? await db.query.organizations.findFirst({
-          where: eq(organizations.id, orgId),
-          columns: {
-            id: true,
-            name: true,
-            slug: true,
-            ssoEnabled: true,
-            ssoDefaultRole: true,
-            workosOrganizationId: true,
-            workosConnectionId: true,
-            customDomain: true,
-            customDomainVerified: true,
-            emailNotificationsEnabled: true,
-            notifyOnInvites: true,
-            notifyOnBillingAlerts: true,
-          },
-        }).catch(() => null)
-      : null;
-
-    if (!org) {
-      // Look for any first org or create single-user default workspace
-      const firstOrg = await db.query.organizations.findFirst({
-        columns: {
-          id: true,
-          name: true,
-          slug: true,
-          ssoEnabled: true,
-          ssoDefaultRole: true,
-          workosOrganizationId: true,
-          workosConnectionId: true,
-          customDomain: true,
-          customDomainVerified: true,
-          emailNotificationsEnabled: true,
-          notifyOnInvites: true,
-          notifyOnBillingAlerts: true,
-        },
-      }).catch(() => null);
-
-      if (firstOrg) {
-        org = firstOrg;
-      } else {
-        // Create default organization
-        try {
-          const inserted = await db.insert(organizations).values({
-            name: "OpenDoor Workspace",
-            slug: "opendoor-workspace",
-            plan: "pro",
-            ssoEnabled: false,
-            ssoDefaultRole: "admin",
-            emailNotificationsEnabled: true,
-            notifyOnInvites: true,
-            notifyOnBillingAlerts: true,
-          }).returning();
-          if (inserted[0]) {
-            org = {
-              id: inserted[0].id,
-              name: inserted[0].name,
-              slug: inserted[0].slug,
-              ssoEnabled: inserted[0].ssoEnabled,
-              ssoDefaultRole: inserted[0].ssoDefaultRole,
-              workosOrganizationId: inserted[0].workosOrganizationId,
-              workosConnectionId: inserted[0].workosConnectionId,
-              customDomain: inserted[0].customDomain,
-              customDomainVerified: inserted[0].customDomainVerified,
-              emailNotificationsEnabled: inserted[0].emailNotificationsEnabled,
-              notifyOnInvites: inserted[0].notifyOnInvites,
-              notifyOnBillingAlerts: inserted[0].notifyOnBillingAlerts,
-            };
-          }
-        } catch {
-          // fallback in-memory object
-        }
-      }
-    }
-
-    if (!org) {
-      org = {
-        id: orgId || "single-user-workspace",
-        name: "OpenDoor Workspace",
-        slug: "opendoor",
-        ssoEnabled: false,
-        ssoDefaultRole: "admin",
-        workosOrganizationId: null,
-        workosConnectionId: null,
-        customDomain: null,
-        customDomainVerified: false,
-        emailNotificationsEnabled: true,
-        notifyOnInvites: true,
-        notifyOnBillingAlerts: true,
-      };
-    }
-
-    return NextResponse.json({ org });
-  } catch (error: any) {
-    console.error("SSO settings fetch error:", error);
-    return NextResponse.json({
-      org: {
-        id: "single-user-workspace",
-        name: "OpenDoor Workspace",
-        slug: "opendoor",
-        ssoEnabled: false,
-        ssoDefaultRole: "admin",
-        workosOrganizationId: null,
-        workosConnectionId: null,
-        customDomain: null,
-        customDomainVerified: false,
+    const org = await db.query.organizations.findFirst({
+      where: eq(organizations.id, orgId),
+      columns: {
+        id: true,
+        name: true,
+        slug: true,
+        plan: true,
+        ssoEnabled: true,
+        ssoDefaultRole: true,
+        workosOrganizationId: true,
+        workosConnectionId: true,
+        customDomain: true,
+        customDomainVerified: true,
         emailNotificationsEnabled: true,
         notifyOnInvites: true,
         notifyOnBillingAlerts: true,
       },
     });
+
+    if (!org) {
+      return NextResponse.json({ error: "Organization not found" }, { status: 404 });
+    }
+
+    const enterpriseTools = workspaceHasEnterpriseTools({
+      plan: org.plan,
+      isSiteAdmin: session.isSiteAdmin,
+    });
+
+    return NextResponse.json({
+      org,
+      enterpriseTools,
+      sso: {
+        included: enterpriseTools,
+        enabled: Boolean(org.ssoEnabled),
+        defaultRole: org.ssoDefaultRole || "member",
+        workosOrganizationId: org.workosOrganizationId,
+        workosConnectionId: org.workosConnectionId,
+      },
+      scim: {
+        included: enterpriseTools,
+        available: enterpriseTools,
+        configured: Boolean(org.workosOrganizationId),
+      },
+    });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Failed to load SSO settings";
+    if (message === "Unauthorized") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 
@@ -180,11 +119,9 @@ export async function POST(req: NextRequest) {
     });
 
     return NextResponse.json({ success: true });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Failed to update SSO settings";
     console.error("SSO settings update error:", error);
-    return NextResponse.json(
-      { error: error.message || "Failed to update SSO settings" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

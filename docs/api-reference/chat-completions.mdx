@@ -1,179 +1,161 @@
 ---
-title: "Chat Completions"
-description: "OpenDoor provides an OpenAI-compatible chat completions endpoint with automatic provider fallback."
+title: "Chat completions"
+description: "POST /v1/chat/completions — OpenAI-shaped chat with streaming, tools, and provider routing."
+showPageTitle: true
 ---
 
-# Chat Completions
-
-OpenDoor provides an OpenAI-compatible chat completions endpoint with automatic provider fallback.
-
-## Endpoint
+# Chat completions
 
 ```
 POST /v1/chat/completions
 ```
 
+OpenAI-compatible. Usage-billed to the calling key and org credits. This is the path Playground uses.
+
+Base: `{{GATEWAY_URL}}`. Auth: `Authorization: Bearer $OPENDOOR_API_KEY`.
+
 ## Headers
 
 | Header | Required | Description |
 |--------|----------|-------------|
-| `Authorization` | Yes | `Bearer YOUR_API_KEY` |
+| `Authorization` | Yes | `Bearer $OPENDOOR_API_KEY` |
 | `Content-Type` | Yes | `application/json` |
+| `HTTP-Referer` / `X-Title` | No | Optional app attribution (logged on the request) |
+| `x-opendoor-service-tier` | No | `standard` or `priority` if not set on the body |
 
-## Request Body
+## Body
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `model` | string | Yes | Model ID (e.g., `gpt-4o`, `llama-3.1-8b-instruct:nitro`, `opendoor/auto`). See [Routing](/api-reference/routing). |
-| `messages` | array | Yes | Array of message objects |
-| `stream` | boolean | No | Enable streaming (default: false) |
-| `max_tokens` | integer | No | Maximum tokens to generate |
-| `temperature` | number | No | Sampling temperature (0-2) |
+| `model` | string | Yes | Catalog id. Start with `{{EXAMPLE_MODEL}}` or an id from `GET /v1/models` |
+| `messages` | array | Yes | `{ role, content }` — `content` is a string or multimodal parts |
+| `stream` | boolean | No | SSE when `true` |
+| `max_tokens` | integer | No | Completion cap (estimate uses 1024 if omitted) |
+| `temperature` | number | No | 0–2 |
 | `top_p` | number | No | Nucleus sampling |
-| `frequency_penalty` | number | No | Frequency penalty (-2 to 2) |
-| `presence_penalty` | number | No | Presence penalty (-2 to 2) |
-| `tools` | array | No | Available tools/functions |
+| `frequency_penalty` | number | No | −2 to 2 |
+| `presence_penalty` | number | No | −2 to 2 |
+| `tools` | array | No | OpenAI-shaped tools |
 | `tool_choice` | string/object | No | `auto`, `none`, `required`, or a named function |
-| `response_format` | object | No | `{ "type": "json_object" }` or `{ "type": "json_schema", "json_schema": { ... } }` |
-| `messages[].content` | string or array | Yes | String, or multimodal parts (`text` + `image_url`) |
-| `provider` | object | No | OpenRouter-style routing: `order`, `allow_fallbacks`, `sort`, `only`, `ignore` |
+| `response_format` | object | No | `json_object` or `json_schema` |
+| `user` | string | No | End-user id (also used in prompt-cache fingerprint) |
+| `service_tier` | string | No | `standard` (default) or `priority` (Pro / Team / Enterprise) |
+| `prompt_cache_key` | string | No | Sticky cache key; the gateway sets one if omitted |
+| `provider` | object | No | OpenRouter-shaped routing (below) |
+| `transforms` | array | No | Message transforms (context window) |
 
-## Example Request
+Pick a **live** catalog id. Do not treat `coming_soon` as the way to chat — hosted Vertex MaaS ids such as `gemma-4-26b-a4b-it`, `qwen3-next-80b-instruct`, and `deepseek-v3.2` are callable when the wholesale path is configured.
+
+## Example
 
 ```bash
-curl http://localhost:3001/v1/chat/completions \
-  -H "Authorization: Bearer YOUR_API_KEY" \
+export OPENDOOR_API_KEY=opd_…
+export OPENDOOR_BASE_URL={{GATEWAY_URL}}
+
+curl "$OPENDOOR_BASE_URL/v1/chat/completions" \
+  -H "Authorization: Bearer $OPENDOOR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "gpt-4o",
+    "model": "{{EXAMPLE_MODEL}}",
     "messages": [
       {"role": "system", "content": "You are a helpful assistant."},
-      {"role": "user", "content": "What is the capital of France?"}
+      {"role": "user", "content": "What is OpenDoor?"}
     ],
-    "max_tokens": 100
+    "max_tokens": 200
   }'
 ```
 
-## Example Response
+Successful responses set `id` (and `x-generation-id`) to the logged generation UUID. Fetch it with `GET /v1/generation/:id` (also mounted at `/v1/generations/:id`).
 
 ```json
 {
-  "id": "chatcmpl-abc123",
+  "id": "generation-uuid",
   "object": "chat.completion",
   "created": 1777777777,
-  "model": "gpt-4o",
+  "model": "{{EXAMPLE_MODEL}}",
   "choices": [
     {
       "index": 0,
-      "message": {
-        "role": "assistant",
-        "content": "The capital of France is Paris."
-      },
+      "message": { "role": "assistant", "content": "…" },
       "finish_reason": "stop"
     }
   ],
   "usage": {
-    "prompt_tokens": 25,
-    "completion_tokens": 7,
-    "total_tokens": 32
+    "prompt_tokens": 20,
+    "completion_tokens": 40,
+    "total_tokens": 60
   }
 }
 ```
 
 ## Streaming
 
-Set `stream: true` to receive Server-Sent Events (SSE):
-
 ```bash
-curl http://localhost:3001/v1/chat/completions \
-  -H "Authorization: Bearer YOUR_API_KEY" \
+curl "$OPENDOOR_BASE_URL/v1/chat/completions" \
+  -H "Authorization: Bearer $OPENDOOR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "gpt-4o",
-    "messages": [{"role": "user", "content": "Hello!"}],
+    "model": "{{EXAMPLE_MODEL}}",
+    "messages": [{"role":"user","content":"Hello"}],
     "stream": true
   }'
 ```
 
-Response format:
-
 ```
-data: {"id":"...","choices":[{"delta":{"content":"Hello"}}]}
-
-data: {"id":"...","choices":[{"delta":{"content":"!"}}]}
+data: {"id":"…","object":"chat.completion.chunk","choices":[{"delta":{"content":"Hello"}}]}
 
 data: [DONE]
 ```
 
 ## Provider routing
 
-Pass an OpenRouter-compatible `provider` object. Residency filters and policy `route_fallback` still apply after this list is built.
-
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `order` | string[] | — | Try these provider slugs first (`together`, `groq`, `openai`, `azure-foundry`, …) |
+| `order` | string[] | — | Try these slugs first (`vertex`, `together`, `openai`, …) |
 | `allow_fallbacks` | boolean | `true` | If false, only the first remaining provider is tried |
 | `sort` | `price` \| `latency` \| `throughput` | — | Re-rank the candidate chain |
 | `only` | string[] | — | Restrict to these slugs |
 | `ignore` | string[] | — | Drop these slugs |
 
+Org BYOK slugs (and `alwaysUse` keys) are preferred before platform env keys. Data-residency filters still apply.
+
 ```bash
-curl http://localhost:3001/v1/chat/completions \
-  -H "Authorization: Bearer YOUR_API_KEY" \
+curl "$OPENDOOR_BASE_URL/v1/chat/completions" \
+  -H "Authorization: Bearer $OPENDOOR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "llama-3.1-8b-instruct",
-    "messages": [{"role": "user", "content": "Hello"}],
-    "provider": {
-      "order": ["together", "groq"],
-      "allow_fallbacks": true,
-      "sort": "latency"
-    }
+    "model": "{{EXAMPLE_MODEL}}",
+    "messages": [{"role":"user","content":"Hello"}],
+    "provider": { "order": ["vertex"], "allow_fallbacks": true }
   }'
 ```
 
-Successful responses set `id` to the logged generation UUID (also `x-generation-id`). Fetch it with `GET /v1/generation/:id`.
+## JavaScript / Python
 
-## Fallback Behavior
+```ts
+import { OpenDoor } from "@opendoor/sdk";
 
-The gateway ranks `fallbackChains` with health, latency, and cost (`getRankedProviders`), then applies `provider` preferences, then residency. Each hop retries up to 3 times with exponential backoff (100ms, 200ms).
+const client = new OpenDoor({
+  apiKey: process.env.OPENDOOR_API_KEY,
+  baseURL: "{{GATEWAY_URL}}",
+});
 
-## Error Responses
-
-### Model Not Found (404)
-
-```json
-{
-  "error": "Model not found: unknown-model"
-}
+const chat = await client.chat.completions.create({
+  model: "{{EXAMPLE_MODEL}}",
+  messages: [{ role: "user", content: "Hello" }],
+});
 ```
 
-### Available on Request (400)
+```python
+from opendoor import OpenDoor
 
-```json
-{
-  "error": "Model 'gpt-5.4' is available upon request",
-  "message": "This model is not currently deployed. Contact your administrator...",
-  "status": "available_on_request"
-}
+client = OpenDoor(base_url="{{GATEWAY_URL}}")
+out = client.chat.completions.create(
+    model="{{EXAMPLE_MODEL}}",
+    messages=[{"role": "user", "content": "Hello"}],
+)
 ```
 
-### Coming Soon (400)
+## Errors
 
-```json
-{
-  "error": "Model 'DeepSeek-V4-Pro' is coming soon",
-  "message": "DeepSeek V4 Pro will be available shortly...",
-  "status": "coming_soon"
-}
-```
-
-### All Providers Failed (502)
-
-```json
-{
-  "error": "All providers failed",
-  "detail": "Azure error [429]: Rate limit exceeded",
-  "tried": ["azure-foundry", "openai"]
-}
-```
+See [Errors](/api-reference/errors) for 401 / 402 / 403 / 404 / 429 / 502 / 503 bodies, including insufficient balance and “all providers failed”.

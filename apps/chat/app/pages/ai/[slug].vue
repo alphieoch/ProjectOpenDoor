@@ -259,8 +259,11 @@ function vote(messageId: string, isUpvoted: boolean) {
     <template #header>
       <Navbar>
         <template #title>
-          <span class="text-sm font-medium text-highlighted truncate min-w-0 max-w-3xs">
-            {{ assistant.name }}
+          <span class="flex items-center gap-2 min-w-0">
+            <ChatAiCrest mood="ready" :size="22" />
+            <span class="text-sm font-medium text-highlighted truncate min-w-0 max-w-3xs">
+              {{ assistant.name }}
+            </span>
           </span>
         </template>
 
@@ -491,6 +494,13 @@ function vote(messageId: string, isUpvoted: boolean) {
             </p>
           </div>
 
+          <div
+            v-if="!chat.messages.some((m) => m.role === 'user')"
+            class="flex justify-center pt-(--ui-header-height) pb-2"
+          >
+            <ChatAiCrest mood="idle" :size="45" />
+          </div>
+
           <UChatMessages
             should-auto-scroll
             :messages="chat.messages"
@@ -531,13 +541,18 @@ function vote(messageId: string, isUpvoted: boolean) {
             :error="chat.error"
             :disabled="isLimitReached"
             variant="subtle"
-            class="sticky bottom-0 [view-transition-name:chat-prompt] rounded-b-none z-10"
+            class="relative sticky bottom-0 [view-transition-name:chat-prompt] rounded-b-none z-10"
             :ui="{ base: 'px-1.5' }"
             @submit="handleSubmit"
           >
             <template #footer>
               <div class="flex items-center gap-1">
-                <!-- Placeholder for future file upload / model select -->
+                <ChatAiCrest
+                  v-if="chat.messages.some((m) => m.role === 'user')"
+                  class="pointer-events-none"
+                  :mood="chat.error ? 'error' : (chat.status === 'submitted' || chat.status === 'streaming') ? 'thinking' : 'ready'"
+                  :size="20"
+                />
               </div>
 
               <UChatPromptSubmit

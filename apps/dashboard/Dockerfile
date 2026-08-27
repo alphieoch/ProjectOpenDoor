@@ -9,6 +9,10 @@ COPY apps/dashboard/package.json ./apps/dashboard/package.json
 COPY apps/gateway/package.json ./apps/gateway/package.json
 COPY apps/chat/package.json ./apps/chat/package.json
 COPY apps/sandbox/package.json ./apps/sandbox/package.json
+COPY apps/openbot-bot/package.json ./apps/openbot-bot/package.json
+COPY apps/openbot-computer/package.json ./apps/openbot-computer/package.json
+COPY apps/openbot-supervisor/package.json ./apps/openbot-supervisor/package.json
+COPY scripts/server-only-stub ./scripts/server-only-stub
 RUN bun install --frozen-lockfile
 
 FROM base AS builder

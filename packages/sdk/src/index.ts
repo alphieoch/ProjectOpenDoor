@@ -309,6 +309,9 @@ export class OpenDoor {
     delete(id: string): Promise<unknown>;
     run(id: string, input?: Record<string, unknown>): Promise<unknown>;
     runs(id: string): Promise<unknown>;
+    publish(id: string, body?: Record<string, unknown>): Promise<unknown>;
+    versions(id: string): Promise<unknown>;
+    trigger(id: string, body?: Record<string, unknown>): Promise<unknown>;
   };
 
   readonly training: {
@@ -335,7 +338,14 @@ export class OpenDoor {
     list(): Promise<unknown>;
     create(body: Record<string, unknown>): Promise<unknown>;
     get(id: string): Promise<unknown>;
+    update(id: string, body: Record<string, unknown>): Promise<unknown>;
+    chat(id: string, body: { message: string }): Promise<unknown>;
+    agui(id: string, body: Record<string, unknown>): Promise<Response>;
+    start(id: string): Promise<unknown>;
+    stop(id: string): Promise<unknown>;
+    computer(id: string, control: "take" | "release"): Promise<unknown>;
     delete(id: string): Promise<unknown>;
+    restore(id: string): Promise<unknown>;
   };
 
   readonly byok: {
@@ -464,8 +474,13 @@ export class OpenDoor {
       get: (id) => this.request("GET", `/v1/workflows/${encodeURIComponent(id)}`),
       update: (id, body) => this.request("PATCH", `/v1/workflows/${encodeURIComponent(id)}`, body),
       delete: (id) => this.request("DELETE", `/v1/workflows/${encodeURIComponent(id)}`),
-      run: (id, input = {}) => this.request("POST", `/v1/workflows/${encodeURIComponent(id)}/run`, input),
-      runs: (id) => this.request("GET", `/v1/workflows/${encodeURIComponent(id)}/runs`),
+    run: (id, input = {}) => this.request("POST", `/v1/workflows/${encodeURIComponent(id)}/run`, input),
+    runs: (id) => this.request("GET", `/v1/workflows/${encodeURIComponent(id)}/runs`),
+    publish: (id, body: Record<string, unknown> = {}) =>
+      this.request("POST", `/v1/workflows/${encodeURIComponent(id)}/publish`, body),
+    versions: (id) => this.request("GET", `/v1/workflows/${encodeURIComponent(id)}/versions`),
+    trigger: (id, body: Record<string, unknown> = {}) =>
+      this.request("POST", `/v1/workflows/${encodeURIComponent(id)}/trigger`, body),
     };
     this.training = {
       datasets: {
@@ -489,7 +504,16 @@ export class OpenDoor {
       list: () => this.request("GET", "/v1/agents"),
       create: (body) => this.request("POST", "/v1/agents", body),
       get: (id) => this.request("GET", `/v1/agents/${encodeURIComponent(id)}`),
+      update: (id, body) => this.request("PATCH", `/v1/agents/${encodeURIComponent(id)}`, body),
+      chat: (id, body) => this.request("POST", `/v1/agents/${encodeURIComponent(id)}/chat`, body),
+      agui: (id, body) =>
+        this.raw("POST", `/v1/agents/${encodeURIComponent(id)}/ag-ui`, body),
+      start: (id) => this.request("PATCH", `/v1/agents/${encodeURIComponent(id)}`, { status: "running" }),
+      stop: (id) => this.request("PATCH", `/v1/agents/${encodeURIComponent(id)}`, { status: "stopped" }),
+      computer: (id, control) =>
+        this.request("PATCH", `/v1/agents/${encodeURIComponent(id)}`, { computerControl: control }),
       delete: (id) => this.request("DELETE", `/v1/agents/${encodeURIComponent(id)}`),
+      restore: (id) => this.request("POST", `/v1/agents/${encodeURIComponent(id)}/restore`),
     };
     this.byok = {
       list: () => this.request("GET", "/v1/byok"),

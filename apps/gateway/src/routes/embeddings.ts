@@ -10,6 +10,7 @@ import { applyModelRouting } from "../lib/model-aliases.js";
 import { applyProviderRouting } from "../lib/provider-routing.js";
 import { getRankedProviders } from "../lib/smart-router.js";
 import { estimateTokens } from "../utils/streaming.js";
+import { asUuid } from "../lib/provider-id.js";
 
 const embeddingsRouter = new Hono();
 
@@ -134,28 +135,30 @@ embeddingsRouter.post("/", async (c) => {
       .from(providers)
       .where(eq(providers.slug, usedSlug))
       .limit(1);
-    providerId = rows[0]?.id || null;
+    providerId = asUuid(rows[0]?.id);
   } catch {
     /* ignore */
   }
 
-  try {
-    await db.insert(requests).values({
-      apiKeyId: apiKey.id,
-      organizationId: organization.id,
-      providerId,
-      modelId: body.model,
-      requestType: "embedding",
-      promptTokens,
-      completionTokens: 0,
-      totalTokens: promptTokens,
-      latencyMs: Date.now() - started,
-      costUsd: costUsd.toString(),
-      status: "success",
-      region,
-    });
-  } catch (e) {
-    console.error("[embeddings] request log failed", e);
+  if (providerId) {
+    try {
+      await db.insert(requests).values({
+        apiKeyId: apiKey.id,
+        organizationId: organization.id,
+        providerId,
+        modelId: body.model,
+        requestType: "embedding",
+        promptTokens,
+        completionTokens: 0,
+        totalTokens: promptTokens,
+        latencyMs: Date.now() - started,
+        costUsd: costUsd.toString(),
+        status: "success",
+        region,
+      });
+    } catch (e) {
+      console.error("[embeddings] request log failed", e);
+    }
   }
 
   return c.json({

@@ -4,62 +4,15 @@ import { workflowRuns, workflows } from "@opendoor/database";
 import { and, desc, eq } from "drizzle-orm";
 import { requireAuth } from "@/lib/auth";
 import { logAuditEvent } from "@/lib/audit";
-import {
-  executeWorkflowGraph,
-  graphHasWebSearch,
-  type WorkflowGraph,
-  type WorkflowStepResult,
-} from "@/lib/workflows/execute";
+import { graphHasWebSearch, type WorkflowGraph, type WorkflowStepResult } from "@/lib/workflows/execute";
 import { WebSearchNotConfiguredError, WebSearchProviderError } from "@/lib/web-search";
 import { loadWebSearchEntitlement, webSearchAddonRequiredResponse } from "@/lib/web-search/entitlement";
-import { workflowGatewayContext } from "@/lib/workflows/gateway";
+import { ensureWorkflowSchema } from "@/lib/workflows/ensure-schema";
+import { executeAndPersist, persistWorkflowRun } from "@/lib/workflows/runner";
+import { graphForLiveRun } from "@opendoor/shared";
 
-function runFinished(status: string): boolean {
-  return status !== "running" && status !== "awaiting_review";
-}
-
-async function persistRun(opts: {
-  id?: string;
-  workflowId: string;
-  organizationId: string;
-  status: string;
-  input: Record<string, unknown>;
-  stepOutputs: WorkflowStepResult[];
-  error?: string | null;
-}) {
-  const db = getDb();
-  const completedAt = runFinished(opts.status) ? new Date() : null;
-  try {
-    if (opts.id) {
-      const [row] = await db
-        .update(workflowRuns)
-        .set({
-          status: opts.status,
-          stepOutputs: opts.stepOutputs,
-          error: opts.error ?? null,
-          completedAt,
-        })
-        .where(and(eq(workflowRuns.id, opts.id), eq(workflowRuns.organizationId, opts.organizationId)))
-        .returning();
-      return row ?? null;
-    }
-    const [row] = await db
-      .insert(workflowRuns)
-      .values({
-        workflowId: opts.workflowId,
-        organizationId: opts.organizationId,
-        status: opts.status,
-        input: opts.input,
-        stepOutputs: opts.stepOutputs,
-        error: opts.error ?? null,
-        completedAt,
-      })
-      .returning();
-    return row ?? null;
-  } catch (err) {
-    console.error("workflow_runs persist failed", err);
-    return null;
-  }
+async function workflowId(params: { id: string } | Promise<{ id: string }>) {
+  return (await params).id;
 }
 
 export async function GET(
@@ -68,7 +21,8 @@ export async function GET(
 ) {
   const session = await requireAuth();
   const orgId = session.orgId as string;
-  const { id } = await params;
+  const id = await workflowId(params);
+  await ensureWorkflowSchema();
 
   const db = getDb();
   const [item] = await db
@@ -84,7 +38,7 @@ export async function GET(
       .from(workflowRuns)
       .where(and(eq(workflowRuns.workflowId, id), eq(workflowRuns.organizationId, orgId)))
       .orderBy(desc(workflowRuns.createdAt))
-      .limit(20);
+      .limit(40);
     return NextResponse.json({ runs });
   } catch (err) {
     console.error("workflow_runs list failed", err);
@@ -98,13 +52,17 @@ export async function POST(
 ) {
   const session = await requireAuth();
   const orgId = session.orgId as string;
-  const { id } = await params;
+  const id = await workflowId(params);
+  await ensureWorkflowSchema();
 
   let body: {
     query?: unknown;
     max_results?: unknown;
     runId?: unknown;
     decision?: unknown;
+    resume?: unknown;
+    published?: unknown;
+    payload?: unknown;
   } = {};
   try {
     body = (await req.json()) as typeof body;
@@ -121,7 +79,17 @@ export async function POST(
 
   if (!item) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  const graph = item.graph as WorkflowGraph;
+  const usePublished = body.published === true;
+  const graph = (
+    usePublished
+      ? graphForLiveRun({
+          graph: item.graph,
+          publishedGraph: item.publishedGraph,
+          publishedVersion: item.publishedVersion,
+        })
+      : (item.graph || { nodes: [], edges: [] })
+  ) as WorkflowGraph;
+
   if (graphHasWebSearch(graph)) {
     const addon = await loadWebSearchEntitlement(orgId, session);
     if (!addon.active) {
@@ -131,11 +99,13 @@ export async function POST(
 
   const query = typeof body.query === "string" ? body.query : undefined;
   const maxResults = typeof body.max_results === "number" ? body.max_results : undefined;
+  const payload = body.payload && typeof body.payload === "object" ? body.payload as Record<string, unknown> : undefined;
   const decision =
     body.decision === "approve" || body.decision === "reject" ? body.decision : null;
   const resumeId = typeof body.runId === "string" ? body.runId : undefined;
+  const resumeWait = body.resume === true;
 
-  if (decision && resumeId) {
+  if ((decision || resumeWait) && resumeId) {
     let existing: typeof workflowRuns.$inferSelect | undefined;
     try {
       const rows = await db
@@ -154,137 +124,148 @@ export async function POST(
       console.error("workflow_runs resume load failed", err);
       return NextResponse.json({ error: "Could not load the paused run." }, { status: 500 });
     }
-    if (!existing || existing.status !== "awaiting_review") {
-      return NextResponse.json({ error: "No run is awaiting review." }, { status: 409 });
-    }
 
-    const prior = (Array.isArray(existing.stepOutputs) ? existing.stepOutputs : []) as WorkflowStepResult[];
-    const pause = [...prior].reverse().find((s) => s.type === "human_review" && s.status === "awaiting_review");
-    if (!pause) {
-      return NextResponse.json({ error: "No human_review step is awaiting review." }, { status: 409 });
-    }
-
-    const storedInput = (existing.input || {}) as { query?: string; maxResults?: number };
+    const prior = (Array.isArray(existing?.stepOutputs) ? existing!.stepOutputs : []) as WorkflowStepResult[];
+    const storedInput = (existing?.input || {}) as { query?: string; maxResults?: number; payload?: Record<string, unknown> };
     const input = {
       query: storedInput.query,
       maxResults: storedInput.maxResults,
+      payload: storedInput.payload,
     };
 
-    if (decision === "reject") {
-      pause.status = "error";
-      pause.error = "Rejected";
-      const run = await persistRun({
-        id: existing.id,
-        workflowId: item.id,
-        organizationId: orgId,
-        status: "rejected",
-        input,
-        stepOutputs: prior,
-        error: "Rejected",
-      });
-      await logAuditEvent({
-        organizationId: orgId,
-        userId: session.sub as string,
-        action: "workflow.reviewed" as any,
-        entityType: "workflow",
-        entityId: item.id,
-        metadata: { runId: existing.id, decision: "reject" },
-      });
-      return NextResponse.json({
-        workflowId: item.id,
-        runId: run?.id ?? existing.id,
-        status: "rejected",
-        steps: prior,
-        error: "Rejected",
-      });
+    if (decision) {
+      if (!existing || existing.status !== "awaiting_review") {
+        return NextResponse.json({ error: "No run is awaiting review." }, { status: 409 });
+      }
+      const pause = [...prior].reverse().find((s) => s.type === "human_review" && s.status === "awaiting_review");
+      if (!pause) {
+        return NextResponse.json({ error: "No human_review step is awaiting review." }, { status: 409 });
+      }
+
+      if (decision === "reject") {
+        pause.status = "error";
+        pause.error = "Rejected";
+        const run = await persistWorkflowRun({
+          id: existing.id,
+          workflowId: item.id,
+          organizationId: orgId,
+          status: "rejected",
+          input,
+          stepOutputs: prior,
+          error: "Rejected",
+        });
+        await logAuditEvent({
+          organizationId: orgId,
+          userId: session.sub as string,
+          action: "workflow.reviewed" as any,
+          entityType: "workflow",
+          entityId: item.id,
+          metadata: { runId: existing.id, decision: "reject" },
+        });
+        return NextResponse.json({
+          workflowId: item.id,
+          runId: run?.id ?? existing.id,
+          status: "rejected",
+          steps: prior,
+          error: "Rejected",
+        });
+      }
+
+      pause.status = "ok";
+      pause.error = undefined;
+      try {
+        const { executed, run, status } = await executeAndPersist({
+          workflow: item,
+          organizationId: orgId,
+          input,
+          triggerType: existing.triggerType || "manual",
+          usePublished: Boolean(existing.version),
+          runId: existing.id,
+          executeOpts: {
+            resumeAfterNodeId: pause.nodeId.includes("/") ? pause.nodeId.split("/").pop() : pause.nodeId,
+            initialText: pause.text,
+            existingSteps: prior,
+          },
+        });
+        await logAuditEvent({
+          organizationId: orgId,
+          userId: session.sub as string,
+          action: "workflow.reviewed" as any,
+          entityType: "workflow",
+          entityId: item.id,
+          metadata: { runId: existing.id, decision: "approve", status, steps: executed.steps.length },
+        });
+        return NextResponse.json({
+          workflowId: item.id,
+          runId: run?.id ?? existing.id,
+          status,
+          awaitingReview: status === "awaiting_review",
+          awaitingWait: status === "awaiting_wait",
+          steps: executed.steps,
+          search: executed.search,
+          assignedTo: executed.assignedTo,
+          dueAt: executed.dueAt,
+          vars: executed.vars,
+          error: status === "failed" ? executed.steps.find((s) => s.status === "error")?.error : undefined,
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Workflow run failed";
+        return NextResponse.json({ error: message }, { status: 500 });
+      }
     }
 
+    if (!existing || existing.status !== "awaiting_wait") {
+      return NextResponse.json({ error: "No run is awaiting a wait timer." }, { status: 409 });
+    }
+    const pause = [...prior].reverse().find((s) => s.type === "wait" && s.status === "awaiting_wait");
+    if (!pause) {
+      return NextResponse.json({ error: "No wait step is awaiting resume." }, { status: 409 });
+    }
+    if (existing.resumeAt && new Date(existing.resumeAt).getTime() > Date.now()) {
+      return NextResponse.json({ error: "Wait timer has not elapsed yet.", resumeAt: existing.resumeAt }, { status: 409 });
+    }
     pause.status = "ok";
     pause.error = undefined;
-
     try {
-      const { steps, search, paused } = await executeWorkflowGraph(
-        graph,
+      const { executed, run, status } = await executeAndPersist({
+        workflow: item,
+        organizationId: orgId,
         input,
-        workflowGatewayContext(orgId),
-        {
-          resumeAfterNodeId: pause.nodeId,
+        triggerType: existing.triggerType || "manual",
+        usePublished: Boolean(existing.version),
+        runId: existing.id,
+        executeOpts: {
+          resumeAfterNodeId: pause.nodeId.includes("/") ? pause.nodeId.split("/").pop() : pause.nodeId,
           initialText: pause.text,
           existingSteps: prior,
-        }
-      );
-      const failed = steps.filter((s) => s.status === "error");
-      const runStatus = paused ? "awaiting_review" : failed.length ? "failed" : "completed";
-      const run = await persistRun({
-        id: existing.id,
-        workflowId: item.id,
-        organizationId: orgId,
-        status: runStatus,
-        input,
-        stepOutputs: steps,
-        error: paused ? (steps.find((s) => s.status === "awaiting_review")?.error ?? null) : failed[0]?.error ?? null,
-      });
-      await logAuditEvent({
-        organizationId: orgId,
-        userId: session.sub as string,
-        action: "workflow.reviewed" as any,
-        entityType: "workflow",
-        entityId: item.id,
-        metadata: {
-          runId: existing.id,
-          decision: "approve",
-          status: runStatus,
-          steps: steps.length,
         },
       });
       return NextResponse.json({
         workflowId: item.id,
         runId: run?.id ?? existing.id,
-        status: runStatus,
-        awaitingReview: Boolean(paused),
-        steps,
-        search,
-        error: failed.length && !paused ? failed[0].error : undefined,
+        status,
+        awaitingReview: status === "awaiting_review",
+        awaitingWait: status === "awaiting_wait",
+        steps: executed.steps,
+        search: executed.search,
+        assignedTo: executed.assignedTo,
+        dueAt: executed.dueAt,
+        vars: executed.vars,
       });
     } catch (err) {
       const message = err instanceof Error ? err.message : "Workflow run failed";
-      await persistRun({
-        id: existing.id,
-        workflowId: item.id,
-        organizationId: orgId,
-        status: "failed",
-        input,
-        stepOutputs: prior,
-        error: message,
-      });
       return NextResponse.json({ error: message }, { status: 500 });
     }
   }
 
-  const input = { query, maxResults };
-  const started = await persistRun({
-    workflowId: item.id,
-    organizationId: orgId,
-    status: "running",
-    input,
-    stepOutputs: [],
-  });
-
+  const input = { query, maxResults, payload };
   try {
-    const { steps, search, paused } = await executeWorkflowGraph(graph, input, workflowGatewayContext(orgId));
-
-    const failed = steps.filter((s) => s.status === "error");
-    const runStatus = paused ? "awaiting_review" : failed.length ? "failed" : "completed";
-    const run = await persistRun({
-      id: started?.id,
-      workflowId: item.id,
+    const { executed, run, status } = await executeAndPersist({
+      workflow: item,
       organizationId: orgId,
-      status: runStatus,
       input,
-      stepOutputs: steps,
-      error: paused
-        ? (steps.find((s) => s.status === "awaiting_review")?.error ?? null)
-        : failed[0]?.error ?? null,
+      triggerType: "manual",
+      usePublished,
     });
 
     await logAuditEvent({
@@ -294,34 +275,35 @@ export async function POST(
       entityType: "workflow",
       entityId: item.id,
       metadata: {
-        steps: steps.length,
-        failed: failed.length,
-        provider: search?.provider,
+        steps: executed.steps.length,
+        failed: executed.steps.filter((s) => s.status === "error").length,
+        provider: executed.search?.provider,
         runId: run?.id,
-        status: runStatus,
+        status,
+        published: usePublished,
       },
     });
 
+    const failed = executed.steps.filter((s) => s.status === "error");
     return NextResponse.json({
       workflowId: item.id,
-      runId: run?.id ?? started?.id,
-      status: runStatus,
-      awaitingReview: Boolean(paused),
-      steps,
-      search,
-      error: failed.length && !paused ? failed[0].error : undefined,
-    }, { status: failed.length && !search && !paused && !steps.some((s) => s.status === "ok") ? 502 : 200 });
+      runId: run?.id,
+      status,
+      awaitingReview: status === "awaiting_review",
+      awaitingWait: status === "awaiting_wait",
+      steps: executed.steps,
+      search: executed.search,
+      assignedTo: executed.assignedTo,
+      dueAt: executed.dueAt,
+      vars: executed.vars,
+      error: failed.length && status === "failed" ? failed[0].error : undefined,
+    }, {
+      status: status === "failed" && !executed.search && !executed.paused && !executed.steps.some((s) => s.status === "ok")
+        ? 502
+        : 200,
+    });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Workflow run failed";
-    await persistRun({
-      id: started?.id,
-      workflowId: item.id,
-      organizationId: orgId,
-      status: "failed",
-      input,
-      stepOutputs: [],
-      error: message,
-    });
     if (err instanceof WebSearchNotConfiguredError) {
       return NextResponse.json({ error: err.message }, { status: 503 });
     }

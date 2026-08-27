@@ -61,6 +61,10 @@ gcloud run services update opendoor-dashboard \
 
 Still add the same key to `cloudbuild.yaml` / `scripts/deploy-gcp.sh` `--set-env-vars` so the next deploy does not drop it. Not done this run (app code left untouched).
 
+## Database through 0043
+
+Cloud SQL `opendoor-pg` already had 0039–0043 objects. Replayed 0039–0043 on 2026-08-18 via Auth Proxy `:5433` (`IF NOT EXISTS` / upsert). 0041/0042 inserted any missing catalog rows. Do not apply these to SokoHut / J&L Supabase.
+
 ## Database 0035 + 0036 + 0037
 
 | Target | Status |
@@ -129,13 +133,11 @@ gcloud run services update opendoor-gateway \
   --update-secrets=TOGETHER_API_KEY=opendoor-together-api-key:latest
 ```
 
-## Firebase Hosting ToS — still blocked
+## Firebase Hosting — live
 
-`firebase hosting:sites:list --project=project-800192c2-3ecc-4889-8f7` returns **no sites**. Still blocked until Firebase is linked / ToS accepted:
+Site `opendoor-gcp` on this project: https://opendoor-gcp.web.app  
+`opendoor-f39a4` is a **different** GCP project. Do not point this repo at it.
 
-1. Open https://console.firebase.google.com/ → Add project → select `project-800192c2-3ecc-4889-8f7` → accept ToS
-2. `firebase login`
-3. `firebase hosting:sites:create opendoor-f39a4 --project project-800192c2-3ecc-4889-8f7`
-4. `firebase deploy --only hosting --project project-800192c2-3ecc-4889-8f7`
-
-Until then, use Cloud Run URLs or `./scripts/setup-edge-lb.sh` (`scripts/finish-ops.sh` already tries the LB path).
+```bash
+firebase deploy --only hosting --project project-800192c2-3ecc-4889-8f7
+```
